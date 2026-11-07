@@ -199,7 +199,8 @@ th.mh{color:var(--fg);padding-top:12px;font-size:12px}
         <button data-hob="built" aria-pressed="true">Встроенная</button>
         <button data-hob="free" aria-pressed="false">Настольная</button>
       </div>
-      <div class="field" style="margin:10px 0 0"><label for="Hx">Смещение от центра шкафа</label><output id="oHx"></output><input type="range" id="Hx" min="-300" max="300" step="5"></div>
+      <div class="toggles" style="margin-top:10px"><label><input type="checkbox" id="tHobAlong"> Вдоль столешницы</label></div>
+      <div class="field" id="fHx" style="margin:10px 0 0"><label for="Hx">Смещение от центра шкафа</label><output id="oHx"></output><input type="range" id="Hx" min="-300" max="300" step="5"></div>
     </div>
 
     <details class="sizes" id="sizesBox">
@@ -306,7 +307,7 @@ th.mh{color:var(--fg);padding-top:12px;font-size:12px}
 (function(){
 renderPalette();
 let T=16, TF=16; const HDF=4, G=2, MM=0.001;
-const P={W:2200,L:1500,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,Dish:true,Apron:true,OvDr:false,Hob:'built',Plinth:true,Ec:30,T:16,TF:16,Tt:38,Wm:'auto',Wh:100};
+const P={W:2200,L:1500,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38,Wm:'auto',Wh:100};
 let doorMode='closed', showDims=true, showWall=true, showEdges=true;
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -618,17 +619,24 @@ function buildWall(){
     const tap=new THREE.Mesh(new THREE.CylinderGeometry(.014,.016,.32,16),blackMat);tap.position.set(cx,ct+.16,.06);wallGroup.add(tap);
     box(cx-.012,cx+.012,ct+.28,ct+.31,.06,.26,blackMat); }
   // two-zone hob over the oven cabinet
-  { const cx=b1+b2+b3/2+P.Hx*MM;
-    if(P.Hob==='free'){   // tabletop two-burner hob standing on the worktop
+  { const free=P.Hob==='free',along=!!P.HobAlong,hd=free?.145:.15;   // hd: half the hob's short side
+    // along the worktop: centred in the cabinet, back edge 20 mm off the wall; across: shifted by the slider
+    const hz=free?.315:.32,cx=b1+b2+b3/2+(along?0:P.Hx*MM),zc=along?.02+hd:hz;   // hz: centre of the hob in its own description, zc: where that centre goes
+    // the hob is described with burners one behind the other (dx across, z into the room); "along" turns it 90° and moves its centre from z=hz to z=zc
+    const at=(dx,z)=>along?[cx+z-hz,zc+dx]:[cx+dx,z];
+    const hb=(dx0,dx1,y0,y1,z0,z1,mat)=>along?box(cx+z0-hz,cx+z1-hz,y0,y1,zc+dx0,zc+dx1,mat):box(cx+dx0,cx+dx1,y0,y1,z0,z1,mat);
+    const disc=(r,h,dx,y,z,mat,seg)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),mat);const [x,zz]=at(dx,z);m.position.set(x,y,zz);wallGroup.add(m);};
+    if(free){   // tabletop two-burner hob standing on the worktop
       const hh=.065;
-      box(cx-.145,cx+.145,ct+.008,ct+hh,.07,.56,blackMat);
-      box(cx-.14,cx+.14,ct+hh,ct+hh+.004,.075,.555,glassMat);
-      [[.2],[.43]].forEach(([z])=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.002,32),burnerMat);r.position.set(cx,ct+hh+.005,z);wallGroup.add(r);});
-      [[-.11,.07],[.11,.07],[-.11,.56],[.11,.56]].forEach(([dx,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.008,.008,.008,10),blackMat);f.position.set(cx+dx,ct+.004,z);wallGroup.add(f);});
-      [-.06,.06].forEach(dx=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.015,16),chromeMat);k.rotation.x=Math.PI/2;k.position.set(cx+dx,ct+.035,.567);wallGroup.add(k);});
+      hb(-.145,.145,ct+.008,ct+hh,.07,.56,blackMat);
+      hb(-.14,.14,ct+hh,ct+hh+.004,.075,.555,glassMat);
+      [.2,.43].forEach(z=>disc(.075,.002,0,ct+hh+.005,z,burnerMat,32));
+      [[-.11,.07],[.11,.07],[-.11,.56],[.11,.56]].forEach(([dx,z])=>disc(.008,.008,dx,ct+.004,z,blackMat,10));
+      const kz=along?zc+.152:.567;   // knobs always on the front face
+      [-.06,.06].forEach(dx=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.015,16),chromeMat);k.rotation.x=Math.PI/2;k.position.set(cx+dx,ct+.035,kz);wallGroup.add(k);});
     }else{   // built-in glass hob flush in a worktop cut-out
-      box(cx-.15,cx+.15,ct,ct+.006,.06,.58,blackMat);
-      [[.18],[.44]].forEach(([z])=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(.085,.085,.002,32),burnerMat);r.position.set(cx,ct+.007,z);wallGroup.add(r);});
+      hb(-.15,.15,ct,ct+.006,.06,.58,blackMat);
+      [.18,.44].forEach(z=>disc(.085,.002,0,ct+.007,z,burnerMat,32));
     } }
   // built-in dishwasher behind the middle front
   if(P.Dish!==false){ const x0=b1+.003,x1=b1+b2-.003,yt=c.ytop*MM-.004,zc=c.zfB*MM-(P.TF||16)*MM,zd=zc-.045,pl=(P.Plinth!==false?P.Pl:0)*MM;
@@ -726,7 +734,7 @@ function setView(v){
   const views={persp:[-.55,1.3,base],front:[0,1.5,base],side:[-1.25,1.45,base*.85],top:[.3,.42,base*1.05],sink:[.25,1.05,base*.4],hob:[-.25,1.05,base*.4],fridge:[-.45,1.4,base*.85],upper:[-.3,1.68,base*.9]};
   const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];
   if(v==='sink')goalT.set(b1/2,P.Ct*MM,.3);
-  else if(v==='hob')goalT.set(b1+b2+b3/2+P.Hx*MM,P.Ct*MM*.85,.3);
+  else if(v==='hob')goalT.set(b1+b2+b3/2+(P.HobAlong?0:P.Hx*MM),P.Ct*MM*.85,.3);
   else if(v==='fridge')goalT.set((c.xr+c.xF)/2*MM,P.Fh*MM*.5,.35);
   else if(v==='upper')goalT.set(c.xF/2*MM,(c.yW+P.H)/2*MM,.2);
   else goalT.set(P.W/2*MM,P.H/2*MM,.45);
@@ -935,7 +943,7 @@ function loop(){
 /* ---------- panel ---------- */
 const ids=['W','L','H','B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'];
 function clamp(){
-  const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,P.Hx));   // keep 20 mm clear of the right edge (fridge side)   // hob (300 mm wide) stays inside its cabinet
+  const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,P.Hx));   // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
   // the run (three bases + fridge niche) has to fit on the wall
   const over=P.B1+P.B2+P.B3+P.Fr-P.W;if(over>0)P.Fr=Math.max(500,P.Fr-over);
 }
@@ -1054,12 +1062,13 @@ function syncHob(){document.querySelectorAll('[data-hob]').forEach(x=>x.setAttri
 document.querySelectorAll('[data-hob]').forEach(b=>b.addEventListener('click',()=>{P.Hob=b.dataset.hob;syncHob();build();}));
 syncHob();
 document.getElementById('tOvDr').addEventListener('change',e=>{P.OvDr=e.target.checked;build();});
+document.getElementById('tHobAlong').addEventListener('change',e=>{P.HobAlong=e.target.checked;syncThick();build();});
 document.getElementById('tApron').addEventListener('change',e=>{P.Apron=e.target.checked;build();});
 document.getElementById('tDish').addEventListener('change',e=>{P.Dish=e.target.checked;build();});
 document.getElementById('tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;build();});
 const feetMat=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.6});
 const pinMat=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
-function syncThick(){document.getElementById('tAnt').checked=P.Ant!==false;document.getElementById('tDish').checked=P.Dish!==false;document.getElementById('tApron').checked=!!P.Apron;document.getElementById('tOvDr').checked=!!P.OvDr;if(typeof syncHob==='function')syncHob();document.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
+function syncThick(){document.getElementById('tAnt').checked=P.Ant!==false;document.getElementById('tDish').checked=P.Dish!==false;document.getElementById('tApron').checked=!!P.Apron;document.getElementById('tOvDr').checked=!!P.OvDr;document.getElementById('tHobAlong').checked=!!P.HobAlong;document.getElementById('fHx').hidden=!!P.HobAlong;if(typeof syncHob==='function')syncHob();document.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
 document.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
 let spin=false;
 const lmap={Laz:'az',Lel:'el',Li:'i'},lunit={az:'°',el:'°',i:'%'};

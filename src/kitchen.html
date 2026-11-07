@@ -332,12 +332,13 @@ function computeParts(p){
     add('Царга задняя'+nm,'carcass',x0+T,x1-T,ytop-RB,ytop,0,T);
     if(b.k==='door')add('Полка нижнего шкафа'+nm,'carcass',x0+T,x1-T,(pl+ytop)/2,(pl+ytop)/2+T,T,zcB-20);
     if(b.k==='oven'){
+      const OG=G/2+3;   // oven-to-front gap: the oven is drawn 3 mm in from the cabinet sides, so top/bottom match its side gaps
       if(p.OvDr){   // oven down on the plinth, pull-out drawer between the oven and the worktop
         ovY=pl;const oy1=pl+595;
         add('Полка над духовкой','carcass',x0+T,x1-T,oy1,oy1+T,0,zcB);
-        const fy0=oy1+T+G/2,fy1=ytop-G/2;
+        const fy0=oy1+OG,fy1=ytop-G/2;   // overlay front covers the shelf edge
         add('Фасад ящика над духовкой','front',x0+G/2,x1-G/2,fy0,fy1,zcB,zfB,{hinge:'S',slide:'ov',travel:zcB-80});
-        const dh=Math.max(50,fy1-fy0-30),dx0=x0+T+13,dx1=x1-T-13,dz0=40,dy0=fy0+8;
+        const dy0=oy1+T+G/2+8,dh=Math.max(50,fy1-dy0-22),dx0=x0+T+13,dx1=x1-T-13,dz0=40;   // the drawer box stays on top of the shelf
         add('Бок ящика','carcass',dx0,dx0+T,dy0,dy0+dh,dz0,zcB,{inSlide:'ov'});
         add('Бок ящика','carcass',dx1-T,dx1,dy0,dy0+dh,dz0,zcB,{inSlide:'ov'});
         add('Задняя стенка ящика','carcass',dx0+T,dx1-T,dy0,dy0+dh,dz0,dz0+T,{inSlide:'ov'});
@@ -345,7 +346,7 @@ function computeParts(p){
       }else{        // oven right under the hob, tilting flap below it
         const oy=ytop-595;ovY=oy;
         add('Полка под духовку','carcass',x0+T,x1-T,oy-T,oy,0,zcB);
-        add('Фасад откидной под духовкой','front',x0+G/2,x1-G/2,pl+G/2,oy-T-G/2,zcB,zfB,{hinge:'F'});
+        add('Фасад откидной под духовкой','front',x0+G/2,x1-G/2,pl+G/2,oy-OG,zcB,zfB,{hinge:'F'});   // overlay front covers the shelf edge
       }
     }else{
       add('Фасад нижнего шкафа','front',x0+G/2,x1-G/2,pl+G/2,ytop-G/2,zcB,zfB,{hinge:i===0?'L':'R'});
@@ -643,7 +644,7 @@ function buildWall(){
     box(x0,x1,0,yt,zb,zb+w,dishInMat); }
   // built-in oven under the hob
   { const x0=b1+b2,yo=c.ovY*MM,zf=c.zfB*MM;
-    box(x0+.003,x0+b3-.003,yo,yo+.591,zf-.02,zf+.004,ovenMat);
+    box(x0+.003,x0+b3-.003,yo,yo+.595,zf-.02,zf+.004,ovenMat);   // standard 595 mm oven fills its niche
     box(x0+.06,x0+b3-.06,yo+.08,yo+.46,zf+.004,zf+.007,glassMat);
     box(x0+.08,x0+b3-.08,yo+.5,yo+.52,zf+.007,zf+.03,chromeMat); }
   // cooker hood under the wall cabinet over the hob

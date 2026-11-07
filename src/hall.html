@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Прихожая</title>
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Tenor+Sans&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 3D viewer fills the left, a workshop-style spec panel on the right; stacks on phones */
+:root{
+  --bg:#ECEDE9; --panel:#F7F7F4; --fg:#1E2321; --muted:#626B66; --line:#D3D6D0;
+  --accent:#2F5D50; --accent-soft:#DCE7E2; --warn:#A5561C; --warn-soft:#F4E4D6; --ok:#2F6B45;
+  --scene-bg:#DCDDD8; --scene-floor:#C9C6BF; --scene-wall:#E7E5E0;
+  --f-display:"Tenor Sans", "Georgia", serif;
+  --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532;
+  --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; --warn-soft:#3A2B1F; --ok:#8BC79F;
+  --scene-bg:#202523; --scene-floor:#2A2C2A; --scene-wall:#3A3C39; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532;
+  --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; --warn-soft:#3A2B1F; --ok:#8BC79F;
+  --scene-bg:#202523; --scene-floor:#2A2C2A; --scene-wall:#3A3C39; color-scheme:dark;}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;min-height:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;box-sizing:border-box}
+.stage{display:flex;flex-direction:column;gap:8px;min-width:0}
+.viewer{position:relative;flex:1;min-width:0;border-radius:6px;overflow:hidden;background:var(--scene-bg);min-height:560px}
+#c{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.views{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.views .btn{padding:8px 4px}
+.camb{position:absolute;z-index:3;right:12px;bottom:12px;width:28px;height:28px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--muted);cursor:pointer;opacity:.95}
+.camb:hover,.camb[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.camb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.inset{position:absolute;right:6px;bottom:6px;width:min(272px,43%);aspect-ratio:1/.72;border:1px solid var(--accent);border-radius:8px;overflow:hidden;pointer-events:none;box-sizing:border-box}
+.inset .dist{position:absolute;left:6px;bottom:6px;display:flex;gap:5px;white-space:nowrap;font:500 11px/1.35 var(--f-mono);color:var(--fg);background:var(--panel);padding:4px 7px;border-radius:3px;font-variant-numeric:tabular-nums}
+.info{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;min-height:28px;box-sizing:border-box;max-width:calc(100% - 24px);padding:4px 9px;background:var(--panel);border:1px solid var(--line);border-radius:4px;font:400 12px/1.35 var(--f-body);color:var(--muted);text-align:left;cursor:pointer;opacity:.95}
+.info:hover,.info[aria-expanded="true"]{border-color:var(--accent)}
+.info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.info .ii{font:600 italic 14px/1 Georgia,serif;color:var(--accent);flex:none}
+.info .sep{color:var(--accent);font-weight:700;margin:0 3px}
+.info .it{display:none}
+.info[aria-expanded="true"] .it{display:block;margin-left:9px}
+.info{margin-right:52px}
+.dbg-on .info{max-width:calc(100% - min(260px,42%) - 36px)}
+.dbg-on .info[aria-expanded="true"] .it{white-space:normal}
+@media (prefers-reduced-motion:reduce){.info .it{transition:none}}
+.inset .dist i{font-style:normal;color:var(--muted)}
+.inset .dist em{font-style:normal}
+.inset .inset-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.inset .cam-arrow{position:absolute;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:12px solid #ff6a00;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+.inset span{position:absolute;left:6px;top:4px;font:500 10px var(--f-mono);color:var(--muted);background:var(--panel);padding:1px 4px;border-radius:3px}
+.hint{position:absolute;left:12px;bottom:10px;margin-right:12px;font-size:12px;color:var(--muted);pointer-events:none;background:var(--panel);padding:4px 8px;border-radius:4px;opacity:.9}
+.btn{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 11px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:20px;min-width:0;overflow:auto;max-height:calc(100vh - 32px);box-sizing:border-box}
+h1{font:400 26px/1.15 var(--f-display);margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin-top:4px;font-family:var(--f-mono);font-size:12px}
+h2{font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+details.sizes{border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+details.sizes summary{cursor:pointer;font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.sizes summary::-webkit-details-marker{display:none}
+details.sizes summary::after{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin-top:-4px;transition:transform .15s}
+details.sizes[open] summary::after{transform:rotate(-135deg);margin-top:4px}
+details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.sizes-body{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+h3{font:600 12px/1 var(--f-body);margin:0 0 10px;color:var(--fg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:500 12px/1 var(--f-mono);padding:6px 8px;border-radius:999px;background:var(--accent-soft);color:var(--ok)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.field{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px;margin-bottom:10px}
+.field label{font-size:13px}
+.field output{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.field input{grid-column:1/-1;width:100%;accent-color:var(--accent);margin:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;font:500 13px var(--f-body);background:transparent;color:var(--fg);border:0;padding:8px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.decors{display:flex;flex-direction:column;gap:6px}
+.decors button{display:flex;gap:10px;align-items:center;text-align:left;font:500 13px/1.25 var(--f-body);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:7px 9px;cursor:pointer}
+.decors button small{font:400 11px var(--f-mono);color:var(--muted)}
+.decors button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.decors button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.decors button{position:relative}
+.tags{position:absolute;top:4px;right:4px;display:flex;gap:2px;pointer-events:none}
+.tags b{font:600 9px/1 var(--f-mono);background:var(--accent);color:var(--panel);padding:3px 4px;border-radius:3px}
+.finnow{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin-top:10px;font-size:12px}
+.finnow span:nth-child(odd){color:var(--muted)}
+[hidden]{display:none!important}
+.ctx{position:fixed;z-index:50;display:flex;flex-direction:column;min-width:170px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.ctx button{font:500 13px var(--f-body);color:var(--fg);background:none;border:0;border-radius:4px;padding:8px 10px;text-align:left;cursor:pointer}
+.ctx button:hover,.ctx button:focus-visible{background:var(--accent-soft);outline:none}
+.ctx .ctx-h{font:600 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+.decors.unis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+
+.decors.unis{grid-template-columns:repeat(3,minmax(0,1fr))}
+.decors .cc{position:relative;display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--line);border-radius:4px;font:500 12px/1.25 var(--f-body);cursor:pointer}
+.decors .cc.on{border-color:var(--accent);background:var(--accent-soft)}
+.decors .cc input{width:100%;height:36px;padding:0;border:1px solid rgba(0,0,0,.15);border-radius:3px;background:none;cursor:pointer}
+.decors .cc small{font:400 10px var(--f-mono);color:var(--muted)}
+.decors.unis button{flex-direction:column;align-items:stretch;gap:6px;padding:6px;font-size:12px}
+.decors.unis .sw{width:100%;height:36px}
+.decors.unis small{font-size:10px}
+.sw{width:28px;height:28px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.15)}
+.toggles{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.toggles.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.toggles.two label{align-items:flex-start;line-height:1.25}
+.toggles.two input{margin-top:1px}
+.toggles label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.toggles input{accent-color:var(--accent);margin:0}
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-weight:600;text-align:left;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+th.n{text-align:right}
+th.mh{color:var(--fg);padding-top:12px;font-size:12px}
+.tot{display:flex;flex-direction:column;gap:4px;font:500 12px var(--f-mono);margin-top:8px;flex-wrap:wrap}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.note{font-size:12px;color:var(--muted)}
+#csv{width:100%;height:90px;font:11px var(--f-mono);margin-top:8px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .viewer{flex:none;min-height:340px;height:72vh}
+  .panel{max-height:none}
+}
+</style>
+
+<div class="ctx" id="ctx" hidden role="menu"><div class="ctx-h">Применить только к</div><button data-where="carcass" role="menuitem">Корпусу</button><button data-where="front" role="menuitem">Фасадам</button></div>
+<div class="app">
+  <div class="stage">
+  <div class="viewer" id="viewer">
+    <canvas id="c" aria-label="3D-модель шкафа-портала"></canvas>
+    <button class="camb" id="camBtn" aria-expanded="false" aria-label="Мини-вид камеры" title="Камера: точка вращения и мини-вид"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2" y="6" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 9l5-3v9l-5-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+    <button class="info" id="infoBtn" aria-expanded="false" aria-label="Как управлять"><span class="ii">i</span><span class="it">Тяните — вращение <b class="sep">•</b> Shift + тяните или два пальца — сдвиг <b class="sep">•</b> колесо — масштаб <b class="sep">•</b> клик по двери или дверце — открыть, удержание — открывать постепенно</span></button>
+  </div>
+  </div>
+
+  <aside class="panel">
+    <div>
+      <h1>Шкаф-портал у входной двери</h1>
+      <div class="sub" id="sub">1200 × 2600 × 350 мм · ЛДСП 18 мм</div>
+    </div>
+
+    <div>
+      <h2>Дверной проём</h2>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div>
+      <h2>Вид</h2>
+      <div class="seg" role="group" aria-label="Фасады">
+        <button data-door="closed" aria-pressed="true">Закрыты</button>
+        <button data-door="open" aria-pressed="false">Открыты</button>
+        <button data-door="hidden" aria-pressed="false">Без фасадов</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="tDims" checked> Размеры</label>
+        <label><input type="checkbox" id="tWall" checked> Стена и дверь</label>
+        <label><input type="checkbox" id="tDoor"> Входная дверь открыта</label>
+        <label><input type="checkbox" id="tEdges" checked> Контуры деталей</label>
+      </div>
+      <h3 style="margin-top:14px">Стены</h3>
+      <div class="seg" role="group" aria-label="Стены">
+        <button data-wm="show" aria-pressed="false">Монолит</button>
+        <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
+        <button data-wm="auto" aria-pressed="true" title="Стены, загораживающие обзор, убираются">Разрез</button>
+        <button data-wm="skeleton" aria-pressed="false">Скелет</button>
+        <button data-wm="outline" aria-pressed="false">Контуры</button>
+      </div>
+      <div class="field" style="margin:10px 0 0"><label for="Wh">Высота стен</label><output id="oWh"></output><input type="range" id="Wh" min="5" max="100" step="5"></div>
+      <h3 style="margin-top:14px">Камера</h3>
+      <div class="views">
+        <button class="btn" data-view="persp">3/4</button>
+        <button class="btn" data-view="front">Спереди</button>
+        <button class="btn" data-view="side">Сбоку</button>
+        <button class="btn" data-view="low" title="Низ шкафа и примыкание к полу">Низ</button>
+        <button class="btn" data-view="shelves">Полки</button>
+        <button class="btn" data-view="back" title="Со стороны лестничной площадки">Сзади</button>
+        <button class="btn" data-view="fake" title="Вид на левую фальш-панель">Фальш</button>
+        <button class="btn" data-view="mezz">Антресоль</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>Состав</h2>
+      <div class="toggles" style="margin-top:0">
+        <label><input type="checkbox" id="tReveal" checked> Обшивка откосов ЛДСП</label>
+        <label><input type="checkbox" id="tPlinth" checked> Цоколь под правой колонной</label>
+        <label><input type="checkbox" id="tFeet"> Ножки 10 мм</label>
+      </div>
+      <p class="note" style="margin:8px 0 0">Добавляет или убирает детали — меняется и деталировка.</p>
+    </div>
+
+    <details class="sizes" id="sizesBox">
+      <summary>Размеры и секции</summary>
+      <div class="sizes-body">
+    <div>
+      <h3>Ниша, мм</h3>
+      <div class="field"><label for="Hc">Высота потолка</label><output id="oHc"></output><input type="range" id="Hc" min="2200" max="3200" step="10"></div>
+      <div class="field"><label for="Sd">Боковые стены от стены с дверью</label><output id="oSd"></output><input type="range" id="Sd" min="0" max="2000" step="10"></div>
+    </div>
+
+    <div>
+      <h3>Шкаф, мм</h3>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — корпус</label><div class="seg" role="group" aria-label="Толщина ЛДСП — корпус" style="min-width:120px"><button data-thick="16" data-for="T" aria-pressed="true">16 мм</button><button data-thick="18" data-for="T" aria-pressed="false">18 мм</button></div></div>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — фасады</label><div class="seg" role="group" aria-label="Толщина ЛДСП — фасады" style="min-width:120px"><button data-thick="16" data-for="TF" aria-pressed="true">16 мм</button><button data-thick="18" data-for="TF" aria-pressed="false">18 мм</button></div></div>
+      <div class="field"><label for="W">Ширина</label><output id="oW"></output><input type="range" id="W" min="900" max="1800" step="10"></div>
+      <div class="field"><label for="H">Высота</label><output id="oH"></output><input type="range" id="H" min="2200" max="3000" step="10"></div>
+      <div class="field"><label for="D">Глубина с фасадом</label><output id="oD"></output><input type="range" id="D" min="200" max="600" step="10"></div>
+    </div>
+
+    <div>
+      <h3>Секции, мм</h3>
+      <div class="field"><label for="Ht">Высота антресоли</label><output id="oHt"></output><input type="range" id="Ht" min="300" max="1000" step="10"></div>
+      <div class="field"><label for="Lw">Левая фальш-панель</label><output id="oLw"></output><input type="range" id="Lw" min="80" max="450" step="10"></div>
+      <div class="field"><label for="Rw">Правая колонна с полками</label><output id="oRw"></output><input type="range" id="Rw" min="150" max="500" step="10"></div>
+      <div class="field"><label for="N">Полок в правой колонне</label><output id="oN"></output><input type="range" id="N" min="2" max="12" step="1"></div>
+      <div class="note" id="shelfGap" style="margin:-4px 0 10px"></div>
+      <div class="field"><label for="Rv">Глубина откоса (от стены до двери)</label><output id="oRv"></output><input type="range" id="Rv" min="40" max="500" step="5"></div>
+      <div class="field" id="plField"><label for="Pl">Высота цоколя</label><output id="oPl"></output><input type="range" id="Pl" min="40" max="200" step="5"></div>
+    </div>
+
+      </div>
+    </details>
+
+    <div>
+      <h2>Цвет и декор</h2>
+      <div class="finnow" id="finNow"></div>
+      <h3 style="margin-top:14px">Древесные декоры</h3>
+      <div class="decors unis" role="group" aria-label="Декор">
+      </div>
+      <h3 style="margin-top:14px">Однотонные</h3>
+      <div class="decors unis" role="group" aria-label="Монотонные декоры">
+        <label class="cc" id="ccCard"><input type="color" id="uniColor" value="#C2B8AA" aria-label="Свой цвет"><span>Свой цвет<br><small id="ccCode">палитра</small></span><span class="tags" id="ccTags"></span></label>
+      </div>
+      <div class="field" style="margin:14px 0 0"><label for="Ec">Контрастность кромки</label><output id="oEc"></output><input type="range" id="Ec" min="0" max="100" step="1"></div>
+      <p class="note" style="margin:8px 0 0">Цвет и рисунок переданы приблизительно, сверяйте с образцом.</p>
+    </div>
+
+    <div>
+      <h2>Свет</h2>
+      <div class="field"><label for="Laz">Направление</label><output id="oLaz"></output><input type="range" id="Laz" min="-180" max="180" step="1"></div>
+      <div class="field"><label for="Lel">Высота над горизонтом</label><output id="oLel"></output><input type="range" id="Lel" min="5" max="89" step="1"></div>
+      <div class="field"><label for="Li">Яркость</label><output id="oLi"></output><input type="range" id="Li" min="0" max="200" step="5"></div>
+      <div class="row" style="margin-top:0"><button class="btn" id="lightSpin" aria-pressed="false">Вращать свет</button><button class="btn" id="lightReset">Сбросить</button></div>
+    </div>
+
+    <div>
+      <h2>Деталировка</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Деталь</th><th class="n">Д × Ш</th><th class="n">Шт</th></tr></thead>
+        <tbody id="cut"></tbody>
+      </table></div>
+      <div class="tot" id="tot"></div>
+      <div class="row">
+        <button class="btn" id="copy">Скопировать CSV</button>
+        <span class="note" id="copied" aria-live="polite"></span>
+      </div>
+      <textarea id="csv" hidden readonly aria-label="CSV деталировки"></textarea>
+    </div>
+
+    <div>
+      <h2>Настройки по умолчанию</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="saveDef">Запомнить текущие</button>
+        <button class="btn" id="resetDef">Вернуть исходные</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="copyDef">Скопировать код настроек</button>
+        <span class="note" id="defMsg" aria-live="polite"></span>
+      </div>
+      <textarea id="defCode" hidden readonly aria-label="Код настроек" style="width:100%;height:70px;font:11px var(--f-mono);margin-top:8px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px"></textarea>
+      <p class="note" style="margin:8px 0 0">«Запомнить» сохраняет настройки в этом браузере. Чтобы они стали стандартными для всех, скопируйте код и пришлите его в чат.</p>
+    </div>
+
+    <p class="note">Допущения: корпус и фасады из ЛДСП выбранной толщины, зазор между фасадами 2 мм. ХДФ не используется. Антресоль — два отдельных корпуса без задней стенки, сзади два ребра жёсткости по 100 мм. Левая колонна — фальш-панель без открывания: лицевая панель, боковина со стороны проёма, дно и крышка. Правая колонна открыта в сторону проёма, лицевая панель глухая, задняя стенка из ЛДСП. Откосы обшиты ЛДСП корпуса. Фурнитура и кромка не учтены. Перед заказом раскроя размеры нужно сверить с замером.</p>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="decors.js"></script>
+<script>
+(function(){
+renderPalette();
+let T=16, TF=16; const HDF=4, G=2, MM=0.001;
+const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,Ec:30,T:16,TF:16,Wm:'auto',Wh:100,Hc:2600,Sd:650};
+let doorMode='closed', showDims=true, showWall=true, showEdges=true;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- parts (mm) ---------- */
+function computeParts(p){
+  const parts=[], W=p.W, Dc=p.D-TF, Hb=p.H-p.Ht, FL=p.Feet?10:0;   // FL: floor-standing parts sit on 10 mm feet
+  const add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  // left column
+  // left column is a false panel: inner side + fixed front, no outer side, no back
+  add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,0,Dc);
+  add('Дно / крышка левой фальш-панели','carcass',0,p.Lw-T,FL,FL+T,0,Dc);
+  add('Дно / крышка левой фальш-панели','carcass',0,p.Lw-T,Hb-T,Hb,0,Dc);
+  add('Левая фальш-панель (лицевая, глухая)','front',0,p.Lw-G/2,FL,Hb-G/2,Dc,Dc+TF);
+  // right column
+  const rx=W-p.Rw;
+  add('Бок правой колонны','carcass',W-T,W,FL,Hb,0,Dc);
+  add('Задняя стенка правой колонны','carcass',rx,W-T,FL,Hb,0,T);
+  const pl=p.plinth?p.Pl:0;
+  add('Лицевая панель правой колонны','front',rx+G/2,W-G/2,FL,Hb-G/2,Dc,Dc+TF);
+  if(pl){
+    add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc);
+  }
+  const step=(Hb-T-pl-FL)/(p.N+1);
+  for(let i=0;i<=p.N+1;i++){
+    const y=i===p.N+1?Hb-T:FL+pl+i*step;
+    add(i===0?'Дно правой колонны':i===p.N+1?'Крышка правой колонны':'Полка правой колонны','carcass',rx,W-T,y,y+T,T,Dc);
+  }
+  // top: two separate carcasses for easier installation
+  const ym=Hb+p.Ht/2-T/2;
+  const topBox=(nm,x0,x1)=>{
+    // no back panel: two 100 mm rails at the back (top and bottom) keep the box square and take the wall fixings
+    const RB=100;
+    add('Бок антресоли — '+nm,'carcass',x0,x0+T,Hb,p.H,0,Dc);
+    add('Бок антресоли — '+nm,'carcass',x1-T,x1,Hb,p.H,0,Dc);
+    add('Дно антресоли — '+nm,'carcass',x0+T,x1-T,Hb,Hb+T,0,Dc);
+    add('Крышка антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T,p.H,0,Dc);
+    add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,Hb+T,Hb+T+RB,0,T);
+    add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T-RB,p.H-T,0,T);
+    add('Полка антресоли — '+nm,'carcass',x0+T,x1-T,ym,ym+T,0,Dc-20);
+  };
+  topBox('центральный корпус',0,rx);
+  topBox('правый корпус',rx,W);
+  if(p.reveal){
+    const z0=-p.Rv;
+    add('Обрамление откоса левое','carcass',p.Lw-T,p.Lw,0,Hb,z0,0);
+    add('Обрамление откоса правое','carcass',rx,rx+T,0,Hb,z0,0);
+    add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
+  }
+  const mid=(p.Lw+rx)/2;
+  add('Фальш-панель антресоли (под петли, глухая)','front',0,p.Lw-G/2,Hb+G/2,p.H,Dc,Dc+TF);
+  add('Фасад антресоли','front',p.Lw+G/2,mid-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'L'});
+  add('Фасад антресоли','front',mid+G/2,rx-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
+  add('Фасад антресоли правый','front',rx+G/2,W-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
+  // every board that reaches the floor is lifted onto the feet
+  if(FL)parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
+  // feet at the corners of each floor-standing unit (8 mm in from the outer faces)
+  const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8],[x1-8,z0+8],[x0+8,z1-8],[x1-8,z1-8]];
+  const feet=[...cnr(0,p.Lw,0,Dc+TF),...cnr(rx,W,0,Dc+TF)];
+  return {parts,Dc,Hb,FL,feet};
+}
+
+/* ---------- wood texture: generic procedural oak (straight grain) or photo decor ---------- */
+function rng(seed){return function(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}
+/* decor data and photo textures come from decors.js */
+let decor='H1386';
+const TW=512,TH=1024,RU=0.6,RV=1.2; // texture covers 600 × 1200 mm, grain runs along V
+function woodTexture(d){
+  if(d.img){
+    // real decor photo; mirrored tiling hides seams of a non-seamless sample
+    const tex=new THREE.Texture();const im=new Image();
+    im.onload=()=>{tex.image=im;tex.needsUpdate=true;};im.src=d.img;
+    tex.wrapS=tex.wrapT=d.wrap==='repeat'?THREE.RepeatWrapping:THREE.MirroredRepeatWrapping;tex.encoding=THREE.sRGBEncoding;tex.anisotropy=8;
+    tex.repeat.set(RU*1000/d.imgW,RV*1000/d.imgH);
+    return tex;
+  }
+  const c=document.createElement('canvas');c.width=TW;c.height=TH;const g=c.getContext('2d');
+  const r=rng(11);
+  let x=0;const strips=[];while(x<TW){let w=110+r()*90;if(TW-x-w<80)w=TW-x;strips.push([x,w]);x+=w;}
+  strips.forEach(([x0,w],si)=>{
+    const dl=(r()-.5)*9,dh=(r()-.5)*3;
+    g.fillStyle=`hsl(${d.h+dh},${d.s}%,${d.l+dl}%)`;g.fillRect(x0,0,w,TH);
+    // soft colour bands along the board
+    for(let b=0;b<6;b++){const bx=x0+r()*w,bw=6+r()*28;
+      g.fillStyle=`hsla(${d.h},${d.s}%,${d.l+(r()<.5?-10:8)}%,${.15+r()*.2})`;g.fillRect(bx,0,bw,TH);}
+    // grain lines; wobble period divides TH so the tile repeats seamlessly
+    const n=Math.floor(w/2.2);
+    for(let i=0;i<n;i++){
+      const gx=x0+r()*w,amp=1+r()*5,k=1+Math.floor(r()*3),ph=r()*6.28,dark=r()<.72;
+      g.strokeStyle=dark?`rgba(45,26,12,${(.05+r()*.16)*(d.gc||1)})`:`rgba(255,235,200,${.04+r()*.1})`;
+      g.lineWidth=.4+r()*1.3;g.beginPath();
+      for(let y=0;y<=TH;y+=16){const xx=gx+amp*Math.sin(y/TH*6.2832*k+ph);y?g.lineTo(xx,y):g.moveTo(xx,y);}
+      g.stroke();
+    }
+    // a couple of small pins/knots, kept away from tile edges
+    const kn=r()<(d.kn||.3)?1:0;
+    for(let q=0;q<kn;q++){const kx=x0+20+r()*(w-40),ky=120+r()*(TH-240),rx=1.5+r()*2.5,ry=rx*(2+r()*2);
+      for(let ring=3;ring>=0;ring--){g.fillStyle=`rgba(50,28,12,${.08+(3-ring)*.06})`;g.beginPath();g.ellipse(kx,ky,rx+ring*2.2,ry+ring*4,0,0,6.2832);g.fill();}}
+    // board joint
+    if(si>0){g.fillStyle='rgba(40,24,12,.18)';g.fillRect(x0,0,1,TH);}
+  });
+  // fine brushed pores (ST40)
+  const img=g.getImageData(0,0,TW,TH),px=img.data,rn=rng(5);
+  for(let i=0;i<px.length;i+=4){const v=(rn()-.5)*10;px[i]+=v;px[i+1]+=v;px[i+2]+=v;}
+  g.putImageData(img,0,0);
+  const tex=new THREE.CanvasTexture(c);
+  tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.encoding=THREE.sRGBEncoding;tex.anisotropy=8;
+  return tex;
+}
+
+/* ---------- three setup ---------- */
+const canvas=document.getElementById('c'), viewer=document.getElementById('viewer');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(35,1,0.01,100);
+scene.add(new THREE.HemisphereLight(0xffffff,0x8a7f70,0.75));
+const sun=new THREE.DirectionalLight(0xffffff,0.9);
+sun.position.set(2.5,4.5,4);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera,{left:-3,right:3,top:3,bottom:-3,near:.5,far:20});
+const LIGHT={az:-35,el:45,i:100};
+function placeSun(){
+  const tx=P.W/2*MM,ty=P.H/2*MM,a=LIGHT.az*Math.PI/180,e=LIGHT.el*Math.PI/180,R=6;
+  sun.target.position.set(tx,ty,0);
+  sun.position.set(tx+R*Math.cos(e)*Math.sin(a),ty+R*Math.sin(e),R*Math.cos(e)*Math.cos(a));
+  sun.intensity=LIGHT.i/100;
+}sun.shadow.bias=-0.0005;
+scene.add(sun);scene.add(sun.target);
+
+const texCache={};
+function getTex(k){return texCache[k]||(texCache[k]=woodTexture(DECORS[k]));}
+// finish per part group: wood decor or plain colour
+const FIN={carcass:{type:'wood',decor:'H1386'},front:{type:'wood',decor:'H1386'}};
+let wood=getTex('H1386');
+const mats={
+  carcass:new THREE.MeshStandardMaterial({map:wood,roughness:.72,metalness:0}),
+  front:new THREE.MeshStandardMaterial({map:wood,roughness:.66,metalness:0}),
+  back:new THREE.MeshStandardMaterial({color:0xd9d2c4,roughness:.9}),
+  edge:new THREE.LineBasicMaterial({color:0x22180f,transparent:true,opacity:.55})
+};
+// end faces (торцы) get their own materials so they can be darkened for reading the construction
+mats.carcassEnd=new THREE.MeshStandardMaterial({roughness:.72});
+mats.frontEnd=new THREE.MeshStandardMaterial({roughness:.66});
+mats.backEnd=mats.back;
+const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
+const wallMat=new THREE.MeshStandardMaterial({roughness:.95});
+const floor=new THREE.Mesh(new THREE.PlaneGeometry(12,12),floorMat);
+floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;scene.add(floor);
+
+// texture offset depends on the part itself, not on its index, so adding or removing parts never reshuffles the grain
+// seed = part name + its order among parts with that name: sizes, heights and feet never change the grain pattern
+const seedCount={};
+function partSeed(p){let h=2166136261;const n=seedCount[p.name]=(seedCount[p.name]||0)+1;const k=p.name+'|'+n;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h%100000+13;}
+function boxGeo(sx,sy,sz,seed){
+  // grain follows the longest side of each panel, like a real cut from a board
+  const g=new THREE.BoxGeometry(sx,sy,sz),uv=g.attributes.uv,r=rng(seed),ox=r(),oy=r();
+  const dims=[sx,sy,sz],ax=dims.indexOf(Math.max(sx,sy,sz));
+  const faces=[[2,1],[2,1],[0,2],[0,2],[0,1],[0,1]]; // which axes a face's u,v run along
+  for(let f=0;f<6;f++){
+    const [au,av]=faces[f],du=dims[au],dv=dims[av];
+    const swap=(au===ax)||(av!==ax&&du>dv);
+    for(let i=0;i<4;i++){const j=f*4+i,u=uv.getX(j),v=uv.getY(j);
+      if(swap)uv.setXY(j,v*dv/RU+ox,u*du/RV+oy);else uv.setXY(j,u*du/RU+ox,v*dv/RV+oy);}
+  }
+  return g;
+}
+
+let model=null, doors=[], dimsGroup=null, wallGroup=null, current=null;
+function disposeGroup(gr){if(!gr)return;gr.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material)&&o.material.map&&!Object.values(texCache).includes(o.material.map))o.material.map.dispose();});scene.remove(gr);}
+
+function build(){
+  T=P.T||16;TF=P.TF||16;
+  disposeGroup(model);disposeGroup(dimsGroup);disposeGroup(wallGroup);
+  current=computeParts(P);
+  const prevDoors={};doors.forEach(d=>prevDoors[d.key]=d);
+  model=new THREE.Group();doors=[];for(const k in seedCount)delete seedCount[k];
+  current.parts.forEach((p,i)=>{
+    const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
+    const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz));
+    const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p)),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
+    mesh.castShadow=mesh.receiveShadow=true;
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats.edge);e.userData.edge=true;e.visible=showEdges;mesh.add(e);
+    const cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM;
+    if(p.mat==='front'){
+      const holder=new THREE.Group();
+      if(p.hinge){
+        const hx=(p.hinge==='L'?p.x0:p.x1)*MM;
+        holder.position.set(hx,0,p.z1*MM);mesh.position.set(cx-hx,cy,cz-p.z1*MM);
+        {const key=p.name+'|'+doors.length,pd=prevDoors[key];const d={g:holder,s:p.hinge==='L'?-1:1,key,a:pd?pd.a:0,t:pd?pd.t:(doorMode==='open'?DMAX:0),last:pd&&pd.last};d.g.rotation.y=d.s*d.a;doors.push(d);}
+      }else mesh.position.set(cx,cy,cz);
+      holder.add(mesh);holder.userData.front=true;model.add(holder);
+    }else{mesh.position.set(cx,cy,cz);model.add(mesh);}
+  });
+  // adjustable feet (Ø16 mm) under floor-standing cabinets; not part of the panel cut list
+  if(current.FL>0)(current.feet||[]).forEach(([x,z])=>{
+    // black plastic puck Ø15×5 mm on the floor + M6 steel pin screwed into the panel edge
+    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0075,.0075,.005,20),feetMat);
+    puck.position.set(x*MM,.0025,z*MM);puck.castShadow=true;model.add(puck);
+    const pin=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,current.FL*MM-.005,12),pinMat);
+    pin.position.set(x*MM,.005+(current.FL*MM-.005)/2,z*MM);model.add(pin);});
+  scene.add(model);
+  buildWall();buildDims();applyVisibility();updatePanel();
+  placeSun();
+}
+
+let doorPivot=null,doorOpen=false,doorAngle=0,entT=0;
+// door angles: cabinet doors open to DMAX, the entrance door to EMAX; a long press moves a door gradually
+const DMAX=1.45,EMAX=1.75,HOLD_MS=500,HOLD_RATE=60*Math.PI/180;
+let held=null,holdTimer=null,lastT=performance.now();
+let sideL=null,sideR=null,sideW=0;
+const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
+let wallParts=[];   // {m: wall mesh, f: () => visible in auto mode}
+function buildWall(){
+  wallGroup=new THREE.Group();wallParts=[];
+  // wall opening: with reveal cladding it is wider by one panel on each side and higher by one panel on top
+  const rv=P.reveal?T:0,W=P.W*MM,wh=(P.Hc||P.H)*MM,dz=P.Rv*MM,th=dz+.1,ext=.1;   // bearing wall with the door runs 100 mm past each side of the cabinet
+  const L=(P.Lw-rv)*MM,Rx=(P.W-P.Rw+rv)*MM,Hb=(current.Hb+rv)*MM;
+  const piece=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,th),wallMat);m.position.set((x0+x1)/2,(y0+y1)/2,-th/2);m.receiveShadow=true;m.castShadow=true;wallGroup.add(m);wallParts.push({m,f:()=>camera.position.z>0});};
+  piece(-ext,L,0,wh);piece(Rx,W+ext,0,wh);piece(L,Rx,Hb,wh);
+  const dw=Rx-L,dh=Hb;
+  if(dw>.2){
+    // entrance door: frame bars + leaf on a hinge pivot (left side), opening outward away from the room
+    const fm=new THREE.MeshStandardMaterial({color:0x34383b,roughness:.5,metalness:.3}),fw=.05,fd=.07;
+    const bar=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,fd),fm);m.position.set((x0+x1)/2,(y0+y1)/2,-dz-fd/2);m.receiveShadow=m.castShadow=true;m.userData.doorPart=true;wallGroup.add(m);};
+    bar(L,L+fw,0,dh);bar(Rx-fw,Rx,0,dh);bar(L+fw,Rx-fw,dh-fw,dh);
+    const lw=dw-2*fw-.006,lh=dh-fw-.01;
+    doorPivot=new THREE.Group();doorPivot.position.set(L+fw+.003,0,-dz-fd);
+    const leaf=new THREE.Mesh(new THREE.BoxGeometry(lw,lh,fd),new THREE.MeshStandardMaterial({color:0x4a4f52,roughness:.45,metalness:.35}));
+    leaf.position.set(lw/2,lh/2+.005,fd/2);leaf.castShadow=leaf.receiveShadow=true;doorPivot.add(leaf);
+    const hm=new THREE.MeshStandardMaterial({color:0xb9b9b5,metalness:.9,roughness:.25});
+    [fd+.02,-.02].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),hm);hd.position.set(lw-.12,1.0,z);doorPivot.add(hd);});
+    doorPivot.rotation.y=doorAngle;wallGroup.add(doorPivot);
+  }
+  // side walls: solid 100 mm walls along both sides of the cabinet, each hidden while the camera is outside it
+  const dep=(P.Sd??650)*MM,sw=.1;   // side walls reach into the room from the door wall
+  const solid=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,wh,z1-z0),wallMat);m.position.set((x0+x1)/2,wh/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;wallGroup.add(m);return m;};
+  sideL=solid(-sw,0,0,dep);sideR=solid(W,W+sw,0,dep);sideW=W;   // side walls start at the face of the bearing wall
+  // dark П-shaped outline of all walls on the floor (the door opening stays open)
+  const foot=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2,.002,(z0+z1)/2);m.renderOrder=1;wallGroup.add(m);};
+  foot(-sw,0,0,dep);foot(W,W+sw,0,dep);
+  foot(-sw,L,-th,0);foot(Rx,W+sw,-th,0);
+  if(sideL)wallParts.push({m:sideL,f:()=>camera.position.x>0},{m:sideR,f:()=>camera.position.x<sideW});
+  scene.add(wallGroup);
+}
+
+/* dimension lines */
+function label(text){
+  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
+  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
+  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
+  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
+  g.fillStyle='#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
+  const hgt=.075;s.scale.set(hgt*w/c.height,hgt,1);s.renderOrder=20;return s;
+}
+const dimMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true});
+function dim(a,b,txt,tick){
+  const pts=[a,b];const t=tick.clone().multiplyScalar(.04);
+  [a,b].forEach(p=>{pts.push(p.clone().add(t),p.clone().sub(t));});
+  const geo=new THREE.BufferGeometry().setFromPoints([pts[0],pts[1],pts[2],pts[3],pts[4],pts[5]]);
+  const l=new THREE.LineSegments(geo,dimMat);l.renderOrder=19;dimsGroup.add(l);
+  const s=label(txt);s.position.copy(a).add(b).multiplyScalar(.5);dimsGroup.add(s);
+}
+function buildDims(){
+  dimsGroup=new THREE.Group();
+  const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),z=P.D+60,Hb=current.Hb;
+  const ow=P.W-P.Lw-P.Rw;
+  dim(V(0,P.H+140,z),V(P.W,P.H+140,z),`${P.W}`,new THREE.Vector3(0,1,0));
+  dim(V(P.W+160,0,z),V(P.W+160,P.H,z),`${P.H}`,new THREE.Vector3(1,0,0));
+  dim(V(-160,Hb,z),V(-160,P.H,z),`${P.Ht}`,new THREE.Vector3(1,0,0));
+  dim(V(P.Lw,260,z),V(P.W-P.Rw,260,z),`проём ${ow}`,new THREE.Vector3(0,1,0));
+  dim(V((P.Lw+P.W-P.Rw)/2,0,z),V((P.Lw+P.W-P.Rw)/2,Hb,z),`${Hb}`,new THREE.Vector3(1,0,0));
+  dim(V(P.W+160,P.H+140,0),V(P.W+160,P.H+140,P.D),`${P.D}`,new THREE.Vector3(0,1,0));
+  scene.add(dimsGroup);
+}
+
+function applyVisibility(){
+  model.children.forEach(o=>{if(o.userData.front)o.visible=doorMode!=='hidden';});
+  model.traverse(o=>{if(o.userData.edge)o.visible=showEdges;});
+  dimsGroup.visible=showDims;wallGroup.visible=showWall;
+}
+
+/* theme colors for scene */
+function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
+function applyTheme(){
+  scene.background=new THREE.Color(css('--scene-bg'));
+  floorMat.color.set(css('--scene-floor'));wallMat.color.set(css('--scene-wall'));
+}
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- orbit ---------- */
+const cam={theta:.6,phi:1.32,r:6,target:new THREE.Vector3()};
+const goal={theta:.6,phi:1.32,r:6};
+const goalT=new THREE.Vector3();   // pivot the camera glides to when a view button is pressed
+function setView(v){
+  const base=Math.max(P.H,P.W*1.6)*MM*2.15*Math.max(1,Math.pow(1/(camera.aspect||1),.95));   // pull back on tall, narrow screens
+  const views={persp:[-.6,1.32,base],front:[0,1.52,base],side:[-1.35,1.56,base*.75],back:[Math.PI+.35,1.12,base*.8],low:[-.85,1.47,base*.42],shelves:[-.75,1.42,base*.65],fake:[.75,1.38,base*.8],mezz:[.35,1.38,base*.55]};
+  const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];
+  if(v==='mezz'){goalT.set(P.W/2*MM,(current.Hb+P.Ht/2)*MM,P.D*MM*.5);}
+  else if(v==='fake'){goalT.set(P.Lw*MM,current.Hb*MM*.5,P.D*MM*.5);}
+  else if(v==='low'){goalT.set(P.W*.45*MM,.3,P.D*MM*.5);}   // bottom of the cabinet and its floor junction
+  else if(v==='side'){goalT.set(P.W/2*MM,P.H*MM*.32,P.D*MM*.4);}   // low, so the floor junction is in view
+  else if(v==='shelves'){goalT.set((P.W-P.Rw)*MM,current.Hb*MM*.5,P.D*MM*.5);}
+  else goalT.set(P.W/2*MM,P.H/2*MM,P.D*MM*.4);
+}
+const ptrs=new Map();let pinch0=0;
+// orbit: drag rotates; Shift+drag, middle button or two fingers pan the camera in the view plane
+const _r=new THREE.Vector3(),_u=new THREE.Vector3();
+function pan(dx,dy){
+  const k=2*cam.r*Math.tan(camera.fov*Math.PI/360)/viewer.clientHeight;
+  _r.setFromMatrixColumn(camera.matrixWorld,0);_u.setFromMatrixColumn(camera.matrixWorld,1);
+  cam.target.addScaledVector(_r,-dx*k).addScaledVector(_u,dy*k);goalT.copy(cam.target);
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1)return;
+  if(e.button===1)e.preventDefault();
+  canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1});
+  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!ptrs.has(e.pointerId))return;const pr=ptrs.get(e.pointerId),dx=e.clientX-pr.x,dy=e.clientY-pr.y;
+  if(!held&&downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>=6)clearTimeout(holdTimer);
+  if(held){ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:pr.pan});return;}
+  if(ptrs.size===1){
+    if(e.shiftKey||pr.pan)pan(dx,dy);
+    else{goal.theta-=dx*.006;goal.phi=Math.min(1.62,Math.max(.2,goal.phi-dy*.006));}
+    ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:pr.pan});
+  }else if(ptrs.size===2){
+    ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    pan(dx/2,dy/2);
+    const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0){goal.r=Math.min(14,Math.max(0.2,goal.r*pinch0/d));}pinch0=d;
+  }
+});
+canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
+const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();let downAt=null;
+canvas.addEventListener('pointerdown',e=>{downAt=(e.pointerType==='mouse'&&e.button!==0)||e.shiftKey?null:{x:e.clientX,y:e.clientY,n:ptrs.size};
+  clearTimeout(holdTimer);
+  if(downAt&&downAt.n<=1){const d0=downAt;holdTimer=setTimeout(()=>{
+    if(downAt!==d0||ptrs.size>1)return;
+    const p=pickAt({clientX:d0.x,clientY:d0.y});if(!p)return;
+    // direction: closed or partly open -> open; fully open -> close; partly open after a previous hold -> reverse
+    const pick=(cur,max,last)=>cur<=.01?1:cur>=max-.01?-1:-(last||-1);
+    if(p.entrance){const dir=pick(doorAngle,EMAX,held&&held.last);held={entrance:true,dir};entT=doorAngle;}
+    else{const d=p.door,dir=pick(d.a,DMAX,d.last);d.last=dir;held={door:d,dir};d.t=d.a;}
+    canvas.style.cursor='grabbing';
+  },HOLD_MS);}
+});
+canvas.addEventListener('lostpointercapture',e=>{ptrs.delete(e.pointerId);});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+// what clickable thing is under the cursor: the entrance door (leaf or frame) or a cabinet door
+function pickAt(e){
+  const r=canvas.getBoundingClientRect();ndc.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+  ray.setFromCamera(ndc,camera);
+  const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
+  const h=ray.intersectObjects(scene.children,true).find(h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!(h.object.material&&h.object.material.opacity===0));
+  if(!h)return null;const o=h.object;
+  if(doorPivot&&wallGroup.visible&&(doorPivot.children.includes(o)||o.userData.doorPart))return {entrance:true};
+  const d=doors.find(d=>d.g.children.includes(o));
+  return d?{door:d}:null;
+}
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0)canvas.style.cursor=pickAt(e)?'pointer':'';});
+const up=e=>{
+  clearTimeout(holdTimer);
+  if(held){const td=document.getElementById('tDoor');if(held.entrance&&td)td.checked=entT>0;held=null;canvas.style.cursor='';downAt=null;ptrs.delete(e.pointerId);pinch0=0;syncDoorMode();return;}
+  if(downAt&&downAt.n<=1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){
+    const p=pickAt(e);
+    if(p&&p.entrance){entT=entT>=EMAX-.01?0:EMAX;doorOpen=entT>0;tDoor.checked=doorOpen;}
+    else if(p&&p.door){p.door.t=p.door.t>=DMAX-.01?0:DMAX;syncDoorMode();}
+  }
+  downAt=null;ptrs.delete(e.pointerId);pinch0=0;};
+canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);
+// wheel zooms toward the point under the cursor (surface hit, or the plane through the pivot)
+const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const r0=cam.r,r1=Math.min(14,r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012))));
+  const rc=canvas.getBoundingClientRect();
+  ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
+  ray.setFromCamera(ndc,camera);
+  const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
+  const hit=ray.intersectObjects(scene.children,true).find(h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!(h.object.material&&h.object.material.opacity===0));
+  if(hit)_zp.copy(hit.point);
+  else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}
+  const f=1-r1/r0;               // fraction of the way toward the point
+  cam.target.lerp(_zp,f);goalT.copy(cam.target);
+  cam.r=goal.r=Math.max(0.2,r1);
+},{passive:false});
+document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));
+
+function resize(){const w=viewer.clientWidth,h=viewer.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+new ResizeObserver(resize).observe(viewer);
+
+
+/* ---------- camera debug: pivot gizmo + overview inset ---------- */
+let showDebug=false;
+const noRay=o=>{o.traverse(c=>{c.raycast=()=>{};});return o;};
+const dbg=new THREE.Group();dbg.visible=false;scene.add(dbg);
+// pivot gizmo (visible in the main view): XYZ axes + sphere, always on top
+const pivot=new THREE.Group();
+[[0xd9483b,[1,0,0]],[0x3f9b4f,[0,1,0]],[0x3b6fd9,[0,0,1]]].forEach(([c,v])=>{
+  const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(...v).multiplyScalar(.25)]);
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,depthTest:false}));l.renderOrder=30;pivot.add(l);
+});
+const pivDot=new THREE.Mesh(new THREE.SphereGeometry(.022,16,12),new THREE.MeshBasicMaterial({color:0xffb300,depthTest:false}));pivDot.renderOrder=31;pivot.add(pivDot);
+dbg.add(noRay(pivot));
+// camera body, view frustum and view vector (only in the inset, layer 1)
+const DBG_COL=0xff6a00;
+const camBody=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),new THREE.MeshBasicMaterial({color:DBG_COL}));
+camBody.geometry.rotateX(-Math.PI/2);
+const viewLine=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,10),new THREE.MeshBasicMaterial({color:DBG_COL,depthTest:false}));viewLine.renderOrder=40;
+const frus=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(16*3).fill(0),3)),new THREE.LineBasicMaterial({color:DBG_COL,depthTest:false}));frus.renderOrder=41;
+const frusFill=new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(12*3).fill(0),3)),new THREE.MeshBasicMaterial({color:DBG_COL,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));frusFill.renderOrder=39;
+[camBody,viewLine,frus,frusFill].forEach(o=>{o.layers.set(1);o.frustumCulled=false;dbg.add(noRay(o));});
+const ovCam=new THREE.PerspectiveCamera(36,1.4,.05,200);ovCam.layers.enableAll();
+const _c=new THREE.Vector3(),_d=new THREE.Vector3(0,.9,1.5).normalize(),_bx=new THREE.Box3(),_sz=new THREE.Vector3(),_up=new THREE.Vector3(0,1,0),_v=new THREE.Vector3(),_q=new THREE.Quaternion();
+function updateDebug(){
+  pivot.position.copy(cam.target);
+  const pv=pivot.children.slice(0,3);pv.forEach(l=>l.scale.setScalar(Math.max(.4,cam.r*.25)));
+  pivDot.scale.setScalar(Math.max(.4,cam.r*.25));
+  // mini view frames the cabinets themselves, not the camera
+  _bx.setFromObject(model);_bx.getCenter(_c);_bx.getSize(_sz);
+  let rad=Math.max(.6,_sz.length()/2);
+  // include the main camera when it is reasonably close; if it is far, keep the model large and show an arrow instead
+  _v.subVectors(camera.position,_c);const cd=_v.length(),reach=Math.min(cd,rad*2.2);
+  if(reach>rad){_c.addScaledVector(_v.normalize(),(reach-rad)/2);rad=(reach+rad)/2+.15;}
+  const dist=rad/Math.sin(ovCam.fov*Math.PI/360)*1.02;
+  ovCam.position.copy(_c).addScaledVector(_d,dist);ovCam.lookAt(_c);
+  // camera body sized to the model, so it is always readable
+  const k=rad*.32;
+  camBody.position.copy(camera.position);camBody.lookAt(cam.target);camBody.scale.setScalar(k);
+  // thick view vector: a thin cylinder from the camera to the pivot
+  _v.subVectors(cam.target,camera.position);const len=_v.length();
+  viewLine.position.copy(camera.position).addScaledVector(_v,.5);
+  _q.setFromUnitVectors(_up,_v.clone().normalize());viewLine.quaternion.copy(_q);
+  viewLine.scale.set(rad*.012,len,rad*.012);
+  // view frustum: what the main camera sees, drawn out to the pivot distance
+  const fd=Math.min(len,rad*.5),hh=Math.tan(camera.fov*Math.PI/360)*fd,hw=hh*camera.aspect;
+  const corn=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y])=>new THREE.Vector3(x*hw,y*hh,-fd).applyMatrix4(camera.matrixWorld));
+  const o=camera.position,fp=frus.geometry.attributes.position;let i=0;
+  const put=v=>{fp.setXYZ(i++,v.x,v.y,v.z);};
+  corn.forEach(c=>{put(o);put(c);});corn.forEach((c,j)=>{put(c);put(corn[(j+1)%4]);});fp.needsUpdate=true;
+  const ff=frusFill.geometry.attributes.position;i=0;
+  corn.forEach((c,j)=>{const n=corn[(j+1)%4];[o,c,n].forEach(v=>{ff.setXYZ(i++,v.x,v.y,v.z);});});ff.needsUpdate=true;
+  // arrow at the edge of the mini view when the camera is outside its frame
+  ovCam.updateMatrixWorld();_v.copy(camera.position).project(ovCam);
+  const behind=_v.z>1,out=behind||Math.abs(_v.x)>.92||Math.abs(_v.y)>.92;
+  camArrow.hidden=!out;
+  if(out){let x=_v.x,y=_v.y;if(behind){x=-x;y=-y;}const m=Math.max(Math.abs(x),Math.abs(y))||1;x/=m;y/=m;
+    camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(16,50-y*40))+'%';
+    camArrow.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad)`;}
+  const f=v=>v.toFixed(2).replace('.',',')+' м';
+  const t=`<i>До точки</i><em>${f(cam.r)}</em><i>· Высота</i><em>${f(camera.position.y)}</em>`;
+  if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
+}
+const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><span>Камера и точка вращения</span><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
+const camArrow=inset.querySelector('.cam-arrow');
+const insetCv=inset.querySelector('.inset-cv');
+const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
+insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
+const distEl=inset.querySelector('.dist');let distTxt='';
+function loop(){
+  const k=reduce?1:.14;
+  cam.theta+=(goal.theta-cam.theta)*k;cam.phi+=(goal.phi-cam.phi)*k;cam.r+=(goal.r-cam.r)*k;
+  cam.target.lerp(goalT,k);
+  const sp=Math.sin(cam.phi);
+  camera.position.set(cam.target.x+cam.r*sp*Math.sin(cam.theta),cam.target.y+cam.r*Math.cos(cam.phi),cam.target.z+cam.r*sp*Math.cos(cam.theta));
+  camera.lookAt(cam.target);
+  // walls are cut at the chosen share of the ceiling height (bottom stays on the floor)
+  { const row=P.Wm==='row',cut=CEIL()*MM*(row?10:(P.Wh??100))/100,skel=P.Wm==='skeleton',op=skel?0:1;
+    // walls share their own material so transparency never touches the riser, boxes or furniture
+    wallTMat.color.copy(wallMat.color);wallTMat.opacity=op;
+    const tr=op<.999;if(wallTMat.transparent!==tr){wallTMat.transparent=tr;wallTMat.depthWrite=!tr;wallTMat.needsUpdate=true;}
+    wallParts.forEach(w=>{
+      if(w.m.material!==wallTMat)w.m.material=wallTMat;
+      w.m.castShadow=!skel;w.m.receiveShadow=!tr;
+      // skeleton: invisible faces, edges drawn as lines
+      if(skel&&!w.e){w.e=new THREE.LineSegments(new THREE.EdgesGeometry(w.m.geometry),wallEdgeMat);w.e.raycast=()=>{};w.m.add(w.e);}
+      if(w.e)w.e.visible=skel;
+      if(w.b===undefined){const h=w.m.geometry.parameters.height;w.b=w.m.position.y-h/2;w.t=w.m.position.y+h/2;w.h=h;}
+      const top=Math.min(w.t,cut),fits=top>w.b+.001;
+      w.m.visible=fits&&(P.Wm==='show'||row||skel?true:P.Wm==='outline'?false:w.f());
+      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
+    }); }
+  const now=performance.now(),dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  if(held&&held.entrance){entT=Math.min(EMAX,Math.max(0,entT+held.dir*HOLD_RATE*dt));doorAngle=entT;doorOpen=entT>0;}
+  else doorAngle+=(entT-doorAngle)*(reduce?1:.07);
+  if(doorPivot)doorPivot.rotation.y=doorAngle;
+  doors.forEach(d=>{
+    if(held&&held.door===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
+    else d.a+=(d.t-d.a)*(reduce?1:.09);
+    d.g.rotation.y=d.s*d.a;});
+  renderer.setScissorTest(false);renderer.setViewport(0,0,viewer.clientWidth,viewer.clientHeight);
+  if(showDebug)updateDebug();
+  renderer.render(scene,camera);
+  if(showDebug){
+    // the mini view has its own small canvas, so the frame can have properly rounded, clipped corners
+    const w=insetCv.clientWidth,h=insetCv.clientHeight;
+    if(w&&h){if(insetCv.width!==Math.round(w*insetR.getPixelRatio()))insetR.setSize(w,h,false);
+      ovCam.aspect=w/h;ovCam.updateProjectionMatrix();insetR.render(scene,ovCam);}
+  }
+  requestAnimationFrame(loop);
+}
+
+/* ---------- panel ---------- */
+const ids=['Hc','Sd','W','H','D','Ht','Lw','Rw','N','Pl','Rv'];
+function clamp(){
+  P.H=Math.min(P.H,P.Hc);
+  P.Ht=Math.min(P.Ht,P.H-1800);
+  const maxSide=P.W-600;if(P.Lw+P.Rw>maxSide){P.Rw=Math.max(150,maxSide-P.Lw);}
+}
+ids.forEach(id=>{
+  const el=document.getElementById(id);el.value=P[id];
+  el.addEventListener('input',()=>{P[id]=+el.value;clamp();ids.forEach(j=>document.getElementById(j).value=P[j]);build();});
+});
+// fronts segment reflects per-door state: all open, all closed, or mixed (nothing pressed)
+function syncDoorMode(){
+  if(doorMode==='hidden')return;
+  const n=doors.filter(d=>d.t>=DMAX-.01).length,z=doors.filter(d=>d.t<=.01).length;
+  doorMode=n===doors.length?'open':z===doors.length?'closed':'mixed';
+  document.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===doorMode));
+}
+document.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
+  doorMode=b.dataset.door;if(doorMode!=='hidden')doors.forEach(d=>d.t=doorMode==='open'?DMAX:0);
+  document.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x===b));applyVisibility();
+}));
+const fin=k=>FIN[k];
+const finName=f=>f.type==='wood'?DECORS[f.decor].name+(DECORS[f.decor].code?' '+DECORS[f.decor].code:''):f.name;
+function applyMaterials(){
+  ['carcass','front'].forEach(k=>{
+    const m=mats[k],f=fin(k);
+    if(f.type==='uni'){m.map=null;m.color.copy(new THREE.Color(f.color).convertSRGBToLinear());m.roughness=.6;}
+    else{const d=DECORS[f.decor];m.map=getTex(f.decor);m.color.setScalar(d.img?(d.gain||PHOTO_GAIN):1);m.roughness=k==='front'?.66:.72;}
+    m.needsUpdate=true;
+  });
+  applyContrast();
+}
+function applyContrast(){
+  // light finishes: darken end faces and joint lines; dark finishes: lighten them softly
+  const c=P.Ec/100;
+  const lum=k=>{const f=fin(k);if(f.type==='wood')return DECORS[f.decor].l/100;const s=new THREE.Color(f.color);return .3*s.r+.59*s.g+.11*s.b;};
+  ['carcass','front'].forEach(k=>{
+    const m=mats[k],e=mats[k+'End'],dark=lum(k)<.42;
+    e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
+    if(dark){e.emissive.setRGB(.13*c,.11*c,.08*c);}
+    else{e.color.multiplyScalar(1-.72*c);e.emissive.setRGB(0,0,0);}
+    e.needsUpdate=true;
+  });
+  const darkFronts=lum('front')<.42;
+  mats.edge.opacity=.25+.75*c;
+  if(darkFronts)mats.edge.color.setRGB(.13+.32*c,.11+.28*c,.09+.22*c);
+  else mats.edge.color.setRGB(.13*(1-c),.09*(1-c),.06*(1-c));
+  const el=document.getElementById('Ec');el.value=P.Ec;document.getElementById('oEc').textContent=P.Ec+'%';
+}
+document.getElementById('Ec').addEventListener('input',e=>{P.Ec=+e.target.value;applyContrast();});
+const palette=[...document.querySelectorAll('[data-decor],[data-uc]')];
+palette.forEach(b=>{const t=document.createElement('span');t.className='tags';b.appendChild(t);});
+const matches=(b,f)=>f.type==='wood'?b.dataset.decor===f.decor:(b.dataset.uc||'').toLowerCase()===(f.color||'').toLowerCase();
+function syncFinish(){
+  palette.forEach(b=>{
+    const c=matches(b,FIN.carcass),f=matches(b,FIN.front);
+    b.setAttribute('aria-pressed',c||f);
+    b.querySelector('.tags').innerHTML=(c?'<b>К</b>':'')+(f?'<b>Ф</b>':'');
+  });
+  const custom=f=>f.type==='uni'&&!palette.some(b=>matches(b,f));
+  const cf=custom(FIN.front)?FIN.front:custom(FIN.carcass)?FIN.carcass:null;
+  document.getElementById('uniColor').value=cf?cf.color:'#C2B8AA';
+  document.getElementById('ccCard').classList.toggle('on',!!cf);
+  document.getElementById('ccCode').textContent=cf?cf.color.toUpperCase():'палитра';
+  document.getElementById('ccTags').innerHTML=(custom(FIN.carcass)?'<b>К</b>':'')+(custom(FIN.front)?'<b>Ф</b>':'');
+  document.getElementById('finNow').innerHTML=`<span>Корпус</span><span>${finName(FIN.carcass)}</span><span>Фасады</span><span>${finName(FIN.front)}</span>`;
+}
+function setFinish(f,where){
+  if(where!=='front')FIN.carcass=Object.assign({},f);
+  if(where!=='carcass')FIN.front=Object.assign({},f);
+  applyMaterials();syncFinish();updatePanel();
+}
+// context menu: apply a swatch to the carcass or the fronts only
+const ctx=document.getElementById('ctx');let ctxPick=null;
+function openCtx(x,y,pick){
+  ctxPick=pick;ctx.hidden=false;
+  const w=ctx.offsetWidth,h=ctx.offsetHeight;
+  ctx.style.left=Math.min(x,innerWidth-w-8)+'px';ctx.style.top=Math.min(y,innerHeight-h-8)+'px';
+  ctx.querySelector('button').focus();
+}
+function closeCtx(){ctx.hidden=true;ctxPick=null;}
+ctx.querySelectorAll('[data-where]').forEach(b=>b.addEventListener('click',()=>{const p=ctxPick;closeCtx();if(p)p(b.dataset.where);}));
+document.addEventListener('pointerdown',e=>{if(!ctx.hidden&&!ctx.contains(e.target))closeCtx();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx();});
+document.querySelector('.panel').addEventListener('scroll',closeCtx);
+const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};
+document.querySelectorAll('[data-decor]').forEach(b=>{const d=DECORS[b.dataset.decor];if(d&&d.img){const sw=b.querySelector('.sw');sw.style.background=`url(${d.img}) center/cover`;}});
+// long press (mouse or touch) opens the same menu; the click that follows is swallowed
+function longPress(el,fn){
+  let t=null,sx=0,sy=0;
+  el.addEventListener('pointerdown',e=>{if(e.button!==0)return;sx=e.clientX;sy=e.clientY;el.dataset.lp='';clearTimeout(t);
+    t=setTimeout(()=>{el.dataset.lp='1';fn(sx,sy);},550);});
+  const stop=()=>clearTimeout(t);
+  el.addEventListener('pointerup',stop);el.addEventListener('pointerleave',stop);el.addEventListener('pointercancel',stop);
+  el.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>8)stop();});
+  el.addEventListener('click',e=>{if(el.dataset.lp==='1'){e.preventDefault();e.stopImmediatePropagation();el.dataset.lp='';}},true);
+}
+palette.forEach(b=>{
+  b.addEventListener('click',()=>setFinish(pickFor(b),'both'));
+  b.title='Клик — весь шкаф. Правая кнопка или долгое нажатие — только корпус или фасады';
+  b.addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>setFinish(pickFor(b),w));});
+  longPress(b,(x,y)=>openCtx(x,y,w=>setFinish(pickFor(b),w)));
+});
+let ccWhere='both';
+const ccInput=document.getElementById('uniColor');
+ccInput.addEventListener('click',()=>{if(!ccInput.dataset.keep)ccWhere='both';delete ccInput.dataset.keep;});
+document.getElementById('ccCard').addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>{ccWhere=w;ccInput.dataset.keep='1';ccInput.click();});});
+ccInput.addEventListener('input',e=>setFinish({type:'uni',color:e.target.value,name:'Свой цвет '+e.target.value.toUpperCase()},ccWhere));
+const feetMat=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.6});
+const pinMat=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
+function syncThick(){const tf=document.getElementById('tFeet');if(tf)tf.checked=!!P.Feet;document.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
+document.getElementById('tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;build();});
+document.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
+// wall display mode: always shown, hidden when the camera is behind them, or only their floor outlines
+const wallEdgeMat=new THREE.LineBasicMaterial({color:0x4a4d50});
+const wallTMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide});
+const CEIL=()=>(P.Hc||P.H);
+function syncWm(){const wh=document.getElementById('Wh');wh.value=P.Wh??100;document.getElementById('oWh').textContent=(P.Wm==='row'?10:(P.Wh??100))+'%';wh.disabled=P.Wm==='row'||P.Wm==='outline';wh.parentElement.style.opacity=wh.disabled?.45:1;document.querySelectorAll('[data-wm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.wm===(P.Wm||'auto')));}
+document.querySelectorAll('[data-wm]').forEach(b=>b.addEventListener('click',()=>{P.Wm=b.dataset.wm;syncWm();}));
+document.getElementById('Wh').addEventListener('input',e=>{P.Wh=+e.target.value;syncWm();});
+syncWm();
+document.getElementById('tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;build();});
+document.getElementById('tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;document.getElementById('Pl').disabled=!P.plinth;document.getElementById('plField').style.opacity=P.plinth?1:.45;build();});
+let spin=false;
+const lmap={Laz:'az',Lel:'el',Li:'i'},lunit={az:'°',el:'°',i:'%'};
+function syncLight(){Object.entries(lmap).forEach(([id,k])=>{document.getElementById(id).value=LIGHT[k];document.getElementById('o'+id).textContent=Math.round(LIGHT[k])+lunit[k];});placeSun();}
+Object.entries(lmap).forEach(([id,k])=>document.getElementById(id).addEventListener('input',e=>{LIGHT[k]=+e.target.value;syncLight();}));
+const spinBtn=document.getElementById('lightSpin');
+spinBtn.addEventListener('click',()=>{spin=!spin;spinBtn.setAttribute('aria-pressed',spin);spinBtn.textContent=spin?'Остановить':'Вращать свет';});
+document.getElementById('lightReset').addEventListener('click',()=>{Object.assign(LIGHT,{az:-35,el:45,i:100});syncLight();});
+setInterval(()=>{if(!spin)return;LIGHT.az=LIGHT.az>=180?-180:LIGHT.az+1;syncLight();},40);
+syncLight();
+document.getElementById('tDims').addEventListener('change',e=>{showDims=e.target.checked;applyVisibility();});
+document.getElementById('tWall').addEventListener('change',e=>{showWall=e.target.checked;applyVisibility();});
+const tDoor=document.getElementById('tDoor');tDoor.addEventListener('change',e=>{doorOpen=e.target.checked;entT=doorOpen?EMAX:0;});
+const infoBtn=document.getElementById('infoBtn');
+const setInfo=o=>infoBtn.setAttribute('aria-expanded',o);
+infoBtn.addEventListener('click',()=>setInfo(infoBtn.getAttribute('aria-expanded')!=='true'));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setInfo(false);});
+const camBtn=document.getElementById('camBtn');
+camBtn.addEventListener('click',()=>{showDebug=!showDebug;camBtn.setAttribute('aria-expanded',showDebug);dbg.visible=showDebug;inset.hidden=!showDebug;viewer.classList.toggle('dbg-on',showDebug);});
+document.getElementById('tEdges').addEventListener('change',e=>{showEdges=e.target.checked;applyVisibility();});
+
+const matName=m=>m==='back'?'ХДФ 4':`ЛДСП ${m==='front'?TF:T} · `+finName(fin(m));
+function cutList(){
+  const map=new Map();
+  current.parts.forEach(p=>{
+    const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0].map(v=>Math.round(v)).sort((a,b)=>b-a);
+    const key=p.name+'|'+d[0]+'|'+d[1];
+    if(!map.has(key))map.set(key,{name:p.name,mat:p.mat,L:d[0],B:d[1],t:d[2],n:0});map.get(key).n++;
+  });
+  return [...map.values()];
+}
+function updatePanel(){
+  ids.forEach(id=>document.getElementById('o'+id).textContent=id==='N'?P[id]:P[id]+' мм');
+  const same=finName(fin('carcass'))===finName(fin('front'));
+  const dn=same?finName(fin('carcass')):`корпус — ${finName(fin('carcass'))}; фасады — ${finName(fin('front'))}`;
+  document.getElementById('sub').textContent=`${P.W} × ${P.H} × ${P.D} мм · ${dn}`;
+  { const pl=P.plinth?P.Pl:0,t=P.T||16,step=(P.H-P.Ht-t-pl-(P.Feet?10:0))/(P.N+1),f=v=>v.toFixed(1).replace('.',',').replace(',0','');
+    document.getElementById('shelfGap').textContent=`Между полками ${f(step-t)} мм · секций ${P.N+1}`; }
+  const ow=P.W-P.Lw-P.Rw,oh=P.H-P.Ht;
+  const chips=[[`ширина ${ow} мм`,ow<800],[`высота ${oh} мм`,oh<2000]];
+  document.getElementById('chips').innerHTML=chips.map(([t,w])=>`<span class="chip${w?' warn':''}">${t}${w?' · мало для двери 800×2000':''}</span>`).join('');
+  // group by material so each sheet decor can be ordered separately
+  const rows=cutList().sort((a,b)=>matName(a.mat).localeCompare(matName(b.mat)));const area={};
+  let last='';
+  document.getElementById('cut').innerHTML=rows.map(r=>{const mn=matName(r.mat);area[mn]=(area[mn]||0)+r.L*r.B*r.n/1e6;
+    const head=mn!==last?`<tr><th colspan="3" class="mh">${mn}</th></tr>`:'';last=mn;
+    return head+`<tr><td>${r.name}</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.n}</td></tr>`;}).join('');
+  const total=rows.reduce((s,r)=>s+r.n,0);
+  document.getElementById('tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')+(current.FL>0?`<span>Опоры регулируемые М6, шайба Ø15×5: ${current.feet.length} шт</span>`:'');
+  document.getElementById('csv').value='Деталь;Материал;Длина;Ширина;Толщина;Кол-во\n'+rows.map(r=>[r.name,matName(r.mat),r.L,r.B,r.t,r.n].join(';')).join('\n');
+}
+document.getElementById('copy').addEventListener('click',()=>{
+  const ta=document.getElementById('csv'),msg=document.getElementById('copied');
+  navigator.clipboard.writeText(ta.value).then(()=>{msg.textContent='Скопировано';}).catch(()=>{ta.hidden=false;ta.focus();ta.select();msg.textContent='Выделено — нажмите Ctrl+C';});
+});
+
+const FACTORY=JSON.stringify({P,LIGHT,FIN});
+const KEY='apt-hall-v1';
+function getState(){return {P:Object.assign({},P),LIGHT:Object.assign({},LIGHT),FIN:JSON.parse(JSON.stringify(FIN))};}
+function applyState(s,rebuild){
+  if(s.P)Object.assign(P,s.P);if(s.LIGHT)Object.assign(LIGHT,s.LIGHT);
+  const okF=f=>f&&(f.type==='uni'||(f.type==='wood'&&DECORS[f.decor]));
+  if(s.FIN&&okF(s.FIN.carcass)&&okF(s.FIN.front)){FIN.carcass=s.FIN.carcass;FIN.front=s.FIN.link?Object.assign({},s.FIN.carcass):s.FIN.front;}
+  else if(s.decor){ // older saved format: one decor + optional plain colour scope
+    const w={type:'wood',decor:DECORS[s.decor]?s.decor:'H1386'},u=s.UNI?{type:'uni',color:s.UNI.color,name:s.UNI.name}:null;
+    const sc=u?s.UNI.scope:'none';
+    FIN.carcass=sc==='all'?u:w;FIN.front=sc==='none'?w:u;
+  }
+  applyMaterials();syncFinish();
+  ids.forEach(j=>document.getElementById(j).value=P[j]);
+  document.getElementById('tPlinth').checked=P.plinth;document.getElementById('tReveal').checked=P.reveal;
+  document.getElementById('Pl').disabled=!P.plinth;document.getElementById('plField').style.opacity=P.plinth?1:.45;
+  syncThick();syncWm();syncLight();if(rebuild)build();
+}
+try{const s=localStorage.getItem(KEY);if(s)applyState(JSON.parse(s),false);}catch(e){}
+const defMsg=document.getElementById('defMsg');
+document.getElementById('saveDef').addEventListener('click',()=>{try{localStorage.setItem(KEY,JSON.stringify(getState()));defMsg.textContent='Сохранено в этом браузере';}catch(e){defMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
+document.getElementById('resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY),true);defMsg.textContent='Исходные настройки возвращены';});
+document.getElementById('copyDef').addEventListener('click',()=>{
+  const ta=document.getElementById('defCode');ta.value=JSON.stringify(getState());
+  navigator.clipboard.writeText(ta.value).then(()=>{defMsg.textContent='Код скопирован';}).catch(()=>{ta.hidden=false;ta.focus();ta.select();defMsg.textContent='Выделено — нажмите Ctrl+C';});
+});
+const sizesBox=document.getElementById('sizesBox');
+try{sizesBox.open=localStorage.getItem('apt-hall-sizes')!=='0';}catch(e){sizesBox.open=true;}
+sizesBox.addEventListener('toggle',()=>{try{localStorage.setItem('apt-hall-sizes',sizesBox.open?'1':'0');}catch(e){}});
+applyTheme();applyMaterials();syncFinish();build();resize();setView('shelves');cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);loop();
+})();
+</script>
+
+</body></html>

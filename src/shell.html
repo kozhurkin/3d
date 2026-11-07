@@ -1,0 +1,66 @@
+<title>Шкафы в квартире</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Tenor+Sans&display=swap">
+<style>
+/* Layout: a slim tab bar over a full-height frame that holds the selected cabinet model */
+:root{
+  --bg:#ECEDE9; --panel:#F7F7F4; --fg:#1E2321; --muted:#626B66; --line:#D3D6D0; --accent:#2F5D50; --accent-soft:#DCE7E2;
+  --f-display:"Tenor Sans", Georgia, serif; --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; color-scheme:dark;}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column}
+.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar h1{font:400 20px/1.2 var(--f-display);margin:0}
+.tabs{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.tabs a{font:500 14px/1 var(--f-body);color:var(--fg);text-decoration:none;padding:9px 16px;background:var(--panel)}
+.tabs a+a{border-left:1px solid var(--line)}
+.tabs a[aria-current="page"]{background:var(--accent);color:var(--panel)}
+.tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.frames{flex:1;min-height:0;position:relative}
+.err{position:absolute;left:16px;top:16px;margin:0;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 12px;z-index:2}
+.frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+</style>
+
+<header class="bar">
+  <h1>Шкафы в квартире</h1>
+  <nav class="tabs" aria-label="Шкаф">
+    <a href="#hall" data-tab="hall">Прихожая</a>
+    <a href="#bath" data-tab="bath">Санузел</a>
+    <a href="#kitchen" data-tab="kitchen">Кухня</a>
+  </nav>
+</header>
+<main class="frames">
+  <p id="err" class="err" hidden></p>
+  <iframe id="f-hall" title="Шкаф-портал у входной двери" hidden></iframe>
+  <iframe id="f-bath" title="Шкафы в санузле" hidden></iframe>
+  <iframe id="f-kitchen" title="Кухня" hidden></iframe>
+</main>
+
+<script>
+(function(){
+  const tabs=['hall','bath','kitchen'];
+  // keep the explicit light/dark choice in sync inside the frames
+  function syncTheme(fr){
+    try{const t=document.documentElement.getAttribute('data-theme');const r=fr.contentDocument&&fr.contentDocument.documentElement;
+      if(r){t?r.setAttribute('data-theme',t):r.removeAttribute('data-theme');}}catch(e){}
+  }
+  function show(){
+    const cur=tabs.includes(location.hash.slice(1))?location.hash.slice(1):'hall';
+    tabs.forEach(t=>{
+      const fr=document.getElementById('f-'+t),on=t===cur;
+      if(on&&!fr.dataset.loaded){fr.dataset.loaded='1';fr.addEventListener('load',()=>syncTheme(fr));
+        // load the model's page text and run it as srcdoc: same origin as this page, so the viewer's frame rules allow it
+        fr.srcdoc=PAGES[t];}
+      fr.hidden=!on;
+      document.querySelector(`[data-tab="${t}"]`).setAttribute('aria-current',on?'page':'false');
+    });
+  }
+  new MutationObserver(()=>tabs.forEach(t=>syncTheme(document.getElementById('f-'+t)))).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  addEventListener('hashchange',show);show();
+})();
+</script>

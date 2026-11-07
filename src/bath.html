@@ -799,7 +799,10 @@ const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
 insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
 const distEl=inset.querySelector('.dist');let distTxt='';
 function loop(){
-  const k=reduce?1:.14;
+  const now=performance.now(),dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+  // easing per second, not per frame: the same speed at 60 and 120 Hz (factors are per 1/120 s)
+  const ease=f=>reduce?1:1-Math.pow(1-f,dt*120);
+  const k=ease(.14);
   cam.theta+=(goal.theta-cam.theta)*k;cam.phi+=(goal.phi-cam.phi)*k;cam.r+=(goal.r-cam.r)*k;
   cam.target.lerp(goalT,k);
   const sp=Math.sin(cam.phi);
@@ -821,13 +824,12 @@ function loop(){
       w.m.visible=fits&&(P.Wm==='show'||row||skel?true:P.Wm==='outline'?false:w.f());
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     }); }
-  const now=performance.now(),dt=Math.min(.1,(now-lastT)/1000);lastT=now;
   if(held&&held.entrance){entT=Math.min(EMAX,Math.max(0,entT+held.dir*HOLD_RATE*dt));doorAngle=entT;doorOpen=entT>0;}
-  else doorAngle+=(entT-doorAngle)*(reduce?1:.07);
+  else doorAngle+=(entT-doorAngle)*ease(.07);
   if(doorPivot)doorPivot.rotation.y=doorAngle;
   doors.forEach(d=>{
     if(held&&held.door===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
-    else d.a+=(d.t-d.a)*(reduce?1:.09);
+    else d.a+=(d.t-d.a)*ease(.09);
     d.g.rotation.y=d.s*d.a;});
   renderer.setScissorTest(false);renderer.setViewport(0,0,viewer.clientWidth,viewer.clientHeight);
   if(showDebug)updateDebug();

@@ -590,7 +590,7 @@ const goal={theta:.6,phi:1.32,r:6};
 const goalT=new THREE.Vector3();   // pivot the camera glides to when a view button is pressed
 function setView(v){
   const base=Math.max(P.H,P.W*1.6)*MM*2.15*Math.max(1,Math.pow(1/(camera.aspect||1),.95));   // pull back on tall, narrow screens
-  const views={persp:[-.6,1.32,base],front:[0,1.52,base],side:[-1.35,1.56,base*.75],back:[Math.PI+.35,1.12,base*.8],low:[-.85,1.47,base*.42],shelves:[-.75,1.42,base*.65],fake:[.75,1.38,base*.8],mezz:[.35,1.38,base*.55]};
+  const views={persp:[-.6,1.32,base*.9],front:[0,1.52,base],side:[-1.35,1.56,base*.75],back:[Math.PI+.35,1.12,base*.8],low:[-.85,1.47,base*.42],shelves:[-.75,1.42,base*.65],fake:[.75,1.38,base*.8],mezz:[.35,1.38,base*.55]};
   const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];
   if(v==='mezz'){goalT.set(P.W/2*MM,(current.Hb+P.Ht/2)*MM,P.D*MM*.5);}
   else if(v==='fake'){goalT.set(P.Lw*MM,current.Hb*MM*.5,P.D*MM*.5);}
@@ -1007,7 +1007,7 @@ document.getElementById('copyDef').addEventListener('click',()=>{
 const sizesBox=document.getElementById('sizesBox');
 try{sizesBox.open=localStorage.getItem('apt-hall-sizes')!=='0';}catch(e){sizesBox.open=true;}
 sizesBox.addEventListener('toggle',()=>{try{localStorage.setItem('apt-hall-sizes',sizesBox.open?'1':'0');}catch(e){}});
-applyTheme();applyMaterials();syncFinish();build();resize();setView('shelves');cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);loop();
+applyTheme();applyMaterials();syncFinish();build();resize();setView('persp');cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);loop();
 })();
 </script>
 

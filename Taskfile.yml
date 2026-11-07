@@ -1,0 +1,17 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Собрать index.html из src/ в один файл
+    sources:
+      - src/*.html
+      - src/decors.js
+      - build.js
+    generates:
+      - index.html
+    cmds:
+      - node build.js
+
+  default:
+    cmds:
+      - task: build

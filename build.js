@@ -8,7 +8,7 @@ const escapeScript = (s) => s.replaceAll('</', '<\\/');
 
 const bridge = '<script>(function(){var p=parent;["PHOTO_GAIN","DECORS","PALETTE_WOOD","PALETTE_UNI"].forEach(function(k){window[k]=p[k];});window.renderPalette=new Function("return "+p.renderPalette.toString())();})();</script>';
 
-const pages = Object.fromEntries(['hall', 'bath', 'kitchen'].map((k) =>
+const pages = Object.fromEntries(['hall', 'bath', 'kitchen', 'plan'].map((k) =>
   [k, read(k + '.html').replaceAll('<script src="decors.js"></script>', bridge)]));
 
 const inject = escapeScript(read('decors.js')) + '\nconst PAGES=' + escapeScript(JSON.stringify(pages)) + ';';

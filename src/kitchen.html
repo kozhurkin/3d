@@ -605,11 +605,12 @@ let wallParts=[];   // {m: wall mesh, f: () => visible in auto mode}
 function buildWall(){
   wallGroup=new THREE.Group();wallParts=[];
   const W=P.W*MM,H=P.H*MM,Lz=P.L*MM,c=current;
-  // kitchen wall and left wall: solid 100 mm, each hidden while the camera is behind it
-  backWall=new THREE.Mesh(new THREE.BoxGeometry(W+.1,H,.1),wallMat);backWall.position.set(W/2-.05,H/2,-.05);backWall.castShadow=backWall.receiveShadow=true;wallGroup.add(backWall);
-  leftWall=new THREE.Mesh(new THREE.BoxGeometry(.1,H,Lz),wallMat);leftWall.position.set(-.05,H/2,Lz/2);leftWall.castShadow=leftWall.receiveShadow=true;wallGroup.add(leftWall);
+  // kitchen wall: solid 100 mm; left wall: external bearing wall, solid 200 mm, runs through the corner (as on the plan tab);
+  // each hidden while the camera is behind it
+  backWall=new THREE.Mesh(new THREE.BoxGeometry(W,H,.1),wallMat);backWall.position.set(W/2,H/2,-.05);backWall.castShadow=backWall.receiveShadow=true;wallGroup.add(backWall);
+  leftWall=new THREE.Mesh(new THREE.BoxGeometry(.2,H,Lz+.1),wallMat);leftWall.position.set(-.1,H/2,(Lz-.1)/2);leftWall.castShadow=leftWall.receiveShadow=true;wallGroup.add(leftWall);
   const foot=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2,.002,(z0+z1)/2);m.renderOrder=1;wallGroup.add(m);};
-  foot(-.1,W,-.1,0);foot(-.1,0,0,Lz);
+  foot(0,W,-.1,0);foot(-.2,0,-.1,Lz);
   const box=(x0,x1,y0,y1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),mat);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;wallGroup.add(m);return m;};
   const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
   // sink with mixer in the first base cabinet

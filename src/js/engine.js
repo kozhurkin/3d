@@ -99,10 +99,11 @@ function pickDoor(e){
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
   ray.setFromCamera(ndc,camera);
-  const h=ray.intersectObjects(scene.children,true).find(h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object));
+  const h=ray.intersectObjects(scene.children,true).find(hittable);
   if(!h)return null;
-  // the leaf, its handles or the entrance frame
-  for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o);if(d)return d;}
+  // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of the view's furniture
+  const fd=VIEWS[view]&&VIEWS[view].furniture?VIEWS[view].furniture().doors:[];
+  for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o);if(d)return d;}
   return null;
 }
 canvas.addEventListener('pointerup',e=>{
@@ -120,13 +121,16 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
 const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
+// what the cursor can hit: a visible surface (not a line, a label, or a wall turned see-through in the skeleton mode)
+const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
+const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();
   const r0=cam.r,r1=Math.min(30,Math.max(.3,r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012)))));
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
   ray.setFromCamera(ndc,camera);
-  const hit=ray.intersectObjects(scene.children,true).find(h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object));
+  const hit=ray.intersectObjects(scene.children,true).find(hittable);
   if(hit)_zp.copy(hit.point);
   else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}
   cam.target.lerp(_zp,1-r1/r0);goalT.copy(cam.target);

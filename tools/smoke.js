@@ -56,13 +56,16 @@ function el(tag, attrs = {}) {
     textContent: '', value: attrs.value ?? '', checked: 'checked' in attrs, disabled: 'disabled' in attrs,
     clientWidth: 800, clientHeight: 600, width: 300, height: 150,
     get id() { return this.attrs.id || ''; },
+    get className() { return this.attrs.class || ''; }, set className(v) { this.attrs.class = String(v); },
+    focus() {}, select() {}, contains(x) { for (; x; x = x.parentElement) if (x === this) return true; return false; },
     get hidden() { return 'hidden' in this.attrs; },
     set hidden(v) { if (v) this.attrs.hidden = ''; else delete this.attrs.hidden; },
     getAttribute(k) { return k in this.attrs ? this.attrs[k] : null; },
     setAttribute(k, v) { this.attrs[k] = String(v); },
     removeAttribute(k) { delete this.attrs[k]; },
     hasAttribute(k) { return k in this.attrs; },
-    set innerHTML(h) { this.children.forEach((c) => (c.parentElement = null)); this.children = []; parseHTML(h, this); },
+    set innerHTML(h) { this.children.forEach((c) => (c.parentElement = null)); this.children = []; this._html = String(h); parseHTML(this._html, this); },
+    get innerHTML() { return this._html; },   // what was last written (enough for the checks)
     appendChild(c) {
       if (c.parentElement) c.parentElement.children = c.parentElement.children.filter((x) => x !== c);
       c.parentElement = this; this.children.push(c); return c;
@@ -134,7 +137,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
   const THREE = stub('THREE'); THREE.Vector3 = Vec3;
   const win = {
     THREE, document, localStorage, console, performance, setTimeout, clearTimeout, Math, JSON,
-    devicePixelRatio: 1, location: { hash },
+    devicePixelRatio: 1, location: { hash }, innerWidth: 1280, innerHeight: 800,
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     getComputedStyle: () => ({ getPropertyValue: () => ' #cccccc ' }),
     requestAnimationFrame: (f) => frames.push(f),
@@ -317,7 +320,7 @@ check('кухня (новая): рамка левой стены, переход
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2000'; fl.dispatch('input');
   assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true, fronts: 'closed', dims: true, walls: true, edges: true });
   fl.value = '9000'; fl.dispatch('input');   // no further than the window wall, which stays out of the kitchen view
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
@@ -381,6 +384,77 @@ check('кухня (новая): шкафы видны только в своей
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
   assert.match(p.document.getElementById('k-gapBase').textContent, /справа свободно 200 мм/);
   assert.strictEqual(p.document.getElementById('k-W').textContent, '2300 мм');
+});
+
+check('кухня (новая): отделка — палитра, меню образца, свой цвет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s), sub = () => kq('#kSub').textContent;
+  assert.strictEqual(kp.querySelectorAll('[data-decor]').length, DECOR_PARENT.PALETTE_WOOD.length);
+  assert.strictEqual(kp.querySelectorAll('[data-uc]').length, DECOR_PARENT.PALETTE_UNI.length);
+  assert.ok(matches(kq('#k-ccCard'), '[aria-label="Монотонные декоры"] .cc'), 'own colour card stays with the plain colours');
+  // what each swatch carries: К carcass, Ф fronts, С worktop, А apron (follows the worktop)
+  const tags = (s) => kq(s).querySelector('.tags').innerHTML;
+  assert.strictEqual(tags('[data-uc="#F1F0EA"]'), '<b>К</b>'); assert.strictEqual(tags('[data-uc="#C2B8AA"]'), '<b>Ф</b>');
+  assert.strictEqual(tags('[data-decor="C1385"]'), '<b>С</b><b>А</b>');
+  // a click paints carcass and fronts
+  kq('[data-decor="H1180"]').click();
+  assert.match(sub(), /потолок 2600 мм · Дуб Галифакс натуральный H1180 ST37; столешница — Дуб Каселла/);
+  // the swatch menu paints one group: the worktop
+  const ctx = p.document.getElementById('ctx');
+  kq('[data-uc="#F1F0EA"]').dispatch('contextmenu', { clientX: 100, clientY: 100 });
+  assert.strictEqual(ctx.hidden, false);
+  assert.deepStrictEqual(ctx.querySelectorAll('[data-where]').filter((b) => !b.hidden).map((b) => b.dataset.where), ['carcass', 'front', 'top', 'apron']);
+  ctx.querySelector('[data-where="top"]').click();
+  assert.strictEqual(ctx.hidden, true);
+  assert.match(sub(), /столешница — Белый премиум W1000 ST9$/);
+  // the apron on its own, then back with the worktop
+  kq('[data-decor="H1180"]').dispatch('contextmenu', { clientX: 1, clientY: 1 }); ctx.querySelector('[data-where="apron"]').click();
+  assert.match(kq('#k-finNow').innerHTML, /Фартук<\/span><span>Дуб Галифакс натуральный H1180 ST37 <button/);
+  kq('#k-apronReset').click();
+  assert.match(kq('#k-finNow').innerHTML, /Фартук<\/span><span>как столешница/);
+  // own colour for the whole cabinet
+  const cc = kq('#k-uniColor'); cc.click(); cc.value = '#123456'; cc.dispatch('input');
+  assert.match(sub(), /Свой цвет #123456; столешница/);
+  assert.strictEqual(kq('#k-ccCode').textContent, '#123456');
+  const ec = kq('#k-Ec'); ec.value = '60'; ec.dispatch('input');
+  assert.strictEqual(kq('#k-oEc').textContent, '60%');
+});
+
+check('кухня (новая): фасады, деталировка, настройки по умолчанию', () => {
+  const storage = new Map();
+  let p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  let kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
+  const pressed = () => kp.querySelectorAll('[data-door]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.door);
+  assert.deepStrictEqual(pressed(), ['closed']);
+  kq('[data-door="open"]').click();
+  assert.deepStrictEqual(p.run('VIEWS.kitchen.furniture().doors.every(d=>d.t===d.max)'), true);
+  // one front closed by hand: nothing pressed, the remembered mode stays
+  p.run('(VIEWS.kitchen.furniture().doors[0].t=0, doorsChanged())');
+  assert.deepStrictEqual(pressed(), []); assert.strictEqual(p.run('VS.kitchen.fronts'), 'open');
+  kq('[data-door="hidden"]').click(); assert.deepStrictEqual(pressed(), ['hidden']);
+  const dims = kq('#k-tDims'); dims.checked = false; dims.dispatch('change');
+  assert.deepStrictEqual(p.run('[VS.kitchen.fronts, VS.kitchen.dims]'), ['hidden', false]);
+  // cut list: every part, grouped by material; the same as CSV
+  assert.match(kq('#k-tot').innerHTML, /^<span>65 деталей<\/span>/);
+  const csv = kq('#k-csv').value.split('\n');
+  assert.strictEqual(csv[0], 'Деталь;Материал;Длина;Ширина;Толщина;Кол-во');
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 65);
+  assert.ok(kq('#k-cut').querySelectorAll('th.mh').length >= 3, 'groups by material');
+  // remembered: cabinets and finishes, without the wall and the ceiling
+  const b1 = kq('[data-p="B1"]'); b1.value = '600'; b1.dispatch('input');
+  kq('[data-decor="H3154"]').click();
+  kq('#k-saveDef').click();
+  const saved = JSON.parse(storage.get('apt-kitchen-v2'));
+  assert.deepStrictEqual([saved.P.B1, saved.P.Fr, 'W' in saved.P, 'H' in saved.P, saved.FIN.front.decor], [600, 550, false, false, 'H3154']);
+  p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  kp = p.document.querySelector('[data-panel="kitchen"]');
+  assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr,f.P.W])(VIEWS.kitchen.furniture())'), [600, 550, 2200]);
+  assert.match(kq('#kSub').textContent, /Дуб Чарльстон тёмно-коричневый/);
+  assert.deepStrictEqual(pressed(), ['hidden'], 'the view remembers the fronts taken off');
+  kq('#k-resetDef').click();
+  assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr])(VIEWS.kitchen.furniture())'), [450, 600]);
+  assert.ok(!storage.has('apt-kitchen-v2'));
+  assert.match(kq('#kSub').textContent, /корпус — Белый премиум W1000 ST9; фасады — Серый кашемир U702 ST9/);
 });
 
 check('shell: вкладки открывают приложение или старые страницы', () => {

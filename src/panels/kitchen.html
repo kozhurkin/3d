@@ -5,6 +5,17 @@
 
     <div>
       <h2>Вид</h2>
+      <div class="seg" role="group" aria-label="Фасады">
+        <button data-door="closed" aria-pressed="true">Закрыты</button>
+        <button data-door="open" aria-pressed="false">Открыты</button>
+        <button data-door="hidden" aria-pressed="false">Без фасадов</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="k-tDims" checked> Размеры</label>
+        <label><input type="checkbox" id="k-tWall" checked> Стены и техника</label>
+        <label><input type="checkbox" id="k-tEdges" checked> Контуры деталей</label>
+      </div>
+      <h3 style="margin-top:14px">Стены</h3>
       <div class="seg" role="group" aria-label="Стены">
         <button data-wm="show" aria-pressed="false">Монолит</button>
         <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
@@ -91,6 +102,48 @@
       </div>
     </details>
 
-    <p class="note" style="margin:0">Новая кухня собрана из общей модели квартиры. Цвет и декор, открывание дверец, размерные линии и деталировка появятся на следующем шаге — пока они во вкладке «Кухня».</p>
+    <div>
+      <h2>Цвет и декор</h2>
+      <div class="finnow" id="k-finNow"></div>
+      <h3 style="margin-top:14px">Древесные декоры</h3>
+      <div class="decors unis" role="group" aria-label="Декор">
+      </div>
+      <h3 style="margin-top:14px">Однотонные</h3>
+      <div class="decors unis" role="group" aria-label="Монотонные декоры">
+        <label class="cc" id="k-ccCard"><input type="color" id="k-uniColor" value="#C2B8AA" aria-label="Свой цвет"><span>Свой цвет<br><small id="k-ccCode">палитра</small></span><span class="tags" id="k-ccTags"></span></label>
+      </div>
+      <div class="field" style="margin:14px 0 0"><label for="k-Ec">Контрастность кромки</label><output id="k-oEc"></output><input type="range" id="k-Ec" min="0" max="100" step="1"></div>
+      <p class="note" style="margin:8px 0 0">Цвет и рисунок переданы приблизительно, сверяйте с образцом.</p>
+    </div>
 
     <div data-shared-slot style="display:contents"></div>
+
+    <div>
+      <h2>Деталировка</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Деталь</th><th class="n">Д × Ш</th><th class="n">Шт</th></tr></thead>
+        <tbody id="k-cut"></tbody>
+      </table></div>
+      <div class="tot" id="k-tot"></div>
+      <div class="row">
+        <button class="btn" id="k-copy">Скопировать CSV</button>
+        <span class="note" id="k-copied" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="k-csv" hidden readonly aria-label="CSV деталировки"></textarea>
+    </div>
+
+    <div>
+      <h2>Настройки по умолчанию</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="k-saveDef">Запомнить текущие</button>
+        <button class="btn" id="k-resetDef">Вернуть исходные</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="k-copyDef">Скопировать код настроек</button>
+        <span class="note" id="k-defMsg" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="k-defCode" hidden readonly aria-label="Код настроек"></textarea>
+      <p class="note" style="margin:8px 0 0">«Запомнить» сохраняет шкафы и их отделку в этом браузере. Чтобы они стали стандартными для всех, скопируйте код и пришлите его в чат. Стена и потолок — на «Планировке».</p>
+    </div>
+
+    <p class="note" style="margin:0">Допущения: корпус и фасады из ЛДСП выбранной толщины, зазор между фасадами 2 мм. Нижние шкафы на цоколе, сверху царги, столешница 38 мм с выступом 20 мм над фасадами. Навесные шкафы без задних стенок, на рёбрах жёсткости. Шкаф над варкой поднят под вытяжку. Антресоли с накладным дном: три равных над столешницей и одна над холодильником. Техника показана условно. Фурнитура и кромка не учтены. Перед заказом раскроя размеры нужно сверить с замером.</p>

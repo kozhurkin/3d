@@ -100,6 +100,40 @@ details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offs
 .sizes-body h3{margin:0 0 10px}
 .sizes-body .field{margin-bottom:10px}
 .sizes-body p:empty{display:none}
+/* finishes of a room: decor and plain-colour swatches, what each group has, own colour, the swatch menu */
+.decors{display:flex;flex-direction:column;gap:6px}
+.decors button{position:relative;display:flex;gap:10px;align-items:center;text-align:left;font:500 13px/1.25 var(--f-body);color:var(--fg);background:transparent;border:1px solid var(--line);border-radius:4px;padding:7px 9px;cursor:pointer}
+.decors button small{font:400 11px var(--f-mono);color:var(--muted)}
+.decors button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.decors button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tags{position:absolute;top:4px;right:4px;display:flex;gap:2px;pointer-events:none}
+.tags b{font:600 9px/1 var(--f-mono);background:var(--accent);color:var(--panel);padding:3px 4px;border-radius:3px}
+.lnk{font:inherit;font-size:11px;color:var(--accent);background:none;border:0;padding:0 0 0 4px;cursor:pointer;text-decoration:underline}
+.finnow{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;margin-top:10px;font-size:12px}
+.finnow span:nth-child(odd){color:var(--muted)}
+.ctx{position:fixed;z-index:50;display:flex;flex-direction:column;min-width:170px;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.ctx button{font:500 13px var(--f-body);color:var(--fg);background:none;border:0;border-radius:4px;padding:8px 10px;text-align:left;cursor:pointer}
+.ctx button:hover,.ctx button:focus-visible{background:var(--accent-soft);outline:none}
+.ctx .ctx-h{font:600 11px var(--f-body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 10px 4px}
+.decors.unis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.decors .cc{position:relative;display:flex;flex-direction:column;gap:6px;padding:6px;border:1px solid var(--line);border-radius:4px;font:500 12px/1.25 var(--f-body);cursor:pointer}
+.decors .cc.on{border-color:var(--accent);background:var(--accent-soft)}
+.decors .cc input{width:100%;height:36px;padding:0;border:1px solid rgba(0,0,0,.15);border-radius:3px;background:none;cursor:pointer}
+.decors .cc small{font:400 10px var(--f-mono);color:var(--muted)}
+.decors.unis button{flex-direction:column;align-items:stretch;gap:6px;padding:6px;font-size:12px}
+.decors.unis .sw{width:100%;height:36px}
+.decors.unis small{font-size:10px}
+.sw{width:28px;height:28px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.15)}
+/* cut list */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-weight:600;text-align:left;color:var(--muted);padding:6px 4px;border-bottom:1px solid var(--line)}
+td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}
+td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+th.n{text-align:right}
+th.mh{color:var(--fg);padding-top:12px;font-size:12px}
+.tot{display:flex;flex-direction:column;gap:4px;font:500 12px var(--f-mono);margin-top:8px;flex-wrap:wrap}
+textarea.code{width:100%;height:80px;font:11px var(--f-mono);margin-top:8px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;box-sizing:border-box}
 @media (max-width:900px){
   .app{grid-template-columns:minmax(0,1fr)}
   .viewer{min-height:340px;height:72vh}
@@ -107,6 +141,8 @@ details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offs
 }
 </style>
 
+<!-- swatch menu of the room panels: apply a finish to one part group only -->
+<div class="ctx" id="ctx" hidden role="menu"><div class="ctx-h">Применить только к</div><button data-where="carcass" role="menuitem">Корпусу</button><button data-where="front" role="menuitem">Фасадам</button><button data-where="top" role="menuitem">Столешнице</button><button data-where="apron" role="menuitem">Фартуку</button></div>
 <div class="app">
   <div class="viewer" id="viewer">
     <canvas id="c" aria-label="3D-план квартиры: прихожая, санузел и кухня"></canvas>

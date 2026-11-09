@@ -145,7 +145,7 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
   const model=new THREE.Group(),doors=[],slideHolders={},partSeed=partSeeder(),prevDoors={};
   prev.forEach(d=>prevDoors[d.key]=d);
   const door=(g,extra)=>{const key=extra.key,pd=prevDoors[key];
-    const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?DMAX:0),last:pd&&pd.last},extra);turnDoor(d);doors.push(d);};
+    const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?DMAX:0),last:pd&&pd.last,max:DMAX},extra);turnDoor(d);doors.push(d);};
   c.parts.forEach(p=>{
     const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
     const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz));
@@ -196,3 +196,46 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
 }
 // a built set out of the scene: geometries and the textures not in the decor cache go
 function disposeGroup(gr){if(!gr)return;gr.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material)&&o.material.map&&!Object.values(texCache).includes(o.material.map))o.material.map.dispose();});if(gr.parent)gr.parent.remove(gr);}
+
+/* ---------- finishes in the panel: palette, context menu, long press ---------- */
+// the decor and plain-colour swatches inside one room's panel (decors.js renderPalette fills the first match in the whole page)
+function fillPalette(root){
+  const esc=t=>String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+  const w=root.querySelector('[aria-label="Декор"]');
+  if(w)w.innerHTML=PALETTE_WOOD.map(d=>'<button data-decor="'+d.k+'" aria-pressed="false"><span class="sw" style="'+esc(d.bg)+'"></span><span>'+d.label+'<br><small>'+d.code+'</small></span></button>').join('');
+  const u=root.querySelector('[aria-label="Монотонные декоры"]');
+  if(u){const cc=u.querySelector('.cc');
+    u.innerHTML=PALETTE_UNI.map(d=>'<button data-uc="'+d.c+'" data-un="'+esc(d.name)+'"><span class="sw" style="background:'+d.c+'"></span><span>'+d.label+'<br><small>'+d.code+'</small></span></button>').join('');
+    if(cc)u.appendChild(cc);}
+  // photo decors show their photo on the swatch
+  root.querySelectorAll('[data-decor]').forEach(b=>{const d=DECORS[b.dataset.decor];if(d&&d.img){const sw=b.querySelector('.sw');sw.style.background=`url(${d.img}) center/cover`;}});
+}
+// one menu for the whole page: apply a swatch to one part group only; wheres: the groups this room has
+const ctx=document.getElementById('ctx');let ctxPick=null;
+function openCtx(x,y,pick,wheres){
+  ctxPick=pick;ctx.hidden=false;
+  ctx.querySelectorAll('[data-where]').forEach(b=>{b.hidden=!wheres.includes(b.dataset.where);});
+  const w=ctx.offsetWidth,h=ctx.offsetHeight;
+  ctx.style.left=Math.min(x,innerWidth-w-8)+'px';ctx.style.top=Math.min(y,innerHeight-h-8)+'px';
+  [...ctx.querySelectorAll('[data-where]')].find(b=>!b.hidden).focus();
+}
+function closeCtx(){ctx.hidden=true;ctxPick=null;}
+ctx.querySelectorAll('[data-where]').forEach(b=>b.addEventListener('click',()=>{const p=ctxPick;closeCtx();if(p)p(b.dataset.where);}));
+document.addEventListener('pointerdown',e=>{if(!ctx.hidden&&!ctx.contains(e.target))closeCtx();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeCtx();});
+document.querySelectorAll('.panel').forEach(p=>p.addEventListener('scroll',closeCtx));
+// long press (mouse or touch) opens the same menu; the click that follows is swallowed
+function longPress(el,fn){
+  let t=null,sx=0,sy=0;
+  el.addEventListener('pointerdown',e=>{if(e.button!==0)return;sx=e.clientX;sy=e.clientY;el.dataset.lp='';clearTimeout(t);
+    t=setTimeout(()=>{el.dataset.lp='1';fn(sx,sy);},550);});
+  const stop=()=>clearTimeout(t);
+  el.addEventListener('pointerup',stop);el.addEventListener('pointerleave',stop);el.addEventListener('pointercancel',stop);
+  el.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-sx,e.clientY-sy)>8)stop();});
+  el.addEventListener('click',e=>{if(el.dataset.lp==='1'){e.preventDefault();e.stopImmediatePropagation();el.dataset.lp='';}},true);
+}
+// a text to the clipboard; where that is not allowed, the text is shown selected for Ctrl+C
+function copyText(ta,text,msg,done){
+  ta.value=text;
+  (navigator.clipboard?navigator.clipboard.writeText(text):Promise.reject()).then(()=>{msg.textContent=done;}).catch(()=>{ta.hidden=false;ta.focus();ta.select();msg.textContent='Выделено — нажмите Ctrl+C';});
+}

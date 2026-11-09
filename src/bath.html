@@ -536,18 +536,18 @@ function buildWall(){
   const W=P.W*MM,H=P.H*MM,zf=current.zf*MM,Lz=P.L*MM,th=.1;
   // walls are single-sided planes facing into the niche, so they never block the view from outside
   const plane=(w,h,pos,ry,mat)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat||wallMat);m.rotation.y=ry;m.position.copy(pos);m.receiveShadow=true;wallGroup.add(m);return m;};
-  // wall behind the tall cabinet: solid 100 mm (covers both back corners), hidden while the camera is behind it
-  backWall=new THREE.Mesh(new THREE.BoxGeometry(W+.2,H,.1),wallMat);backWall.position.set(W/2,H/2,-.05);backWall.castShadow=backWall.receiveShadow=true;wallGroup.add(backWall);
-  // wall behind the installation: solid 100 mm, hidden while the camera is on its outer (left) side
-  leftWall=new THREE.Mesh(new THREE.BoxGeometry(.1,H,Lz+.2),wallMat);leftWall.position.set(-.05,H/2,Lz/2);   // reaches the 500 mm wall, filling the corner
+  // wall behind the tall cabinet: external bearing wall, solid 200 mm (covers both back corners), hidden while the camera is behind it
+  backWall=new THREE.Mesh(new THREE.BoxGeometry(W+.3,H,.2),wallMat);backWall.position.set((W-.1)/2,H/2,-.1);backWall.castShadow=backWall.receiveShadow=true;wallGroup.add(backWall);
+  // wall behind the installation: external bearing wall, solid 200 mm, hidden while the camera is on its outer (left) side
+  leftWall=new THREE.Mesh(new THREE.BoxGeometry(.2,H,Lz+.3),wallMat);leftWall.position.set(-.1,H/2,(Lz-.1)/2);   // from the outer face of the back wall to the 500 mm wall, so the corner stays closed when the back wall hides
   leftWall.castShadow=leftWall.receiveShadow=true;wallGroup.add(leftWall);
   const rw=Math.min(P.Rw2,P.L)*MM, ws=Math.min(P.Ws,P.W)*MM;
   // walls at the open end of the niche: 500×100 wall from the left wall, a 500 mm opening, then a 100 mm thick wall turning 300 mm away.
   // Solid boxes, all shown or hidden together by the same rule as before (visible only while the camera is inside the niche).
   // dark footprints on the floor, so a wall that hides itself still leaves its outline (like a plan cut)
   const foot=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(x1-x0,z1-z0),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2,.002,(z0+z1)/2);m.renderOrder=1;wallGroup.add(m);};
-  foot(-.1,W+.1,-.1,0);          // back wall
-  foot(-.1,0,0,Lz+.1);           // left wall
+  foot(-.2,W+.1,-.2,0);          // back wall
+  foot(-.2,0,0,Lz+.1);           // left wall
   retZ=Lz;retExtra=[];
   const solid=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,H,z1-z0),wallMat);m.position.set((x0+x1)/2,H/2,(z0+z1)/2);m.receiveShadow=m.castShadow=true;wallGroup.add(m);retExtra.push(m);};
   if(ws>0){solid(0,ws,Lz,Lz+.1);foot(0,ws,Lz,Lz+.1);}

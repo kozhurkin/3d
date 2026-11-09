@@ -40,6 +40,19 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 .info .sep{color:var(--accent);font-weight:700;margin:0 3px}
 .info .it{display:none}
 .info[aria-expanded="true"] .it{display:block;margin-left:9px}
+.info{margin-right:52px}
+.camb{position:absolute;z-index:3;right:12px;bottom:12px;width:28px;height:28px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--muted);cursor:pointer;opacity:.95}
+.camb:hover,.camb[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.camb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.inset{position:absolute;right:6px;bottom:6px;width:min(272px,43%);aspect-ratio:1/.72;border:1px solid var(--accent);border-radius:8px;overflow:hidden;pointer-events:none;box-sizing:border-box}
+.inset .dist{position:absolute;left:6px;bottom:6px;display:flex;gap:5px;white-space:nowrap;font:500 11px/1.35 var(--f-mono);color:var(--fg);background:var(--panel);padding:4px 7px;border-radius:3px;font-variant-numeric:tabular-nums}
+.inset .dist i{font-style:normal;color:var(--muted)}
+.inset .dist em{font-style:normal}
+.inset .inset-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.inset .cam-arrow{position:absolute;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:12px solid #ff6a00;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+.inset span{position:absolute;left:6px;top:4px;font:500 10px var(--f-mono);color:var(--muted);background:var(--panel);padding:1px 4px;border-radius:3px}
+.dbg-on .info{max-width:calc(100% - min(260px,42%) - 36px)}
+.dbg-on .info[aria-expanded="true"] .it{white-space:normal}
 .btn{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 4px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
 .btn:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -78,6 +91,7 @@ ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:colu
 <div class="app">
   <div class="viewer" id="viewer">
     <canvas id="c" aria-label="3D-план квартиры: прихожая, санузел и кухня"></canvas>
+    <button class="camb" id="camBtn" aria-expanded="false" aria-label="Мини-вид камеры" title="Камера: точка вращения и мини-вид"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2" y="6" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 9l5-3v9l-5-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
     <button class="info" id="infoBtn" aria-expanded="false" aria-label="Как управлять"><span class="ii">i</span><span class="it">Тяните — вращение <b class="sep">•</b> Shift + тяните, средняя кнопка или два пальца — сдвиг <b class="sep">•</b> колесо — масштаб к курсору <b class="sep">•</b> клик по двери — открыть или закрыть, удержание — открывать постепенно</span></button>
   </div>
 
@@ -128,7 +142,7 @@ ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:colu
       <h2>Нужно уточнить</h2>
       <ol class="qs">
         <li>Кухонная стена выступает на 200 мм — считаю от лицевой стороны стены прихожей (со стороны прихожей). Верно?</li>
-        <li>Правая стена прихожей продолжается прямо вдоль прохода у кухни; кухня справа открыта в проход, низ плана открыт.</li>
+        <li>Правая стена прихожей продолжается прямой линией до стены с окном; 4750 мм у обеих стен кухни считаю от кухонной стены. Окно по центру между левой и правой стенами кухни.</li>
       </ol>
     </div>
   </aside>
@@ -147,7 +161,8 @@ const A={
   hallW:1200,                       // hall between its side walls
   hL1:650, bDoor:600, bDoorH:2000, hL2:650,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
   kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
-  kW:2200, kL:1350,                 // kitchen back wall and kitchen left wall (as in the kitchen tab)
+  kW:2200, kL:4750,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
+  winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
   bNiche:1200, bRight:600,          // bathroom along its back wall: toilet niche, 100 mm partition, then 600
   bL:1100, bWs:500, bStub:600,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
   vOff:150,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway
@@ -159,16 +174,17 @@ const kZ0=hLen, kZ1=hLen+A.wt;       // kitchen wall (bathroom side, kitchen sid
 const xL=A.kOver-A.kW;               // inner face of the common left wall
 const xB1=-A.wt;                     // bathroom side of the hall's left wall
 const zB0=0;                         // the bathroom back wall continues the hall bearing wall
-const zEnd=kZ1+A.kL;
+const zEnd=kZ1+A.kL;                 // inner face of the outer wall with the window
+const winX=(xL+A.hallW)/2;           // window centre, middle of the kitchen
 const zV0=A.hL1+A.bDoor+A.vOff;       // vent shaft wall (bathroom side); the shaft runs from it to the kitchen wall
-                 // the plan stops where the kitchen's left wall ends
 const bx=v=>xL+v, bz=v=>zB0+v;       // bath tab coordinates → plan
 
-// walls: rect [x0,x1,z0,z1]; ext: outer side of an outside wall; holes along the long side: [from, to, height]
+// walls: rect [x0,x1,z0,z1]; ext: outer side of an outside wall; holes along the long side: [from, to, top, sill]
 const WALLS=[
   {name:'Несущая стена: вход и санузел',r:[xL-A.bear,A.hallW+A.bear,-A.bear,0],ext:'-z',holes:[[A.eD0,A.eD1,A.eDH]]},
   {name:'Правая стена прихожей (внешняя)',r:[A.hallW,A.hallW+A.bear,0,zEnd],ext:'+x'},
   {name:'Несущая левая стена: санузел и кухня',r:[xL-A.bear,xL,0,zEnd],ext:'-x'},
+  {name:'Стена кухни с окном (внешняя)',r:[xL-A.bear,A.hallW+A.bear,zEnd,zEnd+A.bear],ext:'+z',holes:[[winX-A.winW/2,winX+A.winW/2,A.winS+A.winH,A.winS]]},
   {name:'Стена прихожая / санузел',r:[xB1,0,0,hLen],holes:[[A.hL1,A.hL1+A.bDoor,A.bDoorH]]},
   {name:'Стена кухни',r:[xL,A.kOver,kZ0,kZ1]},
   {name:'Стенка справа от прохода на кухню',r:[A.hallW-A.kOver,A.hallW,kZ0,kZ1]},   // mirrors the kitchen wall end: the passage gets 200 mm on both sides
@@ -179,11 +195,11 @@ const WALLS=[
   {name:'Канализационный короб',r:[xL,bx(250),zB0,bz(250)]}
 ];
 const ROOMS=[
-  {name:'Прихожая',r:[0,A.hallW,0,zEnd],col:'--fl-hall',at:[A.hallW/2,hLen/2+150]},
+  {name:'Прихожая',r:[0,A.hallW,0,kZ1],col:'--fl-hall',at:[A.hallW/2,hLen/2+150]},
   {name:'Санузел',r:[xL,xB1,zB0,kZ0],col:'--fl-bath',at:[(bx(A.bWs+500)+xB1)/2-150,(bz(A.bStub)+bz(A.bL))/2+40]},   // open middle of the room, clear of all walls
-  {name:'Кухня',r:[xL,0,kZ1,zEnd],col:'--fl-kit',at:[(xL+A.kOver)/2,(kZ1+zEnd)/2]}
+  {name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+675]}   // near the kitchen wall corner, where it was before the kitchen grew
 ];
-const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd};
+const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
 const CX=(BOX.x0+BOX.x1)/2*MM, CZ=(BOX.z0+BOX.z1)/2*MM;
 
 /* ---------- three setup ---------- */
@@ -206,6 +222,8 @@ const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
 const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide});
 const capMat=new THREE.MeshStandardMaterial({color:0x5b5f61,roughness:.9,side:THREE.DoubleSide});   // cut top of the walls, like the poché on a drawing
 const edgeMat=new THREE.LineBasicMaterial({color:0x4a4d50,transparent:true,opacity:.35});
+const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
+const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorMat);
 floor.rotation.x=-Math.PI/2;floor.position.set(CX,-.002,CZ);floor.receiveShadow=true;scene.add(floor);   // outer walls and the entrance door cast their shadows outside the apartment
@@ -254,12 +272,22 @@ function buildWalls(){
     const [x0,x1,z0,z1]=w.r,alongX=(x1-x0)>=(z1-z0),f=wallRule(w);
     // split the wall along its long side: full-height pieces between openings, a lintel over each opening
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
-    const piece=(a,b,y0)=>{if(b-a<1)return;
-      if(alongX)solid(a,b,y0,H,z0,z1,f);else solid(x0,x1,y0,H,a,b,f);
+    const piece=(a,b,y0,y1=H)=>{if(b-a<1)return;
+      if(alongX)solid(a,b,y0,y1,z0,z1,f);else solid(x0,x1,y0,y1,a,b,f);
       if(y0===0){if(alongX)foot(a,b,z0,z1);else foot(x0,x1,a,b);}};
-    (w.holes||[]).forEach(([a,b,h])=>{piece(cur,a,0);piece(a,b,h);cur=b;});
+    (w.holes||[]).forEach(([a,b,h,sill=0])=>{piece(cur,a,0);piece(a,b,h);if(sill>0)piece(a,b,0,sill);cur=b;});
     piece(cur,end,0);
   });
+  // kitchen window: white frame in the middle of the wall, a mullion, glass and an inner sill board; hides with its wall
+  { const w=WALLS.find(v=>v.ext==='+z'),f=wallRule(w),FW=60,FD=70,zc=zEnd+A.bear/2;
+    const x0=winX-A.winW/2,x1=winX+A.winW/2,y0=A.winS,y1=A.winS+A.winH;
+    const part=(a,b,c,d,e,g,mat,shadow=true)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((b-a)*MM,(d-c)*MM,(g-e)*MM),mat);
+      m.position.set((a+b)/2*MM,(c+d)/2*MM,(e+g)/2*MM);m.castShadow=shadow;m.receiveShadow=true;wallGroup.add(m);
+      wallParts.push({m,f,b:c*MM,t:d*MM,h:(d-c)*MM,glass:!shadow});};
+    const bar=(a,b,c,d)=>part(a,b,c,d,zc-FD/2,zc+FD/2,winMat);
+    bar(x0,x1,y0,y0+FW);bar(x0,x1,y1-FW,y1);bar(x0,x0+FW,y0+FW,y1-FW);bar(x1-FW,x1,y0+FW,y1-FW);bar(winX-FW/2,winX+FW/2,y0+FW,y1-FW);
+    part(x0+FW,x1-FW,y0+FW,y1-FW,zc-4,zc+4,glassMat,false);
+    part(x0-50,x1+50,y0-10,y0+20,zEnd-50,zc-FD/2-1,winMat); }   // sill board top sits above the wall opening, so the two faces never coincide (no z-fighting)
   scene.add(wallGroup);
 }
 // "cut" mode: only the outer walls of the apartment hide, each while the camera looks at it from outside; inner walls always stay
@@ -301,6 +329,9 @@ const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10;   // entrance leaf inside the fra
   arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2);
   arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0);
   scene.add(arcs); }
+// every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed
+const doorParts=[];
+doorGroup.traverse(m=>{if(!m.isMesh)return;const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2});});
 
 /* ---------- dimension lines ---------- */
 const labels=[];
@@ -336,6 +367,9 @@ dim(A.hallW-A.kOver,hLen-140,A.hallW,hLen-140,`${A.kOver}`);
 dim(A.kOver,kZ1+350,A.hallW,kZ1+350,`${A.hallW-A.kOver}`);
 dim(xL,kZ1+160,A.kOver,kZ1+160,`${A.kW}`);
 dim(xL+200,kZ1,xL+200,zEnd,`${A.kL}`);
+dim(A.hallW-200,kZ1,A.hallW-200,zEnd,`${A.kL}`);
+dim(xL,zEnd-250,A.hallW,zEnd-250,`${A.hallW-xL}`);
+dim(winX-A.winW/2,zEnd+A.bear+130,winX+A.winW/2,zEnd+A.bear+130,`окно ${A.winW} × ${A.winH}, от пола ${A.winS}`);
 dim(xL,bz(A.bL)-400,xB1,bz(A.bL)-400,`${xB1-xL}`);
 dim(xL,bz(A.bL)+200,bx(A.bWs+500),bz(A.bL)+200,`${A.bWs+500}`);
 dim(bx(A.bWs+500+A.wt),bz(A.bL)+200,xB1,bz(A.bL)+200,`${xB1-bx(A.bWs+500+A.wt)}`);
@@ -389,19 +423,19 @@ const cam={theta:-.5,phi:.9,r:8,target:new THREE.Vector3(CX,0,CZ)};
 const goal={theta:-.5,phi:.9,r:8};
 const goalT=new THREE.Vector3(CX,0,CZ);
 // distance at which the whole apartment fits the frame from straight above
-function fitR(){
-  const t=Math.tan(camera.fov*Math.PI/360),w=(BOX.x1-BOX.x0)*MM,d=(BOX.z1-BOX.z0)*MM;
+function fitR(wmm=BOX.x1-BOX.x0,dmm=BOX.z1-BOX.z0){
+  const t=Math.tan(camera.fov*Math.PI/360),w=wmm*MM,d=dmm*MM;
   return Math.max(d/2/t,w/2/(t*(camera.aspect||1)))*1.12+H*MM;   // + wall height: the wall tops are that much closer to the camera
 }
 function setView(v){
-  const f=fitR();
+  const f=fitR(),fr=fitR(3600,3550);   // fr: room views keep the scale of the hall + bathroom block
   const views={
     plan:[0,.4,f*1.2,CX,0,CZ-.3],   // whole plan from above, tilted from the kitchen side
     top:[0,.0005,f,CX,0,CZ],
     entry:[Math.PI-.4,.7,f*1.05,CX,0,CZ],
-    hall:[1.2,.85,f*.7,A.hallW/2*MM,.6,hLen/2*MM],   // through the outer right wall, facing the bathroom door
-    bath:[.4,.34,f*.62,bx(450)*MM,.9,bz(300)*MM],   // the corner with the installation (left wall) and the tall cabinet (back wall)
-    kitchen:[.55,.5,f*.78,(xL+A.kOver)/2*MM-.1,.6,(kZ1+300)*MM]   // the worktop wall and the left wall, from the passage side
+    hall:[1.2,.85,fr*.7,A.hallW/2*MM,.6,hLen/2*MM],   // through the outer right wall, facing the bathroom door
+    bath:[.4,.34,fr*.62,bx(450)*MM,.9,bz(300)*MM],   // the corner with the installation (left wall) and the tall cabinet (back wall)
+    kitchen:[.55,.5,fr*.78,(xL+A.kOver)/2*MM-.1,.6,(kZ1+300)*MM]   // the worktop wall and the left wall, from the passage side
   };
   const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];goalT.set(s[3],s[4],s[5]);
   // take the short way round
@@ -489,6 +523,77 @@ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',(
 function resize(){const w=viewer.clientWidth,h=viewer.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(viewer);
 
+/* ---------- camera debug: pivot gizmo + overview inset (as in the room tabs) ---------- */
+let showDebug=false;
+const noRay=o=>{o.traverse(c=>{c.raycast=()=>{};});return o;};
+const dbg=new THREE.Group();dbg.visible=false;scene.add(dbg);
+// pivot gizmo (visible in the main view): XYZ axes + sphere, always on top
+const pivot=new THREE.Group();
+[[0xd9483b,[1,0,0]],[0x3f9b4f,[0,1,0]],[0x3b6fd9,[0,0,1]]].forEach(([c,v])=>{
+  const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(...v).multiplyScalar(.25)]);
+  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,depthTest:false}));l.renderOrder=30;pivot.add(l);
+});
+const pivDot=new THREE.Mesh(new THREE.SphereGeometry(.022,16,12),new THREE.MeshBasicMaterial({color:0xffb300,depthTest:false}));pivDot.renderOrder=31;pivot.add(pivDot);
+dbg.add(noRay(pivot));
+// camera body, view frustum and view vector (only in the inset, layer 1)
+const DBG_COL=0xff6a00;
+const camBody=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),new THREE.MeshBasicMaterial({color:DBG_COL}));
+camBody.geometry.rotateX(-Math.PI/2);
+const viewLine=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,10),new THREE.MeshBasicMaterial({color:DBG_COL,depthTest:false}));viewLine.renderOrder=40;
+const frus=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(16*3).fill(0),3)),new THREE.LineBasicMaterial({color:DBG_COL,depthTest:false}));frus.renderOrder=41;
+const frusFill=new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(12*3).fill(0),3)),new THREE.MeshBasicMaterial({color:DBG_COL,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));frusFill.renderOrder=39;
+[camBody,viewLine,frus,frusFill].forEach(o=>{o.layers.set(1);o.frustumCulled=false;dbg.add(noRay(o));});
+const ovCam=new THREE.PerspectiveCamera(36,1.4,.05,200);ovCam.layers.enableAll();
+// the overview looks at the apartment from above, from the window side (like the «Весь план» view)
+const _oc=new THREE.Vector3(),_od=new THREE.Vector3(.25,1.5,1).normalize(),_ov=new THREE.Vector3(),_oup=new THREE.Vector3(0,1,0),_oq=new THREE.Quaternion();
+const apt=new THREE.Box3(new THREE.Vector3(BOX.x0*MM,0,BOX.z0*MM),new THREE.Vector3(BOX.x1*MM,H*MM,BOX.z1*MM)),_osz=new THREE.Vector3();
+function updateDebug(){
+  pivot.position.copy(cam.target);
+  const ps=Math.max(.4,cam.r*.25);pivot.children.forEach(c=>c.scale.setScalar(ps));
+  // mini view frames the apartment itself, not the camera
+  apt.getCenter(_oc);apt.getSize(_osz);
+  let rad=Math.max(.6,_osz.length()/2);
+  // include the main camera when it is reasonably close; if it is far, keep the plan large and show an arrow instead
+  _ov.subVectors(camera.position,_oc);const cd=_ov.length(),reach=Math.min(cd,rad*2.2);
+  if(reach>rad){_oc.addScaledVector(_ov.normalize(),(reach-rad)/2);rad=(reach+rad)/2+.15;}
+  const dist=rad/Math.sin(ovCam.fov*Math.PI/360)*1.02;
+  ovCam.position.copy(_oc).addScaledVector(_od,dist);ovCam.lookAt(_oc);
+  // camera body sized to the plan, so it is always readable
+  const k=rad*.32;
+  camBody.position.copy(camera.position);camBody.lookAt(cam.target);camBody.scale.setScalar(k);
+  // thick view vector: a thin cylinder from the camera to the pivot
+  _ov.subVectors(cam.target,camera.position);const len=_ov.length();
+  viewLine.position.copy(camera.position).addScaledVector(_ov,.5);
+  _oq.setFromUnitVectors(_oup,_ov.clone().normalize());viewLine.quaternion.copy(_oq);
+  viewLine.scale.set(rad*.012,len,rad*.012);
+  // view frustum: what the main camera sees, drawn out to the pivot distance
+  const fd=Math.min(len,rad*.5),hh=Math.tan(camera.fov*Math.PI/360)*fd,hw=hh*camera.aspect;
+  const corn=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y])=>new THREE.Vector3(x*hw,y*hh,-fd).applyMatrix4(camera.matrixWorld));
+  const o=camera.position,fp=frus.geometry.attributes.position;let i=0;
+  const put=v=>{fp.setXYZ(i++,v.x,v.y,v.z);};
+  corn.forEach(c=>{put(o);put(c);});corn.forEach((c,j)=>{put(c);put(corn[(j+1)%4]);});fp.needsUpdate=true;
+  const ff=frusFill.geometry.attributes.position;i=0;
+  corn.forEach((c,j)=>{const n=corn[(j+1)%4];[o,c,n].forEach(v=>{ff.setXYZ(i++,v.x,v.y,v.z);});});ff.needsUpdate=true;
+  // arrow at the edge of the mini view when the camera is outside its frame
+  ovCam.updateMatrixWorld();_ov.copy(camera.position).project(ovCam);
+  const behind=_ov.z>1,out=behind||Math.abs(_ov.x)>.92||Math.abs(_ov.y)>.92;
+  camArrow.hidden=!out;
+  if(out){let x=_ov.x,y=_ov.y;if(behind){x=-x;y=-y;}const m=Math.max(Math.abs(x),Math.abs(y))||1;x/=m;y/=m;
+    camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(16,50-y*40))+'%';
+    camArrow.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad)`;}
+  const f=v=>v.toFixed(2).replace('.',',')+' м';
+  const t=`<i>До точки</i><em>${f(cam.r)}</em><i>· Высота</i><em>${f(camera.position.y)}</em>`;
+  if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
+}
+const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><span>Камера и точка вращения</span><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
+const camArrow=inset.querySelector('.cam-arrow');
+const insetCv=inset.querySelector('.inset-cv');
+const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
+insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
+const distEl=inset.querySelector('.dist');let distTxt='';
+const camBtn=document.getElementById('camBtn');
+camBtn.addEventListener('click',()=>{showDebug=!showDebug;camBtn.setAttribute('aria-expanded',showDebug);dbg.visible=showDebug;inset.hidden=!showDebug;viewer.classList.toggle('dbg-on',showDebug);});
+
 /* ---------- render loop ---------- */
 const _v=new THREE.Vector3(),_d=new THREE.Vector3();
 let lastT=performance.now();
@@ -510,20 +615,31 @@ function loop(){
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
       w.m.visible=fits&&!outline&&(V.Wm==='auto'?w.f():true);
-      w.m.castShadow=!skel;
+      w.m.castShadow=!skel&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });
     doors.forEach(d=>{
       if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
       else d.a+=(d.t-d.a)*ease(.07);
-      d.g.rotation.y=d.a;d.g.scale.y=Math.max(.001,Math.min(1,cut/d.h));if(d.frame)d.frame.scale.y=d.g.scale.y;});
+      d.g.rotation.y=d.a;});
+    doorParts.forEach(p=>{const top=Math.min(p.t,cut),fits=top>p.b+.001;p.m.visible=fits;
+      if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
     doorGroup.visible=V.dm!=='none'&&!outline;arcs.visible=V.dm!=='none';
     dimsGroup.position.y=(outline?0:Math.min(cut,H*MM))+.02;
   }
   // dimension labels keep the same size on screen at any zoom
   { const k=2*Math.tan(camera.fov*Math.PI/360)/(viewer.clientHeight||1);
     labels.forEach(s=>{s.getWorldPosition(_v);const u=_v.distanceTo(camera.position)*k;s.scale.set(19*u*s.userData.ar,19*u,1);}); }
+  if(showDebug)updateDebug();
   renderer.render(scene,camera);
+  if(showDebug){
+    // the mini view has its own small canvas, so the frame can have properly rounded, clipped corners
+    const w=insetCv.clientWidth,h=insetCv.clientHeight;
+    if(w&&h){if(insetCv.width!==Math.round(w*insetR.getPixelRatio()))insetR.setSize(w,h,false);
+      ovCam.aspect=w/h;ovCam.updateProjectionMatrix();
+      // dimension labels are sized for the main camera, so they stay out of the mini view
+      const dv=dimsGroup.visible;dimsGroup.visible=false;insetR.render(scene,ovCam);dimsGroup.visible=dv;}
+  }
   requestAnimationFrame(loop);
 }
 
@@ -535,8 +651,8 @@ document.getElementById('facts').innerHTML=
   `<div class="room">Санузел</div><dl class="facts">${
     row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Вентшахта',`${xB1-bx(A.bWs+500+A.wt)} × ${kZ0-zV0-A.wt}, стенка в ${A.vOff} от проёма`)}</dl>`+
   `<div class="room">Кухня</div><dl class="facts">${
-    row('Стена',`${A.kW}, выступает за стену прихожей на ${A.kOver}`)+row('Левая стена',A.kL)+row('Проход из прихожей',`${A.hallW-2*A.kOver}, стенки по ${A.kOver} с обеих сторон`)}</dl>`+
-  `<p class="note" style="margin:10px 0 0">Внешние стены ${A.bear} мм (со входом, левая стена санузла и кухни, правая стена прихожей), остальные ${A.wt} мм, потолок ${H}. Внутренние стенки санузла взяты из вкладки «Санузел», входной проём — из «Прихожей».</p>`;
+    row('Стена',`${A.kW}, выступает за стену прихожей на ${A.kOver}`)+row('Левая и правая стены',A.kL)+row('Ширина',A.hallW-xL)+row('Окно',`${A.winW} × ${A.winH}, от пола ${A.winS}, по центру внешней стены`)+row('Проход из прихожей',`${A.hallW-2*A.kOver}, стенки по ${A.kOver} с обеих сторон`)}</dl>`+
+  `<p class="note" style="margin:10px 0 0">Внешние стены ${A.bear} мм (со входом, левая стена санузла и кухни, правая стена прихожей и кухни, стена с окном), остальные ${A.wt} мм, потолок ${H}. Внутренние стенки санузла взяты из вкладки «Санузел», входной проём — из «Прихожей».</p>`;
 document.getElementById('sub').textContent=`${(BOX.x1-BOX.x0)} × ${(BOX.z1-BOX.z0)} мм по внешним стенам · потолок ${H}`;
 const infoBtn=document.getElementById('infoBtn');
 infoBtn.addEventListener('click',()=>infoBtn.setAttribute('aria-expanded',infoBtn.getAttribute('aria-expanded')!=='true'));

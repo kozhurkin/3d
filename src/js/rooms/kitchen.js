@@ -1,4 +1,4 @@
-/* ---------- «Кухня» view: the kitchen wall with its left wall, and the cabinets along it ----------
+/* ---------- «Кухня» view: the kitchen wall with its left wall, the cabinets and the appliances along it ----------
    Kitchen coordinates as in the kitchen tab, mm: x along the kitchen wall from the left wall, y up, z from the wall into the room;
    the kitchen's (0,0) is its origin on the plan. The wall width and the ceiling come from the plan (A.kW, A.H),
    how far the left wall shows is the view's frame (VS.kitchen.L). Own scope: the room modules share names (P, T, computeParts…). */
@@ -90,9 +90,110 @@ function computeParts(p){
 }
 
 const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on the plan, mm
-// sizes that belong to the walls come from the plan
-function fromModel(){P.W=A.kW;P.H=A.H;T=P.T||16;TF=P.TF||16;current=computeParts(P);}
+function clamp(){
+  const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,P.Hx));   // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
+  // the run (three bases + fridge niche) has to fit on the wall
+  const over=P.B1+P.B2+P.B3+P.Fr-P.W;if(over>0)P.Fr=Math.max(500,P.Fr-over);
+}
+// sizes that belong to the walls come from the plan; the run of cabinets and the fridge has to fit on the wall
+function fromModel(){P.W=A.kW;P.H=A.H;clamp();T=P.T||16;TF=P.TF||16;current=computeParts(P);}
 fromModel();
+
+/* ---------- finishes and materials ---------- */
+// finish per part group: wood decor or plain colour
+const FIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'},front:{type:'uni',color:'#C2B8AA',name:'Серый кашемир U702 ST9'},top:{type:'wood',decor:'C1385'},apron:null};
+const mats=makeMats();
+applyMaterials(mats,FIN,P.Ec);
+// appliances
+const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
+const blackMat=new THREE.MeshStandardMaterial({color:0x1d1e20,roughness:.35});
+const sinkMat=new THREE.MeshStandardMaterial({color:0x2a2b2d,roughness:.6});
+const burnerMat=new THREE.MeshStandardMaterial({color:0x7a2a24,roughness:.4,emissive:0x2a0705});
+const ovenMat=new THREE.MeshStandardMaterial({color:0xb9bcbf,roughness:.3,metalness:.6});
+const steelMat=new THREE.MeshStandardMaterial({color:0xa9a7a2,roughness:.38,metalness:.75});
+const fridgeSideMat=new THREE.MeshStandardMaterial({color:0x8d8c89,roughness:.45,metalness:.55});
+const handleMat=new THREE.MeshStandardMaterial({color:0x5c5d5f,roughness:.35,metalness:.7});
+const dishMat=new THREE.MeshStandardMaterial({color:0x9fa3a6,roughness:.4,metalness:.6});
+const dishInMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
+const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metalness:.2});
+
+/* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m) */
+function buildAppliances(g){
+  const c=current;
+  const box=(x0,x1,y0,y1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),mat);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
+  const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
+  // sink with mixer in the first base cabinet
+  { const cx=b1/2,cz=.3;
+    box(cx-.2,cx+.2,ct-.004,ct+.006,cz-.22,cz+.22,blackMat);
+    box(cx-.17,cx+.17,ct-.17,ct+.0065,cz-.19,cz+.19,sinkMat);
+    const tap=new THREE.Mesh(new THREE.CylinderGeometry(.014,.016,.32,16),blackMat);tap.position.set(cx,ct+.16,.06);g.add(tap);
+    box(cx-.012,cx+.012,ct+.28,ct+.31,.06,.26,blackMat); }
+  // two-zone hob over the oven cabinet
+  { const free=P.Hob==='free',along=!!P.HobAlong,hd=free?.145:.15;   // hd: half the hob's short side
+    // along the worktop: centred in the cabinet, back edge 20 mm off the wall; across: shifted by the slider
+    const hz=free?.315:.32,cx=b1+b2+b3/2+(along?0:P.Hx*MM),zc=along?.02+hd:hz;   // hz: centre of the hob in its own description, zc: where that centre goes
+    // the hob is described with burners one behind the other (dx across, z into the room); "along" turns it 90° and moves its centre from z=hz to z=zc
+    const at=(dx,z)=>along?[cx+z-hz,zc+dx]:[cx+dx,z];
+    const hb=(dx0,dx1,y0,y1,z0,z1,mat)=>along?box(cx+z0-hz,cx+z1-hz,y0,y1,zc+dx0,zc+dx1,mat):box(cx+dx0,cx+dx1,y0,y1,z0,z1,mat);
+    const disc=(r,h,dx,y,z,mat,seg)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),mat);const [x,zz]=at(dx,z);m.position.set(x,y,zz);g.add(m);};
+    if(free){   // tabletop two-burner hob standing on the worktop
+      const hh=.065;
+      hb(-.145,.145,ct+.008,ct+hh,.07,.56,blackMat);
+      hb(-.14,.14,ct+hh,ct+hh+.004,.075,.555,glassMat);
+      [.2,.43].forEach(z=>disc(.075,.002,0,ct+hh+.005,z,burnerMat,32));
+      [[-.11,.07],[.11,.07],[-.11,.56],[.11,.56]].forEach(([dx,z])=>disc(.008,.008,dx,ct+.004,z,blackMat,10));
+      const kz=along?zc+.152:.567;   // knobs always on the front face
+      [-.06,.06].forEach(dx=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.015,16),chromeMat);k.rotation.x=Math.PI/2;k.position.set(cx+dx,ct+.035,kz);g.add(k);});
+    }else{   // built-in glass hob flush in a worktop cut-out
+      hb(-.15,.15,ct,ct+.006,.06,.58,blackMat);
+      [.18,.44].forEach(z=>disc(.085,.002,0,ct+.007,z,burnerMat,32));
+    } }
+  // built-in dishwasher behind the middle front
+  if(P.Dish!==false){ const x0=b1+.003,x1=b1+b2-.003,yt=c.ytop*MM-.004,zc=c.zfB*MM-(P.TF||16)*MM,zd=zc-.045,pl=(P.Plinth!==false?P.Pl:0)*MM;
+    // hollow tub: back, sides, top and bottom walls only, so the inside is visible with the door open
+    const w=.05,rr=.045,zb=.03,zo=zd-.06,yb=pl;   // 50 mm walls, inner corners rounded
+    const sh=new THREE.Shape();sh.moveTo(x0,0);sh.lineTo(x1,0);sh.lineTo(x1,yt);sh.lineTo(x0,yt);sh.lineTo(x0,0);
+    const ix0=x0+w,ix1=x1-w,iy0=yb+w,iy1=yt-w,hole=new THREE.Path();
+    hole.moveTo(ix0+rr,iy0);hole.lineTo(ix1-rr,iy0);hole.quadraticCurveTo(ix1,iy0,ix1,iy0+rr);hole.lineTo(ix1,iy1-rr);hole.quadraticCurveTo(ix1,iy1,ix1-rr,iy1);
+    hole.lineTo(ix0+rr,iy1);hole.quadraticCurveTo(ix0,iy1,ix0,iy1-rr);hole.lineTo(ix0,iy0+rr);hole.quadraticCurveTo(ix0,iy0,ix0+rr,iy0);
+    sh.holes.push(hole);
+    const tub=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:zo-zb-w,bevelEnabled:false,curveSegments:10}),dishMat);
+    tub.position.z=zb+w;tub.castShadow=tub.receiveShadow=true;g.add(tub);
+    box(x0,x1,0,yt,zb,zb+w,dishInMat); }
+  // built-in oven under the hob
+  { const x0=b1+b2,yo=c.ovY*MM,zf=c.zfB*MM;
+    box(x0+.003,x0+b3-.003,yo,yo+.595,zf-.02,zf+.004,ovenMat);   // standard 595 mm oven fills its niche
+    box(x0+.06,x0+b3-.06,yo+.08,yo+.46,zf+.004,zf+.007,glassMat);
+    box(x0+.08,x0+b3-.08,yo+.5,yo+.52,zf+.007,zf+.03,chromeMat); }
+  // cooker hood under the wall cabinet over the hob
+  { const x0=b1+b2,yh=Math.max(c.yW,P.Ct+P.Gh)*MM;
+    if(yh>c.yW*MM+.01||true)box(x0+.01,x0+b3-.01,yh-.05,yh,.02,P.Dw*MM+.03,chromeMat); }
+  // freestanding fridge in the style of a Haier 3-door: stainless door and two drawers, display, edge handles, feet
+  { const x0=xr+.01,x1=c.xF*MM-.01,fh=P.Fh*MM,fd=P.Fd*MM,ft=.03,lift=.02,bodyD=fd-.06;
+    box(x0,x1,lift,fh,.02,bodyD,fridgeSideMat);
+    const yD=lift+fh*.44,yM=lift+(yD-lift)*.6,gap=.006;   // lower drawer 60 %, upper 40 % of the drawer zone
+    box(x0,x1,yD+gap/2,fh,bodyD,bodyD+.05,steelMat);                   // main door
+    box(x0,x1,yM+gap/2,yD-gap/2,bodyD,bodyD+.05,steelMat);               // upper drawer
+    box(x0,x1,lift,yM-gap/2,bodyD,bodyD+.05,steelMat);                   // lower drawer
+    [yD,yM].forEach(y=>box(x0+.02,x1-.02,y-.028,y-.006,bodyD+.05,bodyD+.052,handleMat));   // drawer grips under each gap
+    box(x0-.005,x0,yD+.25,yD+.25+fh*.3,bodyD+.006,bodyD+.044,handleMat);   // vertical edge handle on the left side of the door (no overlap, no flicker)
+    const cx=(x0+x1)/2;
+    box(cx-.028,cx+.028,fh-.42,fh-.22,bodyD+.05,bodyD+.052,glassMat);          // display
+    box(cx-.03,cx+.03,fh-.085,fh-.075,bodyD+.05,bodyD+.052,handleMat);        // logo strip
+    [[x0+.04,bodyD-.03],[x1-.04,bodyD-.03],[x0+.04,.06],[x1-.04,.06]].forEach(([x,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,lift,16),blackMat);f.position.set(x,lift/2,z);g.add(f);}); }
+}
+
+/* ---------- the kitchen in the scene: built when it is on screen and something changed ---------- */
+let model=null,doors=[],dirty=true;
+function build(){
+  T=P.T||16;TF=P.TF||16;current=computeParts(P);
+  const prev=doors;disposeGroup(model);
+  ({model,doors}=buildParts(current,mats,{prev}));
+  buildAppliances(model);
+  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  scene.add(model);dirty=false;updatePanel();
+}
+frameHooks.push(()=>{const on=view==='kitchen';if(on&&dirty)build();if(model)model.visible=on;});
 
 /* camera presets of the kitchen (as in the kitchen tab), moved to where the kitchen lies on the plan */
 function setCam(v){
@@ -115,12 +216,44 @@ kq('[data-cams]').querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('
 // how far from the kitchen wall the left wall shows: the view's frame, up to the window wall
 const frameL=kq('#kFrameL');
 const showL=()=>Math.min(VS.kitchen.L,A.kL);
-function syncKitchen(){
-  frameL.max=A.kL;frameL.value=showL();kq('#kFrameLOut').textContent=showL();
-  kq('#kSub').textContent=`стена ${A.kW} · потолок ${A.H} мм — с «Планировки»`;
-}
 frameL.addEventListener('input',e=>{VS.kitchen.L=+e.target.value;saveView('kitchen');syncKitchen();
   if(view==='kitchen'){buildWalls(VIEWS.kitchen);aimView();}});
+// cabinet sizes
+const ids=['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'];
+const syncIds=()=>ids.forEach(j=>{kq(`[data-p="${j}"]`).value=P[j];});
+ids.forEach(id=>kq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;clamp();syncIds();build();}));
+// what the kitchen has
+function syncThick(){kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
+function syncHob(){panel.querySelectorAll('[data-hob]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.hob===(P.Hob||'built')));}
+panel.querySelectorAll('[data-hob]').forEach(b=>b.addEventListener('click',()=>{P.Hob=b.dataset.hob;syncHob();build();}));
+kq('#k-tOvDr').addEventListener('change',e=>{P.OvDr=e.target.checked;build();});
+kq('#k-tHobAlong').addEventListener('change',e=>{P.HobAlong=e.target.checked;syncThick();build();});
+kq('#k-tApron').addEventListener('change',e=>{P.Apron=e.target.checked;build();});
+kq('#k-tDish').addEventListener('change',e=>{P.Dish=e.target.checked;build();});
+kq('#k-tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;build();});
+panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
+// sizes, the wall and the ceiling (from the plan), what the finishes are, what is left between the cabinets
+function updatePanel(){
+  ids.forEach(id=>{kq(`[data-p-out="${id}"]`).textContent=/^N/.test(id)?P[id]:P[id]+' мм';});
+  kq('#k-W').textContent=P.W+' мм';kq('#k-H').textContent=P.H+' мм';
+  const fc=finName(finOf(FIN,'carcass')),ff=finName(finOf(FIN,'front'));
+  const dn=fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`;
+  kq('#kSub').textContent=`стена ${P.W} мм · потолок ${P.H} мм · ${dn}; столешница — ${finName(FIN.top)}`;
+  { const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),c=current;
+    const pl=P.Plinth!==false?P.Pl:0,hb=P.Ct-P.Tt-pl;
+    const free=P.W-(P.B1+P.B2+P.B3+P.Fr);
+    kq('#k-gapBase').textContent=`Высота корпуса ${hb} мм · фасады ${hb-2} мм`+(free>0?` · справа свободно ${free} мм`:'');
+    const hw=c.yAnt-c.yW,st=(hw-t)/(P.Nw+1);
+    kq('#k-gapWall').textContent=`Высота навесных ${hw} мм`+(P.Nw?` · между полками ${f(st-t)} мм`:'')+` · вытяжка ${Math.max(c.yW,P.Ct+P.Gh)-P.Ct} мм над столешницей`; }
+}
+// the sizes block stays open or closed as it was left
+const sizesBox=kq('#k-sizesBox');
+sizesBox.addEventListener('toggle',()=>{if(VS.kitchen.sizes!==sizesBox.open){VS.kitchen.sizes=sizesBox.open;saveView('kitchen');}});
+function syncKitchen(){
+  frameL.max=A.kL;frameL.value=showL();kq('#kFrameLOut').textContent=showL();
+  sizesBox.open=VS.kitchen.sizes!==false;
+  syncIds();syncThick();updatePanel();
+}
 
 addView('kitchen',{
   rooms:['kitchen'],
@@ -129,10 +262,12 @@ addView('kitchen',{
   // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the kitchen
-  defaults:{Wm:'auto',Wh:100,L:1350},
+  furniture:()=>({model,doors,P,current}),   // the built kitchen: for the plan (stage 7) and the checks
+  defaults:{Wm:'auto',Wh:100,L:1350,sizes:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncKitchen
 });
-modelHooks.push(()=>{fromModel();syncKitchen();});
+// the plan changed the sizes: the wall, the ceiling and the kitchen's place come along; the kitchen is rebuilt when next on screen
+modelHooks.push(()=>{fromModel();dirty=true;syncKitchen();});
 })();

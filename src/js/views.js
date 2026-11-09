@@ -2,7 +2,7 @@
    A view names the walls it shows (rooms), which walls hide in the cut mode and from which side (fade),
    its own settings (remembered per view) and its panel. Light and wall colour are shared by all views:
    their block (#shared) moves into the panel of the view on screen. */
-const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), poche, defaults, panel, home(), sync(), onDoors()}
+const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), poche, furniture(), defaults, panel, home(), sync(), onDoors()}
 const VS={};        // id → the view's own settings
 let view=null;      // the view on screen
 const vs=()=>VS[view];

@@ -27,6 +27,70 @@
       </div>
     </div>
 
-    <p class="note" style="margin:0">Это новая кухня, собранная из общей модели квартиры: стены и их размеры берутся с «Планировки». Шкафы и техника появятся на следующем шаге; пока всё остальное — во вкладке «Кухня».</p>
+    <div>
+      <h2>Состав</h2>
+      <div class="toggles" style="margin-top:0">
+        <label><input type="checkbox" id="k-tDish" checked> Посудомойка</label>
+        <label><input type="checkbox" id="k-tOvDr"> Ящик над духовкой</label>
+        <label><input type="checkbox" id="k-tApron" checked> Фартук</label>
+        <label><input type="checkbox" id="k-tAnt" checked> Антресоли</label>
+      </div>
+      <p class="note" style="margin:8px 0 0">Добавляет или убирает детали — меняется и деталировка.</p>
+    </div>
+
+    <div>
+      <h2>Варочная панель</h2>
+      <div class="seg" role="group" aria-label="Тип плиты">
+        <button data-hob="built" aria-pressed="true">Встроенная</button>
+        <button data-hob="free" aria-pressed="false">Настольная</button>
+      </div>
+      <div class="toggles" style="margin-top:10px"><label><input type="checkbox" id="k-tHobAlong"> Вдоль столешницы</label></div>
+      <div class="field" id="k-fHx" style="margin:10px 0 0"><label for="k-Hx">Смещение от центра шкафа</label><output data-p-out="Hx"></output><input type="range" id="k-Hx" data-p="Hx" min="-300" max="300" step="5"></div>
+    </div>
+
+    <details class="sizes" id="k-sizesBox">
+      <summary>Размеры и секции</summary>
+      <div class="sizes-body">
+    <div>
+      <h3>Помещение, мм</h3>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — корпус</label><div class="seg" role="group" aria-label="Толщина ЛДСП — корпус" style="min-width:120px"><button data-thick="16" data-for="T" aria-pressed="true">16 мм</button><button data-thick="18" data-for="T" aria-pressed="false">18 мм</button></div></div>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — фасады</label><div class="seg" role="group" aria-label="Толщина ЛДСП — фасады" style="min-width:120px"><button data-thick="16" data-for="TF" aria-pressed="true">16 мм</button><button data-thick="18" data-for="TF" aria-pressed="false">18 мм</button></div></div>
+      <div class="field"><label>Стена</label><output id="k-W"></output></div>
+      <div class="field"><label>Высота потолка</label><output id="k-H"></output></div>
+      <p class="note" style="margin:0 0 10px">Стена и потолок меняются на «Планировке», сколько видно левой стены — в «Виде».</p>
+    </div>
+
+    <div>
+      <h3>Нижние шкафы, мм</h3>
+      <div class="field"><label for="k-B1">Под мойку</label><output data-p-out="B1"></output><input type="range" id="k-B1" data-p="B1" min="300" max="900" step="10"></div>
+      <div class="field"><label for="k-B2">Средний (посудомойка)</label><output data-p-out="B2"></output><input type="range" id="k-B2" data-p="B2" min="300" max="900" step="10"></div>
+      <div class="field"><label for="k-B3">Под духовку</label><output data-p-out="B3"></output><input type="range" id="k-B3" data-p="B3" min="450" max="900" step="10"></div>
+      <div class="field"><label for="k-Ct">Высота столешницы</label><output data-p-out="Ct"></output><input type="range" id="k-Ct" data-p="Ct" min="800" max="1000" step="5"></div>
+      <div class="field"><label for="k-Db">Глубина столешницы</label><output data-p-out="Db"></output><input type="range" id="k-Db" data-p="Db" min="450" max="700" step="10"></div>
+      <div class="field"><label for="k-Pl">Цоколь</label><output data-p-out="Pl"></output><input type="range" id="k-Pl" data-p="Pl" min="60" max="200" step="5"></div>
+      <div class="note" id="k-gapBase" style="margin:-4px 0 10px"></div>
+    </div>
+
+    <div>
+      <h3>Холодильник, мм</h3>
+      <div class="field"><label for="k-Fr">Ширина ниши</label><output data-p-out="Fr"></output><input type="range" id="k-Fr" data-p="Fr" min="500" max="800" step="10"></div>
+      <div class="field"><label for="k-Fh">Высота холодильника</label><output data-p-out="Fh"></output><input type="range" id="k-Fh" data-p="Fh" min="1500" max="2100" step="10"></div>
+      <div class="field"><label for="k-Fd">Глубина холодильника</label><output data-p-out="Fd"></output><input type="range" id="k-Fd" data-p="Fd" min="550" max="750" step="5"></div>
+    </div>
+
+    <div>
+      <h3>Навесные шкафы и антресоли, мм</h3>
+      <div class="field"><label for="k-Dw">Глубина с фасадом</label><output data-p-out="Dw"></output><input type="range" id="k-Dw" data-p="Dw" min="250" max="450" step="10"></div>
+      <div class="field"><label for="k-Gw">От столешницы до навесных</label><output data-p-out="Gw"></output><input type="range" id="k-Gw" data-p="Gw" min="450" max="750" step="10"></div>
+      <div class="field"><label for="k-Gh">От варочной панели до вытяжки</label><output data-p-out="Gh"></output><input type="range" id="k-Gh" data-p="Gh" min="550" max="850" step="10"></div>
+      <div class="field"><label for="k-Ha">Высота антресолей</label><output data-p-out="Ha"></output><input type="range" id="k-Ha" data-p="Ha" min="250" max="700" step="10"></div>
+      <div class="field"><label for="k-Da">Глубина антресолей с фасадом</label><output data-p-out="Da"></output><input type="range" id="k-Da" data-p="Da" min="300" max="700" step="10"></div>
+      <div class="field"><label for="k-Nw">Полок в навесных</label><output data-p-out="Nw"></output><input type="range" id="k-Nw" data-p="Nw" min="0" max="3" step="1"></div>
+      <div class="note" id="k-gapWall" style="margin:-4px 0 10px"></div>
+    </div>
+      </div>
+    </details>
+
+    <p class="note" style="margin:0">Новая кухня собрана из общей модели квартиры. Цвет и декор, открывание дверец, размерные линии и деталировка появятся на следующем шаге — пока они во вкладке «Кухня».</p>
 
     <div data-shared-slot style="display:contents"></div>

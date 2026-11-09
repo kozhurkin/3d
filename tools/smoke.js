@@ -139,11 +139,12 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
     getComputedStyle: () => ({ getPropertyValue: () => ' #cccccc ' }),
     requestAnimationFrame: (f) => frames.push(f),
     MutationObserver: class { observe() {} }, ResizeObserver: class { observe() {} },
+    Image: class { set src(v) {} }, navigator: {},
   };
   const wl = {};
   win.addEventListener = (t, f) => (wl[t] ||= []).push(f);
   win.dispatch = (t) => (wl[t] || []).forEach((f) => f({}));
-  win.window = win; win.parent = { location: { hash }, ...parentWin };
+  win.window = win; win.parent = { location: { hash }, ...DECOR_PARENT, ...parentWin };   // pages take the decors from the shell
   const ctx = vm.createContext(win);
   all(doc).filter((x) => x.tagName === 'SCRIPT' && !x.attrs.src).forEach((s, i) => vm.runInContext(s.text, ctx, { filename: `script#${i}` }));
   const tick = (n = 3) => { for (let i = 0; i < n; i++) { const q = frames.splice(0); q.forEach((f) => f()); } };
@@ -152,6 +153,10 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
 
 /* ---------- the built file ---------- */
 const root = path.join(__dirname, '..');
+// the decor library the shell carries (pages read it from their parent through the bridge)
+const decorsCtx = vm.createContext({});
+vm.runInContext(fs.readFileSync(path.join(root, 'src/decors.js'), 'utf8'), decorsCtx);
+const DECOR_PARENT = Object.fromEntries(['PHOTO_GAIN', 'DECORS', 'PALETTE_WOOD', 'PALETTE_UNI', 'renderPalette'].map((k) => [k, decorsCtx[k]]));
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const pi = html.indexOf('const PAGES=');
 const PAGES = new Function(html.slice(pi, html.indexOf(';\n', pi) + 1) + 'return PAGES;')();
@@ -312,7 +317,7 @@ check('кухня (новая): рамка левой стены, переход
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2000'; fl.dispatch('input');
   assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000 });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true });
   fl.value = '9000'; fl.dispatch('input');   // no further than the window wall, which stays out of the kitchen view
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
@@ -334,6 +339,48 @@ check('кухня (новая): детали шкафов совпадают с�
   const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/kitchen-parts.json'), 'utf8'));
   assert.strictEqual(got.parts.length, want.parts.length);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
+});
+
+check('кухня (новая): шкафы и техника собираются, панель их меняет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
+  const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/kitchen-parts.json'), 'utf8'));
+  const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
+  const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
+  let r = k();
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors, want.parts.length, true], 'built on screen with every front on a hinge');
+  // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
+  assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
+  assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
+  assert.match(kq('#kSub').textContent, /корпус — Белый премиум W1000 ST9; фасады — Серый кашемир U702 ST9; столешница — Дуб Каселла натуральный H1385 ST40/);
+  assert.match(kq('#k-gapBase').textContent, /справа свободно 100 мм/);
+  // a wider sink cabinet: the fridge niche gives way, as in the kitchen tab
+  const b1 = kq('[data-p="B1"]'); b1.value = '600'; b1.dispatch('input');
+  r = k(); assert.deepStrictEqual([r.P.B1, r.P.Fr], [600, 550]);
+  assert.strictEqual(kq('[data-p-out="Fr"]').textContent, '550 мм');
+  // no dishwasher: its front goes, a middle cabinet with a door and a shelf comes
+  const dish = kq('#k-tDish'); dish.checked = false; dish.dispatch('change');
+  r = p.run('VIEWS.kitchen.furniture().current.parts.map(x=>x.name)');
+  assert.ok(!r.includes('Фасад посудомоечной машины') && r.includes('Полка нижнего шкафа — средний'));
+  kq('[data-hob="free"]').click(); kq('[data-thick="18"][data-for="T"]').click();
+  r = k(); assert.deepStrictEqual([r.P.Hob, r.P.T], ['free', 18]);
+  // along the worktop the offset slider hides
+  const along = kq('#k-tHobAlong'); along.checked = true; along.dispatch('change');
+  assert.strictEqual(kq('#k-fHx').hidden, true);
+});
+
+check('кухня (новая): шкафы видны только в своей вкладке и следуют размерам «Планировки»', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().model'), null, 'not built while the kitchen is not on screen');
+  p.run('showView("kitchen")'); p.tick();
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), true);
+  p.run('showView("plan")'); p.tick();
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), false, 'hidden on the plan');
+  slide(p, 'kW', 2300); p.tick();
+  p.run('showView("kitchen")'); p.tick();
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
+  assert.match(p.document.getElementById('k-gapBase').textContent, /справа свободно 200 мм/);
+  assert.strictEqual(p.document.getElementById('k-W').textContent, '2300 мм');
 });
 
 check('shell: вкладки открывают приложение или старые страницы', () => {

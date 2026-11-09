@@ -252,7 +252,7 @@ function placeSun(){
    p: swatch colour when the scene colour does not show the paint itself (the lit white wall, not its base tone) */
 const WALLC={
   white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
-  greige:{n:'Грейж',c:'#C7BEB1',r:.9},
+  greige:{n:'Greige',c:'#C7BEB1',r:.9},
   french:{n:'French Grey',c:'#B8B9A6',r:.9}
 };
 const wallCol=w=>w.c.startsWith('--')?css(w.c):w.c;
@@ -294,20 +294,43 @@ ROOMS.forEach(r=>floorText(r.name,r.at[0],r.at[1],.2));
 
 /* ---------- walls ---------- */
 let wallGroup=null, wallParts=[];   // {m: wall mesh, f: () => visible in "cut" mode}
+let wallLines=[], linesTop=-1;      // {e: edge lines of a whole wall, w, f}; linesTop: cut height (mm) they are drawn for
 const doors=[];                     // {g: hinge pivot, h: leaf height, t: target angle, a: angle, max}
 let arcs=null;
+/* edges of a whole wall cut at height top (mm): outer corners, opening reveals and the cut top only.
+   The wall is built from boxes (pieces between openings, lintels, sills), but the joints between them are not drawn,
+   so a wall with a door or a window reads as one piece */
+function wallOutline(w,top){
+  const [x0,x1,z0,z1]=w.r,alongX=(x1-x0)>=(z1-z0);
+  const [u0,u1,v0,v1]=alongX?[x0,x1,z0,z1]:[z0,z1,x0,x1];   // u along the wall, v across it
+  const s=[],P=(u,y,v)=>alongX?s.push(u*MM,y*MM,v*MM):s.push(v*MM,y*MM,u*MM);
+  const seg=(ua,ya,va,ub,yb,vb)=>{P(ua,ya,va);P(ub,yb,vb);};
+  const holes=w.holes||[];
+  // section of the wall at height y: its length minus the openings cut through at that height
+  const ring=(y,open)=>{let cur=u0;const iv=[];
+    holes.filter(open).sort((p,q)=>p[0]-q[0]).forEach(([a,b])=>{iv.push([cur,a]);cur=b;});iv.push([cur,u1]);
+    iv.forEach(([a,b])=>{if(b-a<1)return;seg(a,y,v0,b,y,v0);seg(a,y,v1,b,y,v1);seg(a,y,v0,a,y,v1);seg(b,y,v0,b,y,v1);});};
+  ring(0,([,,,sill=0])=>sill===0);
+  ring(top,([,,h,sill=0])=>sill<top&&top<=h);
+  [u0,u1].forEach(u=>[v0,v1].forEach(v=>seg(u,0,v,u,top,v)));
+  holes.forEach(([a,b,h,sill=0])=>{if(sill>=top)return;
+    const y1=Math.min(h,top),across=y=>{[v0,v1].forEach(v=>seg(a,y,v,b,y,v));seg(a,y,v0,a,y,v1);seg(b,y,v0,b,y,v1);};
+    [v0,v1].forEach(v=>{seg(a,sill,v,a,y1,v);seg(b,sill,v,b,y1,v);});   // jambs
+    if(h<top)across(h);if(sill>0)across(sill);});                        // head and sill of the opening
+  return s;
+}
 function buildWalls(){
-  wallGroup=new THREE.Group();wallParts=[];
+  wallGroup=new THREE.Group();wallParts=[];wallLines=[];linesTop=-1;
   const solid=(x0,x1,y0,y1,z0,z1,f)=>{
     const g=new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM);
     const m=new THREE.Mesh(g,[wallMat,wallMat,capMat,wallMat,wallMat,wallMat]);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
-    const e=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMat);e.raycast=()=>{};m.add(e);
     wallGroup.add(m);wallParts.push({m,f,b:y0*MM,t:y1*MM,h:(y1-y0)*MM});
   };
   const foot=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.002,(z0+z1)/2*MM);m.renderOrder=1;wallGroup.add(m);};
   WALLS.forEach(w=>{
     const [x0,x1,z0,z1]=w.r,alongX=(x1-x0)>=(z1-z0),f=wallRule(w);
+    const e=new THREE.LineSegments(new THREE.BufferGeometry(),edgeMat);e.raycast=()=>{};wallGroup.add(e);wallLines.push({e,w,f});
     // split the wall along its long side: full-height pieces between openings, a lintel over each opening
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
     const piece=(a,b,y0,y1=H)=>{if(b-a<1)return;
@@ -669,7 +692,7 @@ function loop(){
   camera.position.copy(cam.target).addScaledVector(_d,cam.r);camera.lookAt(cam.target);camera.updateMatrixWorld();
   // walls are cut at the chosen share of the ceiling height (bottom stays on the floor)
   { const row=V.Wm==='row',skel=V.Wm==='skeleton',outline=V.Wm==='outline';
-    const cut=H*MM*(row?10:V.Wh)/100;
+    const cutMm=H*(row?10:V.Wh)/100,cut=cutMm*MM;
     const op=skel?0:1,tr=op<.999;
     [wallMat,capMat].forEach(m=>{m.opacity=op;if(m.transparent!==tr){m.transparent=tr;m.depthWrite=!tr;m.needsUpdate=true;}});
     edgeMat.opacity=skel?.9:.35;
@@ -679,6 +702,10 @@ function loop(){
       w.m.castShadow=!skel&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });
+    // wall edges are redrawn only when the cut height changes
+    if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();
+      l.e.geometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(wallOutline(l.w,Math.min(H,cutMm)),3));});}
+    wallLines.forEach(l=>l.e.visible=!outline&&(V.Wm==='auto'?l.f():true));
     doors.forEach(d=>{
       if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
       else d.a+=(d.t-d.a)*ease(.07);

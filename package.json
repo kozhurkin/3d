@@ -2,6 +2,7 @@
   "name": "3d",
   "private": true,
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "check": "node tools/smoke.js"
   }
 }

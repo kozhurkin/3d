@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}[hidden]{display:none!important}</style>
+<title>Квартира</title>
+</head><body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=Tenor+Sans&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the 3D apartment fills the left, the panel of the view on the right; stacks on phones */
+:root{
+  --bg:#ECEDE9; --panel:#F7F7F4; --fg:#1E2321; --muted:#626B66; --line:#D3D6D0;
+  --accent:#2F5D50; --accent-soft:#DCE7E2; --warn:#A5561C; --warn-soft:#F4E4D6; --ok:#2F6B45;
+  --scene-bg:#DCDDD8; --scene-floor:#C9C6BF; --scene-wall:#E7E5E0;
+  --fl-hall:#D9CDB8; --fl-bath:#C5CDD0; --fl-kit:#D3CDBF;
+  --f-display:"Tenor Sans", "Georgia", serif;
+  --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532;
+  --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; --warn-soft:#3A2B1F; --ok:#8BC79F;
+  --scene-bg:#202523; --scene-floor:#2A2C2A; --scene-wall:#3A3C39;
+  --fl-hall:#3B362E; --fl-bath:#30363A; --fl-kit:#38342E; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532;
+  --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; --warn-soft:#3A2B1F; --ok:#8BC79F;
+  --scene-bg:#202523; --scene-floor:#2A2C2A; --scene-wall:#3A3C39;
+  --fl-hall:#3B362E; --fl-bath:#30363A; --fl-kit:#38342E; color-scheme:dark;}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;min-height:100%;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px;box-sizing:border-box}
+.viewer{position:relative;min-width:0;border-radius:6px;overflow:hidden;background:var(--scene-bg);min-height:560px}
+#c{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.info{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;min-height:28px;box-sizing:border-box;max-width:calc(100% - 24px);padding:4px 9px;background:var(--panel);border:1px solid var(--line);border-radius:4px;font:400 12px/1.35 var(--f-body);color:var(--muted);text-align:left;cursor:pointer;opacity:.95}
+.info:hover,.info[aria-expanded="true"]{border-color:var(--accent)}
+.info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.info .ii{font:600 italic 14px/1 Georgia,serif;color:var(--accent);flex:none}
+.info .sep{color:var(--accent);font-weight:700;margin:0 3px}
+.info .it{display:none}
+.info[aria-expanded="true"] .it{display:block;margin-left:9px}
+.info{margin-right:52px}
+.camb{position:absolute;z-index:3;right:12px;bottom:12px;width:28px;height:28px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--muted);cursor:pointer;opacity:.95}
+.camb:hover,.camb[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
+.camb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.inset{position:absolute;right:6px;bottom:6px;width:min(272px,43%);aspect-ratio:1/.72;border:1px solid var(--accent);border-radius:8px;overflow:hidden;pointer-events:none;box-sizing:border-box}
+.inset .dist{position:absolute;left:6px;bottom:6px;display:flex;gap:5px;white-space:nowrap;font:500 11px/1.35 var(--f-mono);color:var(--fg);background:var(--panel);padding:4px 7px;border-radius:3px;font-variant-numeric:tabular-nums}
+.inset .dist i{font-style:normal;color:var(--muted)}
+.inset .dist em{font-style:normal}
+.inset .inset-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+.inset .cam-arrow{position:absolute;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:12px solid #ff6a00;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+.inset span{position:absolute;left:6px;top:4px;font:500 10px var(--f-mono);color:var(--muted);background:var(--panel);padding:1px 4px;border-radius:3px}
+.dbg-on .info{max-width:calc(100% - min(260px,42%) - 36px)}
+.dbg-on .info[aria-expanded="true"] .it{white-space:normal}
+.btn{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 4px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.seg button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:20px;min-width:0;overflow:auto;max-height:calc(100vh - 32px);box-sizing:border-box}
+h1{font:400 26px/1.15 var(--f-display);margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin-top:4px;font-family:var(--f-mono);font-size:12px}
+h2{font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+h3{font:600 12px/1 var(--f-body);margin:14px 0 10px;color:var(--fg)}
+.field{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+.field label{font-size:13px}
+.field output{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums}
+.field input{grid-column:1/-1;width:100%;accent-color:var(--accent);margin:0}
+.seg{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.seg button{flex:1;font:500 13px var(--f-body);background:transparent;color:var(--fg);border:0;padding:8px 4px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
+.views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.toggles{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.toggles label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.toggles input{accent-color:var(--accent);margin:0}
+dl.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0;font-size:12px}
+dl.facts dt{color:var(--muted)}
+dl.facts dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+dl.facts .q{color:var(--warn)}
+.room{font:600 12px var(--f-body);margin:14px 0 8px}
+.room:first-of-type{margin-top:0}
+.note{font-size:12px;color:var(--muted)}
+.wcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wc{display:flex;flex-direction:column;gap:6px;padding:6px;font:500 12px/1.2 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;cursor:pointer;text-align:center}
+.wc i{display:block;height:30px;border-radius:3px;border:1px solid rgba(0,0,0,.14)}
+.wc:hover{border-color:var(--accent)}
+.wc[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+@media (max-width:900px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .viewer{min-height:340px;height:72vh}
+  .panel{max-height:none}
+}
+</style>
+
+<div class="app">
+  <div class="viewer" id="viewer">
+    <canvas id="c" aria-label="3D-план квартиры: прихожая, санузел и кухня"></canvas>
+    <button class="camb" id="camBtn" aria-expanded="false" aria-label="Мини-вид камеры" title="Камера: точка вращения и мини-вид"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2" y="6" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 9l5-3v9l-5-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
+    <button class="info" id="infoBtn" aria-expanded="false" aria-label="Как управлять"><span class="ii">i</span><span class="it">Тяните — вращение <b class="sep">•</b> Shift + тяните, средняя кнопка или два пальца — сдвиг <b class="sep">•</b> колесо — масштаб к курсору <b class="sep">•</b> клик по двери — открыть или закрыть, удержание — открывать постепенно</span></button>
+  </div>
+
+  <aside class="panel" data-panel="plan" hidden>
+<!--include panels/plan.html-->
+  </aside>
+</div>
+<!-- light and wall colour: shared by all views, moved into the panel of the view on screen -->
+<div id="shared" style="display:contents" hidden>
+<!--include panels/shared.html-->
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/apartment.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/walls.js"></script>
+<script src="js/views.js"></script>
+<script src="js/plan.js"></script>
+<script>
+// the view to open: the shell tab in the hash (the app runs in its frame); later the shell switches views with showView()
+let first="plan";try{const h=parent.location.hash.slice(1);if(VIEWS[h])first=h;}catch(e){}
+resize();showView(first,false);
+if(document.fonts)document.fonts.ready.then(paintNames);
+loop();
+</script>

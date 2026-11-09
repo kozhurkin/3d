@@ -41,29 +41,35 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
   <iframe id="f-hall" title="Шкаф-портал у входной двери" hidden></iframe>
   <iframe id="f-bath" title="Шкафы в санузле" hidden></iframe>
   <iframe id="f-kitchen" title="Кухня" hidden></iframe>
-  <iframe id="f-plan" title="Планировка квартиры" hidden></iframe>
+  <iframe id="f-app" title="Квартира" hidden></iframe>
 </main>
 
 <script>
 (function(){
   const tabs=['plan','hall','bath','kitchen'];
+  // tabs the app already shows as views of its one scene; the others are still their own pages
+  const inApp=['plan'];
+  const frameOf=t=>inApp.includes(t)?'app':t;
+  const frames=['app','hall','bath','kitchen'];
   // keep the explicit light/dark choice in sync inside the frames
   function syncTheme(fr){
     try{const t=document.documentElement.getAttribute('data-theme');const r=fr.contentDocument&&fr.contentDocument.documentElement;
       if(r){t?r.setAttribute('data-theme',t):r.removeAttribute('data-theme');}}catch(e){}
   }
   function show(){
-    const cur=tabs.includes(location.hash.slice(1))?location.hash.slice(1):'plan';
-    tabs.forEach(t=>{
-      const fr=document.getElementById('f-'+t),on=t===cur;
+    const cur=tabs.includes(location.hash.slice(1))?location.hash.slice(1):'plan',fid=frameOf(cur);
+    frames.forEach(f=>{
+      const fr=document.getElementById('f-'+f),on=f===fid;
       if(on&&!fr.dataset.loaded){fr.dataset.loaded='1';fr.addEventListener('load',()=>syncTheme(fr));
         // load the model's page text and run it as srcdoc: same origin as this page, so the viewer's frame rules allow it
-        fr.srcdoc=PAGES[t];}
+        fr.srcdoc=PAGES[f];}
       fr.hidden=!on;
-      document.querySelector(`[data-tab="${t}"]`).setAttribute('aria-current',on?'page':'false');
     });
+    // a fresh app reads its view from the hash; a loaded one switches here
+    if(fid==='app')try{const w=document.getElementById('f-app').contentWindow;if(w&&w.showView)w.showView(cur);}catch(e){}
+    tabs.forEach(t=>document.querySelector(`[data-tab="${t}"]`).setAttribute('aria-current',t===cur?'page':'false'));
   }
-  new MutationObserver(()=>tabs.forEach(t=>syncTheme(document.getElementById('f-'+t)))).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+  new MutationObserver(()=>frames.forEach(f=>syncTheme(document.getElementById('f-'+f)))).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   addEventListener('hashchange',show);show();
 })();
 </script>

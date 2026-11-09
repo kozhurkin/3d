@@ -1,0 +1,13 @@
+    <div>
+      <h2>Цвет стен</h2>
+      <div class="wcs" id="wcs" role="group" aria-label="Цвет стен"></div>
+    </div>
+
+    <div>
+      <h2>Свет</h2>
+      <div class="field"><label for="Laz">Направление</label><output id="oLaz"></output><input type="range" id="Laz" min="-180" max="180" step="1"></div>
+      <div class="field" style="margin-top:10px"><label for="Lel">Высота над горизонтом</label><output id="oLel"></output><input type="range" id="Lel" min="5" max="89" step="1"></div>
+      <div class="field" style="margin-top:10px"><label for="Li">Яркость солнца</label><output id="oLi"></output><input type="range" id="Li" min="0" max="200" step="5"></div>
+      <div class="field" style="margin-top:10px"><label for="La">Рассеянный свет</label><output id="oLa"></output><input type="range" id="La" min="0" max="200" step="5"></div>
+      <div class="row"><button class="btn" id="lightSpin" aria-pressed="false">Вращать свет</button><button class="btn" id="lightReset">Сбросить</button></div>
+    </div>

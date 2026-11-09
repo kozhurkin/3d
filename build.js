@@ -8,11 +8,15 @@ const escapeScript = (s) => s.replaceAll('</', '<\\/');
 
 const bridge = '<script>(function(){var p=parent;["PHOTO_GAIN","DECORS","PALETTE_WOOD","PALETTE_UNI"].forEach(function(k){window[k]=p[k];});window.renderPalette=new Function("return "+p.renderPalette.toString())();})();</script>';
 
-// <script src="js/….js"></script> в странице → содержимое модуля прямо в странице
-const inlineModules = (html) => html.replace(/<script src="(js\/[\w\/.-]+\.js)"><\/script>/g,
-  (_, f) => '<script>\n' + escapeScript(read(f)) + '\n</script>');
+// <script src="js/….js"></script> в странице → содержимое модуля прямо в странице;
+// <!--include panels/….html--> → разметка из файла (панели вкладок)
+const inlineModules = (html) => html
+  .replace(/<!--include ([\w\/.-]+\.html)-->/g, (_, f) => read(f))
+  .replace(/<script src="(js\/[\w\/.-]+\.js)"><\/script>/g,
+    (_, f) => '<script>\n' + escapeScript(read(f)) + '\n</script>');
 
-const pages = Object.fromEntries(['hall', 'bath', 'kitchen', 'plan'].map((k) =>
+// app — одна сцена квартиры (вкладка «Планировка», дальше и комнаты); hall/bath/kitchen — старые страницы, пока не перенесены
+const pages = Object.fromEntries(['hall', 'bath', 'kitchen', 'app'].map((k) =>
   [k, inlineModules(read(k + '.html')).replaceAll('<script src="decors.js"></script>', bridge)]));
 
 const inject = escapeScript(read('decors.js')) + '\nconst PAGES=' + escapeScript(JSON.stringify(pages)) + ';';

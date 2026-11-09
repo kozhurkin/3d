@@ -34,24 +34,22 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     <a href="#hall" data-tab="hall">Прихожая</a>
     <a href="#bath" data-tab="bath">Санузел</a>
     <a href="#kitchen" data-tab="kitchen">Кухня</a>
-    <a href="#kitchen-new" data-tab="kitchen-new" title="Кухня из общей модели квартиры — собирается по шагам, пока рядом со старой">Кухня (новая)</a>
   </nav>
 </header>
 <main class="frames">
   <p id="err" class="err" hidden></p>
   <iframe id="f-hall" title="Шкаф-портал у входной двери" hidden></iframe>
   <iframe id="f-bath" title="Шкафы в санузле" hidden></iframe>
-  <iframe id="f-kitchen" title="Кухня" hidden></iframe>
   <iframe id="f-app" title="Квартира" hidden></iframe>
 </main>
 
 <script>
 (function(){
-  const tabs=['plan','hall','bath','kitchen','kitchen-new'];
+  const tabs=['plan','hall','bath','kitchen'];
   // tabs the app already shows as views of its one scene (tab → view); the others are still their own pages
-  const inApp={plan:'plan','kitchen-new':'kitchen'};
+  const inApp={plan:'plan',kitchen:'kitchen'};
   const frameOf=t=>t in inApp?'app':t;
-  const frames=['app','hall','bath','kitchen'];
+  const frames=['app','hall','bath'];
   // keep the explicit light/dark choice in sync inside the frames
   function syncTheme(fr){
     try{const t=document.documentElement.getAttribute('data-theme');const r=fr.contentDocument&&fr.contentDocument.documentElement;

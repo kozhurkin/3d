@@ -167,7 +167,7 @@ const checks = [];
 const check = (name, fn) => { fn(); checks.push(name); };
 
 check('страницы в index.html', () => {
-  assert.deepStrictEqual(Object.keys(PAGES).sort(), ['app', 'bath', 'hall', 'kitchen']);
+  assert.deepStrictEqual(Object.keys(PAGES).sort(), ['app', 'bath', 'hall']);
   Object.entries(PAGES).forEach(([k, p]) => {
     assert.ok(!/<script src="js\//.test(p), k + ': js/ module left as a link');
     assert.ok(!/<!--include /.test(p), k + ': include left in the page');
@@ -295,7 +295,7 @@ function fnSource(s, name) {
 const kitchenWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.kitchen)}))';
 const vec = (p, v) => p.run(`[${v}.x,${v}.y,${v}.z]`).map((x) => round(x));
 
-check('кухня (новая): стены кухни, обрезанные рамкой, как во вкладке «Кухня»', () => {
+check('кухня: стены кухни, обрезанные рамкой, как в старой вкладке', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   assert.strictEqual(p.run('view'), 'kitchen');
   // the kitchen tab: kitchen wall 2200 × 100 behind x 0..W; left wall 200 thick from the back of the kitchen wall to L = 1350
@@ -314,7 +314,7 @@ check('кухня (новая): стены кухни, обрезанные ра
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.775, 0.9, 2.3]);
 });
 
-check('кухня (новая): рамка левой стены, переходы и размеры с «Планировки»', () => {
+check('кухня: рамка левой стены, переходы и размеры с «Планировки»', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
   const fl = p.document.getElementById('kFrameL');
@@ -336,7 +336,7 @@ check('кухня (новая): рамка левой стены, переход
   assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
 });
 
-check('кухня (новая): детали шкафов совпадают со старой кухней', () => {
+check('кухня: детали шкафов совпадают со старой кухней', () => {
   const pLine = PAGES.app.match(/^const P=\{W:2200,H:2600,.*\};$/m)[0];
   const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
   const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/kitchen-parts.json'), 'utf8'));
@@ -344,7 +344,7 @@ check('кухня (новая): детали шкафов совпадают с�
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
 });
 
-check('кухня (новая): шкафы и техника собираются, панель их меняет', () => {
+check('кухня: шкафы и техника собираются, панель их меняет', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
   const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/kitchen-parts.json'), 'utf8'));
@@ -372,7 +372,7 @@ check('кухня (новая): шкафы и техника собираютс�
   assert.strictEqual(kq('#k-fHx').hidden, true);
 });
 
-check('кухня (новая): шкафы видны только в своей вкладке и следуют размерам «Планировки»', () => {
+check('кухня: шкафы видны только в своей вкладке и следуют размерам «Планировки»', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model'), null, 'not built while the kitchen is not on screen');
   p.run('showView("kitchen")'); p.tick();
@@ -386,7 +386,7 @@ check('кухня (новая): шкафы видны только в своей
   assert.strictEqual(p.document.getElementById('k-W').textContent, '2300 мм');
 });
 
-check('кухня (новая): отделка — палитра, меню образца, свой цвет', () => {
+check('кухня: отделка — палитра, меню образца, свой цвет', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s), sub = () => kq('#kSub').textContent;
   assert.strictEqual(kp.querySelectorAll('[data-decor]').length, DECOR_PARENT.PALETTE_WOOD.length);
@@ -420,7 +420,7 @@ check('кухня (новая): отделка — палитра, меню об
   assert.strictEqual(kq('#k-oEc').textContent, '60%');
 });
 
-check('кухня (новая): фасады, деталировка, настройки по умолчанию', () => {
+check('кухня: фасады, деталировка, настройки по умолчанию', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
   let kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
@@ -464,19 +464,19 @@ check('shell: вкладки открывают приложение или ст
   const fr = (id) => p.document.getElementById('f-' + id);
   const cur = () => p.document.querySelectorAll('[data-tab]').filter((a) => a.getAttribute('aria-current') === 'page').map((a) => a.dataset.tab);
   assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('app').srcdoc, PAGES.app);
-  ['hall', 'bath', 'kitchen'].forEach((t) => assert.strictEqual(fr(t).hidden, true));
+  ['hall', 'bath'].forEach((t) => assert.strictEqual(fr(t).hidden, true));
+  assert.strictEqual(fr('kitchen'), null, 'the kitchen is a view of the app, no page of its own');
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen']);
   assert.deepStrictEqual(cur(), ['plan']);
   fr('app').contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
+  p.ctx.location.hash = '#hall'; p.ctx.dispatch('hashchange');
+  assert.strictEqual(fr('hall').hidden, false); assert.strictEqual(fr('hall').srcdoc, PAGES.hall);
+  assert.strictEqual(fr('app').hidden, true); assert.deepStrictEqual(cur(), ['hall']);
   p.ctx.location.hash = '#kitchen'; p.ctx.dispatch('hashchange');
-  assert.strictEqual(fr('kitchen').hidden, false); assert.strictEqual(fr('kitchen').srcdoc, PAGES.kitchen);
-  assert.strictEqual(fr('app').hidden, true); assert.deepStrictEqual(cur(), ['kitchen']);
+  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('hall').hidden, true);
+  assert.deepStrictEqual(cur(), ['kitchen']); assert.strictEqual(p.ctx.appView, 'kitchen');
   p.ctx.location.hash = '#plan'; p.ctx.dispatch('hashchange');
-  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('kitchen').hidden, true);
-  // the temporary tab of the new kitchen is a view of the same app
-  p.ctx.location.hash = '#kitchen-new'; p.ctx.dispatch('hashchange');
-  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('kitchen').hidden, true);
-  assert.deepStrictEqual(cur(), ['kitchen-new']); assert.strictEqual(p.ctx.appView, 'kitchen');
-  assert.deepStrictEqual(shown, ['plan', 'kitchen']);
+  assert.deepStrictEqual(shown, ['kitchen', 'plan']);
 });
 
 console.log('ok:', checks.length, 'checks\n - ' + checks.join('\n - '));

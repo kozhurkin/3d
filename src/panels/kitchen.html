@@ -1,0 +1,32 @@
+    <div>
+      <h1>Кухня</h1>
+      <div class="sub" id="kSub"></div>
+    </div>
+
+    <div>
+      <h2>Вид</h2>
+      <div class="seg" role="group" aria-label="Стены">
+        <button data-wm="show" aria-pressed="false">Монолит</button>
+        <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
+        <button data-wm="auto" aria-pressed="true" title="Стены, загораживающие обзор, убираются">Разрез</button>
+        <button data-wm="skeleton" aria-pressed="false">Скелет</button>
+        <button data-wm="outline" aria-pressed="false">Контуры</button>
+      </div>
+      <div class="field" style="margin-top:10px"><label for="kWh">Высота стен</label><output data-wh-out></output><input type="range" id="kWh" data-wh min="5" max="100" step="5"></div>
+      <div class="field" style="margin-top:10px"><label for="kFrameL">Левая стена видна на</label><output id="kFrameLOut"></output><input type="range" id="kFrameL" min="600" max="4750" step="10"></div>
+      <h3>Камера</h3>
+      <div class="views v4" data-cams>
+        <button class="btn" data-cam="persp">3/4</button>
+        <button class="btn" data-cam="perspR" title="3/4 с правой стороны">Справа</button>
+        <button class="btn" data-cam="front">Спереди</button>
+        <button class="btn" data-cam="side">Сбоку</button>
+        <button class="btn" data-cam="sink">Мойка</button>
+        <button class="btn" data-cam="hob">Варка</button>
+        <button class="btn" data-cam="back" title="Со стороны стены">Сзади</button>
+        <button class="btn" data-cam="upper" title="Навесные шкафы и антресоли">Верх</button>
+      </div>
+    </div>
+
+    <p class="note" style="margin:0">Это новая кухня, собранная из общей модели квартиры: стены и их размеры берутся с «Планировки». Шкафы и техника появятся на следующем шаге; пока всё остальное — во вкладке «Кухня».</p>
+
+    <div data-shared-slot style="display:contents"></div>

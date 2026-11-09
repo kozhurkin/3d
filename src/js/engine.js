@@ -204,11 +204,12 @@ const insetCv=inset.querySelector('.inset-cv');
 const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
 insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
 const distEl=inset.querySelector('.dist');let distTxt='';
-// the apartment changed size: the sun aims at its new centre, the mini view frames it
-modelHooks.push(()=>{
-  apt.min.set(BOX.x0*MM,0,BOX.z0*MM);apt.max.set(BOX.x1*MM,H*MM,BOX.z1*MM);
-  sun.target.position.set(CX,0,CZ);placeSun();
-});
+// the sun and the mini view follow the view on screen (views.js: aimView)
+function aimSun(x,y,z,half){
+  sun.target.position.set(x,y,z);
+  Object.assign(sun.shadow.camera,{left:-half,right:half,top:half,bottom:-half});sun.shadow.camera.updateProjectionMatrix();
+  placeSun();
+}
 const camBtn=document.getElementById('camBtn');
 camBtn.addEventListener('click',()=>{showDebug=!showDebug;camBtn.setAttribute('aria-expanded',showDebug);dbg.visible=showDebug;inset.hidden=!showDebug;viewer.classList.toggle('dbg-on',showDebug);});
 

@@ -66,7 +66,7 @@ let arcs=null;
    The wall is built from boxes (pieces between openings, lintels, sills), but the joints between them are not drawn,
    so a wall with a door or a window reads as one piece */
 function wallOutline(w,top){
-  const [x0,x1,z0,z1]=w.r,alongX=(x1-x0)>=(z1-z0);
+  const [x0,x1,z0,z1]=w.r,alongX=w.along;
   const [u0,u1,v0,v1]=alongX?[x0,x1,z0,z1]:[z0,z1,x0,x1];   // u along the wall, v across it
   const s=[],P=(u,y,v)=>alongX?s.push(u*MM,y*MM,v*MM):s.push(v*MM,y*MM,u*MM);
   const seg=(ua,ya,va,ub,yb,vb)=>{P(ua,ya,va);P(ub,yb,vb);};
@@ -86,19 +86,34 @@ function wallOutline(w,top){
 }
 // the walls a view shows: its flagged walls, or all of them
 const showsWall=(vw,w)=>vw.rooms==='all'||w.rooms.some(r=>vw.rooms.includes(r));
+/* the part of a wall inside the view's frame (walls and frames are rectangles along the axes); null when nothing is left.
+   along: the wall's direction, taken from the whole wall (a short cut piece must not turn across);
+   holes are cut with it, kept: the holes that are still whole (their doors and windows can show) */
+function clipWall(w,fr){
+  const along=(w.r[1]-w.r[0])>=(w.r[3]-w.r[2]),holes0=w.holes||[];
+  if(!fr)return {...w,along,holes:holes0,kept:holes0.map((h,i)=>i)};
+  const r=[Math.max(w.r[0],fr[0]),Math.min(w.r[1],fr[1]),Math.max(w.r[2],fr[2]),Math.min(w.r[3],fr[3])];
+  if(r[1]-r[0]<1||r[3]-r[2]<1)return null;
+  const [u0,u1]=along?[r[0],r[1]]:[r[2],r[3]],holes=[],kept=[];
+  holes0.forEach(([a,b,...rest],i)=>{const a1=Math.max(a,u0),b1=Math.min(b,u1);if(b1-a1<1)return;
+    holes.push([a1,b1,...rest]);if(a1===a&&b1===b)kept.push(i);});
+  return {...w,r,along,holes,kept};
+}
+let holesShown=new Set();   // 'wallId:holeIndex' of the openings on screen whole: their doors show
 function buildWalls(vw){
   if(wallGroup){scene.remove(wallGroup);wallGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
-  wallGroup=new THREE.Group();wallParts=[];wallLines=[];linesTop=-1;
-  const wallRule=w=>fadeRule(w,vw);
+  wallGroup=new THREE.Group();wallParts=[];wallLines=[];linesTop=-1;holesShown=new Set();
+  const wallRule=w=>fadeRule(w,vw),fr=vw.frame?vw.frame():null;
   const solid=(x0,x1,y0,y1,z0,z1,f)=>{
     const g=new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM);
-    const m=new THREE.Mesh(g,[wallMat,wallMat,capMat,wallMat,wallMat,wallMat]);
+    const m=new THREE.Mesh(g,[wallMat,wallMat,vw.poche?capMat:wallMat,wallMat,wallMat,wallMat]);   // the plan draws the cut tops dark, like the poché of a drawing
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     wallGroup.add(m);wallParts.push({m,f,b:y0*MM,t:y1*MM,h:(y1-y0)*MM});
   };
   const foot=(x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.002,(z0+z1)/2*MM);m.renderOrder=1;wallGroup.add(m);};
-  WALLS.filter(w=>showsWall(vw,w)).forEach(w=>{
-    const [x0,x1,z0,z1]=w.r,alongX=(x1-x0)>=(z1-z0),f=wallRule(w);
+  WALLS.filter(w=>showsWall(vw,w)).map(w=>clipWall(w,fr)).filter(Boolean).forEach(w=>{
+    w.kept.forEach(i=>holesShown.add(w.id+':'+i));
+    const [x0,x1,z0,z1]=w.r,alongX=w.along,f=wallRule(w);
     const e=new THREE.LineSegments(new THREE.BufferGeometry(),edgeMat);e.raycast=()=>{};wallGroup.add(e);wallLines.push({e,w,f});
     // split the wall along its long side: full-height pieces between openings, a lintel over each opening
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
@@ -109,8 +124,7 @@ function buildWalls(vw){
     piece(cur,end,0);
   });
   // kitchen window: white frame in the middle of the wall, a mullion, glass and an inner sill board; hides with its wall
-  const ww=WALLS.find(v=>v.id==='window');
-  if(showsWall(vw,ww)){ const w=ww,f=wallRule(w),FW=60,FD=70,zc=zEnd+A.bear/2;
+  if(holesShown.has('window:0')){ const w=WALLS.find(v=>v.id==='window'),f=wallRule(w),FW=60,FD=70,zc=zEnd+A.bear/2;
     const x0=winX-A.winW/2,x1=winX+A.winW/2,y0=A.winS,y1=A.winS+A.winH;
     const part=(a,b,c,d,e,g,mat,shadow=true)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((b-a)*MM,(d-c)*MM,(g-e)*MM),mat);
       m.position.set((a+b)/2*MM,(c+d)/2*MM,(e+g)/2*MM);m.castShadow=shadow;m.receiveShadow=true;wallGroup.add(m);
@@ -120,11 +134,21 @@ function buildWalls(vw){
     part(x0+FW,x1-FW,y0+FW,y1-FW,zc-4,zc+4,glassMat,false);
     part(x0-50,x1+50,y0-10,y0+20,zEnd-50,zc-FD/2-1,winMat); }   // sill board top sits above the wall opening, so the two faces never coincide (no z-fighting)
   scene.add(wallGroup);
+  // doors and their swings show with their whole openings
+  doors.forEach(d=>{const on=holesShown.has(d.hole);d.g.visible=on;if(d.frame)d.frame.visible=on;});
+  if(arcs)arcs.children.forEach(l=>{l.visible=holesShown.has(l.userData.hole);});
 }
-/* "cut" mode: a wall hides while the camera is on the side the view names for it in fade
-   ('-x': the camera is past its -x face, …); walls the view does not name always stay */
+/* "cut" mode: a wall hides while the camera is on its side named by the view's fade ('-x': past its -x face, …).
+   A room view hides, besides, every wall while the camera is on its side away from the room's floor;
+   the plan hides only the walls it names */
+function fadeSide(w,vw){
+  const named=(vw.fade||{})[w.id];
+  if(named||!Array.isArray(vw.rooms))return named;
+  const rm=ROOMS.find(r=>r.id===vw.rooms[0]).r,r=w.r;
+  return r[3]<=rm[2]?'-z':r[2]>=rm[3]?'+z':r[1]<=rm[0]?'-x':r[0]>=rm[1]?'+x':null;
+}
 function fadeRule(w,vw){
-  const r=w.r.map(v=>v*MM),c=camera.position,side=(vw.fade||{})[w.id];
+  const r=w.r.map(v=>v*MM),c=camera.position,side=fadeSide(w,vw);
   if(!side)return ()=>true;
   return {'-x':()=>c.x>r[1],'+x':()=>c.x<r[0],'-z':()=>c.z>r[3],'+z':()=>c.z<r[2]}[side];
 }
@@ -152,21 +176,21 @@ function buildDoors(){
   emptyGroup(doorGroup,false);doors.length=0;held=null;
   if(arcs){scene.remove(arcs);emptyGroup(arcs);}
   const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10;   // entrance leaf inside the frame
-  { const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);
+  { const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);ent.hole='entry:0';   // the door shows with this opening
     [ED+20,-20].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),handleMat);hd.position.set((eLw-120)*MM,1.0,z*MM);hd.castShadow=true;ent.g.add(hd);});
     const fr=new THREE.Group();doorGroup.add(fr);ent.frame=fr;
     const bar=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,ED*MM),frameMat);
       m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(EZ-ED/2)*MM);m.castShadow=m.receiveShadow=true;fr.add(m);};
     bar(A.eD0,A.eD0+EF,0,A.eDH);bar(A.eD1-EF,A.eD1,0,A.eDH);bar(A.eD0+EF,A.eD1-EF,A.eDH-EF,A.eDH);
     const bw=A.bDoor-6,bh=A.bDoorH-10;
-    door(0,A.hL1+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5); }
+    door(0,A.hL1+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5).hole='hallBath:0'; }
   // door swing on the floor, drawn the way plans show it
   { arcs=new THREE.Group();const am=new THREE.LineDashedMaterial({color:0x6b7069,dashSize:.04,gapSize:.03});
-    const arc=(cx,cz,r,a0,a1,leaf)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
-      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();arcs.add(l);
-      const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));arcs.add(e);};
-    arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2);
-    arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0);
+    const arc=(cx,cz,r,a0,a1,leaf,hole)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
+      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();l.userData.hole=hole;arcs.add(l);
+      const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));e.userData.hole=hole;arcs.add(e);};
+    arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2,'entry:0');
+    arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0,'hallBath:0');
     scene.add(arcs); }
   doors.forEach((d,i)=>{if(keep[i])Object.assign(d,keep[i]);});
   doorParts.length=0;

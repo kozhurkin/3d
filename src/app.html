@@ -70,6 +70,7 @@ h3{font:600 12px/1 var(--f-body);margin:14px 0 10px;color:var(--fg)}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 .views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.views.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .toggles{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .toggles label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
 .toggles input{accent-color:var(--accent);margin:0}
@@ -116,6 +117,9 @@ details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offs
   <aside class="panel" data-panel="plan" hidden>
 <!--include panels/plan.html-->
   </aside>
+  <aside class="panel" data-panel="kitchen" hidden>
+<!--include panels/kitchen.html-->
+  </aside>
 </div>
 <!-- light and wall colour: shared by all views, moved into the panel of the view on screen -->
 <div id="shared" style="display:contents" hidden>
@@ -128,9 +132,10 @@ details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offs
 <script src="js/walls.js"></script>
 <script src="js/views.js"></script>
 <script src="js/plan.js"></script>
+<script src="js/rooms/kitchen.js"></script>
 <script>
-// the view to open: the shell tab in the hash (the app runs in its frame); later the shell switches views with showView()
-let first="plan";try{const h=parent.location.hash.slice(1);if(VIEWS[h])first=h;}catch(e){}
+// the view to open: the shell names it (appView; the app runs in its frame), or its hash; later the shell switches views with showView()
+let first="plan";try{const v=parent.appView||parent.location.hash.slice(1);if(VIEWS[v])first=v;}catch(e){}
 resize();showView(first,false);
 if(document.fonts)document.fonts.ready.then(paintNames);
 loop();

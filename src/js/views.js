@@ -2,7 +2,7 @@
    A view names the walls it shows (rooms), which walls hide in the cut mode and from which side (fade),
    its own settings (remembered per view) and its panel. Light and wall colour are shared by all views:
    their block (#shared) moves into the panel of the view on screen. */
-const VIEWS={};     // id → {rooms, fade, defaults, panel, home(), sync(), onDoors()}
+const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), poche, defaults, panel, home(), sync(), onDoors()}
 const VS={};        // id → the view's own settings
 let view=null;      // the view on screen
 const vs=()=>VS[view];
@@ -55,19 +55,31 @@ function addView(id,def){
 /* a door was clicked or held: the view updates its door controls and remembers */
 function doorsChanged(){const vw=VIEWS[view];if(vw.onDoors)vw.onDoors();saveView();}
 
+/* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows);
+   the camera mini view frames the view's frame, or the whole apartment */
+function aimView(){
+  const vw=VIEWS[view],s=vw.sun();
+  aimSun(s.x,s.y,s.z,s.half);
+  const f=vw.frame?vw.frame():[BOX.x0,BOX.x1,BOX.z0,BOX.z1];
+  apt.min.set(f[0]*MM,0,f[2]*MM);apt.max.set(f[1]*MM,H*MM,f[3]*MM);
+}
+modelHooks.push(()=>{if(view)aimView();});
+
 /* show a view: its panel, its walls, its camera — where it was left, or the view's home on the first visit.
    animate=false puts the camera there at once (first load); otherwise the camera flies there */
+// the camera of each view, its target kept from the view's anchor (a room's origin): when the plan moves the room, the camera goes with it
 const camMem={};
+const anchorOf=id=>{const a=VIEWS[id].anchor?VIEWS[id].anchor():[0,0];return new THREE.Vector3(a[0]*MM,0,a[1]*MM);};
 function showView(id,animate=true){
   if(!VIEWS[id])id='plan';
   if(id===view)return;
-  if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone()};
+  if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
   vw.panel.querySelector('[data-shared-slot]').appendChild(sharedEl);sharedEl.hidden=false;
-  buildWalls(vw);
+  buildWalls(vw);aimView();
   const m=camMem[id];
-  if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t);shortWay();}else vw.home();
+  if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(!animate){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}
   syncWallCtl(id);if(vw.sync)vw.sync();applyTheme();
 }

@@ -185,7 +185,7 @@ const _v=new THREE.Vector3();
 insetHide.push(dimsGroup);
 frameHooks.push(()=>{
   const on=view==='plan';
-  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=on&&VS.plan.names;
+  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=on&&VS.plan.names;roomGroup.visible=on;   // room views have the plain floor, as before
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallOutlineMode?0:wallCut)+.02;
   // dimension labels keep the same size on screen at any zoom
@@ -198,6 +198,8 @@ addView('plan',{
   // the cut mode hides only the outer walls of the apartment, each while the camera looks at it from outside; inner walls always stay
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
   defaults:{Wm:'auto',Wh:100,dm:'closed',dims:false,names:true,floors:true},
+  sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole apartment from any direction
+  poche:true,
   panel:planPanel,
   home:()=>setCam('plan'),
   sync:syncPlan,

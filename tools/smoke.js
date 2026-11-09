@@ -22,6 +22,25 @@ function stub(name = 'stub') {
     },
   });
 }
+// a real vector, so camera targets and goals can be checked in numbers
+class Vec3 {
+  constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
+  set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
+  setScalar(s) { return this.set(s, s, s); }
+  copy(v) { return this.set(+v.x, +v.y, +v.z); }
+  clone() { return new Vec3(this.x, this.y, this.z); }
+  add(v) { this.x += +v.x; this.y += +v.y; this.z += +v.z; return this; }
+  sub(v) { this.x -= +v.x; this.y -= +v.y; this.z -= +v.z; return this; }
+  subVectors(a, b) { return this.set(+a.x - b.x, +a.y - b.y, +a.z - b.z); }
+  multiplyScalar(s) { this.x *= s; this.y *= s; this.z *= s; return this; }
+  addScaledVector(v, s) { this.x += +v.x * s; this.y += +v.y * s; this.z += +v.z * s; return this; }
+  lerp(v, k) { this.x += (+v.x - this.x) * k; this.y += (+v.y - this.y) * k; this.z += (+v.z - this.z) * k; return this; }
+  length() { return Math.hypot(this.x, this.y, this.z); }
+  normalize() { return this.multiplyScalar(1 / (this.length() || 1)); }
+  distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
+  setFromMatrixColumn() { return this; } applyMatrix4() { return this; } applyQuaternion() { return this; } project() { return this; }
+}
+const round = (v, d = 4) => +(+v).toFixed(d);
 
 /* ---------- a small DOM: elements parsed from the page, enough for querySelector, events and attributes ---------- */
 const VOID = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
@@ -112,8 +131,9 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
     getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
   };
+  const THREE = stub('THREE'); THREE.Vector3 = Vec3;
   const win = {
-    THREE: stub('THREE'), document, localStorage, console, performance, setTimeout, clearTimeout, Math, JSON,
+    THREE, document, localStorage, console, performance, setTimeout, clearTimeout, Math, JSON,
     devicePixelRatio: 1, location: { hash },
     matchMedia: () => ({ matches: false, addEventListener() {} }),
     getComputedStyle: () => ({ getPropertyValue: () => ' #cccccc ' }),
@@ -127,7 +147,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
   const ctx = vm.createContext(win);
   all(doc).filter((x) => x.tagName === 'SCRIPT' && !x.attrs.src).forEach((s, i) => vm.runInContext(s.text, ctx, { filename: `script#${i}` }));
   const tick = (n = 3) => { for (let i = 0; i < n; i++) { const q = frames.splice(0); q.forEach((f) => f()); } };
-  return { ctx, doc, document, storage, tick, run: (code) => JSON.parse(vm.runInContext('JSON.stringify(' + code + ')', ctx)) };
+  return { ctx, doc, document, storage, tick, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
 }
 
 /* ---------- the built file ---------- */
@@ -148,9 +168,10 @@ check('страницы в index.html', () => {
 
 check('приложение: «Планировка» открывается', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
-  const r = p.run('({view, n:Object.keys(VIEWS), lines:wallLines.length, parts:wallParts.length, fade:VIEWS.plan.fade, vs:VS.plan})');
+  const r = p.run('({view, n:Object.keys(VIEWS), lines:wallLines.length, parts:wallParts.length, fade:VIEWS.plan.fade, vs:VS.plan, doors:doors.map(d=>d.g.visible)})');
   assert.strictEqual(r.view, 'plan');
-  assert.deepStrictEqual(r.n, ['plan']);
+  assert.deepStrictEqual(r.n, ['plan', 'kitchen']);
+  assert.deepStrictEqual(r.doors, [true, true], 'both doors on the plan');
   assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
   assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
   assert.deepStrictEqual(r.fade, { entry: '-z', rightOuter: '+x', leftOuter: '-x', window: '+z' });
@@ -255,6 +276,66 @@ check('размеры стен: «Запомнить» и «Вернуть ис�
   assert.strictEqual(p.run('A.bNiche'), 1200);
 });
 
+// a function's source by matching braces from its start (code private to a module is checked by running its text)
+function fnSource(s, name) {
+  const i = s.indexOf('function ' + name + '(');
+  assert.ok(i >= 0, 'no function ' + name);
+  let d = 0, j = s.indexOf('{', i);
+  for (; j < s.length; j++) { if (s[j] === '{') d++; else if (s[j] === '}' && --d === 0) break; }
+  return s.slice(i, j + 1);
+}
+const kitchenWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.kitchen)}))';
+const vec = (p, v) => p.run(`[${v}.x,${v}.y,${v}.z]`).map((x) => round(x));
+
+check('кухня (новая): стены кухни, обрезанные рамкой, как во вкладке «Кухня»', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  assert.strictEqual(p.run('view'), 'kitchen');
+  // the kitchen tab: kitchen wall 2200 × 100 behind x 0..W; left wall 200 thick from the back of the kitchen wall to L = 1350
+  assert.deepStrictEqual(p.run(kitchenWalls), [
+    { id: 'leftOuter', r: [-2200, -2000, 1900, 3350], fade: '-x' },
+    { id: 'kitchen', r: [-2000, 200, 1900, 2000], fade: '-z' },
+  ]);
+  assert.deepStrictEqual(p.run('[wallParts.length, doors.map(d=>d.g.visible)]'), [2, [false, false]], 'two wall pieces, no doors, no window');
+  const kp = p.document.querySelector('[data-panel="kitchen"]');
+  assert.strictEqual(kp.hidden, false); assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, true);
+  assert.ok(matches(p.document.getElementById('shared'), '[data-panel="kitchen"] #shared'), 'light and wall colour moved to the kitchen');
+  assert.strictEqual(kp.querySelector('#kFrameLOut').textContent, 1350);
+  // camera: «3/4» on the first visit, the kitchen tab's targets moved to the kitchen's place on the plan (origin −2000, 2000)
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.15, 1.3, 2.45]); assert.deepStrictEqual(vec(p, 'cam.target'), [-1.15, 1.3, 2.45]);
+  kp.querySelector('[data-cam="sink"]').click();
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.775, 0.9, 2.3]);
+});
+
+check('кухня (новая): рамка левой стены, переходы и размеры с «Планировки»', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  const fl = p.document.getElementById('kFrameL');
+  fl.value = '2000'; fl.dispatch('input');
+  assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000 });
+  fl.value = '9000'; fl.dispatch('input');   // no further than the window wall, which stays out of the kitchen view
+  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
+  // to the plan and back: all walls and doors there, the kitchen camera where it was left
+  p.document.querySelector('[data-cam="sink"]').click();
+  p.run('showView("plan")'); p.tick();
+  assert.deepStrictEqual(p.run('[view, wallLines.length, doors.map(d=>d.g.visible)]'), ['plan', 12, [true, true]]);
+  assert.ok(matches(p.document.getElementById('shared'), '[data-panel="plan"] #shared'));
+  // a size changed on the plan reaches the kitchen
+  slide(p, 'kW', 2300);
+  p.run('showView("kitchen")'); p.tick();
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.875, 0.9, 2.3], 'sink target, kitchen moved 100 left');
+  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2300, -2100, 1900, 6750], [-2100, 200, 1900, 2000]]);
+  assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
+});
+
+check('кухня (новая): детали шкафов совпадают со старой кухней', () => {
+  const pLine = PAGES.app.match(/^const P=\{W:2200,H:2600,.*\};$/m)[0];
+  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
+  const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/kitchen-parts.json'), 'utf8'));
+  assert.strictEqual(got.parts.length, want.parts.length);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
+});
+
 check('shell: вкладки открывают приложение или старые страницы', () => {
   const shellPage = html.slice(html.indexOf('<header'));
   const shown = [];
@@ -270,7 +351,11 @@ check('shell: вкладки открывают приложение или ст
   assert.strictEqual(fr('app').hidden, true); assert.deepStrictEqual(cur(), ['kitchen']);
   p.ctx.location.hash = '#plan'; p.ctx.dispatch('hashchange');
   assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('kitchen').hidden, true);
-  assert.deepStrictEqual(shown, ['plan']);
+  // the temporary tab of the new kitchen is a view of the same app
+  p.ctx.location.hash = '#kitchen-new'; p.ctx.dispatch('hashchange');
+  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('kitchen').hidden, true);
+  assert.deepStrictEqual(cur(), ['kitchen-new']); assert.strictEqual(p.ctx.appView, 'kitchen');
+  assert.deepStrictEqual(shown, ['plan', 'kitchen']);
 });
 
 console.log('ok:', checks.length, 'checks\n - ' + checks.join('\n - '));

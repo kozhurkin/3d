@@ -80,6 +80,14 @@ dl.facts .q{color:var(--warn)}
 .room{font:600 12px var(--f-body);margin:14px 0 8px}
 .room:first-of-type{margin-top:0}
 .note{font-size:12px;color:var(--muted)}
+.wcs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wc{display:flex;flex-direction:column;gap:6px;padding:6px;font:500 12px/1.2 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;cursor:pointer;text-align:center}
+.wc i{display:block;height:30px;border-radius:3px;border:1px solid rgba(0,0,0,.14)}
+.wc:hover{border-color:var(--accent)}
+.wc[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.wc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:column;gap:6px}
 @media (max-width:900px){
   .app{grid-template-columns:minmax(0,1fr)}
@@ -118,7 +126,7 @@ ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:colu
         <button data-dm="open" aria-pressed="false">Открыты</button>
       </div>
       <div class="toggles">
-        <label><input type="checkbox" id="tDims" checked> Размеры</label>
+        <label><input type="checkbox" id="tDims"> Размеры</label>
         <label><input type="checkbox" id="tNames" checked> Названия комнат</label>
         <label><input type="checkbox" id="tFloors" checked> Цвет пола по комнатам</label>
       </div>
@@ -131,6 +139,20 @@ ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:colu
         <button class="btn" data-view="bath">Санузел</button>
         <button class="btn" data-view="kitchen">Кухня</button>
       </div>
+    </div>
+
+    <div>
+      <h2>Цвет стен</h2>
+      <div class="wcs" id="wcs" role="group" aria-label="Цвет стен"></div>
+    </div>
+
+    <div>
+      <h2>Свет</h2>
+      <div class="field"><label for="Laz">Направление</label><output id="oLaz"></output><input type="range" id="Laz" min="-180" max="180" step="1"></div>
+      <div class="field" style="margin-top:10px"><label for="Lel">Высота над горизонтом</label><output id="oLel"></output><input type="range" id="Lel" min="5" max="89" step="1"></div>
+      <div class="field" style="margin-top:10px"><label for="Li">Яркость солнца</label><output id="oLi"></output><input type="range" id="Li" min="0" max="200" step="5"></div>
+      <div class="field" style="margin-top:10px"><label for="La">Рассеянный свет</label><output id="oLa"></output><input type="range" id="La" min="0" max="200" step="5"></div>
+      <div class="row"><button class="btn" id="lightSpin" aria-pressed="false">Вращать свет</button><button class="btn" id="lightReset">Сбросить</button></div>
     </div>
 
     <div>
@@ -211,13 +233,29 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(35,1,0.01,200);
-scene.add(new THREE.HemisphereLight(0xffffff,0x8a7f70,0.9));
-const sun=new THREE.DirectionalLight(0xffffff,0.7);
+const hemi=new THREE.HemisphereLight(0xffffff,0x8a7f70,0.75);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffffff,1);
 sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);sun.shadow.bias=-0.0005;
-Object.assign(sun.shadow.camera,{left:-4,right:4,top:4,bottom:-4,near:.5,far:30});
-sun.target.position.set(CX,0,CZ);sun.position.set(CX-2,9,CZ+3);   // high sun: short shadows that do not cover the plan
+Object.assign(sun.shadow.camera,{left:-4.6,right:4.6,top:4.6,bottom:-4.6,near:.5,far:30});   // covers the whole apartment from any direction
+sun.target.position.set(CX,0,CZ);
 scene.add(sun);scene.add(sun.target);
+// sun around the plan centre: az — from +z (window side) toward +x, el — above the horizon.
+// Defaults and 100 % match the room tabs, so the walls have the same tone there and here
+const LIGHT0={az:-35,el:45,i:100,a:100};
+function placeSun(){
+  const L=V.light,a=L.az*Math.PI/180,e=L.el*Math.PI/180,R=10;
+  sun.position.set(CX+R*Math.cos(e)*Math.sin(a),R*Math.sin(e),CZ+R*Math.cos(e)*Math.cos(a));
+  sun.intensity=L.i/100;hemi.intensity=.75*L.a/100;
+}
 
+/* wall finishes, matte paint. "white" is the wall colour of the room tabs (follows the theme);
+   p: swatch colour when the scene colour does not show the paint itself (the lit white wall, not its base tone) */
+const WALLC={
+  white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
+  greige:{n:'Грейж',c:'#C7BEB1',r:.9},
+  french:{n:'French Grey',c:'#B8B9A6',r:.9}
+};
+const wallCol=w=>w.c.startsWith('--')?css(w.c):w.c;
 const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
 const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide});
 const capMat=new THREE.MeshStandardMaterial({color:0x5b5f61,roughness:.9,side:THREE.DoubleSide});   // cut top of the walls, like the poché on a drawing
@@ -384,7 +422,9 @@ dim(xL+420,zB0,xL+420,bz(A.bL),`${A.bL}`);
 function css(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}
 function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
-  floorMat.color.set(css('--scene-floor'));wallMat.color.set(css('--scene-wall'));
+  floorMat.color.set(css('--scene-floor'));
+  const wc=WALLC[V.wc]||WALLC.white;wallMat.color.set(wallCol(wc));
+  wallMat.roughness=wc.r;
   roomMats.forEach((m,i)=>m.color.set(V.floors?css(ROOMS[i].col):css('--scene-floor')));
   paintNames();
 }
@@ -392,9 +432,16 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change',applyTheme)
 new MutationObserver(applyTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
 
 /* ---------- view settings, remembered in this browser ---------- */
-const VKEY='apt-plan-view-v1';
-const V={Wm:'auto',Wh:100,dm:'closed',dims:true,names:true,floors:true};
-try{const s=JSON.parse(localStorage.getItem(VKEY)||'null');if(s)Object.assign(V,s);delete V.pr;}catch(e){}
+const VKEY='apt-plan-view-v3';
+const V={Wm:'auto',Wh:100,dm:'closed',dims:false,names:true,floors:true,wc:'white',light:{...LIGHT0}};
+try{
+  let s=JSON.parse(localStorage.getItem(VKEY)||'null');
+  // older versions: keep the view settings; v1 had dimensions on by default, v2 had a higher, dimmer sun
+  if(!s){s=JSON.parse(localStorage.getItem('apt-plan-view-v2')||'null');if(s)delete s.light;}
+  if(!s){s=JSON.parse(localStorage.getItem('apt-plan-view-v1')||'null');if(s)delete s.dims;}
+  if(s)Object.assign(V,s,{light:{...LIGHT0,...(s.light||{})}});delete V.pr;
+  if(!WALLC[V.wc])V.wc='white';
+}catch(e){}
 const saveV=()=>{try{localStorage.setItem(VKEY,JSON.stringify(V));}catch(e){}};
 function syncUI(){
   const wh=document.getElementById('Wh');wh.value=V.Wh;document.getElementById('oWh').textContent=(V.Wm==='row'?10:V.Wh)+'%';
@@ -417,6 +464,20 @@ document.getElementById('Wh').addEventListener('input',e=>{V.Wh=+e.target.value;
 document.getElementById('tDims').addEventListener('change',e=>{V.dims=e.target.checked;syncUI();saveV();});
 document.getElementById('tNames').addEventListener('change',e=>{V.names=e.target.checked;syncUI();saveV();});
 document.getElementById('tFloors').addEventListener('change',e=>{V.floors=e.target.checked;applyTheme();saveV();});
+// wall colour swatches
+const wcs=document.getElementById('wcs');
+wcs.innerHTML=Object.entries(WALLC).map(([k,w])=>`<button class="wc" data-wc="${k}" aria-pressed="false"><i style="background:${w.p||w.c}"></i>${w.n}</button>`).join('');
+const syncWc=()=>wcs.querySelectorAll('[data-wc]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wc===V.wc));
+wcs.querySelectorAll('[data-wc]').forEach(b=>b.addEventListener('click',()=>{V.wc=b.dataset.wc;syncWc();applyTheme();saveV();}));
+syncWc();
+// light
+const lmap={Laz:'az',Lel:'el',Li:'i',La:'a'},lunit={az:'°',el:'°',i:'%',a:'%'};
+function syncLight(){Object.entries(lmap).forEach(([id,k])=>{document.getElementById(id).value=V.light[k];document.getElementById('o'+id).textContent=Math.round(V.light[k])+lunit[k];});placeSun();}
+Object.entries(lmap).forEach(([id,k])=>document.getElementById(id).addEventListener('input',e=>{V.light[k]=+e.target.value;syncLight();saveV();}));
+let spin=false;const spinBtn=document.getElementById('lightSpin');
+spinBtn.addEventListener('click',()=>{spin=!spin;spinBtn.setAttribute('aria-pressed',spin);spinBtn.textContent=spin?'Остановить':'Вращать свет';if(!spin){syncLight();saveV();}});
+document.getElementById('lightReset').addEventListener('click',()=>{V.light={...LIGHT0};syncLight();saveV();});
+syncLight();
 
 /* ---------- orbit ---------- */
 const cam={theta:-.5,phi:.9,r:8,target:new THREE.Vector3(CX,0,CZ)};
@@ -630,6 +691,7 @@ function loop(){
   // dimension labels keep the same size on screen at any zoom
   { const k=2*Math.tan(camera.fov*Math.PI/360)/(viewer.clientHeight||1);
     labels.forEach(s=>{s.getWorldPosition(_v);const u=_v.distanceTo(camera.position)*k;s.scale.set(19*u*s.userData.ar,19*u,1);}); }
+  if(spin){const L=V.light;L.az+=30*dt;if(L.az>180)L.az-=360;syncLight();}   // one turn in 12 s
   if(showDebug)updateDebug();
   renderer.render(scene,camera);
   if(showDebug){

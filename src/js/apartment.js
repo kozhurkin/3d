@@ -9,7 +9,7 @@ const APT_A={
   kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kW:2200, kL:4750,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
-  bNiche:1200, bRight:600,          // bathroom along its back wall: toilet niche, 100 mm partition, then 600
+  bNiche:1200,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet
   bL:1100, bWs:500, bStub:600,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
   bGap:500,                         // opening between the wall at the niche end and the shower partition
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
@@ -55,4 +55,21 @@ function apartment(a){
   ];
   const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
   return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
+}
+
+/* What does not fit with these sizes: [] when everything does. The plan's size sliders stop at the last value that fits.
+   Walls may touch but not overlap, and none may come out shorter than nothing; plus the rules a plan of walls alone can't see */
+function aptProblems(a){
+  const m=apartment(a),A=m.A,out=[];
+  m.WALLS.forEach(w=>{if(w.r[1]<w.r[0]||w.r[3]<w.r[2])out.push(`«${w.name}» не помещается`);});
+  m.WALLS.forEach((p,i)=>m.WALLS.slice(i+1).forEach(q=>{
+    const ox=Math.min(p.r[1],q.r[1])-Math.max(p.r[0],q.r[0]),oz=Math.min(p.r[3],q.r[3])-Math.max(p.r[2],q.r[2]);
+    if(ox>.5&&oz>.5)out.push(`«${p.name}» и «${q.name}» пересекаются`);}));
+  if(A.hallW-2*A.kOver<600)out.push('Проход на кухню уже 600 мм');
+  if(A.eD0<0||A.eD1>A.hallW)out.push('Входной проём не помещается в ширину прихожей');
+  if(A.bNiche+A.wt>m.xB1-m.xL)out.push('Ниша с перегородкой у пенала не помещается в ширину санузла');
+  if(m.zV0<A.bL)out.push('Стенка вентшахты не доходит до перегородки душа');
+  if(A.winW>A.hallW-m.xL-200)out.push('Окно шире кухни (нужно хотя бы по 100 мм до боковых стен)');
+  if(Math.max(A.eDH,A.bDoorH,A.winS+A.winH)>A.H-50)out.push('Проём выше потолка (нужно хотя бы 50 мм)');
+  return out;
 }

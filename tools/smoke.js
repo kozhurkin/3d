@@ -189,6 +189,72 @@ check('приложение: кнопки камеры плана двигают
   assert.ok(Number.isFinite(r.r) && r.r > 5 && r.r < 30, 'distance ' + r.r);
 });
 
+// a slider of the plan's wall sizes moved to v, as the browser does it
+const slide = (p, k, v) => { const s = p.document.querySelector(`[data-size="${k}"]`); s.value = String(v); s.dispatch('input'); };
+
+check('размеры стен: ползунок меняет модель и всё перестраивается', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const panel = p.document.querySelector('[data-panel="plan"]');
+  assert.deepStrictEqual(p.run('aptProblems(A)'), [], 'defaults fit');
+  // every slider shows its size
+  const n = p.run('sizeFields.length');
+  assert.strictEqual(panel.querySelectorAll('[data-size]').length, n);
+  assert.strictEqual(panel.querySelector('[data-size-out="kW"]').textContent, 2200);
+  assert.strictEqual(panel.querySelector('[data-size-out="eW"]').textContent, 892);
+  // dimensions on: built once
+  const dims = panel.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();
+  const nLabels = p.run('labels.length'); assert.ok(nLabels > 20, 'labels ' + nLabels);
+  // doors open, then the kitchen wall grows by 100
+  panel.querySelector('[data-dm="open"]').click();
+  slide(p, 'kW', 2300);
+  assert.strictEqual(p.run('dimsDirty'), true, 'dimensions marked for a rebuild');
+  p.tick();
+  assert.strictEqual(p.run('dimsDirty'), false, 'dimensions rebuilt on the next frame');
+  const r = p.run('({kW:A.kW, xL, lines:wallLines.length, parts:wallParts.length, doors:doors.length, open:doors.every(d=>d.t===d.max), labels:labels.length, rooms:roomMats.length})');
+  assert.deepStrictEqual(r, { kW: 2300, xL: -2100, lines: 12, parts: 26, doors: 2, open: true, labels: nLabels, rooms: 3 });
+  assert.ok(panel.querySelector('#pFacts').children.length > 0);
+  assert.match(panel.querySelector('#pSub').textContent, /^3700 × /, 'sub follows the size');
+  assert.strictEqual(panel.querySelector('[data-size-out="kW"]').textContent, 2300);
+  assert.strictEqual(panel.querySelector('#pSizeMsg').textContent, '');
+});
+
+check('размеры стен: ползунок упирается и говорит во что', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const msg = p.document.getElementById('pSizeMsg');
+  slide(p, 'bNiche', 2000);   // the bathroom is 1900 wide: niche + 100 partition fit up to 1800
+  assert.strictEqual(p.run('A.bNiche'), 1800);
+  assert.match(msg.textContent, /^Дальше нельзя: /);
+  slide(p, 'bNiche', 1200);
+  assert.strictEqual(p.run('A.bNiche'), 1200); assert.strictEqual(msg.textContent, '');
+  // the entrance moves keeping its width; its width stops at the hall's right wall
+  slide(p, 'eD0', 100);
+  assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 992]);
+  slide(p, 'eW', 1200);
+  assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 1200]);
+  assert.match(msg.textContent, /Входной проём/);
+  // a slider with step 10 stops on its step from the current value
+  slide(p, 'vOff', 1000);
+  const v = p.run('A.vOff'); assert.ok(v % 10 === 0 && v > 150 && !p.run('aptProblems(A)').length, 'vOff ' + v);
+});
+
+check('размеры стен: «Запомнить» и «Вернуть исходные»', () => {
+  const storage = new Map();
+  let p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
+  slide(p, 'kW', 2300); slide(p, 'H', 2700);
+  p.document.getElementById('pSaveA').click();
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-model-v1')), { H: 2700, kW: 2300 }, 'only what differs from the defaults');
+  p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
+  assert.deepStrictEqual(p.run('[A.kW,A.H,xL]'), [2300, 2700, -2100]);
+  assert.strictEqual(p.document.querySelector('[data-size-out="H"]').textContent, 2700);
+  p.document.getElementById('pResetA').click();
+  assert.deepStrictEqual(p.run('[A.kW,A.H]'), [2200, 2600]);
+  assert.ok(!storage.has('apt-model-v1'));
+  // sizes that do not fit are not taken from the browser
+  storage.set('apt-model-v1', JSON.stringify({ bNiche: 5000 }));
+  p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
+  assert.strictEqual(p.run('A.bNiche'), 1200);
+});
+
 check('shell: вкладки открывают приложение или старые страницы', () => {
   const shellPage = html.slice(html.indexOf('<header'));
   const shown = [];

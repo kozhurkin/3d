@@ -19,12 +19,23 @@ const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorMat);
 floor.rotation.x=-Math.PI/2;floor.position.set(CX,-.002,CZ);floor.receiveShadow=true;scene.add(floor);   // outer walls and the entrance door cast their shadows outside the apartment
 
 
-/* room floors */
+// take everything out of a group; its own materials and textures go too, shared ones stay (own=false)
+function emptyGroup(g,own=true){
+  g.children.slice().forEach(c=>{g.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();
+    if(own&&o.material)[].concat(o.material).forEach(m=>{if(m.map)m.map.dispose();m.dispose();});});});
+}
+
+/* room floors and the names on them: rebuilt when the sizes change */
 const roomGroup=new THREE.Group();scene.add(roomGroup);
-const roomMats=ROOMS.map(r=>{
-  const m=new THREE.MeshStandardMaterial({roughness:.9});
-  const p=new THREE.Mesh(new THREE.PlaneGeometry((r.r[1]-r.r[0])*MM,(r.r[3]-r.r[2])*MM),m);
-  p.rotation.x=-Math.PI/2;p.position.set((r.r[0]+r.r[1])/2*MM,0,(r.r[2]+r.r[3])/2*MM);p.receiveShadow=true;roomGroup.add(p);return m;});
+let roomMats=[];
+function buildRooms(){
+  emptyGroup(roomGroup);emptyGroup(namesGroup);nameTexts.length=0;
+  roomMats=ROOMS.map(r=>{
+    const m=new THREE.MeshStandardMaterial({roughness:.9});
+    const p=new THREE.Mesh(new THREE.PlaneGeometry((r.r[1]-r.r[0])*MM,(r.r[3]-r.r[2])*MM),m);
+    p.rotation.x=-Math.PI/2;p.position.set((r.r[0]+r.r[1])/2*MM,0,(r.r[2]+r.r[3])/2*MM);p.receiveShadow=true;roomGroup.add(p);return m;});
+  ROOMS.forEach(r=>floorText(r.name,r.at[0],r.at[1],.2));
+}
 
 /* room names lying on the floor */
 const namesGroup=new THREE.Group();scene.add(namesGroup);
@@ -43,7 +54,7 @@ function paintNames(){
   nameTexts.forEach(n=>{n.g.clearRect(0,0,n.c.width,n.c.height);n.g.font=`400 ${n.f}px "Tenor Sans", Georgia, serif`;
     n.g.fillStyle=col;n.g.globalAlpha=.55;n.g.textBaseline='middle';n.g.fillText(n.text,12,n.c.height/2+4);n.t.needsUpdate=true;});
 }
-ROOMS.forEach(r=>floorText(r.name,r.at[0],r.at[1],.2));
+buildRooms();
 
 
 /* ---------- walls ---------- */
@@ -134,26 +145,40 @@ function door(px,pz,size,pos,mat,max){
   g.add(m);doorGroup.add(g);const d={g,h:size[1]*MM,t:0,a:0,max};doors.push(d);return d;
 }
 const EF=50,ED=70,EZ=-100;   // entrance frame: bar width, bar depth, hall-side face of the frame (100 mm into the wall)
-const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10;   // entrance leaf inside the frame
-{ const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);
-  [ED+20,-20].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),handleMat);hd.position.set((eLw-120)*MM,1.0,z*MM);hd.castShadow=true;ent.g.add(hd);});
-  const fr=new THREE.Group();doorGroup.add(fr);ent.frame=fr;
-  const bar=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,ED*MM),frameMat);
-    m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(EZ-ED/2)*MM);m.castShadow=m.receiveShadow=true;fr.add(m);};
-  bar(A.eD0,A.eD0+EF,0,A.eDH);bar(A.eD1-EF,A.eD1,0,A.eDH);bar(A.eD0+EF,A.eD1-EF,A.eDH-EF,A.eDH);
-  const bw=A.bDoor-6,bh=A.bDoorH-10;
-  door(0,A.hL1+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5); }
-// door swing on the floor, drawn the way plans show it
-{ arcs=new THREE.Group();const am=new THREE.LineDashedMaterial({color:0x6b7069,dashSize:.04,gapSize:.03});
-  const arc=(cx,cz,r,a0,a1,leaf)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
-    const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();arcs.add(l);
-    const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));arcs.add(e);};
-  arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2);
-  arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0);
-  scene.add(arcs); }
-// every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed
-const doorParts=[];
-doorGroup.traverse(m=>{if(!m.isMesh)return;const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2});});
+const doorParts=[];          // every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed
+// doors are rebuilt when the sizes change; each stays as open as it was
+function buildDoors(){
+  const keep=doors.map(d=>({t:d.t,a:d.a,last:d.last}));
+  emptyGroup(doorGroup,false);doors.length=0;held=null;
+  if(arcs){scene.remove(arcs);emptyGroup(arcs);}
+  const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10;   // entrance leaf inside the frame
+  { const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);
+    [ED+20,-20].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),handleMat);hd.position.set((eLw-120)*MM,1.0,z*MM);hd.castShadow=true;ent.g.add(hd);});
+    const fr=new THREE.Group();doorGroup.add(fr);ent.frame=fr;
+    const bar=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,ED*MM),frameMat);
+      m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(EZ-ED/2)*MM);m.castShadow=m.receiveShadow=true;fr.add(m);};
+    bar(A.eD0,A.eD0+EF,0,A.eDH);bar(A.eD1-EF,A.eD1,0,A.eDH);bar(A.eD0+EF,A.eD1-EF,A.eDH-EF,A.eDH);
+    const bw=A.bDoor-6,bh=A.bDoorH-10;
+    door(0,A.hL1+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5); }
+  // door swing on the floor, drawn the way plans show it
+  { arcs=new THREE.Group();const am=new THREE.LineDashedMaterial({color:0x6b7069,dashSize:.04,gapSize:.03});
+    const arc=(cx,cz,r,a0,a1,leaf)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
+      const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();arcs.add(l);
+      const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));arcs.add(e);};
+    arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2);
+    arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0);
+    scene.add(arcs); }
+  doors.forEach((d,i)=>{if(keep[i])Object.assign(d,keep[i]);});
+  doorParts.length=0;
+  doorGroup.traverse(m=>{if(!m.isMesh)return;const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2});});
+}
+buildDoors();
+
+// the sizes changed: everything of the apartment is built again for the view on screen
+modelHooks.push(()=>{
+  floor.position.set(CX,-.002,CZ);
+  buildRooms();buildDoors();buildWalls(VIEWS[view]);applyTheme();
+});
 
 
 /* theme colours; the wall colour is shared by all views, floor colours by room are a setting of the view */

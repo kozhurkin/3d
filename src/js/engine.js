@@ -3,9 +3,20 @@
 const MM=.001;
 const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- the apartment as built now (js/apartment.js) ---------- */
-const {A,H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX}=apartment();
-const CX=(BOX.x0+BOX.x1)/2*MM, CZ=(BOX.z0+BOX.z1)/2*MM;
+/* ---------- the apartment as built now (js/apartment.js) ----------
+   Its sizes are edited on the plan: setModel() swaps the model, then modelHooks rebuild what depends on it
+   (walls, doors, floors, dimensions…). The sizes remembered in this browser (apt-model-v1) are the ones to start with. */
+let A,H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX,CX,CZ;
+const MKEY='apt-model-v1';
+const modelHooks=[];
+function useModel(a){
+  ({A,H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX}=apartment(a));
+  CX=(BOX.x0+BOX.x1)/2*MM;CZ=(BOX.z0+BOX.z1)/2*MM;
+}
+function setModel(a){useModel(a);modelHooks.forEach(f=>f());}
+// only the sizes that differ from the defaults, so a later change of a default still reaches the sizes nobody touched
+const modelDiff=()=>Object.fromEntries(Object.entries(A).filter(([k,v])=>APT_A[k]!==v));
+useModel((()=>{try{const a=JSON.parse(localStorage.getItem(MKEY)||'null');if(a&&!aptProblems(a).length)return a;}catch(e){}return {};})());
 
 /* ---------- three setup ---------- */
 const canvas=document.getElementById('c'), viewer=document.getElementById('viewer');
@@ -193,6 +204,11 @@ const insetCv=inset.querySelector('.inset-cv');
 const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
 insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
 const distEl=inset.querySelector('.dist');let distTxt='';
+// the apartment changed size: the sun aims at its new centre, the mini view frames it
+modelHooks.push(()=>{
+  apt.min.set(BOX.x0*MM,0,BOX.z0*MM);apt.max.set(BOX.x1*MM,H*MM,BOX.z1*MM);
+  sun.target.position.set(CX,0,CZ);placeSun();
+});
 const camBtn=document.getElementById('camBtn');
 camBtn.addEventListener('click',()=>{showDebug=!showDebug;camBtn.setAttribute('aria-expanded',showDebug);dbg.visible=showDebug;inset.hidden=!showDebug;viewer.classList.toggle('dbg-on',showDebug);});
 

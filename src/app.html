@@ -89,6 +89,16 @@ dl.facts .q{color:var(--warn)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px}
 .btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
 ol.qs{margin:0;padding-left:18px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+details.sizes{border:1px solid var(--line);border-radius:4px;padding:10px 12px}
+details.sizes summary{cursor:pointer;font:600 11px/1 var(--f-body);letter-spacing:.09em;text-transform:uppercase;color:var(--muted);list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.sizes summary::-webkit-details-marker{display:none}
+details.sizes summary::after{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin-top:-4px;transition:transform .15s}
+details.sizes[open] summary::after{transform:rotate(-135deg);margin-top:4px}
+details.sizes summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+.sizes-body{display:flex;flex-direction:column;gap:16px;margin-top:14px}
+.sizes-body h3{margin:0 0 10px}
+.sizes-body .field{margin-bottom:10px}
+.sizes-body p:empty{display:none}
 @media (max-width:900px){
   .app{grid-template-columns:minmax(0,1fr)}
   .viewer{min-height:340px;height:72vh}

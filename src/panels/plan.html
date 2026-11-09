@@ -35,7 +35,30 @@
       </div>
     </div>
 
+    <details class="sizes" id="pSizesBox">
+      <summary>Размеры стен</summary>
+      <div class="sizes-body">
+        <p class="note" style="margin:0">Размеры стен меняются только здесь; вкладки комнат берут их отсюда.</p>
+        <div id="pSizes" style="display:contents"></div>
+        <p class="note" id="pSizeMsg" aria-live="polite" style="margin:0;color:var(--warn)"></p>
+      </div>
+    </details>
+
     <div data-shared-slot style="display:contents"></div>
+
+    <div>
+      <h2>Размеры по умолчанию</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="pSaveA">Запомнить текущие</button>
+        <button class="btn" id="pResetA">Вернуть исходные</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="pCopyA">Скопировать код размеров</button>
+        <span class="note" id="pAMsg" aria-live="polite"></span>
+      </div>
+      <textarea id="pACode" hidden readonly aria-label="Код размеров" style="width:100%;height:70px;font:11px var(--f-mono);margin-top:8px;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:4px;box-sizing:border-box"></textarea>
+      <p class="note" style="margin:8px 0 0">«Запомнить» сохраняет размеры в этом браузере. Чтобы они стали исходными для всех, скопируйте код и пришлите его в чат.</p>
+    </div>
 
     <div>
       <h2>Что заложено, мм</h2>

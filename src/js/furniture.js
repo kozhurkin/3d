@@ -105,9 +105,10 @@ function makeMats(){
 // finish of a part group: wood decor or plain colour; the apron follows the worktop unless set separately
 const finOf=(FIN,k)=>k==='apron'&&!FIN.apron?FIN.top:FIN[k];
 const finName=f=>f.type==='wood'?DECORS[f.decor].name+(DECORS[f.decor].code?' '+DECORS[f.decor].code:''):f.name;
+// a room without a worktop (the bathroom) has only carcass and front finishes: the other groups are left alone
 function applyMaterials(mats,FIN,ec){
   ['carcass','front','top','apron'].forEach(k=>{
-    const m=mats[k],f=finOf(FIN,k);
+    const m=mats[k],f=finOf(FIN,k);if(!f)return;
     if(f.type==='uni'){m.map=null;m.color.copy(new THREE.Color(f.color).convertSRGBToLinear());m.roughness=.6;}
     else{const d=DECORS[f.decor];m.map=getTex(f.decor);m.color.setScalar(d.img?(d.gain||PHOTO_GAIN):1);m.roughness=k==='front'?.66:.72;}
     m.needsUpdate=true;
@@ -119,6 +120,7 @@ function applyContrast(mats,FIN,ec){
   const c=ec/100;
   const lum=k=>{const f=finOf(FIN,k);if(f.type==='wood')return DECORS[f.decor].l/100;const s=new THREE.Color(f.color);return .3*s.r+.59*s.g+.11*s.b;};
   ['carcass','front','top','apron'].forEach(k=>{
+    if(!finOf(FIN,k))return;
     const m=mats[k],e=mats[k+'End'],dark=lum(k)<.42;
     e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
     if(dark){e.emissive.setRGB(.13*c,.11*c,.08*c);}

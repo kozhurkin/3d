@@ -24,7 +24,58 @@
         <button class="btn" data-cam="upper" title="Шкаф над инсталляцией">Верхний</button>
         <button class="btn" data-cam="riser" title="Канализационный короб">Короб</button>
       </div>
-      <p class="note" style="margin:8px 0 0">Ниша, потолок и короб меняются на «Планировке».</p>
     </div>
+
+    <div>
+      <h2>Состав</h2>
+      <div class="toggles" style="margin-top:0">
+        <label><input type="checkbox" id="b-tMid" checked> Ниша над инсталляцией</label>
+        <label><input type="checkbox" id="b-tFeet"> Ножки 10 мм под пеналом</label>
+      </div>
+      <p class="note" style="margin:8px 0 0">Добавляет или убирает детали — меняется и деталировка.</p>
+    </div>
+
+    <details class="sizes" id="b-sizesBox">
+      <summary>Размеры и секции</summary>
+      <div class="sizes-body">
+    <div>
+      <h3>Ниша, мм</h3>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — корпус</label><div class="seg" role="group" aria-label="Толщина ЛДСП — корпус" style="min-width:120px"><button data-thick="16" data-for="T" aria-pressed="true">16 мм</button><button data-thick="18" data-for="T" aria-pressed="false">18 мм</button></div></div>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — фасады</label><div class="seg" role="group" aria-label="Толщина ЛДСП — фасады" style="min-width:120px"><button data-thick="16" data-for="TF" aria-pressed="true">16 мм</button><button data-thick="18" data-for="TF" aria-pressed="false">18 мм</button></div></div>
+      <div class="field"><label>Ниша вдоль задней стены</label><output id="b-W"></output></div>
+      <div class="field"><label>Ниша вдоль стены инсталляции</label><output id="b-L"></output></div>
+      <div class="field"><label>Высота потолка</label><output id="b-H"></output></div>
+      <div class="field"><label>Короб</label><output id="b-R"></output></div>
+      <p class="note" style="margin:0 0 10px">Ниша, потолок и короб меняются на «Планировке», сколько видно левой стены — в «Виде».</p>
+    </div>
+
+    <div>
+      <h3>Инсталляция и верхний шкаф (левая стена), мм</h3>
+      <div class="field"><label for="b-Hi">Высота инсталляции</label><output data-p-out="Hi"></output><input type="range" id="b-Hi" data-p="Hi" min="800" max="1500" step="10"></div>
+      <div class="field"><label for="b-Di">Глубина короба инсталляции</label><output data-p-out="Di"></output><input type="range" id="b-Di" data-p="Di" min="100" max="400" step="10"></div>
+      <div class="field"><label for="b-Gap">Отступ шкафа от инсталляции</label><output data-p-out="Gap"></output><input type="range" id="b-Gap" data-p="Gap" min="0" max="800" step="10"></div>
+      <div class="field"><label for="b-Du">Глубина верхнего шкафа с фасадом</label><output data-p-out="Du"></output><input type="range" id="b-Du" data-p="Du" min="150" max="450" step="10"></div>
+      <div class="field"><label for="b-Nu">Полок в верхнем шкафу</label><output data-p-out="Nu"></output><input type="range" id="b-Nu" data-p="Nu" min="0" max="4" step="1"></div>
+      <div class="note" id="b-gapU" style="margin:-4px 0 10px"></div>
+    </div>
+
+    <div>
+      <h3>Ниша над инсталляцией, мм</h3>
+      <div class="field" id="b-fDm"><label for="b-Dm">Глубина ниши</label><output data-p-out="Dm"></output><input type="range" id="b-Dm" data-p="Dm" min="100" max="400" step="10"></div>
+      <div class="note" id="b-gapM" style="margin:-4px 0 10px"></div>
+    </div>
+
+    <div>
+      <h3>Пенал до потолка (задняя стена), мм</h3>
+      <div class="field"><label for="b-Dt">Глубина с фасадом</label><output data-p-out="Dt"></output><input type="range" id="b-Dt" data-p="Dt" min="200" max="600" step="10"></div>
+      <div class="field"><label for="b-Wc">Ширина каркаса</label><output data-p-out="Wc"></output><input type="range" id="b-Wc" data-p="Wc" min="400" max="1400" step="10"></div>
+      <div class="field"><label for="b-Pl">Цоколь</label><output data-p-out="Pl"></output><input type="range" id="b-Pl" data-p="Pl" min="0" max="200" step="5"></div>
+      <div class="field"><label for="b-Nh">Полок вверху</label><output data-p-out="Nh"></output><input type="range" id="b-Nh" data-p="Nh" min="0" max="4" step="1"></div>
+      <div class="note" id="b-gapH" style="margin:-4px 0 10px"></div>
+      <div class="field"><label for="b-Nb">Полок внизу</label><output data-p-out="Nb"></output><input type="range" id="b-Nb" data-p="Nb" min="0" max="8" step="1"></div>
+      <div class="note" id="b-gapB" style="margin:-4px 0 10px"></div>
+    </div>
+      </div>
+    </details>
 
     <div data-shared-slot style="display:contents"></div>

@@ -79,6 +79,52 @@ function clamp(){
 function fromModel(){P.W=A.bNiche;P.L=A.bL;P.H=A.H;P.Rx=A.rX;P.Rz=A.rZ;clamp();T=P.T||16;TF=P.TF||16;current=computeParts(P);}
 fromModel();
 
+/* ---------- finishes and materials ---------- */
+// finish per part group, as in the bath tab: wood decor or plain colour (no worktop here)
+const FIN={carcass:{type:'uni',color:'#6E7173',name:'Диамант серый U963 ST9'},front:{type:'wood',decor:'H1386'}};
+const mats=makeMats();
+applyMaterials(mats,FIN,P.Ec);
+const tileMat=new THREE.MeshStandardMaterial({color:0x6b6e70,roughness:.6});
+const whiteMat=new THREE.MeshStandardMaterial({color:0xf4f4f2,roughness:.25,metalness:.05});
+const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
+
+/* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
+   under the upper cabinet, its flush plate, the wall-hung bowl facing +x with its seat */
+function buildSanitary(g){
+  const box=(x0,x1,y0,y1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),mat);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
+  const zf=current.zf*MM,di=P.Di*MM,hi=P.Hi*MM,lt=P.Lt*MM,cz=zf+lt/2;
+  box(0,di,0,hi,zf,zf+lt,tileMat);
+  box(di,di+.008,hi-.28,hi-.115,cz-.123,cz+.123,chromeMat);
+  const bowl=new THREE.Mesh(new THREE.CylinderGeometry(.18,.15,.36,32),whiteMat);
+  bowl.scale.set(.7/.36,1,1);bowl.position.set(di+.15,.22,cz);bowl.castShadow=bowl.receiveShadow=true;g.add(bowl);   // 700 mm long: 200 mm sunk into the box, 500 mm out
+  const seat=new THREE.Mesh(new THREE.CylinderGeometry(.185,.185,.02,32),whiteMat);
+  seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
+}
+
+/* ---------- the bathroom in the scene: built when it is on screen and something changed ---------- */
+let model=null,doors=[],sani=null,dirty=true;
+function build(){
+  T=P.T||16;TF=P.TF||16;current=computeParts(P);
+  const prev=doors;disposeGroup(model);
+  ({model,doors}=buildParts(current,mats,{prev}));
+  sani=new THREE.Group();buildSanitary(sani);model.add(sani);
+  clipToFloor(model);
+  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  scene.add(model);dirty=false;updatePanel();
+}
+// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing
+frameHooks.push((dt,ease)=>{
+  const on=view==='bath',s=presence('bath');
+  if(on&&dirty)build();
+  if(!model)return;
+  model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  if(!on)return;
+  doors.forEach(d=>{
+    if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
+    else d.a+=(d.t-d.a)*ease(.09);
+    turnDoor(d);});
+});
+
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */
 function setCam(v){
   const base=Math.max(P.H,P.W*1.6)*MM*1.9*Math.max(1,Math.pow(1/(camera.aspect||1),.95));   // pull back on tall, narrow screens
@@ -101,9 +147,40 @@ const frameL=bq('#bFrameL');
 const showL=()=>Math.min(VS.bath.L,hLen);
 frameL.addEventListener('input',e=>{VS.bath.L=+e.target.value;saveView('bath');syncBath();
   if(view==='bath'){buildWalls(VIEWS.bath);aimView();}});
+// what the bathroom has: the niche over the installation, feet under the tall cabinet; panel thickness
+function syncThick(){bq('#b-tMid').checked=P.Mid!==false;bq('#b-tFeet').checked=!!P.Feet;panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
+bq('#b-tMid').addEventListener('change',e=>{P.Mid=e.target.checked;build();});
+bq('#b-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;build();});
+panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
+// cabinet sizes
+const ids=['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'];
+const syncIds=()=>ids.forEach(j=>{bq(`[data-p="${j}"]`).value=P[j];});
+ids.forEach(id=>bq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;clamp();syncIds();build();}));
+// sizes, the niche and the ceiling (from the plan), the space between the shelves
+function updatePanel(){
+  ids.forEach(id=>{bq(`[data-p-out="${id}"]`).textContent=/^N/.test(id)?P[id]:P[id]+' мм';});
+  bq('#b-W').textContent=P.W+' мм';bq('#b-L').textContent=P.L+' мм';bq('#b-H').textContent=P.H+' мм';bq('#b-R').textContent=`${P.Rx} × ${P.Rz} мм`;
+  bq('#bSub').textContent=`ниша ${P.W} × ${P.L} мм · потолок ${P.H} мм · короб ${P.Rx} × ${P.Rz} мм`;
+  const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),fl=P.Feet?10:0;
+  // free height between neighbouring shelves (from the top of one shelf to the underside of the next)
+  const sb=(P.Hi-t/2-P.Pl-fl-t)/(P.Nb+1),sh=(P.H-t-P.Hi-t/2)/(P.Nh+1);
+  const yb=P.Hi+P.Gap,su=(P.H-yb-t)/(P.Nu+1);
+  const gap=(n,v)=>(n?`между полками ${f(v-t)} мм`:`без полок: высота отделения ${f(v-t)} мм`);
+  bq('#b-gapB').textContent=`Высота дверей ${P.Hi-P.Pl-fl} мм · `+gap(P.Nb,sb);
+  bq('#b-gapH').textContent=`Высота дверей ${P.H-P.Hi} мм · `+gap(P.Nh,sh);
+  const on=P.Mid!==false;
+  bq('#b-Dm').disabled=!on;bq('#b-fDm').style.opacity=on?1:.45;
+  bq('#b-gapM').textContent=on?`Высота ниши ${P.Gap} мм · внутри ${Math.max(0,P.Gap-2*t)} мм`:'Ниша выключена в блоке «Состав»';
+  bq('#b-gapM').style.opacity=on?1:.45;
+  bq('#b-gapU').textContent=`Высота шкафа ${P.H-yb} мм · `+gap(P.Nu,su);
+}
+// the sizes block stays open or closed as it was left
+const sizesBox=bq('#b-sizesBox');
+sizesBox.addEventListener('toggle',()=>{if(VS.bath.sizes!==sizesBox.open){VS.bath.sizes=sizesBox.open;saveView('bath');}});
 function syncBath(){
   frameL.max=hLen;frameL.value=showL();bq('#bFrameLOut').textContent=showL();
-  bq('#bSub').textContent=`ниша ${P.W} × ${P.L} мм · потолок ${P.H} мм · короб ${P.Rx} × ${P.Rz} мм`;
+  sizesBox.open=!!VS.bath.sizes;
+  syncIds();syncThick();updatePanel();
 }
 
 addView('bath',{
@@ -116,12 +193,13 @@ addView('bath',{
   // as in the bath tab: the sun aims at the middle of the back wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the bathroom
-  furniture:()=>({model:null,doors:[],P,current}),   // the cabinets come in the next step
-  defaults:{Wm:'auto',Wh:100,L:1400},
+  furniture:()=>({model,doors,P,current}),   // the built bathroom: for the plan (stage 7) and the checks
+  defaults:{Wm:'auto',Wh:100,L:1400,sizes:false},
   panel,
   home:()=>setCam('persp'),
   sync:syncBath
 });
-// the plan changed the sizes: the niche, the ceiling, the riser box and the bathroom's place come along
-modelHooks.push(()=>{fromModel();syncBath();});
+// the plan changed the sizes: the niche, the ceiling, the riser box and the bathroom's place come along;
+// the bathroom is rebuilt when next on screen
+modelHooks.push(()=>{fromModel();dirty=true;syncBath();});
 })();

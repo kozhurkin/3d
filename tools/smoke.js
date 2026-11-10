@@ -22,6 +22,12 @@ function stub(name = 'stub') {
       // meshes and lines keep what they were made of, so checks can see their materials
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line'].includes(name)) Object.assign(o, { geometry: args[0], material: args[1] });
       if (name === 'THREE.Sprite') o.material = args[0];
+      // objects of the scene have a real place and real children, so checks can see where things stand
+      if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group'].includes(name)) {
+        Object.assign(o, { position: new Vec3(), children: [] });
+        o.add = (...c) => { c.forEach((x) => { x.parent = o; o.children.push(x); }); return o; };
+        o.remove = (...c) => { o.children = o.children.filter((x) => !c.includes(x)); return o; };
+      }
       return o;
     },
   });
@@ -512,6 +518,54 @@ check('санузел: детали шкафов совпадают со ста�
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
 });
 
+check('санузел: шкафы, инсталляция и унитаз собираются, панель их меняет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
+  const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/bath-parts.json'), 'utf8'));
+  const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
+  // the installation box, its flush plate, the bowl and the seat: the last group of the bathroom
+  const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.model.children[f.model.children.length-1].children.map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
+  let r = b();
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 34, true], 'built on screen, every door on a hinge');
+  assert.strictEqual(nDoors, 6, 'four tall cabinet doors, two upper cabinet doors');
+  assert.deepStrictEqual(r.sani.map((y) => round(y, 4)), [0.6, 1.0025, 0.22, 0.41]);
+  // the panel: sizes, the niche and the ceiling from the plan, what is between the shelves
+  assert.strictEqual(bq('[data-p-out="Hi"]').textContent, '1200 мм');
+  assert.deepStrictEqual(['#b-W', '#b-L', '#b-H', '#b-R'].map((s) => bq(s).textContent), ['1200 мм', '1100 мм', '2600 мм', '250 × 250 мм']);
+  assert.strictEqual(bq('#b-gapB').textContent, 'Высота дверей 1120 мм · между полками 349,3 мм');
+  assert.strictEqual(bq('#b-gapM').textContent, 'Высота ниши 300 мм · внутри 268 мм');
+  // a higher installation: the box and the bowl's flush plate go up with it
+  const hi = bq('[data-p="Hi"]'); hi.value = '1300'; hi.dispatch('input');
+  r = b(); assert.deepStrictEqual([r.P.Hi, round(r.sani[0], 3)], [1300, 0.65]);
+  // the tall cabinet is never wider than the niche past the riser box
+  const wc = bq('[data-p="Wc"]'); wc.value = '1400'; wc.dispatch('input');
+  assert.strictEqual(b().P.Wc, 950); assert.strictEqual(wc.value, 950);
+  // no niche over the installation: its boards go, its depth is off; feet under the tall cabinet
+  const mid = bq('#b-tMid'); mid.checked = false; mid.dispatch('change');
+  r = b(); assert.ok(!r.parts.includes('Бок ниши над инсталляцией')); assert.strictEqual(bq('#b-Dm').disabled, true);
+  const feet = bq('#b-tFeet'); feet.checked = true; feet.dispatch('change');
+  r = b(); assert.deepStrictEqual([r.P.Feet, r.feet], [true, 6]);
+  bq('[data-thick="18"][data-for="T"]').click();
+  assert.strictEqual(b().P.T, 18);
+});
+
+check('санузел: шкафы только в своей вкладке, поднимаются из пола, следуют «Планировке»', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  assert.strictEqual(p.run('VIEWS.bath.furniture().model'), null, 'not built while the bathroom is not on screen');
+  p.run('showView("bath")'); p.tick(25, 17);
+  const m = p.run('(f=>({y:f.model.position.y, s:presence("bath")}))(VIEWS.bath.furniture())');
+  near(m.s, 0.5, 'halfway'); near(m.y, -1.35, 'halfway up out of the floor');
+  p.fly();
+  assert.deepStrictEqual(p.run('(f=>[f.model.visible, f.model.position.y])(VIEWS.bath.furniture())'), [true, 0]);
+  p.run('showView("plan")'); p.fly();
+  assert.strictEqual(p.run('VIEWS.bath.furniture().model.visible'), false, 'hidden on the plan');
+  p.run('setModel({bL:1200, H:2700})'); p.tick();
+  p.run('showView("bath")'); p.fly();
+  // the installation fills the rest of the left wall: 1200 − 300 = 900
+  assert.deepStrictEqual(p.run('(f=>[f.P.L, f.P.H, f.P.Lt])(VIEWS.bath.furniture())'), [1200, 2700, 900]);
+  assert.strictEqual(p.document.getElementById('b-H').textContent, '2700 мм');
+});
+
 check('санузел: рамка левой стены, размеры с «Планировки», перелёт', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick();
@@ -523,7 +577,7 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(w.find((x) => x.id === 'leftOuter').r, [-2200, -2000, 0, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shower').r, [-1000, -900, 1100, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shaft').r, [-900, -700, 1400, 1500]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900 });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: false });
   // the plan makes the niche wider: the frame, the partition, the cabinets and the panel follow
   p.run('setModel({bNiche:1300})'); p.tick();
   assert.deepStrictEqual(p.run(bathWalls).find((x) => x.id === 'bathStub').r, [-700, -600, 0, 600]);

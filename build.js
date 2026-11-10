@@ -15,8 +15,8 @@ const inlineModules = (html) => html
   .replace(/<script src="(js\/[\w\/.-]+\.js)"><\/script>/g,
     (_, f) => '<script>\n' + escapeScript(read(f)) + '\n</script>');
 
-// app — одна сцена квартиры (вкладки «Планировка» и «Кухня», дальше и остальные); hall/bath — старые страницы, пока не перенесены
-const pages = Object.fromEntries(['hall', 'bath', 'app'].map((k) =>
+// app — одна сцена квартиры (вкладки «Планировка», «Кухня» и «Санузел», дальше и прихожая); hall — старая страница, пока не перенесена
+const pages = Object.fromEntries(['hall', 'app'].map((k) =>
   [k, inlineModules(read(k + '.html')).replaceAll('<script src="decors.js"></script>', bridge)]));
 
 const inject = escapeScript(read('decors.js')) + '\nconst PAGES=' + escapeScript(JSON.stringify(pages)) + ';';

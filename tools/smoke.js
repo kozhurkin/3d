@@ -186,7 +186,7 @@ const checks = [];
 const check = (name, fn) => { fn(); checks.push(name); };
 
 check('страницы в index.html', () => {
-  assert.deepStrictEqual(Object.keys(PAGES).sort(), ['app', 'bath', 'hall']);
+  assert.deepStrictEqual(Object.keys(PAGES).sort(), ['app', 'hall']);
   Object.entries(PAGES).forEach(([k, p]) => {
     assert.ok(!/<script src="js\//.test(p), k + ': js/ module left as a link');
     assert.ok(!/<!--include /.test(p), k + ': include left in the page');
@@ -800,9 +800,9 @@ check('shell: вкладки открывают приложение или ст
   const fr = (id) => p.document.getElementById('f-' + id);
   const cur = () => p.document.querySelectorAll('[data-tab]').filter((a) => a.getAttribute('aria-current') === 'page').map((a) => a.dataset.tab);
   assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('app').srcdoc, PAGES.app);
-  ['hall', 'bath'].forEach((t) => assert.strictEqual(fr(t).hidden, true));
-  assert.strictEqual(fr('kitchen'), null, 'the kitchen is a view of the app, no page of its own');
-  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen', 'bath-new']);
+  assert.strictEqual(fr('hall').hidden, true);
+  ['kitchen', 'bath'].forEach((t) => assert.strictEqual(fr(t), null, `the ${t} is a view of the app, no page of its own`));
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen']);
   assert.deepStrictEqual(cur(), ['plan']);
   fr('app').contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
   p.ctx.location.hash = '#hall'; p.ctx.dispatch('hashchange');
@@ -811,8 +811,8 @@ check('shell: вкладки открывают приложение или ст
   p.ctx.location.hash = '#kitchen'; p.ctx.dispatch('hashchange');
   assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('hall').hidden, true);
   assert.deepStrictEqual(cur(), ['kitchen']); assert.strictEqual(p.ctx.appView, 'kitchen');
-  p.ctx.location.hash = '#bath-new'; p.ctx.dispatch('hashchange');
-  assert.deepStrictEqual(cur(), ['bath-new']); assert.strictEqual(p.ctx.appView, 'bath');
+  p.ctx.location.hash = '#bath'; p.ctx.dispatch('hashchange');
+  assert.deepStrictEqual(cur(), ['bath']); assert.strictEqual(p.ctx.appView, 'bath');
   p.ctx.location.hash = '#plan'; p.ctx.dispatch('hashchange');
   assert.deepStrictEqual(shown, ['kitchen', 'bath', 'plan']);
 });

@@ -71,14 +71,46 @@ function computeParts(p){
 const O=()=>ROOMS.find(r=>r.id==='hall').origin;   // the hall's (0,0) on the plan, mm
 /* sizes that belong to the walls come from the plan: the false panel and the column reach the opening's sides, the mezzanine
    starts at its top; with the reveal cladding on, each is one board bigger and the board lines the opening. The cabinet is no
-   higher than the ceiling */
+   higher than the ceiling and leaves the mezzanine at least HT_MIN (its two back rails fit) */
+const HT_MIN=300;
+const hBottom=()=>A.eDH-(P.reveal?(P.T||16):0);   // where the mezzanine starts: the top of the opening, or of its cladding
+const hRange=()=>{const hi=A.H;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(){
-  T=P.T||16;TF=P.TF||16;const rv=P.reveal?T:0;
-  P.W=A.hallW;P.Rv=A.eRv;P.H=Math.min(P.H,A.H);
-  P.Lw=A.eD0+rv;P.Rw=A.hallW-A.eD1+rv;P.Ht=P.H-(A.eDH-rv);
+  T=P.T||16;TF=P.TF||16;const rv=P.reveal?T:0,[h0,h1]=hRange();
+  P.W=A.hallW;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(P.H,h1));
+  P.Lw=A.eD0+rv;P.Rw=A.hallW-A.eD1+rv;P.Ht=P.H-hBottom();
   current=computeParts(P);
 }
 fromModel();
+
+/* ---------- finishes and materials ---------- */
+// finish per part group, as in the hall tab: wood decor or plain colour (no worktop here)
+const FIN={carcass:{type:'wood',decor:'H1386'},front:{type:'wood',decor:'H1386'}};
+const mats=makeMats();
+applyMaterials(mats,FIN,P.Ec);
+
+/* ---------- the hall cabinet in the scene: built when it is on screen and something changed ---------- */
+let model=null,doors=[],dirty=true;
+function build(){
+  fromModel();
+  const prev=doors;disposeGroup(model);
+  ({model,doors}=buildParts(current,mats,{prev}));
+  clipToFloor(model);
+  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  scene.add(model);dirty=false;updatePanel();
+}
+// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing
+frameHooks.push((dt,ease)=>{
+  const on=view==='hall',s=presence('hall');
+  if(on&&dirty)build();
+  if(!model)return;
+  model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  if(!on)return;
+  doors.forEach(d=>{
+    if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
+    else d.a+=(d.t-d.a)*ease(.09);
+    turnDoor(d);});
+});
 
 /* camera presets of the hall tab, moved to where the hall lies on the plan */
 function setCam(v){
@@ -103,9 +135,35 @@ const frameSd=hq('#hFrameSd');
 const showSd=()=>Math.min(VS.hall.Sd,hLen);
 frameSd.addEventListener('input',e=>{VS.hall.Sd=+e.target.value;saveView('hall');syncHall();
   if(view==='hall'){buildWalls(VIEWS.hall);aimView();}});
+// what the cabinet has: the reveal cladding (the false panel and the column grow by a board), the plinth, feet; panel thickness
+function syncThick(){
+  hq('#h-tReveal').checked=!!P.reveal;hq('#h-tPlinth').checked=!!P.plinth;hq('#h-tFeet').checked=!!P.Feet;
+  hq('#h-Pl').disabled=!P.plinth;hq('#h-fPl').style.opacity=P.plinth?1:.45;
+  panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));
+}
+hq('#h-tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;build();syncIds();});
+hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;syncThick();build();});
+hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;build();});
+panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();syncIds();}));
+// cabinet sizes; the height stays between the mezzanine's least and the ceiling
+const ids=['H','D','N','Pl'];
+const syncIds=()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;ids.forEach(j=>{hq(`[data-p="${j}"]`).value=P[j];});};
+ids.forEach(id=>hq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;build();syncIds();}));
+// sizes, what comes from the plan, the space between the shelves
+function updatePanel(){
+  ids.forEach(id=>{hq(`[data-p-out="${id}"]`).textContent=id==='N'?P[id]:P[id]+' мм';});
+  [['W',P.W],['Hc',A.H],['Rv',P.Rv],['Ht',P.Ht],['Lw',P.Lw],['Rw',P.Rw]].forEach(([k,v])=>{hq('#h-'+k).textContent=v+' мм';});
+  hq('#hSub').textContent=`${P.W} × ${P.H} × ${P.D} мм · проём ${A.eD1-A.eD0} × ${A.eDH} мм`;
+  const pl=P.plinth?P.Pl:0,t=P.T||16,step=(P.H-P.Ht-t-pl-(P.Feet?10:0))/(P.N+1),f=v=>v.toFixed(1).replace('.',',').replace(',0','');
+  hq('#h-shelfGap').textContent=`Между полками ${f(step-t)} мм · секций ${P.N+1}`;
+}
+// the sizes block stays open or closed as it was left
+const sizesBox=hq('#h-sizesBox');
+sizesBox.addEventListener('toggle',()=>{if(VS.hall.sizes!==sizesBox.open){VS.hall.sizes=sizesBox.open;saveView('hall');}});
 function syncHall(){
   frameSd.max=hLen;frameSd.value=showSd();hq('#hFrameSdOut').textContent=showSd();
-  hq('#hSub').textContent=`${P.W} × ${P.H} × ${P.D} мм · проём ${A.eD1-A.eD0} × ${A.eDH} мм`;
+  sizesBox.open=VS.hall.sizes!==false;
+  syncIds();syncThick();updatePanel();
 }
 
 addView('hall',{
@@ -115,12 +173,12 @@ addView('hall',{
   // as in the hall tab: the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the hall
-  furniture:()=>({model:null,doors:[],P,current}),   // the cabinet comes in the next step
-  defaults:{Wm:'auto',Wh:100,Sd:650},
+  furniture:()=>({model,doors,P,current}),   // the built cabinet: for the plan (stage 7) and the checks
+  defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncHall
 });
-// the plan changed the sizes: the hall, the entrance opening and the ceiling come along
-modelHooks.push(()=>{fromModel();syncHall();});
+// the plan changed the sizes: the hall, the entrance opening and the ceiling come along; rebuilt when next on screen
+modelHooks.push(()=>{fromModel();dirty=true;syncHall();});
 })();

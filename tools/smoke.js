@@ -703,6 +703,60 @@ check('прихожая: детали шкафа совпадают со ста�
   assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 100, 240, 600, 100, 36]);
 });
 
+check('прихожая: шкаф-портал собирается, «Состав» и размеры его меняют, проём остаётся', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/hall-parts.json'), 'utf8'));
+  const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
+  const h = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.hall.furniture())');
+  let r = h();
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 36, true], 'built on screen, every door on a hinge');
+  assert.strictEqual(nDoors, 3, 'three mezzanine doors');
+  // the panel: what comes from the plan, the cabinet sizes, the space between the shelves
+  assert.deepStrictEqual(['W', 'Hc', 'Rv', 'Ht', 'Lw', 'Rw'].map((k) => hq('#h-' + k).textContent), ['1200 мм', '2600 мм', '100 мм', '600 мм', '100 мм', '240 мм']);
+  assert.strictEqual(hq('#h-shelfGap').textContent, 'Между полками 301,3 мм · секций 6');
+  assert.strictEqual(hq('#h-sizesBox').open, true, 'the sizes are open, as in the hall tab');
+  // the height: from the mezzanine's least (the opening's top + 300) to the ceiling
+  const hs = hq('[data-p="H"]');
+  assert.deepStrictEqual([hs.min, hs.max], [2300, 2600]);
+  hs.value = '2400'; hs.dispatch('input');
+  r = h(); assert.deepStrictEqual([r.P.H, r.P.Ht], [2400, 400]);
+  hs.value = '2100'; hs.dispatch('input');
+  r = h(); assert.deepStrictEqual([r.P.H, r.P.Ht, hs.value], [2300, 300, 2300]);
+  // no reveal cladding: its boards go, the false panel and the column shrink to the opening, the mezzanine goes down to it
+  const rev = hq('#h-tReveal'); rev.checked = false; rev.dispatch('change');
+  // (the cabinet was at its least: it grows by the board, so the mezzanine stays 300)
+  r = h(); assert.deepStrictEqual([r.P.Lw, r.P.Rw, r.P.Ht, r.P.H], [84, 224, 300, 2316]);
+  assert.ok(!r.parts.includes('Обрамление откоса левое'));
+  assert.strictEqual(hq('#h-Lw').textContent, '84 мм');
+  rev.checked = true; rev.dispatch('change');
+  // thicker boards: the cladding is thicker, the false panel and the column grow with it
+  hq('[data-thick="18"][data-for="T"]').click();
+  r = h(); assert.deepStrictEqual([r.P.T, r.P.Lw, r.P.Rw], [18, 102, 242]);
+  // no plinth: its board goes, its height is off; feet under both columns
+  const pl = hq('#h-tPlinth'); pl.checked = false; pl.dispatch('change');
+  r = h(); assert.ok(!r.parts.includes('Цоколь правой колонны (со стороны проёма)')); assert.strictEqual(hq('#h-Pl').disabled, true);
+  const feet = hq('#h-tFeet'); feet.checked = true; feet.dispatch('change');
+  assert.deepStrictEqual([h().P.Feet, h().feet], [true, 8]);
+});
+
+check('прихожая: шкаф только в своей вкладке, поднимается из пола, не выше потолка', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  assert.strictEqual(p.run('VIEWS.hall.furniture().model'), null, 'not built while the hall is not on screen');
+  p.run('showView("hall")'); p.tick(25, 17);
+  const m = p.run('(f=>({y:f.model.position.y, s:presence("hall")}))(VIEWS.hall.furniture())');
+  near(m.s, 0.5, 'halfway'); near(m.y, -1.35, 'halfway up out of the floor');
+  p.fly();
+  assert.deepStrictEqual(p.run('(f=>[f.model.visible, f.model.position.y])(VIEWS.hall.furniture())'), [true, 0]);
+  p.run('showView("plan")'); p.fly();
+  assert.strictEqual(p.run('VIEWS.hall.furniture().model.visible'), false, 'hidden on the plan');
+  // a lower ceiling takes the cabinet down with it
+  p.run('setModel({H:2500})'); p.tick();
+  p.run('showView("hall")'); p.fly();
+  assert.deepStrictEqual(p.run('(f=>[f.P.H, f.P.Ht])(VIEWS.hall.furniture())'), [2500, 500]);
+  assert.strictEqual(p.document.getElementById('h-Hc').textContent, '2500 мм');
+});
+
 check('прихожая: шкаф следует проёму с «Планировки», откос — размер двери, рамка боковых стен', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
@@ -718,7 +772,7 @@ check('прихожая: шкаф следует проёму с «Планир�
   const sd = p.document.getElementById('hFrameSd'); sd.value = '1900'; sd.dispatch('input');
   assert.deepStrictEqual(p.run(hallWalls).find((x) => x.id === 'hallBath').r, [-100, 0, 0, 1900]);
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, true]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900 });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900, sizes: true });
   // a flight to the bathroom and back
   p.run('showView("bath")'); p.fly();
   assert.strictEqual(p.run('view'), 'bath');

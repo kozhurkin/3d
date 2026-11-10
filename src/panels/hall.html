@@ -26,7 +26,48 @@
         <button class="btn" data-cam="fake" title="Вид на левую фальш-панель">Фальш</button>
         <button class="btn" data-cam="mezz">Антресоль</button>
       </div>
-      <p class="note" style="margin:8px 0 0">Ширина прихожей, входной проём, глубина откоса и потолок меняются на «Планировке».</p>
     </div>
+
+    <div>
+      <h2>Состав</h2>
+      <div class="toggles" style="margin-top:0">
+        <label><input type="checkbox" id="h-tReveal" checked> Обшивка откосов ЛДСП</label>
+        <label><input type="checkbox" id="h-tPlinth" checked> Цоколь под правой колонной</label>
+        <label><input type="checkbox" id="h-tFeet"> Ножки 10 мм</label>
+      </div>
+      <p class="note" style="margin:8px 0 0">Добавляет или убирает детали — меняется и деталировка. Обшивка откосов делает фальш-панель и колонну шире, а антресоль выше на толщину ЛДСП: проём остаётся на месте.</p>
+    </div>
+
+    <details class="sizes" id="h-sizesBox">
+      <summary>Размеры и секции</summary>
+      <div class="sizes-body">
+    <div>
+      <h3>Прихожая, мм</h3>
+      <div class="field"><label>Ширина</label><output id="h-W"></output></div>
+      <div class="field"><label>Высота потолка</label><output id="h-Hc"></output></div>
+      <div class="field"><label>Глубина откоса до двери</label><output id="h-Rv"></output></div>
+      <p class="note" style="margin:0 0 10px">Ширина, входной проём, глубина откоса и потолок меняются на «Планировке», сколько видно боковых стен — в «Виде».</p>
+    </div>
+
+    <div>
+      <h3>Шкаф, мм</h3>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — корпус</label><div class="seg" role="group" aria-label="Толщина ЛДСП — корпус" style="min-width:120px"><button data-thick="16" data-for="T" aria-pressed="true">16 мм</button><button data-thick="18" data-for="T" aria-pressed="false">18 мм</button></div></div>
+      <div class="field" style="grid-template-columns:1fr auto"><label>Толщина ЛДСП — фасады</label><div class="seg" role="group" aria-label="Толщина ЛДСП — фасады" style="min-width:120px"><button data-thick="16" data-for="TF" aria-pressed="true">16 мм</button><button data-thick="18" data-for="TF" aria-pressed="false">18 мм</button></div></div>
+      <div class="field"><label for="h-H">Высота</label><output data-p-out="H"></output><input type="range" id="h-H" data-p="H" min="2300" max="2600" step="10"></div>
+      <div class="field"><label for="h-D">Глубина с фасадом</label><output data-p-out="D"></output><input type="range" id="h-D" data-p="D" min="200" max="600" step="10"></div>
+    </div>
+
+    <div>
+      <h3>Секции, мм</h3>
+      <div class="field"><label>Высота антресоли</label><output id="h-Ht"></output></div>
+      <div class="field"><label>Левая фальш-панель</label><output id="h-Lw"></output></div>
+      <div class="field"><label>Правая колонна с полками</label><output id="h-Rw"></output></div>
+      <p class="note" style="margin:0 0 10px">Фальш-панель и колонна доходят до краёв входного проёма, антресоль начинается над ним — их задаёт проём на «Планировке».</p>
+      <div class="field"><label for="h-N">Полок в правой колонне</label><output data-p-out="N"></output><input type="range" id="h-N" data-p="N" min="2" max="12" step="1"></div>
+      <div class="note" id="h-shelfGap" style="margin:-4px 0 10px"></div>
+      <div class="field" id="h-fPl"><label for="h-Pl">Высота цоколя</label><output data-p-out="Pl"></output><input type="range" id="h-Pl" data-p="Pl" min="40" max="200" step="5"></div>
+    </div>
+      </div>
+    </details>
 
     <div data-shared-slot style="display:contents"></div>

@@ -186,7 +186,7 @@ const checks = [];
 const check = (name, fn) => { fn(); checks.push(name); };
 
 check('страницы в index.html', () => {
-  assert.deepStrictEqual(Object.keys(PAGES).sort(), ['app', 'hall']);
+  assert.deepStrictEqual(Object.keys(PAGES), ['app']);
   Object.entries(PAGES).forEach(([k, p]) => {
     assert.ok(!/<script src="js\//.test(p), k + ': js/ module left as a link');
     assert.ok(!/<!--include /.test(p), k + ': include left in the page');
@@ -968,30 +968,22 @@ check('перелёт: без галочки «Анимированный пер
   assert.strictEqual(p.run('inTransition()'), true);
 });
 
-check('shell: вкладки открывают приложение или старые страницы', () => {
+check('shell: все вкладки — виды одного приложения в одном окне', () => {
   const shellPage = html.slice(html.indexOf('<header'));
   const shown = [];
   const p = runPage('<html>' + shellPage, { hash: '#plan' });
-  const fr = (id) => p.document.getElementById('f-' + id);
+  const fr = p.document.getElementById('f-app');
   const cur = () => p.document.querySelectorAll('[data-tab]').filter((a) => a.getAttribute('aria-current') === 'page').map((a) => a.dataset.tab);
-  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('app').srcdoc, PAGES.app);
-  assert.strictEqual(fr('hall').hidden, true);
-  ['kitchen', 'bath'].forEach((t) => assert.strictEqual(fr(t), null, `the ${t} is a view of the app, no page of its own`));
-  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen', 'hall-new']);
+  assert.deepStrictEqual(p.document.querySelectorAll('iframe').map((f) => f.id), ['f-app'], 'no old pages');
+  assert.deepStrictEqual([fr.hidden, fr.srcdoc === PAGES.app, p.ctx.appView], [false, true, 'plan']);
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen']);
   assert.deepStrictEqual(cur(), ['plan']);
-  fr('app').contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
-  p.ctx.location.hash = '#hall'; p.ctx.dispatch('hashchange');
-  assert.strictEqual(fr('hall').hidden, false); assert.strictEqual(fr('hall').srcdoc, PAGES.hall);
-  assert.strictEqual(fr('app').hidden, true); assert.deepStrictEqual(cur(), ['hall']);
-  p.ctx.location.hash = '#kitchen'; p.ctx.dispatch('hashchange');
-  assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('hall').hidden, true);
-  assert.deepStrictEqual(cur(), ['kitchen']); assert.strictEqual(p.ctx.appView, 'kitchen');
-  p.ctx.location.hash = '#bath'; p.ctx.dispatch('hashchange');
-  assert.deepStrictEqual(cur(), ['bath']); assert.strictEqual(p.ctx.appView, 'bath');
-  p.ctx.location.hash = '#hall-new'; p.ctx.dispatch('hashchange');
-  assert.deepStrictEqual(cur(), ['hall-new']); assert.strictEqual(p.ctx.appView, 'hall');
-  p.ctx.location.hash = '#plan'; p.ctx.dispatch('hashchange');
-  assert.deepStrictEqual(shown, ['kitchen', 'bath', 'hall', 'plan']);
+  fr.contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
+  ['hall', 'bath', 'kitchen', 'plan'].forEach((t) => {
+    p.ctx.location.hash = '#' + t; p.ctx.dispatch('hashchange');
+    assert.deepStrictEqual([cur(), p.ctx.appView, fr.hidden], [[t], t, false]);
+  });
+  assert.deepStrictEqual(shown, ['hall', 'bath', 'kitchen', 'plan']);
 });
 
 console.log('ok:', checks.length, 'checks\n - ' + checks.join('\n - '));

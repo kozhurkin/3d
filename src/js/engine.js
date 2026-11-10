@@ -201,13 +201,13 @@ function updateDebug(){
   const behind=_ov.z>1,out=behind||Math.abs(_ov.x)>.92||Math.abs(_ov.y)>.92;
   camArrow.hidden=!out;
   if(out){let x=_ov.x,y=_ov.y;if(behind){x=-x;y=-y;}const m=Math.max(Math.abs(x),Math.abs(y))||1;x/=m;y/=m;
-    camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(16,50-y*40))+'%';
+    camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(8,50-y*44))+'%';
     camArrow.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad)`;}
   const f=v=>v.toFixed(2).replace('.',',')+' м';
   const t=`<i>До точки</i><em>${f(cam.r)}</em><i>· Высота</i><em>${f(camera.position.y)}</em>`;
   if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
 }
-const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><span>Камера и точка вращения</span><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
+const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
 const camArrow=inset.querySelector('.cam-arrow');
 const insetCv=inset.querySelector('.inset-cv');
 const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});

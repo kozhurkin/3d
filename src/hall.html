@@ -37,7 +37,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 .camb:hover,.camb[aria-expanded="true"]{border-color:var(--accent);color:var(--accent)}
 .camb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .inset{position:absolute;right:6px;bottom:6px;width:min(272px,43%);aspect-ratio:1/.72;border:1px solid var(--accent);border-radius:8px;overflow:hidden;pointer-events:none;box-sizing:border-box}
-.inset .dist{position:absolute;left:6px;bottom:6px;display:flex;gap:5px;white-space:nowrap;font:500 11px/1.35 var(--f-mono);color:var(--fg);background:var(--panel);padding:4px 7px;border-radius:3px;font-variant-numeric:tabular-nums}
+.inset .dist{position:absolute;left:6px;bottom:4px;display:flex;gap:5px;white-space:nowrap;font:500 11px/1.35 var(--f-mono);color:var(--fg);font-variant-numeric:tabular-nums;text-shadow:0 0 2px var(--panel),0 0 2px var(--panel),0 0 3px var(--panel)}
 .info{position:absolute;left:12px;bottom:12px;display:flex;align-items:center;min-height:28px;box-sizing:border-box;max-width:calc(100% - 24px);padding:4px 9px;background:var(--panel);border:1px solid var(--line);border-radius:4px;font:400 12px/1.35 var(--f-body);color:var(--muted);text-align:left;cursor:pointer;opacity:.95}
 .info:hover,.info[aria-expanded="true"]{border-color:var(--accent)}
 .info:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -53,7 +53,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 .inset .dist em{font-style:normal}
 .inset .inset-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .inset .cam-arrow{position:absolute;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:12px solid #ff6a00;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
-.inset span{position:absolute;left:6px;top:4px;font:500 10px var(--f-mono);color:var(--muted);background:var(--panel);padding:1px 4px;border-radius:3px}
 .hint{position:absolute;left:12px;bottom:10px;margin-right:12px;font-size:12px;color:var(--muted);pointer-events:none;background:var(--panel);padding:4px 8px;border-radius:4px;opacity:.9}
 .btn{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 11px;cursor:pointer}
 .btn:hover{border-color:var(--accent)}
@@ -748,7 +747,7 @@ function updateDebug(){
   const t=`<i>До точки</i><em>${f(cam.r)}</em><i>· Высота</i><em>${f(camera.position.y)}</em>`;
   if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
 }
-const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><span>Камера и точка вращения</span><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
+const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
 const camArrow=inset.querySelector('.cam-arrow');
 const insetCv=inset.querySelector('.inset-cv');
 const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});

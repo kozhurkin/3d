@@ -15,8 +15,8 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='apt-shared-v1';
-const S={wc:'white',light:{...LIGHT0},poche:true};   // poche: dark cut tops of the walls
-{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.poche===false)S.poche=false;} }
+const S={wc:'white',light:{...LIGHT0},poche:true,fly:true};   // poche: dark cut tops of the walls; fly: the animated flight between tabs
+{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.poche===false)S.poche=false;if(s.fly===false)S.fly=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
 // wall colour swatches
@@ -28,6 +28,9 @@ syncWc();
 // the cut tops of the walls: dark or the wall colour, the same in every view
 const pocheBox=document.getElementById('wPoche');pocheBox.checked=S.poche;
 pocheBox.addEventListener('change',e=>{S.poche=e.target.checked;applyTheme();saveShared();});
+// the animated flight between tabs; without it the new view's walls are there at once and the camera glides to it
+const flyBox=document.getElementById('wFly');flyBox.checked=S.fly;
+flyBox.addEventListener('change',e=>{S.fly=e.target.checked;saveShared();});
 // light
 const lmap={Laz:'az',Lel:'el',Li:'i',La:'a'},lunit={az:'°',el:'°',i:'%',a:'%'};
 function syncLight(){Object.entries(lmap).forEach(([id,k])=>{document.getElementById(id).value=S.light[k];document.getElementById('o'+id).textContent=Math.round(S.light[k])+lunit[k];});placeSun();}
@@ -94,7 +97,8 @@ preHooks.push(dt=>{
 });
 
 /* show a view: its panel, its walls, its camera — where it was left, or the view's home on the first visit.
-   animate=false puts everything there at once (first load); otherwise it is a flight (or a jump with reduced motion) */
+   animate=false puts everything there at once (first load); otherwise it is a flight, or without the animated flight
+   (the shared setting) the new view's walls at once and the camera gliding there (a jump with reduced motion) */
 // the camera of each view, its target kept from the view's anchor (a room's origin): when the plan moves the room, the camera goes with it
 const camMem={};
 const anchorOf=id=>{const a=VIEWS[id].anchor?VIEWS[id].anchor():[0,0];return new THREE.Vector3(a[0]*MM,0,a[1]*MM);};
@@ -102,7 +106,7 @@ function showView(id,animate=true){
   if(!VIEWS[id])id='plan';
   if(id===view)return;
   // what is on screen now: the flight starts from here
-  const fly=animate&&!reduce&&view!==null;
+  const fly=animate&&!reduce&&S.fly&&view!==null;
   let start=null;
   if(fly){const pres0={};Object.keys(VIEWS).forEach(k=>{pres0[k]=presence(k);});const s=sun.target.position;
     start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf}};}

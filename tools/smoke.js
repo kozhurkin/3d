@@ -209,7 +209,7 @@ check('приложение: настройки вида и общие наст�
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', dims: true, names: true, floors: true });
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true, fly: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
@@ -565,6 +565,29 @@ check('торцы стен: тёмный срез — одна настройк�
   assert.deepStrictEqual([p.run('S.poche'), p.document.getElementById('wPoche').checked], [false, false]);
 });
 
+
+check('перелёт: без галочки «Анимированный перелёт» — как раньше: стены сразу, камера доезжает', () => {
+  const storage = new Map();
+  let p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const box = p.document.getElementById('wFly');
+  assert.strictEqual(box.checked, true);
+  box.checked = false; box.dispatch('change');
+  assert.strictEqual(JSON.parse(storage.get('apt-shared-v1')).fly, false);
+  p.run('showView("kitchen")');
+  // the kitchen's walls, furniture and shadows at once, nothing flies
+  p.tick();
+  assert.deepStrictEqual(p.run('[inTransition(), morph, camDrive, wallLines.length, presence("kitchen"), VIEWS.kitchen.furniture().model.position.y, sunHalf]'), [false, null, null, 2, 1, 0, 3]);
+  // the camera glides to the kitchen by itself
+  assert.ok(Math.abs(p.run('cam.theta-goal.theta')) > 1e-3, 'the camera is on its way');
+  p.tick(120, 16.67);
+  near(p.run('cam.theta'), p.run('goal.theta'), 'camera at the goal');
+  // remembered: off after a reload too, and the flight is back with the box
+  p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  assert.deepStrictEqual([p.run('S.fly'), p.document.getElementById('wFly').checked], [false, false]);
+  const b = p.document.getElementById('wFly'); b.checked = true; b.dispatch('change');
+  p.run('showView("plan")');
+  assert.strictEqual(p.run('inTransition()'), true);
+});
 
 check('shell: вкладки открывают приложение или старые страницы', () => {
   const shellPage = html.slice(html.indexOf('<header'));

@@ -2,7 +2,7 @@
    A view names the walls it shows (rooms), which walls hide in the cut mode and from which side (fade),
    its own settings (remembered per view) and its panel. Light and wall colour are shared by all views:
    their block (#shared) moves into the panel of the view on screen. */
-const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), poche, furniture(), defaults, panel, home(), sync(), onDoors()}
+const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), furniture(), defaults, panel, home(), sync(), onDoors()}
 const VS={};        // id → the view's own settings
 let view=null;      // the view on screen
 const vs=()=>VS[view];
@@ -15,8 +15,8 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='apt-shared-v1';
-const S={wc:'white',light:{...LIGHT0}};
-{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};} }
+const S={wc:'white',light:{...LIGHT0},poche:true};   // poche: dark cut tops of the walls
+{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.poche===false)S.poche=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
 // wall colour swatches
@@ -25,6 +25,9 @@ wcs.innerHTML=Object.entries(WALLC).map(([k,w])=>`<button class="wc" data-wc="${
 const syncWc=()=>wcs.querySelectorAll('[data-wc]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wc===S.wc));
 wcs.querySelectorAll('[data-wc]').forEach(b=>b.addEventListener('click',()=>{S.wc=b.dataset.wc;syncWc();applyTheme();saveShared();}));
 syncWc();
+// the cut tops of the walls: dark or the wall colour, the same in every view
+const pocheBox=document.getElementById('wPoche');pocheBox.checked=S.poche;
+pocheBox.addEventListener('change',e=>{S.poche=e.target.checked;applyTheme();saveShared();});
 // light
 const lmap={Laz:'az',Lel:'el',Li:'i',La:'a'},lunit={az:'°',el:'°',i:'%',a:'%'};
 function syncLight(){Object.entries(lmap).forEach(([id,k])=>{document.getElementById(id).value=S.light[k];document.getElementById('o'+id).textContent=Math.round(S.light[k])+lunit[k];});placeSun();}
@@ -110,7 +113,7 @@ function showView(id,animate=true){
   const m=camMem[id];
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(fly){
-    startWallMorph(start.walls,id);frameInset(vw);
+    startWallMorph(start.walls,id,goalPosition());frameInset(vw);
     tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),pres0:start.pres0};camDrive=driveCam;
   }else{
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();

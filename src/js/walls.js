@@ -110,13 +110,13 @@ function viewWalls(vw){
 /* builds the given (clipped) walls: full-height pieces between openings, a lintel over each opening, a sill under a window,
    their footprints, and the window when its opening is whole. Every piece keeps its wall id and its box on the plan (mm),
    so a flight between views can cut it shorter and lower without new geometry. ruleOf: the cut-mode rule of a wall;
-   poche: dark cut tops (the plan); lines: the outline of every whole wall */
-function buildWallSet(list,ruleOf,poche,lines){
+   lines: the outline of every whole wall. The tops are capMat: dark cut tops or the wall colour (a shared setting) */
+function buildWallSet(list,ruleOf,lines){
   if(wallGroup){scene.remove(wallGroup);wallGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   wallGroup=new THREE.Group();wallParts=[];wallLines=[];wallFeet=[];linesTop=-1;holesShown=new Set();
   const solid=(id,x0,x1,y0,y1,z0,z1,f)=>{
     const g=new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM);
-    const m=new THREE.Mesh(g,[wallMat,wallMat,poche?capMat:wallMat,wallMat,wallMat,wallMat]);   // the plan draws the cut tops dark, like the poché of a drawing
+    const m=new THREE.Mesh(g,[wallMat,wallMat,capMat,wallMat,wallMat,wallMat]);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     wallGroup.add(m);wallParts.push({m,f,id,box:[x0,x1,z0,z1],b:y0*MM,t:y1*MM,h:(y1-y0)*MM});
   };
@@ -149,38 +149,54 @@ function buildWallSet(list,ruleOf,poche,lines){
   if(arcs)arcs.children.forEach(l=>{l.visible=holesShown.has(l.userData.hole);});
 }
 // the walls of a view at rest: exact pieces, outlines, its cut-mode rules
-function buildWalls(vw){morph=null;buildWallSet([...viewWalls(vw).values()],w=>fadeRule(w,vw),vw.poche,true);}
+function buildWalls(vw){morph=null;buildWallSet([...viewWalls(vw).values()],w=>fadeRule(w,vw),true);}
 
 /* ---------- a flight between views ----------
-   The walls of both views at once: each goes from its rect and cut height in the old view to those in the new one
-   (no rect: the wall is not in that view — it sinks into the floor or rises from it). Pieces are built for the span
-   of both rects and cut to the current one by scale, like the cut height; at the end the new view's walls are built exactly */
-let morph=null;   // {w: id → {rF, rT, cF, cT, kept}, e: eased progress 0..1}
-const viewCut=id=>{const V=VS[id];return V.Wm==='row'?H*.1:H*V.Wh/100;};   // the view's wall height, mm
-// a view's walls at rest: id → {r, cut, kept}
-function wallsAtRest(id){const m=new Map();viewWalls(VIEWS[id]).forEach((c,k)=>m.set(k,{r:c.r,cut:viewCut(id),kept:c.kept}));return m;}
-// where a wall of the flight is at progress e
-function morphWall(s,e){return {r:s.rF&&s.rT?s.rF.map((v,i)=>v+(s.rT[i]-v)*e):(s.rF||s.rT),cut:s.cF+(s.cT-s.cF)*e};}
-// the walls on screen now: a new flight starts from here, even in the middle of another one
-function wallsNow(){
-  if(!morph)return wallsAtRest(view);
-  const m=new Map();
-  morph.w.forEach((s,id)=>{const n=morphWall(s,morph.e);if(n.cut>.5)m.set(id,{r:n.r,cut:n.cut,kept:s.kept});});
+   The walls of both views at once. How each wall looks is taken twice: at the start, as it is on screen (the old view's
+   wall mode and cut-mode rules, the camera where it is), and at the end, as the new view will show it (the camera where
+   the flight ends). In between nothing is decided per frame: a wall only goes from its rect and height to the new ones —
+   up from the floor, down into it, shorter or longer — so nothing pops or blinks on the way. A wall hidden at both ends
+   stays hidden. Pieces are built for the span of both rects and cut to the current one by scale, like the cut height;
+   at the end the new view's walls are built exactly */
+let morph=null;   // {w: id → {rF,rT,cF,cT,hF,hT,exT,kept}, e, opF,opT, lnF,lnT, doors}
+// is a wall seen by the camera at c (m) under its cut-mode rule: the camera must be on the room's side of its face
+const sideVisible=(side,r,c)=>!side||({'-x':c.x>r[1],'+x':c.x<r[0],'-z':c.z>r[3],'+z':c.z<r[2]})[side];
+// a view's walls at rest with the camera at pos: id → {r, cut: the height it shows (0: hidden), h: its height for the doors, kept}
+function wallsAtRest(id,pos){
+  const vw=VIEWS[id],V=VS[id],m=new Map();
+  const h=V.Wm==='outline'?0:V.Wm==='row'?H*.1:H*V.Wh/100;
+  viewWalls(vw).forEach((c,k)=>{
+    const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),c.r.map(v=>v*MM),pos);
+    m.set(k,{r:c.r,cut:seen?h:0,h,kept:c.kept});});
   return m;
 }
-function startWallMorph(from,toId){
-  const vt=VIEWS[toId],to=wallsAtRest(toId),w=new Map(),list=[];
+// a wall of the flight at progress e: its rect (mm), the height it shows and the height its doors are cut at (mm)
+function morphWall(s,e){return {r:s.rF&&s.rT?s.rF.map((v,i)=>v+(s.rT[i]-v)*e):(s.rF||s.rT),cut:s.cF+(s.cT-s.cF)*e,h:s.hF+(s.hT-s.hF)*e};}
+// the walls on screen now: a new flight starts from here, even in the middle of another one
+function wallsNow(){
+  if(!morph)return wallsAtRest(view,camera.position);
+  const m=new Map();
+  morph.w.forEach((s,id)=>{const n=morphWall(s,morph.e);m.set(id,{r:n.r,cut:n.cut,h:n.h,kept:s.kept});});
+  return m;
+}
+// pos: where the camera ends the flight (m)
+function startWallMorph(from,toId,pos){
+  const to=wallsAtRest(toId,pos),w=new Map(),list=[],V=VS[toId];
   new Set([...from.keys(),...to.keys()]).forEach(id=>{
     const F=from.get(id),T=to.get(id),a=(F||T).r,b=(T||F).r;
     const c=clipWall(WALLS.find(v=>v.id===id),[Math.min(a[0],b[0]),Math.max(a[1],b[1]),Math.min(a[2],b[2]),Math.max(a[3],b[3])]);
     if(!c)return;
     // an opening whole in either view keeps its door or window while its wall is there
     const kept=new Set([...(F?F.kept:[]),...(T?T.kept:[])]);c.kept=c.kept.filter(i=>kept.has(i));
-    list.push(c);w.set(id,{rF:F?F.r:null,rT:T?T.r:null,cF:F?F.cut:0,cT:T?T.cut:0,kept:c.kept});
+    list.push(c);
+    w.set(id,{rF:F?F.r:null,rT:T?T.r:null,cF:F?F.cut:0,cT:T?T.cut:0,hF:F?F.h:0,hT:T?T.h:0,exT:!!T,kept:c.kept});
   });
-  // walls of the new view hide by its rules; the others stay until they are down
-  buildWallSet(list,c=>to.has(c.id)?fadeRule(c,vt):()=>true,vt.poche,false);
-  morph={w,e:0};
+  const doorsF=doorGroup.visible;   // as on screen now
+  buildWallSet(list,()=>()=>true,true);
+  // the walls' see-through and their outlines go from how they look now to the new view's mode (the skeleton is see-through)
+  const skel=V.Wm==='skeleton';
+  morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:skel?.9:.35,
+    doors:doorsF&&V.dm!=='none'&&V.Wm!=='outline'};   // doors show only if both ends show them
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
 function fitBox(m,box,r,flat){
@@ -198,11 +214,7 @@ function fadeSide(w,vw){
   const rm=ROOMS.find(r=>r.id===vw.rooms[0]).r,r=w.r;
   return r[3]<=rm[2]?'-z':r[2]>=rm[3]?'+z':r[1]<=rm[0]?'-x':r[0]>=rm[1]?'+x':null;
 }
-function fadeRule(w,vw){
-  const r=w.r.map(v=>v*MM),c=camera.position,side=fadeSide(w,vw);
-  if(!side)return ()=>true;
-  return {'-x':()=>c.x>r[1],'+x':()=>c.x<r[0],'-z':()=>c.z>r[3],'+z':()=>c.z<r[2]}[side];
-}
+function fadeRule(w,vw){const r=w.r.map(v=>v*MM),side=fadeSide(w,vw);return side?()=>sideVisible(side,r,camera.position):()=>true;}
 
 
 /* doors. Entrance: as in the hall tab — dark metal frame set 100 mm into the bearing wall from the hall side,
@@ -263,41 +275,55 @@ function applyTheme(){
   floorMat.color.set(css('--scene-floor'));
   const wc=WALLC[S.wc]||WALLC.white;wallMat.color.set(wallCol(wc));
   wallMat.roughness=wc.r;
+  // the cut tops of the walls: dark, like the poché of a drawing, or the wall colour (one setting for every view)
+  if(S.poche!==false){capMat.color.set(0x5b5f61);capMat.roughness=.9;}else{capMat.color.copy(wallMat.color);capMat.roughness=wc.r;}
   const fl=(vs()||{}).floors!==false;
   roomMats.forEach((m,i)=>m.color.set(fl?css(ROOMS[i].col):css('--scene-floor')));
   paintNames();
 }
 
-/* every frame: walls are cut at the view's share of the ceiling height (bottom stays on the floor), doors swing */
+/* every frame: walls are cut at the view's share of the ceiling height (bottom stays on the floor), doors swing;
+   in a flight between views every wall follows the flight instead (see morph) */
 let wallCut=H*MM, wallOutlineMode=false;   // where the walls end now (m) and whether only their outlines show — for the dimension lines
+const lineGeo=pts=>new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
+function wallsSeeThrough(op){const see=op<.999;[wallMat,capMat].forEach(m=>{m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}});}
 frameHooks.push((dt,ease)=>{
   const V=vs();
-  { const row=V.Wm==='row',skel=V.Wm==='skeleton',outline=V.Wm==='outline';
-    const cutMm=H*(row?10:V.Wh)/100,cut=cutMm*MM;
-    const op=skel?0:1,see=op<.999;
-    [wallMat,capMat].forEach(m=>{m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}});
-    // in a flight between views every wall has its own height and rect
-    const at=id=>morph&&morph.w.has(id)?morphWall(morph.w.get(id),morph.e):null;
-    edgeMat.opacity=skel?.9:.35;
+  const row=V.Wm==='row',skel=V.Wm==='skeleton',outline=V.Wm==='outline';
+  const cutMm=H*(row?10:V.Wh)/100,cut=cutMm*MM;
+  let doorCut=()=>cut;   // the height a door is cut at: its wall's
+  if(morph){
+    const e=morph.e,at=id=>morphWall(morph.w.get(id),e),op=morph.opF+(morph.opT-morph.opF)*e;
+    wallsSeeThrough(op);edgeMat.opacity=morph.lnF+(morph.lnT-morph.lnF)*e;
     wallParts.forEach(w=>{
-      const n=at(w.id),cw=n?n.cut*MM:cut,inR=n?fitBox(w.m,w.box,n.r,false):true;
-      const top=Math.min(w.t,cw),fits=inR&&top>w.b+.001;
+      const n=at(w.id),top=Math.min(w.t,n.cut*MM),fits=fitBox(w.m,w.box,n.r,false)&&top>w.b+.001;
+      w.m.visible=fits;w.m.castShadow=op>.5&&!w.glass;
+      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
+    });
+    // outlines go with their walls; footprints stay while their wall is in either view
+    wallLines.forEach(l=>{const n=at(l.w.id),c=n.cut>=1&&clipWall(l.w,n.r);l.e.visible=!!c;
+      if(c){l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(c,Math.min(H,n.cut)));}});
+    wallFeet.forEach(f=>{f.m.visible=(morph.w.get(f.id).exT||e<1)&&fitBox(f.m,f.box,at(f.id).r,true);});
+    doorCut=id=>morph.w.has(id)?at(id).h*MM:0;
+    doorGroup.visible=arcs.visible=morph.doors;
+  }else{
+    wallsSeeThrough(skel?0:1);edgeMat.opacity=skel?.9:.35;
+    wallParts.forEach(w=>{
+      const top=Math.min(w.t,cut),fits=top>w.b+.001;
       w.m.visible=fits&&!outline&&(V.Wm==='auto'?w.f():true);
       w.m.castShadow=!skel&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });
     // wall edges are redrawn only when the cut height changes
-    if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();
-      l.e.geometry=new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(wallOutline(l.w,Math.min(H,cutMm)),3));});}
+    if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(l.w,Math.min(H,cutMm)));});}
     wallLines.forEach(l=>l.e.visible=!outline&&(V.Wm==='auto'?l.f():true));
-    wallFeet.forEach(f=>{const n=at(f.id);f.m.visible=!n||(n.cut>.5&&fitBox(f.m,f.box,n.r,true));});
-    doors.forEach(d=>{
-      if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
-      else d.a+=(d.t-d.a)*ease(.07);
-      d.g.rotation.y=d.a;});
-    doorParts.forEach(p=>{const n=at(p.wall),top=Math.min(p.t,n?n.cut*MM:cut),fits=top>p.b+.001;p.m.visible=fits;
-      if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
     doorGroup.visible=V.dm!=='none'&&!outline;arcs.visible=V.dm!=='none';
-    wallCut=Math.min(cut,H*MM);wallOutlineMode=outline;
   }
+  doors.forEach(d=>{
+    if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
+    else d.a+=(d.t-d.a)*ease(.07);
+    d.g.rotation.y=d.a;});
+  doorParts.forEach(p=>{const top=Math.min(p.t,doorCut(p.wall)),fits=top>p.b+.001;p.m.visible=fits;
+    if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
+  wallCut=Math.min(cut,H*MM);wallOutlineMode=outline;
 });

@@ -25,6 +25,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.outputEncoding=THREE.sRGBEncoding;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled=true;   // furniture is clipped at the floor (furniture.js: FLOOR_CLIP)
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(35,1,0.01,200);
 const hemi=new THREE.HemisphereLight(0xffffff,0x8a7f70,0.75);scene.add(hemi);
@@ -52,6 +53,8 @@ const cam={theta:-.5,phi:.9,r:8,target:new THREE.Vector3(CX,0,CZ)};
 const goal={theta:-.5,phi:.9,r:8};
 const goalT=new THREE.Vector3(CX,0,CZ);
 // turn toward the goal angle the short way round
+// where the camera stands once it reaches its goal (m)
+function goalPosition(){const sp=Math.sin(goal.phi);return new THREE.Vector3(goalT.x+goal.r*sp*Math.sin(goal.theta),goalT.y+goal.r*Math.cos(goal.phi),goalT.z+goal.r*sp*Math.cos(goal.theta));}
 function shortWay(){
   while(goal.theta-cam.theta>Math.PI)goal.theta-=2*Math.PI;
   while(cam.theta-goal.theta>Math.PI)goal.theta+=2*Math.PI;

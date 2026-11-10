@@ -222,6 +222,7 @@ function build(){
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   appl=new THREE.Group();buildAppliances(appl);model.add(appl);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
+  clipToFloor(model);
   const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
   scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
@@ -239,6 +240,7 @@ frameHooks.push((dt,ease)=>{
   if(!model)return;
   // in a flight the kitchen sinks into the floor or rises out of it; the floor hides what is below
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  dimsGroup.visible=VS.kitchen.dims!==false&&!inTransition();   // dimension lines come when the kitchen is reached
   if(!on)return;
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}

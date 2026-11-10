@@ -194,6 +194,10 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
     pin.position.set(x*MM,.005+(c.FL*MM-.005)/2,z*MM);model.add(pin);});
   return {model,doors};
 }
+/* nothing of the furniture shows below the floor, from any side: it rises out of the floor and sinks into it in a flight
+   between views (the room's group moves down) — the floor plane alone would not hide it from below or through gaps */
+const FLOOR_CLIP=[new THREE.Plane(new THREE.Vector3(0,1,0),.001)];
+function clipToFloor(g){g.traverse(o=>{[].concat(o.material||[]).forEach(m=>{if(m.clippingPlanes!==FLOOR_CLIP){m.clippingPlanes=FLOOR_CLIP;m.clipShadows=true;}});});}
 // a built set out of the scene: geometries and the textures not in the decor cache go
 function disposeGroup(gr){if(!gr)return;gr.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material)&&o.material.map&&!Object.values(texCache).includes(o.material.map))o.material.map.dispose();});if(gr.parent)gr.parent.remove(gr);}
 

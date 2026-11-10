@@ -17,7 +17,8 @@ function stub(name = 'stub') {
     apply() { return stub(name + '()'); },
     construct(t, args) {
       const o = stub('new ' + name);
-      if (name === 'THREE.PerspectiveCamera') Object.assign(o, { fov: args[0], aspect: args[1] });
+      // the camera has a real position: the cut-mode rules of the walls look at it
+      if (name === 'THREE.PerspectiveCamera') Object.assign(o, { fov: args[0], aspect: args[1], position: new Vec3() });
       return o;
     },
   });
@@ -205,7 +206,7 @@ check('приложение: настройки вида и общие наст�
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', dims: true, names: true, floors: true });
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 } });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
@@ -466,27 +467,50 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ 
 
 check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  // the plan is seen from the window side: the window wall is hidden by its cut-mode rule
+  assert.strictEqual(piece(p, 'window').visible, false);
   const c0 = p.run('({theta:cam.theta, r:cam.r})');
   p.run('showView("kitchen")');
   const g = p.run('({theta:goal.theta, r:goal.r})');
-  // in the flight: the walls of both views, no outlines, nothing to click, the camera driven by the flight
-  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 0, 26, true, null]);
+  // in the flight: the walls of both views with their outlines, nothing to click, the camera driven by the flight
+  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 12, 26, true, null]);
   p.tick(25, 17);   // 425 ms of 850: halfway, the eased progress is 0.5 too
   near(p.run('tr.e'), 0.5, 'progress');
-  // the left wall shrinks from the whole wall (z 0…6750) to the kitchen's frame (1900…3350): now 950…5050, full height
+  // a wall hidden on the plan and not in the kitchen stays hidden all the way (it does not pop up to sink again)
+  assert.strictEqual(piece(p, 'window').visible, false, 'hidden window wall stays hidden');
+  // the left wall shrinks from the whole wall (z 0…6750) to the kitchen's frame (1900…3350): now 950…5050;
+  // the kitchen's 3/4 camera is left of it, so the kitchen's cut mode hides it: it also goes down, halfway now
   const lo = piece(p, 'leftOuter');
-  near(lo.sz, 4100 / 6750, 'left wall length'); near(lo.z, 3.0, 'left wall centre'); near(lo.sy, 1, 'left wall height');
+  near(lo.sz, 4100 / 6750, 'left wall length'); near(lo.z, 3.0, 'left wall centre'); near(lo.sy, 0.5, 'left wall height');
   // a wall that is not in the kitchen is halfway down; the kitchen wall stays
   near(piece(p, 'hallBath').sy, 0.5, 'hall/bath wall height'); near(piece(p, 'kitchen').sy, 1, 'kitchen wall height');
   // the kitchen comes up out of the floor, the sun's shadows close in on it, the camera is halfway
   const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, theta:cam.theta, r:cam.r})');
   near(k.s, 0.5, 'kitchen presence'); near(k.y, -1.35, 'kitchen below the floor'); near(k.half, 3.8, 'shadow box');
   near(k.theta, (c0.theta + g.theta) / 2, 'camera angle'); near(k.r, (c0.r + g.r) / 2, 'camera distance');
-  // landed: the kitchen's own walls with outlines, the kitchen on the floor, the camera free
+  // landed: the kitchen's own walls with outlines, the kitchen on the floor, the camera free; the left wall hidden by the
+  // cut mode just as the flight ended it
   p.fly();
   const r = p.run('({tr:inTransition(), lines:wallLines.length, parts:wallParts.length, y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, drive:camDrive, theta:cam.theta, goal:goal.theta})');
   assert.deepStrictEqual([r.tr, r.lines, r.parts, r.y, r.half, r.drive], [false, 2, 2, 0, 3, null]);
   near(r.theta, r.goal, 'camera at the goal');
+  assert.deepStrictEqual([piece(p, 'leftOuter').visible, piece(p, 'kitchen').visible], [false, true]);
+});
+
+check('перелёт: разный вид стен у вкладок — высота и «Скелет» меняются плавно', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const plan = p.document.querySelector('[data-panel="plan"]');
+  plan.querySelector('[data-wm="row"]').click(); p.tick();   // the plan in «Ряд»: walls 10 % high
+  p.run('showView("kitchen")'); p.tick(25, 17);
+  near(piece(p, 'kitchen').sy, (260 + (2600 - 260) / 2) / 2600, 'kitchen wall grows from 10 % to full');
+  p.fly();
+  p.run('showView("plan")'); p.fly();
+  plan.querySelector('[data-wm="skeleton"]').click(); p.tick();
+  assert.strictEqual(p.run('wallMat.opacity'), 0);
+  p.run('showView("kitchen")'); p.tick(25, 17);
+  near(p.run('wallMat.opacity'), 0.5, 'see-through skeleton turns solid gradually');
+  p.fly();
+  assert.strictEqual(p.run('wallMat.opacity'), 1);
 });
 
 check('перелёт: прерывание, мышь забирает камеру, «уменьшить движение»', () => {
@@ -495,6 +519,7 @@ check('перелёт: прерывание, мышь забирает каме�
   // back to the plan in the middle: the new flight starts from what is on screen
   p.run('showView("plan")');
   assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 5050], [-2200, -2000, 0, 6750]]);
+  near(p.run('morph.w.get("leftOuter").cF'), 1300, 'the left wall starts from halfway down');
   near(p.run('tr.pres0.kitchen'), 0.5, 'the kitchen starts from halfway');
   p.fly();
   assert.deepStrictEqual(p.run('[view, wallLines.length, VIEWS.kitchen.furniture().model.visible]'), ['plan', 12, false]);
@@ -512,6 +537,20 @@ check('перелёт: прерывание, мышь забирает каме�
   p.run('showView("kitchen")');
   assert.deepStrictEqual(p.run('[inTransition(), wallLines.length]'), [false, 2]);
 });
+
+check('торцы стен: тёмный срез — одна настройка для всех вкладок', () => {
+  const storage = new Map();
+  let p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const box = p.document.getElementById('wPoche');
+  assert.strictEqual(box.checked, true);
+  box.checked = false; box.dispatch('change');
+  assert.strictEqual(JSON.parse(storage.get('apt-shared-v1')).poche, false);
+  p.run('showView("kitchen")'); p.fly();
+  assert.ok(matches(box, '[data-panel="kitchen"] #wPoche'), 'the setting moved with the shared block');
+  p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  assert.deepStrictEqual([p.run('S.poche'), p.document.getElementById('wPoche').checked], [false, false]);
+});
+
 
 check('shell: вкладки открывают приложение или старые страницы', () => {
   const shellPage = html.slice(html.indexOf('<header'));

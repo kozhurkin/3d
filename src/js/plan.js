@@ -200,7 +200,6 @@ addView('plan',{
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
   defaults:{Wm:'auto',Wh:100,dm:'closed',dims:false,names:true,floors:true},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole apartment from any direction
-  poche:true,
   panel:planPanel,
   home:()=>setCam('plan'),
   sync:syncPlan,

@@ -44,6 +44,12 @@ class Vec3 {
   distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
   setFromMatrixColumn() { return this; } applyMatrix4() { return this; } applyQuaternion() { return this; } project() { return this; }
 }
+// a real box: the mini view's part of the apartment
+class Box3 {
+  constructor(min = new Vec3(), max = new Vec3()) { this.min = min; this.max = max; }
+  getCenter(v) { return v.copy(this.min).lerp(this.max, 0.5); }
+  getSize(v) { return v.copy(this.max).sub(this.min); }
+}
 const round = (v, d = 4) => +(+v).toFixed(d);
 
 /* ---------- a small DOM: elements parsed from the page, enough for querySelector, events and attributes ---------- */
@@ -138,7 +144,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
     getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
   };
-  const THREE = stub('THREE'); THREE.Vector3 = Vec3;
+  const THREE = stub('THREE'); THREE.Vector3 = Vec3; THREE.Box3 = Box3;
   const win = {
     THREE, document, localStorage, console, setTimeout, clearTimeout, Math, JSON,
     performance: { now: () => clock.t },   // page time moves only with tick(): 16 ms a frame
@@ -473,7 +479,11 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   // the plan is seen from the window side: the window wall is hidden by its cut-mode rule
   assert.strictEqual(piece(p, 'window').visible, false);
   const c0 = p.run('({theta:cam.theta, r:cam.r})');
+  // the mini view: from the whole apartment to the kitchen's frame, with the rest of the flight, without a jump
+  const inset = () => p.run('insetNow()'), b0 = inset(), bT = p.run('insetFrame(VIEWS.kitchen)');
+  assert.deepStrictEqual(b0.map(Math.round), p.run('[BOX.x0, BOX.x1, BOX.z0, BOX.z1]'));
   p.run('showView("kitchen")');
+  inset().forEach((v, i) => near(v, b0[i], 'the mini view does not jump at the start'));
   const g = p.run('({theta:goal.theta, r:goal.r})');
   // in the flight: the walls of both views with their outlines, nothing to click, the camera driven by the flight
   assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 12, 26, true, null]);
@@ -495,6 +505,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, theta:cam.theta, r:cam.r})');
   near(k.s, 0.5, 'kitchen presence'); near(k.y, -1.35, 'kitchen below the floor'); near(k.half, 3.8, 'shadow box');
   near(k.theta, (c0.theta + g.theta) / 2, 'camera angle'); near(k.r, (c0.r + g.r) / 2, 'camera distance');
+  inset().forEach((v, i) => near(v, (b0[i] + bT[i]) / 2, 'the mini view halfway'));
   p.tick(24, 16.67);   // ≈ 0.97 of the flight: the leaving walls are below 1 cm
   const lowCut = p.run('morphWall(morph.w.get("hallBath"),morph.e).cut');
   assert.ok(lowCut > 1 && lowCut < 40, 'a low wall ' + lowCut);
@@ -506,6 +517,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   const r = p.run('({tr:inTransition(), lines:wallLines.length, parts:wallParts.length, y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, drive:camDrive, theta:cam.theta, goal:goal.theta})');
   assert.deepStrictEqual([r.tr, r.lines, r.parts, r.y, r.half, r.drive], [false, 2, 2, 0, 3, null]);
   near(r.theta, r.goal, 'camera at the goal');
+  inset().forEach((v, i) => near(v, bT[i], 'the mini view on the kitchen'));
   assert.deepStrictEqual([piece(p, 'leftOuter').visible, piece(p, 'kitchen').visible], [false, true]);
   // the flight's own materials are gone: the walls are back on the shared ones (the wall colour setting reaches them)
   assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.m.material[0]===wallMat&&w.m.material[2]===capMat), wallFeet.every(f=>f.m.material===footMat)]'), [null, true, true]);

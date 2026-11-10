@@ -63,20 +63,21 @@ function doorsChanged(){const vw=VIEWS[view];if(vw.onDoors)vw.onDoors();saveView
 
 /* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows);
    the camera mini view frames the view's frame, or the whole apartment */
-function aimView(){const vw=VIEWS[view],s=vw.sun();aimSun(s.x,s.y,s.z,s.half);frameInset(vw);}
-function frameInset(vw){
-  const f=vw.frame?vw.frame():[BOX.x0,BOX.x1,BOX.z0,BOX.z1];
-  apt.min.set(f[0]*MM,0,f[2]*MM);apt.max.set(f[1]*MM,H*MM,f[3]*MM);
-}
+function aimView(){const vw=VIEWS[view],s=vw.sun();aimSun(s.x,s.y,s.z,s.half);frameInset(insetFrame(vw));}
+// the part of the apartment the mini view keeps in its shot: the view's frame or the whole apartment (mm: x0 x1 z0 z1)
+const insetFrame=vw=>vw.frame?vw.frame():[BOX.x0,BOX.x1,BOX.z0,BOX.z1];
+const insetNow=()=>[apt.min.x,apt.max.x,apt.min.z,apt.max.z].map(v=>v/MM);
+function frameInset(f){apt.min.set(f[0]*MM,0,f[2]*MM);apt.max.set(f[1]*MM,H*MM,f[3]*MM);}
 modelHooks.push(()=>{if(tr){tr=null;camDrive=null;}if(view)aimView();});   // the walls were just built anew for the view: a flight is over
 
 /* ---------- a flight between views ----------
    One progress p (eased: e) moves everything together: the camera from where it was to the new view's goal,
-   the walls (walls.js: morph), each room's furniture into the floor or out of it (presence), the sun and its shadows.
+   the walls (walls.js: morph), each room's furniture into the floor or out of it (presence), the sun and its shadows,
+   the part of the apartment the mini view shows.
    A click on another tab in the middle starts a new flight from what is on screen. Orbiting, panning or zooming
    takes the camera back from the flight; the rest finishes */
 const FLY=.85;   // seconds
-let tr=null;     // {p, e, cam0, sun0, sunT, pres0}
+let tr=null;     // {p, e, cam0, sun0, sunT, box0, boxT, pres0}
 const inTransition=()=>!!tr;
 // how much of a view's furniture is in the scene: 1 in its view, 0 elsewhere, in between while flying
 function presence(id){return tr?tr.pres0[id]+((view===id?1:0)-tr.pres0[id])*tr.e:(view===id?1:0);}
@@ -93,6 +94,7 @@ preHooks.push(dt=>{
   if(morph)morph.e=e;
   const a=tr.sun0,b=tr.sunT,l=(u,v)=>u+(v-u)*e;
   aimSun(l(a.x,b.x),l(a.y,b.y),l(a.z,b.z),l(a.half,b.half));
+  frameInset(tr.box0.map((v,i)=>l(v,tr.boxT[i])));
   if(tr.p>=1)endTransition();
 });
 
@@ -109,7 +111,7 @@ function showView(id,animate=true){
   const fly=animate&&!reduce&&S.fly&&view!==null;
   let start=null;
   if(fly){const pres0={};Object.keys(VIEWS).forEach(k=>{pres0[k]=presence(k);});const s=sun.target.position;
-    start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf}};}
+    start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf},box0:insetNow()};}
   if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
@@ -117,8 +119,8 @@ function showView(id,animate=true){
   const m=camMem[id];
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(fly){
-    startWallMorph(start.walls,id,goalPosition());frameInset(vw);
-    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),pres0:start.pres0};camDrive=driveCam;
+    startWallMorph(start.walls,id,goalPosition());
+    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),box0:start.box0,boxT:insetFrame(vw),pres0:start.pres0};camDrive=driveCam;
   }else{
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();
     if(!animate||reduce){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}

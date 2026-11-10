@@ -184,24 +184,7 @@ function buildAppliances(g){
 }
 
 /* ---------- dimension lines of the kitchen (kitchen axes; they belong to the kitchen and move with it) ---------- */
-function label(text){
-  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
-  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
-  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
-  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
-  g.fillStyle='#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
-  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
-  const hgt=.075;s.scale.set(hgt*w/c.height,hgt,1);s.renderOrder=20;return s;
-}
-const dimMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true});
-function dim(a,b,txt,tick){
-  const pts=[a,b];const t=tick.clone().multiplyScalar(.04);
-  [a,b].forEach(p=>{pts.push(p.clone().add(t),p.clone().sub(t));});
-  const geo=new THREE.BufferGeometry().setFromPoints([pts[0],pts[1],pts[2],pts[3],pts[4],pts[5]]);
-  const l=new THREE.LineSegments(geo,dimMat);l.renderOrder=19;dimsGroup.add(l);
-  const s=label(txt);s.position.copy(a).add(b).multiplyScalar(.5);dimsGroup.add(s);
-}
+const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
 function buildDims(){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
   const c=current,zf=P.Db+40;let x=0;

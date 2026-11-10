@@ -5,7 +5,7 @@
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W, L, H, Rx, Rz are the plan's niche, ceiling and riser box
-const P={W:1200,H:2600,Rx:250,Rz:250,Hi:1200,Di:200,Gap:300,Du:200,Nu:2,Dt:300,L:1100,Lt:800,Wc:800,Dm:200,Pl:80,Sp:1500,Nb:2,Nh:3,Ec:30,T:16,TF:16};
+const P={W:1200,H:2600,Rx:250,Rz:250,Hi:1200,Di:200,Gap:300,Du:200,Nu:2,Dt:300,L:1100,Lt:800,Wc:800,Dm:200,Pl:80,Sp:1500,Nb:2,Nh:3,Ec:30,T:16,TF:16,Mid:true,Feet:false};
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -101,16 +101,45 @@ function buildSanitary(g){
   seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
 }
 
+/* ---------- dimension lines of the bathroom (bath axes; they belong to the bathroom and move with it) ---------- */
+const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
+function buildDims(){
+  const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
+  const zf=current.zf,yb=current.yb,z1=zf+P.Lt,xe=Math.max(P.Du,P.Di)+80;
+  { const wc=Math.min(P.Wc,P.W-P.Rx),xa=P.W-wc,yd=P.H+120;
+    dim(V(0,yd,0),V(P.Rx,yd,0),`${P.Rx}`,Y);
+    if(xa>P.Rx)dim(V(P.Rx,yd,0),V(xa,yd,0),`${xa-P.Rx}`,Y);
+    dim(V(xa,yd,0),V(P.W,yd,0),`${wc}`,Y);
+    dim(V(0,yd+160,0),V(P.W,yd+160,0),`${P.W}`,Y); }
+  dim(V(P.W,P.H+120,0),V(P.W,P.H+120,zf),`${zf}`,Y);
+  dim(V(0,P.H+120,0),V(0,P.H+120,P.Rz),`${P.Rz}`,Y);
+  if(zf>P.Rz)dim(V(0,P.H+120,P.Rz),V(0,P.H+120,zf),`${zf-P.Rz}`,Y);
+  dim(V(0,P.H+120,zf),V(0,P.H+120,z1),`${P.Lt}`,Y);
+  dim(V(0,P.H+280,0),V(0,P.H+280,P.L),`${P.L}`,Y);
+  dim(V(P.W-60,0,zf+60),V(P.W-60,P.H,zf+60),`${P.H}`,X);
+  dim(V(xe,0,z1-60),V(xe,P.Hi,z1-60),`${P.Hi}`,X);
+  if(P.Gap>0)dim(V(xe,P.Hi,z1-60),V(xe,yb,z1-60),`${P.Gap}`,X);
+  dim(V(0,yb-80,z1+40),V(P.Du,yb-80,z1+40),`${P.Du}`,Y);
+}
+
 /* ---------- the bathroom in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],sani=null,dirty=true;
+let model=null,doors=[],sani=null,dimsGroup=null,dirty=true;
 function build(){
   T=P.T||16;TF=P.TF||16;current=computeParts(P);
-  const prev=doors;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev}));
+  const prev=doors,V=VS.bath;disposeGroup(model);
+  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   sani=new THREE.Group();buildSanitary(sani);model.add(sani);
+  dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
   clipToFloor(model);
   const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
-  scene.add(model);dirty=false;updatePanel();
+  scene.add(model);dirty=false;applyVisibility();updatePanel();
+}
+// what the view shows: fronts, joint lines, the installation and the toilet (with the walls, as in the bath tab), dimensions
+function applyVisibility(){
+  if(!model)return;const V=VS.bath;
+  model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
+  model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
+  sani.visible=V.walls!==false;dimsGroup.visible=V.dims!==false;
 }
 // every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing
 frameHooks.push((dt,ease)=>{
@@ -118,11 +147,13 @@ frameHooks.push((dt,ease)=>{
   if(on&&dirty)build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  dimsGroup.visible=VS.bath.dims!==false&&!inTransition();   // dimension lines come when the bathroom is reached
   if(!on)return;
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);
     turnDoor(d);});
+  if(wallGroup)wallGroup.visible=VS.bath.walls!==false;
 });
 
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */
@@ -156,11 +187,110 @@ panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=
 const ids=['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'];
 const syncIds=()=>ids.forEach(j=>{bq(`[data-p="${j}"]`).value=P[j];});
 ids.forEach(id=>bq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;clamp();syncIds();build();}));
-// sizes, the niche and the ceiling (from the plan), the space between the shelves
+// fronts: all open, all closed (or nothing pressed when they differ), or taken off
+function syncDoorMode(){
+  const V=VS.bath;let st=V.fronts;
+  if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=DMAX-.01).length,z=doors.filter(d=>d.t<=.01).length;
+    st=n===doors.length?'open':z===doors.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
+  panel.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===st));
+}
+panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
+  const V=VS.bath;V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
+  syncDoorMode();applyVisibility();saveView('bath');}));
+// dimensions, walls with the installation and the toilet, joint lines of the parts
+const toggles={dims:'#b-tDims',walls:'#b-tWall',edges:'#b-tEdges'};
+Object.entries(toggles).forEach(([k,s])=>bq(s).addEventListener('change',e=>{VS.bath[k]=e.target.checked;applyVisibility();saveView('bath');}));
+
+/* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one of them ---------- */
+fillPalette(panel);
+const palette=[...panel.querySelectorAll('[data-decor],[data-uc]')];
+palette.forEach(b=>{const t=document.createElement('span');t.className='tags';b.appendChild(t);});
+const sameFin=(b,f)=>f.type==='wood'?b.dataset.decor===f.decor:(b.dataset.uc||'').toLowerCase()===(f.color||'').toLowerCase();
+const WHERE=['carcass','front'];
+function syncFinish(){
+  palette.forEach(b=>{
+    const c=sameFin(b,FIN.carcass),f=sameFin(b,FIN.front);
+    b.setAttribute('aria-pressed',c||f);
+    b.querySelector('.tags').innerHTML=(c?'<b>К</b>':'')+(f?'<b>Ф</b>':'');
+  });
+  const custom=f=>f.type==='uni'&&!palette.some(b=>sameFin(b,f));
+  const cf=custom(FIN.front)?FIN.front:custom(FIN.carcass)?FIN.carcass:null;
+  bq('#b-uniColor').value=cf?cf.color:'#C2B8AA';
+  bq('#b-ccCard').classList.toggle('on',!!cf);
+  bq('#b-ccCode').textContent=cf?cf.color.toUpperCase():'палитра';
+  bq('#b-ccTags').innerHTML=(custom(FIN.carcass)?'<b>К</b>':'')+(custom(FIN.front)?'<b>Ф</b>':'');
+  bq('#b-finNow').innerHTML=`<span>Корпус</span><span>${finName(FIN.carcass)}</span><span>Фасады</span><span>${finName(FIN.front)}</span>`;
+}
+function setFinish(f,where){
+  if(where!=='front')FIN.carcass=Object.assign({},f);
+  if(where!=='carcass')FIN.front=Object.assign({},f);
+  applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();
+}
+const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};
+palette.forEach(b=>{
+  b.addEventListener('click',()=>setFinish(pickFor(b),'both'));
+  b.title='Клик — весь шкаф. Правая кнопка или долгое нажатие — только корпус или фасады';
+  b.addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>setFinish(pickFor(b),w),WHERE);});
+  longPress(b,(x,y)=>openCtx(x,y,w=>setFinish(pickFor(b),w),WHERE));
+});
+// own colour: the picker paints the whole cabinet, or the group chosen in its menu
+let ccWhere='both';
+const ccInput=bq('#b-uniColor');
+ccInput.addEventListener('click',()=>{if(!ccInput.dataset.keep)ccWhere='both';delete ccInput.dataset.keep;});
+bq('#b-ccCard').addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>{ccWhere=w;ccInput.dataset.keep='1';ccInput.click();},WHERE);});
+ccInput.addEventListener('input',e=>setFinish({type:'uni',color:e.target.value,name:'Свой цвет '+e.target.value.toUpperCase()},ccWhere));
+// contrast of the end faces and joint lines
+const syncEc=()=>{bq('#b-Ec').value=P.Ec;bq('#b-oEc').textContent=P.Ec+'%';};
+bq('#b-Ec').addEventListener('input',e=>{P.Ec=+e.target.value;applyContrast(mats,FIN,P.Ec);syncEc();});
+
+/* ---------- cut list ---------- */
+const matName=m=>m==='back'?'ХДФ 4':`ЛДСП ${m==='front'?TF:T} · `+finName(finOf(FIN,m));
+function cutList(){
+  const map=new Map();
+  current.parts.forEach(p=>{
+    const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0].map(v=>Math.round(v)).sort((a,b)=>b-a);
+    const key=p.name+'|'+d[0]+'|'+d[1];
+    if(!map.has(key))map.set(key,{name:p.name,mat:p.mat,L:d[0],B:d[1],t:d[2],n:0});map.get(key).n++;
+  });
+  return [...map.values()];
+}
+function updateCut(){
+  // group by material so each sheet decor can be ordered separately
+  const rows=cutList().sort((a,b)=>matName(a.mat).localeCompare(matName(b.mat)));const area={};
+  let last='';
+  bq('#b-cut').innerHTML=rows.map(r=>{const mn=matName(r.mat);area[mn]=(area[mn]||0)+r.L*r.B*r.n/1e6;
+    const head=mn!==last?`<tr><th colspan="3" class="mh">${mn}</th></tr>`:'';last=mn;
+    return head+`<tr><td>${r.name}</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.n}</td></tr>`;}).join('');
+  const total=rows.reduce((s,r)=>s+r.n,0);
+  bq('#b-tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')+(current.FL>0?`<span>Опоры регулируемые М6, шайба Ø15×5: ${current.feet.length} шт</span>`:'');
+  bq('#b-csv').value='Деталь;Материал;Длина;Ширина;Толщина;Кол-во\n'+rows.map(r=>[r.name,matName(r.mat),r.L,r.B,r.t,r.n].join(';')).join('\n');
+}
+bq('#b-copy').addEventListener('click',()=>{const ta=bq('#b-csv');copyText(ta,ta.value,bq('#b-copied'),'Скопировано');});
+
+/* ---------- settings to start with: in this browser, or as a code for the chat ----------
+   the cabinets and their finishes; the niche, the ceiling and the riser box belong to the plan, the view settings are remembered by themselves */
+const KEY='apt-bath-v2';
+const getState=()=>{const p=Object.assign({},P);['W','L','H','Rx','Rz','Lt'].forEach(k=>delete p[k]);return {P:p,FIN:JSON.parse(JSON.stringify(FIN))};};
+const FACTORY=JSON.stringify(getState());
+function applyState(s){
+  if(s.P)Object.assign(P,s.P);
+  const okF=f=>f&&(f.type==='uni'||(f.type==='wood'&&DECORS[f.decor]));
+  if(s.FIN&&okF(s.FIN.carcass)&&okF(s.FIN.front)){FIN.carcass=s.FIN.carcass;FIN.front=s.FIN.front;}
+  fromModel();applyMaterials(mats,FIN,P.Ec);dirty=true;
+}
+{ const s=readJSON(KEY);if(s)applyState(s); }
+const defMsg=bq('#b-defMsg');
+bq('#b-saveDef').addEventListener('click',()=>{try{localStorage.setItem(KEY,JSON.stringify(getState()));defMsg.textContent='Сохранено в этом браузере';}catch(e){defMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
+bq('#b-resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY));syncBath();defMsg.textContent='Исходные настройки возвращены';});
+bq('#b-copyDef').addEventListener('click',()=>copyText(bq('#b-defCode'),JSON.stringify(getState()),defMsg,'Код скопирован'));
+
+// sizes, the niche and the ceiling (from the plan), the space between the shelves, the finishes, the cut list
 function updatePanel(){
   ids.forEach(id=>{bq(`[data-p-out="${id}"]`).textContent=/^N/.test(id)?P[id]:P[id]+' мм';});
   bq('#b-W').textContent=P.W+' мм';bq('#b-L').textContent=P.L+' мм';bq('#b-H').textContent=P.H+' мм';bq('#b-R').textContent=`${P.Rx} × ${P.Rz} мм`;
-  bq('#bSub').textContent=`ниша ${P.W} × ${P.L} мм · потолок ${P.H} мм · короб ${P.Rx} × ${P.Rz} мм`;
+  const fc=finName(FIN.carcass),ff=finName(FIN.front);
+  bq('#bSub').textContent=`ниша ${P.W} × ${P.L} мм · потолок ${P.H} мм · `+(fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`);
+  updateCut();
   const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),fl=P.Feet?10:0;
   // free height between neighbouring shelves (from the top of one shelf to the underside of the next)
   const sb=(P.Hi-t/2-P.Pl-fl-t)/(P.Nb+1),sh=(P.H-t-P.Hi-t/2)/(P.Nh+1);
@@ -179,8 +309,9 @@ const sizesBox=bq('#b-sizesBox');
 sizesBox.addEventListener('toggle',()=>{if(VS.bath.sizes!==sizesBox.open){VS.bath.sizes=sizesBox.open;saveView('bath');}});
 function syncBath(){
   frameL.max=hLen;frameL.value=showL();bq('#bFrameLOut').textContent=showL();
-  sizesBox.open=!!VS.bath.sizes;
-  syncIds();syncThick();updatePanel();
+  sizesBox.open=VS.bath.sizes!==false;
+  Object.entries(toggles).forEach(([k,s])=>{bq(s).checked=VS.bath[k]!==false;});
+  syncIds();syncThick();syncDoorMode();syncFinish();syncEc();updatePanel();applyVisibility();
 }
 
 addView('bath',{
@@ -193,11 +324,12 @@ addView('bath',{
   // as in the bath tab: the sun aims at the middle of the back wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the bathroom
-  furniture:()=>({model,doors,P,current}),   // the built bathroom: for the plan (stage 7) and the checks
-  defaults:{Wm:'auto',Wh:100,L:1400,sizes:false},
+  furniture:()=>({model,doors,P,current,sani,dims:dimsGroup}),   // the built bathroom: for the plan (stage 7) and the checks
+  defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),
-  sync:syncBath
+  sync:syncBath,
+  onDoors:syncDoorMode
 });
 // the plan changed the sizes: the niche, the ceiling, the riser box and the bathroom's place come along;
 // the bathroom is rebuilt when next on screen

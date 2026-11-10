@@ -501,7 +501,7 @@ check('санузел: стены ниши, обрезанные рамкой, �
   assert.strictEqual(bp.hidden, false);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="bath"] #shared'), 'light and wall colour moved to the bathroom');
   assert.strictEqual(bq('#bFrameLOut').textContent, 1400);
-  assert.strictEqual(bq('#bSub').textContent, 'ниша 1200 × 1100 мм · потолок 2600 мм · короб 250 × 250 мм');
+  assert.strictEqual(bq('#bSub').textContent, 'ниша 1200 × 1100 мм · потолок 2600 мм · корпус — Диамант серый U963 ST9; фасады — Базовый коричневый декор');
   // camera: «3/4» on the first visit, the bath tab's targets moved to the bathroom's place; the sun over the back wall
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.4, 1.3, 0.55]);
   bq('[data-cam="tall"]').click();
@@ -524,7 +524,7 @@ check('санузел: шкафы, инсталляция и унитаз соб
   const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/bath-parts.json'), 'utf8'));
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   // the installation box, its flush plate, the bowl and the seat: the last group of the bathroom
-  const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.model.children[f.model.children.length-1].children.map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
+  const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.sani.children.map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
   let r = b();
   assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 34, true], 'built on screen, every door on a hinge');
   assert.strictEqual(nDoors, 6, 'four tall cabinet doors, two upper cabinet doors');
@@ -547,6 +547,81 @@ check('санузел: шкафы, инсталляция и унитаз соб
   r = b(); assert.deepStrictEqual([r.P.Feet, r.feet], [true, 6]);
   bq('[data-thick="18"][data-for="T"]').click();
   assert.strictEqual(b().P.T, 18);
+});
+
+check('санузел: отделка — палитра, меню образца «корпус / фасады», свой цвет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const bp = p.document.querySelector('[data-panel="bath"]'), bq = (s) => bp.querySelector(s), sub = () => bq('#bSub').textContent;
+  assert.strictEqual(bp.querySelectorAll('[data-decor]').length, DECOR_PARENT.PALETTE_WOOD.length);
+  assert.strictEqual(bp.querySelectorAll('[data-uc]').length, DECOR_PARENT.PALETTE_UNI.length);
+  assert.ok(matches(bq('#b-ccCard'), '[aria-label="Монотонные декоры"] .cc'), 'own colour card stays with the plain colours');
+  // the bath tab's finishes: grey carcass, brown wood fronts
+  const tags = (s) => bq(s).querySelector('.tags').innerHTML;
+  assert.strictEqual(tags('[data-decor="H1386"]'), '<b>Ф</b>');
+  assert.match(bq('#b-finNow').innerHTML, /^<span>Корпус<\/span><span>Диамант серый U963 ST9<\/span><span>Фасады<\/span><span>Базовый коричневый декор<\/span>$/);
+  // a click paints the whole cabinet
+  bq('[data-decor="H1180"]').click();
+  assert.match(sub(), /потолок 2600 мм · Дуб Галифакс натуральный H1180 ST37$/);
+  // the swatch menu offers only what the bathroom has: the carcass and the fronts
+  const ctx = p.document.getElementById('ctx');
+  bq('[data-uc="#F1F0EA"]').dispatch('contextmenu', { clientX: 100, clientY: 100 });
+  assert.deepStrictEqual(ctx.querySelectorAll('[data-where]').filter((b) => !b.hidden).map((b) => b.dataset.where), ['carcass', 'front']);
+  ctx.querySelector('[data-where="front"]').click();
+  assert.match(sub(), /корпус — Дуб Галифакс натуральный H1180 ST37; фасады — Белый премиум W1000 ST9$/);
+  // own colour for the whole cabinet; contrast of the end faces
+  const cc = bq('#b-uniColor'); cc.click(); cc.value = '#123456'; cc.dispatch('input');
+  assert.match(sub(), /мм · Свой цвет #123456$/);
+  assert.strictEqual(bq('#b-ccCode').textContent, '#123456');
+  const ec = bq('#b-Ec'); ec.value = '60'; ec.dispatch('input');
+  assert.deepStrictEqual([bq('#b-oEc').textContent, p.run('VIEWS.bath.furniture().P.Ec')], ['60%', 60]);
+});
+
+check('санузел: фасады, размеры, деталировка, настройки по умолчанию', () => {
+  const storage = new Map();
+  let p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick();
+  let bp = p.document.querySelector('[data-panel="bath"]');
+  const bq = (s) => bp.querySelector(s);
+  const pressed = () => bp.querySelectorAll('[data-door]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.door);
+  // the bath tab's 13 dimension lines (a line and a label each), hidden in a flight
+  assert.strictEqual(p.run('VIEWS.bath.furniture().dims.children.length'), 26);
+  assert.strictEqual(bq('#b-sizesBox').open, true, 'the sizes are open, as in the bath tab');
+  assert.deepStrictEqual(pressed(), ['closed']);
+  bq('[data-door="open"]').click();
+  assert.strictEqual(p.run('VIEWS.bath.furniture().doors.every(d=>d.t===d.max)'), true);
+  // one door closed by hand: nothing pressed, the remembered mode stays
+  p.run('(VIEWS.bath.furniture().doors[0].t=0, doorsChanged())');
+  assert.deepStrictEqual(pressed(), []); assert.strictEqual(p.run('VS.bath.fronts'), 'open');
+  bq('[data-door="hidden"]').click(); assert.deepStrictEqual(pressed(), ['hidden']);
+  // the walls toggle takes the walls, the installation and the toilet away
+  const walls = bq('#b-tWall'); walls.checked = false; walls.dispatch('change'); p.tick();
+  assert.deepStrictEqual(p.run('[wallGroup.visible, VS.bath.walls]'), [false, false]);
+  const dims = bq('#b-tDims'); dims.checked = false; dims.dispatch('change');
+  assert.deepStrictEqual(p.run('[VS.bath.fronts, VS.bath.dims]'), ['hidden', false]);
+  // cut list: every part, grouped by material; the same as CSV
+  assert.match(bq('#b-tot').innerHTML, /^<span>34 детали?<\/span>|^<span>34 деталей<\/span>/);
+  const csv = bq('#b-csv').value.split('\n');
+  assert.strictEqual(csv[0], 'Деталь;Материал;Длина;Ширина;Толщина;Кол-во');
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 34);
+  assert.strictEqual(bq('#b-cut').querySelectorAll('th.mh').length, 2, 'carcass and fronts');
+  // feet are listed under the parts
+  const feet = bq('#b-tFeet'); feet.checked = true; feet.dispatch('change');
+  assert.match(bq('#b-tot').innerHTML, /Опоры регулируемые М6, шайба Ø15×5: 6 шт/);
+  // remembered: cabinets and finishes, without the niche, the ceiling and the riser box
+  const hi = bq('[data-p="Hi"]'); hi.value = '1300'; hi.dispatch('input');
+  bq('[data-decor="H3154"]').click();
+  bq('#b-saveDef').click();
+  const saved = JSON.parse(storage.get('apt-bath-v2'));
+  assert.deepStrictEqual([saved.P.Hi, saved.P.Feet, ['W', 'L', 'H', 'Rx', 'Rz', 'Lt'].some((k) => k in saved.P), saved.FIN.front.decor], [1300, true, false, 'H3154']);
+  p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick();
+  bp = p.document.querySelector('[data-panel="bath"]');
+  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet,f.P.W])(VIEWS.bath.furniture())'), [1300, true, 1200]);
+  assert.match(bq('#bSub').textContent, /Дуб Чарльстон тёмно-коричневый/);
+  assert.deepStrictEqual(pressed(), ['hidden'], 'the view remembers the fronts taken off');
+  bq('#b-resetDef').click();
+  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet])(VIEWS.bath.furniture())'), [1200, false]);
+  assert.strictEqual(bq('#b-tFeet').checked, false);
+  assert.ok(!storage.has('apt-bath-v2'));
+  assert.match(bq('#bSub').textContent, /корпус — Диамант серый U963 ST9; фасады — Базовый коричневый декор$/);
 });
 
 check('санузел: шкафы только в своей вкладке, поднимаются из пола, следуют «Планировке»', () => {
@@ -577,7 +652,7 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(w.find((x) => x.id === 'leftOuter').r, [-2200, -2000, 0, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shower').r, [-1000, -900, 1100, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shaft').r, [-900, -700, 1400, 1500]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: false });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: true, fronts: 'closed', dims: true, walls: true, edges: true });
   // the plan makes the niche wider: the frame, the partition, the cabinets and the panel follow
   p.run('setModel({bNiche:1300})'); p.tick();
   assert.deepStrictEqual(p.run(bathWalls).find((x) => x.id === 'bathStub').r, [-700, -600, 0, 600]);

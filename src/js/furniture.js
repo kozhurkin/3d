@@ -196,6 +196,27 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
     pin.position.set(x*MM,.005+(c.FL*MM-.005)/2,z*MM);model.add(pin);});
   return {model,doors};
 }
+/* ---------- dimension lines of a room (room axes, m): a line with ticks and its label, put into the room's group ----------
+   (named apart from the plan's label/dim: all modules share one scope) */
+function roomLabel(text){
+  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
+  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
+  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
+  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
+  g.fillStyle='#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
+  const hgt=.075;s.scale.set(hgt*w/c.height,hgt,1);s.renderOrder=20;return s;
+}
+const roomDimMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true});
+// from a to b (vectors, m), ticks across along tick
+function roomDim(g,a,b,txt,tick){
+  const t=tick.clone().multiplyScalar(.04);
+  const pts=[a,b,a.clone().add(t),a.clone().sub(t),b.clone().add(t),b.clone().sub(t)];
+  const l=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),roomDimMat);l.renderOrder=19;g.add(l);
+  const s=roomLabel(txt);s.position.copy(a).add(b).multiplyScalar(.5);g.add(s);
+}
+
 /* nothing of the furniture shows below the floor, from any side: it rises out of the floor and sinks into it in a flight
    between views (the room's group moves down) — the floor plane alone would not hide it from below or through gaps */
 const FLOOR_CLIP=[new THREE.Plane(new THREE.Vector3(0,1,0),.001)];

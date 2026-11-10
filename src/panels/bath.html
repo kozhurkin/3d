@@ -5,7 +5,17 @@
 
     <div>
       <h2>Вид</h2>
-      <h3>Стены</h3>
+      <div class="seg" role="group" aria-label="Фасады">
+        <button data-door="closed" aria-pressed="true">Закрыты</button>
+        <button data-door="open" aria-pressed="false">Открыты</button>
+        <button data-door="hidden" aria-pressed="false">Без фасадов</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="b-tDims" checked> Размеры</label>
+        <label><input type="checkbox" id="b-tWall" checked> Стены, инсталляция и унитаз</label>
+        <label><input type="checkbox" id="b-tEdges" checked> Контуры деталей</label>
+      </div>
+      <h3 style="margin-top:14px">Стены</h3>
       <div class="seg" role="group" aria-label="Стены">
         <button data-wm="show" aria-pressed="false">Монолит</button>
         <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
@@ -78,4 +88,48 @@
       </div>
     </details>
 
+    <div>
+      <h2>Цвет и декор</h2>
+      <div class="finnow" id="b-finNow"></div>
+      <h3 style="margin-top:14px">Древесные декоры</h3>
+      <div class="decors unis" role="group" aria-label="Декор">
+      </div>
+      <h3 style="margin-top:14px">Однотонные</h3>
+      <div class="decors unis" role="group" aria-label="Монотонные декоры">
+        <label class="cc" id="b-ccCard"><input type="color" id="b-uniColor" value="#C2B8AA" aria-label="Свой цвет"><span>Свой цвет<br><small id="b-ccCode">палитра</small></span><span class="tags" id="b-ccTags"></span></label>
+      </div>
+      <div class="field" style="margin:14px 0 0"><label for="b-Ec">Контрастность кромки</label><output id="b-oEc"></output><input type="range" id="b-Ec" min="0" max="100" step="1"></div>
+      <p class="note" style="margin:8px 0 0">Цвет и рисунок переданы приблизительно, сверяйте с образцом.</p>
+    </div>
+
     <div data-shared-slot style="display:contents"></div>
+
+    <div>
+      <h2>Деталировка</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Деталь</th><th class="n">Д × Ш</th><th class="n">Шт</th></tr></thead>
+        <tbody id="b-cut"></tbody>
+      </table></div>
+      <div class="tot" id="b-tot"></div>
+      <div class="row">
+        <button class="btn" id="b-copy">Скопировать CSV</button>
+        <span class="note" id="b-copied" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="b-csv" hidden readonly aria-label="CSV деталировки"></textarea>
+    </div>
+
+    <div>
+      <h2>Настройки по умолчанию</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="b-saveDef">Запомнить текущие</button>
+        <button class="btn" id="b-resetDef">Вернуть исходные</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="b-copyDef">Скопировать код настроек</button>
+        <span class="note" id="b-defMsg" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="b-defCode" hidden readonly aria-label="Код настроек"></textarea>
+      <p class="note" style="margin:8px 0 0">«Запомнить» сохраняет шкафы и их отделку в этом браузере. Чтобы они стали стандартными для всех, скопируйте код и пришлите его в чат. Ниша, потолок и короб — на «Планировке».</p>
+    </div>
+
+    <p class="note" style="margin:0">Расстояние между полками — свободная высота от верха одной полки до низа следующей. Допущения: корпус и фасады из ЛДСП выбранной толщины, зазор между фасадами 2 мм. Шкафы без задних стенок, сзади рёбра жёсткости по 100 мм. Пенал стоит вдоль задней стены у перегородки, на цоколе; четыре дверцы, две снизу и две сверху, граница дверей на высоте инсталляции. Облицовка короба — два глухих фасада в одной плоскости с дверцами. Цоколь общий, заподлицо с фасадами. Инсталляция и верхний шкаф — вдоль левой стены, сразу за облицовкой короба. Короб инсталляции и сантехника показаны условно. Фурнитура и кромка не учтены. Перед заказом раскроя размеры нужно сверить с замером.</p>

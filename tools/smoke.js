@@ -19,6 +19,9 @@ function stub(name = 'stub') {
       const o = stub('new ' + name);
       // the camera has a real position: the cut-mode rules of the walls look at it
       if (name === 'THREE.PerspectiveCamera') Object.assign(o, { fov: args[0], aspect: args[1], position: new Vec3() });
+      // meshes and lines keep what they were made of, so checks can see their materials
+      if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line'].includes(name)) Object.assign(o, { geometry: args[0], material: args[1] });
+      if (name === 'THREE.Sprite') o.material = args[0];
       return o;
     },
   });
@@ -484,10 +487,19 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   near(lo.sz, 4100 / 6750, 'left wall length'); near(lo.z, 3.0, 'left wall centre'); near(lo.sy, 0.5, 'left wall height');
   // a wall that is not in the kitchen is halfway down; the kitchen wall stays
   near(piece(p, 'hallBath').sy, 0.5, 'hall/bath wall height'); near(piece(p, 'kitchen').sy, 1, 'kitchen wall height');
+  // footprints fade between the views: half gone under a wall that leaves, whole under one that stays; walls high above the floor are solid
+  const mat = (id, k) => p.run(`morph.mats.get("${id}").${k}.opacity`);
+  near(mat('hallBath', 'foot'), 0.5, 'leaving footprint'); near(mat('window', 'foot'), 0.5, 'footprint of the hidden window wall');
+  near(mat('kitchen', 'foot'), 1, 'kitchen wall footprint'); near(mat('hallBath', 'body'), 1, 'a wall 1.3 m high');
   // the kitchen comes up out of the floor, the sun's shadows close in on it, the camera is halfway
   const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, theta:cam.theta, r:cam.r})');
   near(k.s, 0.5, 'kitchen presence'); near(k.y, -1.35, 'kitchen below the floor'); near(k.half, 3.8, 'shadow box');
   near(k.theta, (c0.theta + g.theta) / 2, 'camera angle'); near(k.r, (c0.r + g.r) / 2, 'camera distance');
+  p.tick(24, 16.67);   // ≈ 0.97 of the flight: the leaving walls are below 1 cm
+  const lowCut = p.run('morphWall(morph.w.get("hallBath"),morph.e).cut');
+  assert.ok(lowCut > 1 && lowCut < 40, 'a low wall ' + lowCut);
+  near(mat('hallBath', 'body'), lowCut / 150, 'low wall fades'); near(mat('hallBath', 'cap'), lowCut / 150, 'its dark top too');
+  assert.ok(mat('hallBath', 'foot') < 0.1 && mat('hallBath', 'line') < 0.05, 'footprint and outline almost gone');
   // landed: the kitchen's own walls with outlines, the kitchen on the floor, the camera free; the left wall hidden by the
   // cut mode just as the flight ended it
   p.fly();
@@ -495,6 +507,8 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   assert.deepStrictEqual([r.tr, r.lines, r.parts, r.y, r.half, r.drive], [false, 2, 2, 0, 3, null]);
   near(r.theta, r.goal, 'camera at the goal');
   assert.deepStrictEqual([piece(p, 'leftOuter').visible, piece(p, 'kitchen').visible], [false, true]);
+  // the flight's own materials are gone: the walls are back on the shared ones (the wall colour setting reaches them)
+  assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.m.material[0]===wallMat&&w.m.material[2]===capMat), wallFeet.every(f=>f.m.material===footMat)]'), [null, true, true]);
 });
 
 check('перелёт: разный вид стен у вкладок — высота и «Скелет» меняются плавно', () => {

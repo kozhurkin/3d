@@ -15,7 +15,8 @@ const APT_A={
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
   vOff:150,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
-  eD0:84, eD1:976, eDH:2016         // entrance door opening (as in the hall tab)
+  eD0:84, eD1:976, eDH:2016,        // entrance door opening (as in the hall tab)
+  eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
 };
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.
@@ -71,5 +72,6 @@ function aptProblems(a){
   if(m.zV0<A.bL)out.push('Стенка вентшахты не доходит до перегородки душа');
   if(A.winW>A.hallW-m.xL-200)out.push('Окно шире кухни (нужно хотя бы по 100 мм до боковых стен)');
   if(Math.max(A.eDH,A.bDoorH,A.winS+A.winH)>A.H-50)out.push('Проём выше потолка (нужно хотя бы 50 мм)');
+  if(A.eRv+70>A.bear)out.push('Коробка входной двери (70 мм) не помещается в несущую стену');
   return out;
 }

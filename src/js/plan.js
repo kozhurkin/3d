@@ -82,7 +82,7 @@ const row=(k,v,q)=>`<dt>${k}</dt><dd${q?' class="q"':''}>${v}</dd>`;
 function renderFacts(){
   pq('#pFacts').innerHTML=
     `<div class="room">Прихожая</div><dl class="facts">${
-      row('Ширина',A.hallW)+row('Левая стена',`${A.hL1} + проём ${A.bDoor} (h ${A.bDoorH}) + ${A.hL2}`)+row('Правая стена',`${hLen} до кухонной стены`)+row('Входной проём',`${A.eD1-A.eD0} × ${A.eDH}, несущая стена ${A.bear}`)}</dl>`+
+      row('Ширина',A.hallW)+row('Левая стена',`${A.hL1} + проём ${A.bDoor} (h ${A.bDoorH}) + ${A.hL2}`)+row('Правая стена',`${hLen} до кухонной стены`)+row('Входной проём',`${A.eD1-A.eD0} × ${A.eDH}, откос до двери ${A.eRv}, несущая стена ${A.bear}`)}</dl>`+
     `<div class="room">Санузел</div><dl class="facts">${
       row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Вентшахта',`${xB1-bx(A.bWs+A.bGap+A.wt)} × ${kZ0-zV0-A.wt}, стенка в ${A.vOff} от проёма`)}</dl>`+
     `<div class="room">Кухня</div><dl class="facts">${
@@ -126,7 +126,8 @@ const SIZES=[
     {k:'hL2',n:'Левая стена после двери',min:100,max:2500,step:10},
     {k:'eD0',n:'Вход: от левой стены',min:0,max:600,step:1,set:(a,v)=>({...a,eD0:v,eD1:v+a.eD1-a.eD0})},   // the opening moves, its width stays
     {k:'eW',n:'Вход: ширина',min:600,max:1200,step:1,get:a=>a.eD1-a.eD0,set:(a,v)=>({...a,eD1:a.eD0+v})},
-    {k:'eDH',n:'Вход: высота',min:1800,max:2500,step:1}]],
+    {k:'eDH',n:'Вход: высота',min:1800,max:2500,step:1},
+    {k:'eRv',n:'Вход: глубина откоса до двери',min:40,max:300,step:5}]],
   ['Санузел',[
     {k:'bNiche',n:'Ниша с инсталляцией: ширина',min:600,max:2000,step:10},
     {k:'bL',n:'Ниша с инсталляцией: глубина',min:600,max:2500,step:10},

@@ -240,14 +240,14 @@ function door(px,pz,size,pos,mat,max){
   m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));
   g.add(m);doorGroup.add(g);const d={g,h:size[1]*MM,t:0,a:0,max};doors.push(d);return d;
 }
-const EF=50,ED=70,EZ=-100;   // entrance frame: bar width, bar depth, hall-side face of the frame (100 mm into the wall)
+const EF=50,ED=70;   // entrance frame: bar width, bar depth; its hall-side face is A.eRv into the wall
 const doorParts=[];          // every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed
 // doors are rebuilt when the sizes change; each stays as open as it was
 function buildDoors(){
   const keep=doors.map(d=>({t:d.t,a:d.a,last:d.last}));
   emptyGroup(doorGroup,false);doors.length=0;held=null;
   if(arcs){scene.remove(arcs);emptyGroup(arcs);}
-  const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10;   // entrance leaf inside the frame
+  const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10, EZ=-A.eRv;   // entrance leaf inside the frame; hall-side face of the frame
   { const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);ent.hole='entry:0';   // the door shows with this opening
     [ED+20,-20].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),handleMat);hd.position.set((eLw-120)*MM,1.0,z*MM);hd.castShadow=true;ent.g.add(hd);});
     const fr=new THREE.Group();doorGroup.add(fr);ent.frame=fr;

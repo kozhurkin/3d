@@ -197,7 +197,7 @@ check('приложение: «Планировка» открывается', (
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const r = p.run('({view, n:Object.keys(VIEWS), lines:wallLines.length, parts:wallParts.length, fade:VIEWS.plan.fade, vs:VS.plan, doors:doors.map(d=>d.g.visible)})');
   assert.strictEqual(r.view, 'plan');
-  assert.deepStrictEqual(r.n, ['plan', 'kitchen', 'bath']);
+  assert.deepStrictEqual(r.n, ['plan', 'kitchen', 'bath', 'hall']);
   assert.deepStrictEqual(r.doors, [true, true], 'both doors on the plan');
   assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
   assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
@@ -666,6 +666,66 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['bath', 7]);
 });
 
+const hallWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.hall)}))';
+
+check('прихожая: несущая стена с входной дверью и боковые стены, обрезанные рамкой, как в старой вкладке', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  assert.strictEqual(p.run('view'), 'hall');
+  // the hall tab: the bearing wall 200 from 100 left of the left wall to 200 right of the hall (the outer wall), the opening in it;
+  // the side walls up to Sd = 650 from it; each hides from outside, as in the hall tab
+  assert.deepStrictEqual(p.run(hallWalls), [
+    { id: 'entry', r: [-100, 1400, -200, 0], fade: '-z' },
+    { id: 'rightOuter', r: [1200, 1400, 0, 650], fade: '+x' },
+    { id: 'hallBath', r: [-100, 0, 0, 650], fade: '-x' },
+  ]);
+  assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false], 'the entrance door of the model; the bathroom door is past the frame');
+  const hp = p.document.querySelector('[data-panel="hall"]'), hq = (s) => hp.querySelector(s);
+  assert.strictEqual(hp.hidden, false);
+  assert.ok(matches(p.document.getElementById('shared'), '[data-panel="hall"] #shared'), 'light and wall colour moved to the hall');
+  assert.strictEqual(hq('#hFrameSdOut').textContent, 650);
+  assert.strictEqual(hq('#hSub').textContent, '1200 × 2600 × 400 мм · проём 892 × 2016 мм');
+  // camera: «3/4» on the first visit at the hall tab's target; the mezzanine; the sun over the middle of the cabinet
+  assert.deepStrictEqual(vec(p, 'goalT'), [0.6, 1.3, 0.16]);
+  hq('[data-cam="mezz"]').click();
+  assert.deepStrictEqual(vec(p, 'goalT'), [0.6, 2.3, 0.2]);
+  assert.deepStrictEqual([...vec(p, 'VIEWS.hall.sun()'), p.run('sunHalf')], [0.6, 1.3, 0, 3]);
+});
+
+check('прихожая: детали шкафа совпадают со старой прихожей', () => {
+  const mod = PAGES.app.slice(PAGES.app.indexOf('«Прихожая» view'));
+  const pLine = mod.match(/^const P=\{W:1200,H:2600,.*\};$/m)[0];
+  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(mod, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
+  const want = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/hall-parts.json'), 'utf8'));
+  assert.strictEqual(got.parts.length, 36);
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
+  // in the app the same sizes come from the walls: the default opening gives the hall tab's false panel, column and mezzanine
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 100, 240, 600, 100, 36]);
+});
+
+check('прихожая: шкаф следует проёму с «Планировки», откос — размер двери, рамка боковых стен', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  // the opening moves and grows on the plan: the false panel and the column reach its sides, the mezzanine sits on its top
+  p.run('setModel({eD0:150, eD1:1000, eDH:2100})'); p.tick();
+  assert.deepStrictEqual(p.run('(f=>[f.P.Lw,f.P.Rw,f.P.Ht])(VIEWS.hall.furniture())'), [166, 216, 516]);
+  // the door frame sits as deep as the reveal; the plan's slider stops where the 70 mm frame leaves the 200 mm wall
+  slide(p, 'eRv', 300); p.tick();
+  assert.strictEqual(p.run('A.eRv'), 130);
+  assert.deepStrictEqual([p.run('VIEWS.hall.furniture().P.Rv'), round(p.run('doors[0].g.position.z'), 3)], [130, -0.2]);
+  // the side walls up to the kitchen wall: the whole bathroom doorway, so its door shows too
+  p.run('showView("hall")'); p.fly();
+  const sd = p.document.getElementById('hFrameSd'); sd.value = '1900'; sd.dispatch('input');
+  assert.deepStrictEqual(p.run(hallWalls).find((x) => x.id === 'hallBath').r, [-100, 0, 0, 1900]);
+  assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, true]);
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900 });
+  // a flight to the bathroom and back
+  p.run('showView("bath")'); p.fly();
+  assert.strictEqual(p.run('view'), 'bath');
+  p.run('showView("hall")'); p.fly();
+  assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['hall', 3]);
+});
+
 check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
   // the plan is seen from the window side: the window wall is hidden by its cut-mode rule
@@ -802,7 +862,7 @@ check('shell: вкладки открывают приложение или ст
   assert.strictEqual(fr('app').hidden, false); assert.strictEqual(fr('app').srcdoc, PAGES.app);
   assert.strictEqual(fr('hall').hidden, true);
   ['kitchen', 'bath'].forEach((t) => assert.strictEqual(fr(t), null, `the ${t} is a view of the app, no page of its own`));
-  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen']);
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen', 'hall-new']);
   assert.deepStrictEqual(cur(), ['plan']);
   fr('app').contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
   p.ctx.location.hash = '#hall'; p.ctx.dispatch('hashchange');
@@ -813,8 +873,10 @@ check('shell: вкладки открывают приложение или ст
   assert.deepStrictEqual(cur(), ['kitchen']); assert.strictEqual(p.ctx.appView, 'kitchen');
   p.ctx.location.hash = '#bath'; p.ctx.dispatch('hashchange');
   assert.deepStrictEqual(cur(), ['bath']); assert.strictEqual(p.ctx.appView, 'bath');
+  p.ctx.location.hash = '#hall-new'; p.ctx.dispatch('hashchange');
+  assert.deepStrictEqual(cur(), ['hall-new']); assert.strictEqual(p.ctx.appView, 'hall');
   p.ctx.location.hash = '#plan'; p.ctx.dispatch('hashchange');
-  assert.deepStrictEqual(shown, ['kitchen', 'bath', 'plan']);
+  assert.deepStrictEqual(shown, ['kitchen', 'bath', 'hall', 'plan']);
 });
 
 console.log('ok:', checks.length, 'checks\n - ' + checks.join('\n - '));

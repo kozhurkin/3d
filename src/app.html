@@ -160,6 +160,9 @@ textarea.code{width:100%;height:80px;font:11px var(--f-mono);margin-top:8px;back
   <aside class="panel" data-panel="bath" hidden>
 <!--include panels/bath.html-->
   </aside>
+  <aside class="panel" data-panel="hall" hidden>
+<!--include panels/hall.html-->
+  </aside>
 </div>
 <!-- light and wall colour: shared by all views, moved into the panel of the view on screen -->
 <div id="shared" style="display:contents" hidden>
@@ -176,6 +179,7 @@ textarea.code{width:100%;height:80px;font:11px var(--f-mono);margin-top:8px;back
 <script src="js/furniture.js"></script>
 <script src="js/rooms/kitchen.js"></script>
 <script src="js/rooms/bath.js"></script>
+<script src="js/rooms/hall.js"></script>
 <script>
 // the view to open: the shell names it (appView; the app runs in its frame), or its hash; later the shell switches views with showView()
 let first="plan";try{const v=parent.appView||parent.location.hash.slice(1);if(VIEWS[v])first=v;}catch(e){}

@@ -34,6 +34,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     <a href="#hall" data-tab="hall">Прихожая</a>
     <a href="#bath" data-tab="bath">Санузел</a>
     <a href="#kitchen" data-tab="kitchen">Кухня</a>
+    <a href="#hall-new" data-tab="hall-new" title="Прихожая из общей модели квартиры — собирается по шагам, пока рядом со старой">Прихожая (новая)</a>
   </nav>
 </header>
 <main class="frames">
@@ -44,9 +45,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 
 <script>
 (function(){
-  const tabs=['plan','hall','bath','kitchen'];
+  const tabs=['plan','hall','bath','kitchen','hall-new'];
   // tabs the app already shows as views of its one scene (tab → view); the others are still their own pages
-  const inApp={plan:'plan',kitchen:'kitchen',bath:'bath'};
+  const inApp={plan:'plan',kitchen:'kitchen',bath:'bath','hall-new':'hall'};
   const frameOf=t=>t in inApp?'app':t;
   const frames=['app','hall'];
   // keep the explicit light/dark choice in sync inside the frames

@@ -122,8 +122,8 @@ function matches(e, sel) {
 }
 
 /* ---------- run a page's inline scripts in one context, like a browser does ---------- */
-function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) {
-  const doc = parseHTML(html), docEl = el('html'), frames = [];
+function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce = false } = {}) {
+  const doc = parseHTML(html), docEl = el('html'), frames = [], clock = { t: 0 };
   const document = {
     documentElement: docEl, fonts: undefined,
     getElementById: (id) => all(doc).find((x) => x.attrs.id === id) || null,
@@ -136,9 +136,10 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
   };
   const THREE = stub('THREE'); THREE.Vector3 = Vec3;
   const win = {
-    THREE, document, localStorage, console, performance, setTimeout, clearTimeout, Math, JSON,
+    THREE, document, localStorage, console, setTimeout, clearTimeout, Math, JSON,
+    performance: { now: () => clock.t },   // page time moves only with tick(): 16 ms a frame
     devicePixelRatio: 1, location: { hash }, innerWidth: 1280, innerHeight: 800,
-    matchMedia: () => ({ matches: false, addEventListener() {} }),
+    matchMedia: (q) => ({ matches: reduce && q.includes('reduce'), addEventListener() {} }),
     getComputedStyle: () => ({ getPropertyValue: () => ' #cccccc ' }),
     requestAnimationFrame: (f) => frames.push(f),
     MutationObserver: class { observe() {} }, ResizeObserver: class { observe() {} },
@@ -150,8 +151,10 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {} } = {}) 
   win.window = win; win.parent = { location: { hash }, ...DECOR_PARENT, ...parentWin };   // pages take the decors from the shell
   const ctx = vm.createContext(win);
   all(doc).filter((x) => x.tagName === 'SCRIPT' && !x.attrs.src).forEach((s, i) => vm.runInContext(s.text, ctx, { filename: `script#${i}` }));
-  const tick = (n = 3) => { for (let i = 0; i < n; i++) { const q = frames.splice(0); q.forEach((f) => f()); } };
-  return { ctx, doc, document, storage, tick, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
+  // n frames of ms each; a flight between views takes 0.85 s, so fly() lets it finish
+  const tick = (n = 3, ms = 16) => { for (let i = 0; i < n; i++) { clock.t += ms; const q = frames.splice(0); q.forEach((f) => f()); } };
+  const fly = () => tick(60);
+  return { ctx, doc, document, storage, tick, fly, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
 }
 
 /* ---------- the built file ---------- */
@@ -325,12 +328,12 @@ check('кухня: рамка левой стены, переходы и раз�
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
   p.document.querySelector('[data-cam="sink"]').click();
-  p.run('showView("plan")'); p.tick();
+  p.run('showView("plan")'); p.fly();
   assert.deepStrictEqual(p.run('[view, wallLines.length, doors.map(d=>d.g.visible)]'), ['plan', 12, [true, true]]);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="plan"] #shared'));
   // a size changed on the plan reaches the kitchen
   slide(p, 'kW', 2300);
-  p.run('showView("kitchen")'); p.tick();
+  p.run('showView("kitchen")'); p.fly();
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.875, 0.9, 2.3], 'sink target, kitchen moved 100 left');
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2300, -2100, 1900, 6750], [-2100, 200, 1900, 2000]]);
   assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
@@ -375,12 +378,12 @@ check('кухня: шкафы и техника собираются, панел
 check('кухня: шкафы видны только в своей вкладке и следуют размерам «Планировки»', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model'), null, 'not built while the kitchen is not on screen');
-  p.run('showView("kitchen")'); p.tick();
+  p.run('showView("kitchen")'); p.fly();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), true);
-  p.run('showView("plan")'); p.tick();
+  p.run('showView("plan")'); p.fly();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), false, 'hidden on the plan');
   slide(p, 'kW', 2300); p.tick();
-  p.run('showView("kitchen")'); p.tick();
+  p.run('showView("kitchen")'); p.fly();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
   assert.match(p.document.getElementById('k-gapBase').textContent, /справа свободно 200 мм/);
   assert.strictEqual(p.document.getElementById('k-W').textContent, '2300 мм');
@@ -455,6 +458,59 @@ check('кухня: фасады, деталировка, настройки по
   assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr])(VIEWS.kitchen.furniture())'), [450, 600]);
   assert.ok(!storage.has('apt-kitchen-v2'));
   assert.match(kq('#kSub').textContent, /корпус — Белый премиум W1000 ST9; фасады — Серый кашемир U702 ST9/);
+});
+
+// a piece of a wall in the flight: its scale and place (the first piece of that wall standing on the floor)
+const piece = (p, id) => p.run(`(w=>({sx:w.m.scale.x, sy:w.m.scale.y, sz:w.m.scale.z, z:w.m.position.z, visible:w.m.visible}))(wallParts.find(w=>w.id==="${id}"&&w.b===0))`);
+const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ ${b}`);
+
+check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const c0 = p.run('({theta:cam.theta, r:cam.r})');
+  p.run('showView("kitchen")');
+  const g = p.run('({theta:goal.theta, r:goal.r})');
+  // in the flight: the walls of both views, no outlines, nothing to click, the camera driven by the flight
+  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 0, 26, true, null]);
+  p.tick(25, 17);   // 425 ms of 850: halfway, the eased progress is 0.5 too
+  near(p.run('tr.e'), 0.5, 'progress');
+  // the left wall shrinks from the whole wall (z 0…6750) to the kitchen's frame (1900…3350): now 950…5050, full height
+  const lo = piece(p, 'leftOuter');
+  near(lo.sz, 4100 / 6750, 'left wall length'); near(lo.z, 3.0, 'left wall centre'); near(lo.sy, 1, 'left wall height');
+  // a wall that is not in the kitchen is halfway down; the kitchen wall stays
+  near(piece(p, 'hallBath').sy, 0.5, 'hall/bath wall height'); near(piece(p, 'kitchen').sy, 1, 'kitchen wall height');
+  // the kitchen comes up out of the floor, the sun's shadows close in on it, the camera is halfway
+  const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, theta:cam.theta, r:cam.r})');
+  near(k.s, 0.5, 'kitchen presence'); near(k.y, -1.35, 'kitchen below the floor'); near(k.half, 3.8, 'shadow box');
+  near(k.theta, (c0.theta + g.theta) / 2, 'camera angle'); near(k.r, (c0.r + g.r) / 2, 'camera distance');
+  // landed: the kitchen's own walls with outlines, the kitchen on the floor, the camera free
+  p.fly();
+  const r = p.run('({tr:inTransition(), lines:wallLines.length, parts:wallParts.length, y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, drive:camDrive, theta:cam.theta, goal:goal.theta})');
+  assert.deepStrictEqual([r.tr, r.lines, r.parts, r.y, r.half, r.drive], [false, 2, 2, 0, 3, null]);
+  near(r.theta, r.goal, 'camera at the goal');
+});
+
+check('перелёт: прерывание, мышь забирает камеру, «уменьшить движение»', () => {
+  let p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  p.run('showView("kitchen")'); p.tick(25, 17);
+  // back to the plan in the middle: the new flight starts from what is on screen
+  p.run('showView("plan")');
+  assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 5050], [-2200, -2000, 0, 6750]]);
+  near(p.run('tr.pres0.kitchen'), 0.5, 'the kitchen starts from halfway');
+  p.fly();
+  assert.deepStrictEqual(p.run('[view, wallLines.length, VIEWS.kitchen.furniture().model.visible]'), ['plan', 12, false]);
+  // a drag takes the camera back; the walls finish their flight
+  p.run('showView("kitchen")'); p.tick(5);
+  const c = p.document.getElementById('c');
+  c.dispatch('pointerdown', { pointerId: 1, clientX: 10, clientY: 10, button: 0, pointerType: 'mouse' });
+  c.dispatch('pointermove', { pointerId: 1, clientX: 40, clientY: 10 });
+  c.dispatch('pointerup', { pointerId: 1, clientX: 40, clientY: 10, button: 0 });
+  assert.deepStrictEqual(p.run('[camDrive, inTransition()]'), [null, true]);
+  p.fly();
+  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length]'), [false, 2]);
+  // reduced motion: no flight, the kitchen at once
+  p = runPage(PAGES.app, { parentWin: { appView: 'plan' }, reduce: true }); p.tick();
+  p.run('showView("kitchen")');
+  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length]'), [false, 2]);
 });
 
 check('shell: вкладки открывают приложение или старые страницы', () => {

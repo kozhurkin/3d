@@ -234,10 +234,12 @@ function applyVisibility(){
 }
 // every frame: built when on screen and changed; the fronts swing toward where they were sent, or follow a long press
 frameHooks.push((dt,ease)=>{
-  const on=view==='kitchen';
+  const on=view==='kitchen',s=presence('kitchen');
   if(on&&dirty)build();
   if(!model)return;
-  model.visible=on;if(!on)return;
+  // in a flight the kitchen sinks into the floor or rises out of it; the floor hides what is below
+  model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  if(!on)return;
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);

@@ -184,8 +184,9 @@ modelHooks.push(()=>{dimsDirty=true;renderFacts();syncSizes();});
 const _v=new THREE.Vector3();
 insetHide.push(dimsGroup);
 frameHooks.push(()=>{
-  const on=view==='plan';
-  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=on&&VS.plan.names;roomGroup.visible=on;   // room views have the plain floor, as before
+  // dimensions come when the plan is reached; room floors and names change halfway (room views have the plain floor, as before)
+  const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
+  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=half;
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallOutlineMode?0:wallCut)+.02;
   // dimension labels keep the same size on screen at any zoom

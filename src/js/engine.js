@@ -83,6 +83,7 @@ canvas.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId))return;const pr=ptrs.get(e.pointerId),dx=e.clientX-pr.x,dy=e.clientY-pr.y;
   if(!held&&downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>=6)clearTimeout(holdTimer);
   if(held){ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:pr.pan});return;}
+  if(ptrs.size>=1)camDrive=null;   // the user takes the camera back from a flight between views
   if(ptrs.size===1){
     if(e.shiftKey||pr.pan)pan(dx,dy);
     else{goal.theta-=dx*.006;goal.phi=Math.min(1.62,Math.max(.0005,goal.phi-dy*.006));}
@@ -96,6 +97,7 @@ canvas.addEventListener('pointermove',e=>{
 const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;};
 // a click (no drag) on a door leaf opens or closes that door
 function pickDoor(e){
+  if(inTransition())return null;   // nothing to click while flying between views
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
   ray.setFromCamera(ndc,camera);
@@ -125,7 +127,7 @@ const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
 const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
+  e.preventDefault();camDrive=null;
   const r0=cam.r,r1=Math.min(30,Math.max(.3,r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012)))));
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
@@ -209,8 +211,9 @@ const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
 insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
 const distEl=inset.querySelector('.dist');let distTxt='';
 // the sun and the mini view follow the view on screen (views.js: aimView)
+let sunHalf=4.6;   // half the side of the square the shadows cover, m
 function aimSun(x,y,z,half){
-  sun.target.position.set(x,y,z);
+  sun.target.position.set(x,y,z);sunHalf=half;
   Object.assign(sun.shadow.camera,{left:-half,right:half,top:half,bottom:-half});sun.shadow.camera.updateProjectionMatrix();
   placeSun();
 }
@@ -222,7 +225,9 @@ infoBtn.addEventListener('click',()=>infoBtn.setAttribute('aria-expanded',infoBt
 document.addEventListener('keydown',e=>{if(e.key==='Escape')infoBtn.setAttribute('aria-expanded','false');});
 
 /* ---------- render loop ---------- */
+const preHooks=[];     // (dt) => void: before the camera moves (a flight between views advances here)
 const frameHooks=[];   // (dt, ease) => void: walls, doors, labels… — called every frame after the camera has moved
+let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 const insetHide=[];    // objects kept out of the mini view (dimension labels are sized for the main camera)
 const _d=new THREE.Vector3();
 let lastT=performance.now();
@@ -230,9 +235,11 @@ function loop(){
   const now=performance.now(),dt=Math.min(.1,(now-lastT)/1000);lastT=now;
   // easing per second, not per frame: the same speed at 60 and 120 Hz (factors are per 1/120 s)
   const ease=f=>reduce?1:1-Math.pow(1-f,dt*120);
-  const k=ease(.14);
-  cam.theta+=(goal.theta-cam.theta)*k;cam.phi+=(goal.phi-cam.phi)*k;cam.r+=(goal.r-cam.r)*k;
-  cam.target.lerp(goalT,k);
+  preHooks.forEach(f=>f(dt));
+  if(camDrive)camDrive();
+  else{ const k=ease(.14);
+    cam.theta+=(goal.theta-cam.theta)*k;cam.phi+=(goal.phi-cam.phi)*k;cam.r+=(goal.r-cam.r)*k;
+    cam.target.lerp(goalT,k); }
   const sp=Math.sin(cam.phi);
   _d.set(sp*Math.sin(cam.theta),Math.cos(cam.phi),sp*Math.cos(cam.theta));
   camera.position.copy(cam.target).addScaledVector(_d,cam.r);camera.lookAt(cam.target);camera.updateMatrixWorld();

@@ -4,8 +4,24 @@
     </div>
 
     <div>
+      <h2>Дверной проём</h2>
+      <div class="chips" id="h-chips"></div>
+    </div>
+
+    <div>
       <h2>Вид</h2>
-      <h3>Стены</h3>
+      <div class="seg" role="group" aria-label="Фасады">
+        <button data-door="closed" aria-pressed="true">Закрыты</button>
+        <button data-door="open" aria-pressed="false">Открыты</button>
+        <button data-door="hidden" aria-pressed="false">Без фасадов</button>
+      </div>
+      <div class="toggles">
+        <label><input type="checkbox" id="h-tDims" checked> Размеры</label>
+        <label><input type="checkbox" id="h-tWall" checked> Стена и дверь</label>
+        <label><input type="checkbox" id="h-tEntry"> Входная дверь открыта</label>
+        <label><input type="checkbox" id="h-tEdges" checked> Контуры деталей</label>
+      </div>
+      <h3 style="margin-top:14px">Стены</h3>
       <div class="seg" role="group" aria-label="Стены">
         <button data-wm="show" aria-pressed="false">Монолит</button>
         <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
@@ -70,4 +86,48 @@
       </div>
     </details>
 
+    <div>
+      <h2>Цвет и декор</h2>
+      <div class="finnow" id="h-finNow"></div>
+      <h3 style="margin-top:14px">Древесные декоры</h3>
+      <div class="decors unis" role="group" aria-label="Декор">
+      </div>
+      <h3 style="margin-top:14px">Однотонные</h3>
+      <div class="decors unis" role="group" aria-label="Монотонные декоры">
+        <label class="cc" id="h-ccCard"><input type="color" id="h-uniColor" value="#C2B8AA" aria-label="Свой цвет"><span>Свой цвет<br><small id="h-ccCode">палитра</small></span><span class="tags" id="h-ccTags"></span></label>
+      </div>
+      <div class="field" style="margin:14px 0 0"><label for="h-Ec">Контрастность кромки</label><output id="h-oEc"></output><input type="range" id="h-Ec" min="0" max="100" step="1"></div>
+      <p class="note" style="margin:8px 0 0">Цвет и рисунок переданы приблизительно, сверяйте с образцом.</p>
+    </div>
+
     <div data-shared-slot style="display:contents"></div>
+
+    <div>
+      <h2>Деталировка</h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Деталь</th><th class="n">Д × Ш</th><th class="n">Шт</th></tr></thead>
+        <tbody id="h-cut"></tbody>
+      </table></div>
+      <div class="tot" id="h-tot"></div>
+      <div class="row">
+        <button class="btn" id="h-copy">Скопировать CSV</button>
+        <span class="note" id="h-copied" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="h-csv" hidden readonly aria-label="CSV деталировки"></textarea>
+    </div>
+
+    <div>
+      <h2>Настройки по умолчанию</h2>
+      <div class="row" style="margin-top:0">
+        <button class="btn" id="h-saveDef">Запомнить текущие</button>
+        <button class="btn" id="h-resetDef">Вернуть исходные</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="h-copyDef">Скопировать код настроек</button>
+        <span class="note" id="h-defMsg" aria-live="polite"></span>
+      </div>
+      <textarea class="code" id="h-defCode" hidden readonly aria-label="Код настроек"></textarea>
+      <p class="note" style="margin:8px 0 0">«Запомнить» сохраняет шкаф и его отделку в этом браузере. Чтобы они стали стандартными для всех, скопируйте код и пришлите его в чат. Ширина прихожей, входной проём, откос и потолок — на «Планировке».</p>
+    </div>
+
+    <p class="note" style="margin:0">Допущения: корпус и фасады из ЛДСП выбранной толщины, зазор между фасадами 2 мм. ХДФ не используется. Антресоль — два отдельных корпуса без задней стенки, сзади два ребра жёсткости по 100 мм. Левая колонна — фальш-панель без открывания: лицевая панель, боковина со стороны проёма, дно и крышка. Правая колонна открыта в сторону проёма, лицевая панель глухая, задняя стенка из ЛДСП. Фальш-панель и колонна доходят до краёв входного проёма, антресоль начинается над ним. Откосы обшиты ЛДСП корпуса до дверной коробки. Фурнитура и кромка не учтены. Перед заказом раскроя размеры нужно сверить с замером.</p>

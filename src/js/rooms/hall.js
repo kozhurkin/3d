@@ -89,27 +89,52 @@ const FIN={carcass:{type:'wood',decor:'H1386'},front:{type:'wood',decor:'H1386'}
 const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
 
+/* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ---------- */
+const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
+function buildDims(){
+  const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),z=P.D+60,Hb=current.Hb;
+  const ow=P.W-P.Lw-P.Rw;
+  dim(V(0,P.H+140,z),V(P.W,P.H+140,z),`${P.W}`,Y);
+  dim(V(P.W+160,0,z),V(P.W+160,P.H,z),`${P.H}`,X);
+  dim(V(-160,Hb,z),V(-160,P.H,z),`${P.Ht}`,X);
+  dim(V(P.Lw,260,z),V(P.W-P.Rw,260,z),`проём ${ow}`,Y);
+  dim(V((P.Lw+P.W-P.Rw)/2,0,z),V((P.Lw+P.W-P.Rw)/2,Hb,z),`${Hb}`,X);
+  dim(V(P.W+160,P.H+140,0),V(P.W+160,P.H+140,P.D),`${P.D}`,Y);
+}
+
 /* ---------- the hall cabinet in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],dirty=true;
+let model=null,doors=[],dimsGroup=null,dirty=true;
 function build(){
   fromModel();
-  const prev=doors;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev}));
+  const prev=doors,V=VS.hall;disposeGroup(model);
+  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
+  dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
   clipToFloor(model);
   const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
-  scene.add(model);dirty=false;updatePanel();
+  scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
-// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing
+// what the view shows: fronts, joint lines, dimensions (the walls and the entrance door: every frame, below)
+function applyVisibility(){
+  if(!model)return;const V=VS.hall;
+  model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
+  model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
+  dimsGroup.visible=V.dims!==false;
+}
+// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing;
+// «Стена и дверь» off takes away the walls, the entrance door and its swing
 frameHooks.push((dt,ease)=>{
   const on=view==='hall',s=presence('hall');
   if(on&&dirty)build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  dimsGroup.visible=VS.hall.dims!==false&&!inTransition();   // dimension lines come when the hall is reached
   if(!on)return;
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);
     turnDoor(d);});
+  if(VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
+  else if(wallGroup)wallGroup.visible=true;
 });
 
 /* camera presets of the hall tab, moved to where the hall lies on the plan */
@@ -149,13 +174,118 @@ panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=
 const ids=['H','D','N','Pl'];
 const syncIds=()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;ids.forEach(j=>{hq(`[data-p="${j}"]`).value=P[j];});};
 ids.forEach(id=>hq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;build();syncIds();}));
-// sizes, what comes from the plan, the space between the shelves
+// fronts: all open, all closed (or nothing pressed when they differ), or taken off; the entrance door's box follows the door
+function syncDoorMode(){
+  const V=VS.hall;let st=V.fronts;
+  if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=DMAX-.01).length,z=doors.filter(d=>d.t<=.01).length;
+    st=n===doors.length?'open':z===doors.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
+  panel.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===st));
+  const e=entranceDoor();hq('#h-tEntry').checked=!!e&&e.t>0;
+}
+panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
+  const V=VS.hall;V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
+  syncDoorMode();applyVisibility();saveView('hall');}));
+// the entrance door of the model, opened or closed from here as by a click on it
+hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
+// dimensions, the walls with the entrance door, joint lines of the parts
+const toggles={dims:'#h-tDims',walls:'#h-tWall',edges:'#h-tEdges'};
+Object.entries(toggles).forEach(([k,s])=>hq(s).addEventListener('change',e=>{VS.hall[k]=e.target.checked;applyVisibility();saveView('hall');}));
+
+/* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one of them ---------- */
+fillPalette(panel);
+const palette=[...panel.querySelectorAll('[data-decor],[data-uc]')];
+palette.forEach(b=>{const t=document.createElement('span');t.className='tags';b.appendChild(t);});
+const sameFin=(b,f)=>f.type==='wood'?b.dataset.decor===f.decor:(b.dataset.uc||'').toLowerCase()===(f.color||'').toLowerCase();
+const WHERE=['carcass','front'];
+function syncFinish(){
+  palette.forEach(b=>{
+    const c=sameFin(b,FIN.carcass),f=sameFin(b,FIN.front);
+    b.setAttribute('aria-pressed',c||f);
+    b.querySelector('.tags').innerHTML=(c?'<b>К</b>':'')+(f?'<b>Ф</b>':'');
+  });
+  const custom=f=>f.type==='uni'&&!palette.some(b=>sameFin(b,f));
+  const cf=custom(FIN.front)?FIN.front:custom(FIN.carcass)?FIN.carcass:null;
+  hq('#h-uniColor').value=cf?cf.color:'#C2B8AA';
+  hq('#h-ccCard').classList.toggle('on',!!cf);
+  hq('#h-ccCode').textContent=cf?cf.color.toUpperCase():'палитра';
+  hq('#h-ccTags').innerHTML=(custom(FIN.carcass)?'<b>К</b>':'')+(custom(FIN.front)?'<b>Ф</b>':'');
+  hq('#h-finNow').innerHTML=`<span>Корпус</span><span>${finName(FIN.carcass)}</span><span>Фасады</span><span>${finName(FIN.front)}</span>`;
+}
+function setFinish(f,where){
+  if(where!=='front')FIN.carcass=Object.assign({},f);
+  if(where!=='carcass')FIN.front=Object.assign({},f);
+  applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();
+}
+const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};
+palette.forEach(b=>{
+  b.addEventListener('click',()=>setFinish(pickFor(b),'both'));
+  b.title='Клик — весь шкаф. Правая кнопка или долгое нажатие — только корпус или фасады';
+  b.addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>setFinish(pickFor(b),w),WHERE);});
+  longPress(b,(x,y)=>openCtx(x,y,w=>setFinish(pickFor(b),w),WHERE));
+});
+// own colour: the picker paints the whole cabinet, or the group chosen in its menu
+let ccWhere='both';
+const ccInput=hq('#h-uniColor');
+ccInput.addEventListener('click',()=>{if(!ccInput.dataset.keep)ccWhere='both';delete ccInput.dataset.keep;});
+hq('#h-ccCard').addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>{ccWhere=w;ccInput.dataset.keep='1';ccInput.click();},WHERE);});
+ccInput.addEventListener('input',e=>setFinish({type:'uni',color:e.target.value,name:'Свой цвет '+e.target.value.toUpperCase()},ccWhere));
+// contrast of the end faces and joint lines
+const syncEc=()=>{hq('#h-Ec').value=P.Ec;hq('#h-oEc').textContent=P.Ec+'%';};
+hq('#h-Ec').addEventListener('input',e=>{P.Ec=+e.target.value;applyContrast(mats,FIN,P.Ec);syncEc();});
+
+/* ---------- cut list ---------- */
+const matName=m=>m==='back'?'ХДФ 4':`ЛДСП ${m==='front'?TF:T} · `+finName(finOf(FIN,m));
+function cutList(){
+  const map=new Map();
+  current.parts.forEach(p=>{
+    const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0].map(v=>Math.round(v)).sort((a,b)=>b-a);
+    const key=p.name+'|'+d[0]+'|'+d[1];
+    if(!map.has(key))map.set(key,{name:p.name,mat:p.mat,L:d[0],B:d[1],t:d[2],n:0});map.get(key).n++;
+  });
+  return [...map.values()];
+}
+function updateCut(){
+  // group by material so each sheet decor can be ordered separately
+  const rows=cutList().sort((a,b)=>matName(a.mat).localeCompare(matName(b.mat)));const area={};
+  let last='';
+  hq('#h-cut').innerHTML=rows.map(r=>{const mn=matName(r.mat);area[mn]=(area[mn]||0)+r.L*r.B*r.n/1e6;
+    const head=mn!==last?`<tr><th colspan="3" class="mh">${mn}</th></tr>`:'';last=mn;
+    return head+`<tr><td>${r.name}</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.n}</td></tr>`;}).join('');
+  const total=rows.reduce((s,r)=>s+r.n,0);
+  hq('#h-tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')+(current.FL>0?`<span>Опоры регулируемые М6, шайба Ø15×5: ${current.feet.length} шт</span>`:'');
+  hq('#h-csv').value='Деталь;Материал;Длина;Ширина;Толщина;Кол-во\n'+rows.map(r=>[r.name,matName(r.mat),r.L,r.B,r.t,r.n].join(';')).join('\n');
+}
+hq('#h-copy').addEventListener('click',()=>{const ta=hq('#h-csv');copyText(ta,ta.value,hq('#h-copied'),'Скопировано');});
+
+/* ---------- settings to start with: in this browser, or as a code for the chat ----------
+   the cabinet and its finishes; the sizes that follow the walls and the opening belong to the plan, the view settings are remembered by themselves */
+const KEY='apt-hall-v2';
+const getState=()=>{const p=Object.assign({},P);['W','Lw','Rw','Ht','Rv'].forEach(k=>delete p[k]);return {P:p,FIN:JSON.parse(JSON.stringify(FIN))};};
+const FACTORY=JSON.stringify(getState());
+function applyState(s){
+  if(s.P)Object.assign(P,s.P);
+  const okF=f=>f&&(f.type==='uni'||(f.type==='wood'&&DECORS[f.decor]));
+  if(s.FIN&&okF(s.FIN.carcass)&&okF(s.FIN.front)){FIN.carcass=s.FIN.carcass;FIN.front=s.FIN.front;}
+  fromModel();applyMaterials(mats,FIN,P.Ec);dirty=true;
+}
+{ const s=readJSON(KEY);if(s)applyState(s); }
+const defMsg=hq('#h-defMsg');
+hq('#h-saveDef').addEventListener('click',()=>{try{localStorage.setItem(KEY,JSON.stringify(getState()));defMsg.textContent='Сохранено в этом браузере';}catch(e){defMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
+hq('#h-resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY));syncHall();defMsg.textContent='Исходные настройки возвращены';});
+hq('#h-copyDef').addEventListener('click',()=>copyText(hq('#h-defCode'),JSON.stringify(getState()),defMsg,'Код скопирован'));
+
+// sizes, what comes from the plan, the space between the shelves, the opening left between the columns, the finishes, the cut list
 function updatePanel(){
   ids.forEach(id=>{hq(`[data-p-out="${id}"]`).textContent=id==='N'?P[id]:P[id]+' мм';});
   [['W',P.W],['Hc',A.H],['Rv',P.Rv],['Ht',P.Ht],['Lw',P.Lw],['Rw',P.Rw]].forEach(([k,v])=>{hq('#h-'+k).textContent=v+' мм';});
-  hq('#hSub').textContent=`${P.W} × ${P.H} × ${P.D} мм · проём ${A.eD1-A.eD0} × ${A.eDH} мм`;
+  const fc=finName(FIN.carcass),ff=finName(FIN.front);
+  hq('#hSub').textContent=`${P.W} × ${P.H} × ${P.D} мм · `+(fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`);
   const pl=P.plinth?P.Pl:0,t=P.T||16,step=(P.H-P.Ht-t-pl-(P.Feet?10:0))/(P.N+1),f=v=>v.toFixed(1).replace('.',',').replace(',0','');
   hq('#h-shelfGap').textContent=`Между полками ${f(step-t)} мм · секций ${P.N+1}`;
+  // the opening as it is left between the claddings
+  const ow=P.W-P.Lw-P.Rw,oh=P.H-P.Ht;
+  hq('#h-chips').innerHTML=[[`ширина ${ow} мм`,ow<800],[`высота ${oh} мм`,oh<2000]].map(([t,w])=>`<span class="chip${w?' warn':''}">${t}${w?' · мало для двери 800×2000':''}</span>`).join('');
+  updateCut();
 }
 // the sizes block stays open or closed as it was left
 const sizesBox=hq('#h-sizesBox');
@@ -163,7 +293,8 @@ sizesBox.addEventListener('toggle',()=>{if(VS.hall.sizes!==sizesBox.open){VS.hal
 function syncHall(){
   frameSd.max=hLen;frameSd.value=showSd();hq('#hFrameSdOut').textContent=showSd();
   sizesBox.open=VS.hall.sizes!==false;
-  syncIds();syncThick();updatePanel();
+  Object.entries(toggles).forEach(([k,s])=>{hq(s).checked=VS.hall[k]!==false;});
+  syncIds();syncThick();syncDoorMode();syncFinish();syncEc();updatePanel();applyVisibility();
 }
 
 addView('hall',{
@@ -173,11 +304,12 @@ addView('hall',{
   // as in the hall tab: the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the hall
-  furniture:()=>({model,doors,P,current}),   // the built cabinet: for the plan (stage 7) and the checks
-  defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true},
+  furniture:()=>({model,doors,P,current,dims:dimsGroup}),   // the built cabinet: for the plan (stage 7) and the checks
+  defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),
-  sync:syncHall
+  sync:syncHall,
+  onDoors:syncDoorMode   // a cabinet door or the entrance door was clicked
 });
 // the plan changed the sizes: the hall, the entrance opening and the ceiling come along; rebuilt when next on screen
 modelHooks.push(()=>{fromModel();dirty=true;syncHall();});

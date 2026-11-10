@@ -61,6 +61,7 @@ buildRooms();
 let wallGroup=null, wallParts=[];   // {m: wall mesh, f: () => visible in "cut" mode}
 let wallLines=[], linesTop=-1;      // {e: edge lines of a whole wall, w, f}; linesTop: cut height (mm) they are drawn for
 const doors=[];                     // {g: hinge pivot, h: leaf height, t: target angle, a: angle, max}
+const entranceDoor=()=>doors.find(d=>d.hole==='entry:0');   // for the room modules, whose own doors are the cabinet's
 let arcs=null;
 /* edges of a whole wall cut at height top (mm): outer corners, opening reveals and the cut top only.
    The wall is built from boxes (pieces between openings, lintels, sills), but the joints between them are not drawn,

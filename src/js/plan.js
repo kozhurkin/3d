@@ -96,7 +96,9 @@ renderFacts();
 function syncPlan(){
   const V=VS.plan;
   planPanel.querySelectorAll('[data-dm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.dm===V.dm));
-  pq('#pFurn').checked=V.furn!==false;pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;pq('#pFloors').checked=V.floors;
+  pq('#pFurn').checked=V.furn!==false;pq('#pFurnCut').checked=V.fcut!==false;
+  pq('#pFurnCut').disabled=V.furn===false;pq('#pFurnCutRow').style.opacity=V.furn===false?.45:1;   // nothing to cut without the cabinets
+  pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;pq('#pFloors').checked=V.floors;
 }
 // doors segment: all open, all closed, or nothing pressed when the doors differ
 function syncDoorSeg(){
@@ -108,7 +110,9 @@ function syncDoorSeg(){
 }
 planPanel.querySelectorAll('[data-dm]').forEach(b=>b.addEventListener('click',()=>{const V=VS.plan;V.dm=b.dataset.dm;if(V.dm!=='none')doors.forEach(d=>d.t=V.dm==='open'?d.max:0);syncPlan();saveView('plan');}));
 // the cabinets of every room, as their tabs set them up (each room module shows its own: presence)
-pq('#pFurn').addEventListener('change',e=>{VS.plan.furn=e.target.checked;saveView('plan');});
+pq('#pFurn').addEventListener('change',e=>{VS.plan.furn=e.target.checked;syncPlan();saveView('plan');});
+// … cut at the walls' height, or whole whatever the walls are (views.js: furnCut)
+pq('#pFurnCut').addEventListener('change',e=>{VS.plan.fcut=e.target.checked;saveView('plan');});
 pq('#pDims').addEventListener('change',e=>{VS.plan.dims=e.target.checked;saveView('plan');});
 pq('#pNames').addEventListener('change',e=>{VS.plan.names=e.target.checked;saveView('plan');});
 pq('#pFloors').addEventListener('change',e=>{VS.plan.floors=e.target.checked;applyTheme();saveView('plan');});
@@ -201,7 +205,7 @@ addView('plan',{
   rooms:'all',
   // the cut mode hides only the outer walls of the apartment, each while the camera looks at it from outside; inner walls always stay
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
-  defaults:{Wm:'auto',Wh:100,dm:'closed',furn:true,dims:false,names:true,floors:true},
+  defaults:{Wm:'auto',Wh:100,dm:'closed',furn:true,fcut:true,dims:false,names:true,floors:true},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole apartment from any direction
   panel:planPanel,
   home:()=>setCam('plan'),

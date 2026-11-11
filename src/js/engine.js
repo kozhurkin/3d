@@ -25,7 +25,7 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.outputEncoding=THREE.sRGBEncoding;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
 renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.localClippingEnabled=true;   // furniture is clipped at the floor (furniture.js: FLOOR_CLIP)
+renderer.localClippingEnabled=true;   // furniture is clipped at the floor and on the plan at the walls' height (furniture.js: furnClip)
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(35,1,0.01,200);
 const hemi=new THREE.HemisphereLight(0xffffff,0x8a7f70,0.75);scene.add(hemi);

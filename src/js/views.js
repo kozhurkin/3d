@@ -78,12 +78,28 @@ modelHooks.push(()=>{if(tr){tr=null;camDrive=null;}if(view)aimView();});   // th
    A click on another tab in the middle starts a new flight from what is on screen. Orbiting, panning or zooming
    takes the camera back from the flight; the rest finishes */
 const FLY=.85;   // seconds
-let tr=null;     // {p, e, cam0, sun0, sunT, box0, boxT, pres0}
+let tr=null;     // {p, e, cam0, sun0, sunT, box0, boxT, pres0, fur0: how each room's furniture showed at the start (furnCut)}
 const inTransition=()=>!!tr;
 // a room's furniture is in the scene in its own view and on the plan with «Шкафы» on (for 'plan': on the plan)
 const furnOn=id=>view===id||(view==='plan'&&id!=='plan'&&VS.plan.furn!==false);
 // how much of a view's furniture is in the scene: 1 or 0 as above, in between while flying
 function presence(id){const t=furnOn(id)?1:0;return tr?tr.pres0[id]+(t-tr.pres0[id])*tr.e:t;}
+/* how a room's furniture shows: up to the height c (m, its own floor up), and its footprint on the floor f (0…1).
+   Only the plan cuts it — with «Резать шкафы по стенам», at the height of its walls; in «Контуры» nothing of it stands,
+   its footprint is there instead. A room's own view always shows it whole */
+const furnWhole=()=>H*MM+.05;
+function furnRest(){
+  const V=VS.plan;
+  if(view!=='plan'||V.fcut===false)return {c:furnWhole(),f:0};
+  const o=V.Wm==='outline';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM,f:o?1:0};
+}
+// … now: in a flight from how it was at the start to how the new view shows it; a room that is there at one end only
+// keeps that end's (it sinks or rises as it is cut there)
+function furnCut(id){
+  const r=furnRest();if(!tr)return r;
+  const a=tr.pres0[id]>.001?tr.fur0[id]:null,b=furnOn(id)?r:null,f=a||b,t=b||a;
+  if(!f)return r;const e=tr.e;return {c:f.c+(t.c-f.c)*e,f:f.f+(t.f-f.f)*e};
+}
 function driveCam(){const c=tr.cam0,e=tr.e;
   cam.theta=c.theta+(goal.theta-c.theta)*e;cam.phi=c.phi+(goal.phi-c.phi)*e;cam.r=c.r+(goal.r-c.r)*e;cam.target.copy(c.t).lerp(goalT,e);}
 function endTransition(){
@@ -113,8 +129,8 @@ function showView(id,animate=true){
   // what is on screen now: the flight starts from here
   const fly=animate&&!reduce&&S.fly&&view!==null;
   let start=null;
-  if(fly){const pres0={};Object.keys(VIEWS).forEach(k=>{pres0[k]=presence(k);});const s=sun.target.position;
-    start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf},box0:insetNow()};}
+  if(fly){const pres0={},fur0={};Object.keys(VIEWS).forEach(k=>{pres0[k]=presence(k);fur0[k]=furnCut(k);});const s=sun.target.position;
+    start={walls:wallsNow(),pres0,fur0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf},box0:insetNow()};}
   if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
@@ -123,7 +139,7 @@ function showView(id,animate=true){
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(fly){
     startWallMorph(start.walls,id,goalPosition());
-    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),box0:start.box0,boxT:insetFrame(vw),pres0:start.pres0};camDrive=driveCam;
+    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),box0:start.box0,boxT:insetFrame(vw),pres0:start.pres0,fur0:start.fur0};camDrive=driveCam;
   }else{
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();
     if(!animate||reduce){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}

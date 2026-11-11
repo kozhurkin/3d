@@ -103,14 +103,17 @@ function buildDims(){
 }
 
 /* ---------- the hall cabinet in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],dimsGroup=null,dirty=true;
+let model=null,doors=[],dimsGroup=null,foot=null,dirty=true;
+const clip=furnClip();   // the hall cabinet's floor and top planes
 function build(){
   fromModel();
   const prev=doors,V=VS.hall;disposeGroup(model);
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);place();
-  scene.add(model);dirty=false;applyVisibility();updatePanel();
+  clipToFloor(model,clip);
+  // its footprint for «Контуры» on the plan: the false panel, the shelf column, the cladding of the reveals
+  foot=furnFoot(current);if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}
+  place();scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
 // the cabinet where the hall lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
@@ -128,6 +131,9 @@ frameHooks.push((dt,ease)=>{
   if(dirty&&(on||s>.001))build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Контуры» its footprint shows
+  const fc=furnCut('hall');clip[1].constant=fc.c+model.position.y;
+  if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
   dimsGroup.visible=on&&VS.hall.dims!==false&&!inTransition();   // its dimension lines only in its own view, once it is reached
   if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
   else if(on&&wallGroup)wallGroup.visible=true;
@@ -304,7 +310,7 @@ addView('hall',{
   // as in the hall tab: the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the hall
-  furniture:()=>({model,doors,P,current,dims:dimsGroup}),   // the built cabinet: for the plan (stage 7) and the checks
+  furniture:()=>({model,doors,P,current,dims:dimsGroup,clip,foot}),   // the built cabinet: for the plan (stage 7) and the checks
   defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),

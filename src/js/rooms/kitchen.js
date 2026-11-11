@@ -198,15 +198,18 @@ function buildDims(){
 }
 
 /* ---------- the kitchen in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],appl=null,dimsGroup=null,dirty=true;
+let model=null,doors=[],appl=null,dimsGroup=null,foot=null,dirty=true;
+const clip=furnClip();   // the kitchen's floor and top planes
 function build(){
   T=P.T||16;TF=P.TF||16;current=computeParts(P);
   const prev=doors,V=VS.kitchen;disposeGroup(model);
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   appl=new THREE.Group();buildAppliances(appl);model.add(appl);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);place();
-  scene.add(model);dirty=false;applyVisibility();updatePanel();
+  clipToFloor(model,clip);
+  // its footprint for «Контуры» on the plan: the base run and the fridge
+  foot=furnFoot(current,[[current.xr+10,current.xF-10,20,P.Fd-10]]);if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}
+  place();scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
 // the kitchen where it lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
@@ -224,6 +227,9 @@ frameHooks.push((dt,ease)=>{
   if(!model)return;
   // in a flight the kitchen sinks into the floor or rises out of it; the floor hides what is below
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Контуры» its footprint shows
+  const fc=furnCut('kitchen');clip[1].constant=fc.c+model.position.y;
+  if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
   // its dimension lines only in its own view, once it is reached; the appliances go with the walls there (as in the kitchen
   // tab), elsewhere the walls are there
   dimsGroup.visible=on&&VS.kitchen.dims!==false&&!inTransition();
@@ -402,7 +408,7 @@ addView('kitchen',{
   // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the kitchen
-  furniture:()=>({model,doors,P,current,appl,dims:dimsGroup}),   // the built kitchen: for clicks on its fronts and the checks
+  furniture:()=>({model,doors,P,current,appl,dims:dimsGroup,clip,foot}),   // the built kitchen: for clicks on its fronts and the checks
   defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),

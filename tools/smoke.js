@@ -202,7 +202,7 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
   assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
   assert.deepStrictEqual(r.fade, { entry: '-z', rightOuter: '+x', leftOuter: '-x', window: '+z' });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, dims: false, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, fcut: true, dims: false, names: true, floors: true });
   const panel = p.document.querySelector('[data-panel="plan"]'), shared = p.document.getElementById('shared');
   assert.strictEqual(panel.hidden, false, 'plan panel shown');
   assert.ok(matches(shared, '[data-panel="plan"] [data-shared-slot] #shared') && !shared.hidden, 'light and wall colour in the plan panel');
@@ -221,7 +221,7 @@ check('приложение: настройки вида и общие наст�
   p.document.querySelector('[data-wc="greige"]').click();
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, dims: true, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, fcut: true, dims: true, names: true, floors: true });
   assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true, fly: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
@@ -883,6 +883,41 @@ check('«Планировка»: шкафы всех комнат по гало�
   near(p.run('VIEWS.kitchen.furniture().model.position.y'), -1.35, 'the kitchen halfway up');
   p.fly();
   at().forEach((r) => assert.deepStrictEqual(r.slice(0, 3), [true, 0, false]));
+});
+
+check('«Планировка»: «Резать шкафы по стенам» — срез на высоте стен, в «Контурах» след на полу', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const plan = p.document.querySelector('[data-panel="plan"]'), rooms = ['kitchen', 'bath', 'hall'];
+  // the top plane of a room (m), its footprint shown, its opacity
+  const cut = (k) => p.run(`(f=>[f.clip[1].constant, f.foot.visible, f.foot.material.opacity])(VIEWS.${k}.furniture())`);
+  assert.strictEqual(plan.querySelector('#pFurnCut').checked, true);
+  near(cut('kitchen')[0], 2.6, '«Разрез» at 100 %: up to the ceiling, whole');
+  // «Ряд»: every room cut at the walls' 10 %
+  plan.querySelector('[data-wm="row"]').click(); p.tick();
+  rooms.forEach((k) => { const c = cut(k); near(c[0], 0.26, k); assert.strictEqual(c[1], false); });
+  // the walls' height slider
+  plan.querySelector('[data-wm="show"]').click();
+  const wh = plan.querySelector('[data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
+  near(cut('hall')[0], 1.3, 'half the ceiling');
+  // «Контуры»: nothing of the cabinets stands, their footprints are on the floor
+  plan.querySelector('[data-wm="outline"]').click(); p.tick();
+  rooms.forEach((k) => assert.deepStrictEqual(cut(k), [0, true, 1]));
+  // to the kitchen: it grows whole and its footprint fades; the bathroom sinks cut as it was, its footprint stays on the floor and fades
+  p.run('showView("kitchen")'); p.tick(25, 17);
+  const c = cut('kitchen'); near(c[0], 2.65 / 2, 'the kitchen halfway up'); near(c[2], 0.5, 'its footprint');
+  const b = p.run('(f=>[f.clip[1].constant, f.model.position.y, f.foot.material.opacity, f.foot.position.y+f.model.position.y])(VIEWS.bath.furniture())');
+  near(b[1], -1.35, 'the bathroom halfway down'); near(b[0], b[1], 'cut at the floor, going down with it');
+  near(b[2], 0.5, 'its footprint fades'); near(b[3], 0.003, 'on the floor');
+  p.fly();
+  assert.deepStrictEqual(cut('kitchen').slice(1), [false, 0]); near(cut('kitchen')[0], 2.65, 'whole in its own view');
+  // off: whole on the plan whatever the walls; remembered; greyed out without the cabinets
+  p.run('showView("plan")'); p.fly();
+  const box = plan.querySelector('#pFurnCut'); box.checked = false; box.dispatch('change'); p.tick();
+  assert.deepStrictEqual(cut('bath').slice(1), [false, 0]); near(cut('bath')[0], 2.65, 'whole');
+  assert.strictEqual(JSON.parse(storage.get('apt-view-plan-v1')).fcut, false);
+  const furn = plan.querySelector('#pFurn'); furn.checked = false; furn.dispatch('change');
+  assert.strictEqual(box.disabled, true);
 });
 
 check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {

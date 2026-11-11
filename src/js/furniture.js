@@ -100,6 +100,11 @@ function makeMats(){
   mats.topEnd=new THREE.MeshStandardMaterial({roughness:.55});
   mats.apronEnd=new THREE.MeshStandardMaterial({roughness:.5});
   mats.backEnd=mats.back;
+  // the room's own steel and plastic too: every material of a room is cut by the room's own planes (furnClip)
+  mats.dishDoor=new THREE.MeshStandardMaterial({color:0xb4b7ba,roughness:.35,metalness:.65});
+  mats.dishPanel=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
+  mats.feet=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.6});
+  mats.pin=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
   return mats;
 }
 // finish of a part group: wood decor or plain colour; the apron follows the worktop unless set separately
@@ -137,10 +142,6 @@ function applyContrast(mats,FIN,ec){
 // cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F: axis x) or slides (S: axis z)
 const DMAX=1.45;
 function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;}
-const dishDoorMat=new THREE.MeshStandardMaterial({color:0xb4b7ba,roughness:.35,metalness:.65});
-const dishPanelMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
-const feetMat=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.6});
-const pinMat=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
 /* c: computeParts() of a room; prev: the doors of the previous build (by key they keep how open they were);
    open: how new doors start; edges: joint lines shown. Returns the group (room axes, mm → m) and its doors */
 function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
@@ -180,9 +181,9 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
         door(holder,{s:p.hinge==='L'?-1:1,key});
       }else mesh.position.set(cx,cy,cz);
       if(p.hinge==='B'){ const dw=(p.x1-p.x0)*MM,dh=(p.y1-p.y0)*MM;   // appliance door behind the decor front
-        const ad=new THREE.Mesh(new THREE.BoxGeometry(dw-.006,dh-.01,.04),dishDoorMat);
+        const ad=new THREE.Mesh(new THREE.BoxGeometry(dw-.006,dh-.01,.04),mats.dishDoor);
         ad.position.set(cx,dh/2-.05,.02);ad.castShadow=true;holder.add(ad);
-        const pn=new THREE.Mesh(new THREE.BoxGeometry(dw-.06,dh-.08,.004),dishPanelMat);
+        const pn=new THREE.Mesh(new THREE.BoxGeometry(dw-.06,dh-.08,.004),mats.dishPanel);
         pn.position.set(cx,dh/2-.05,-.002);holder.add(pn); }
       holder.add(mesh);holder.userData.front=true;model.add(holder);
     }else{mesh.position.set(cx,cy,cz);(p.inSlide&&slideHolders[p.inSlide]||model).add(mesh);}
@@ -190,9 +191,9 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
   // adjustable feet (Ø16 mm) under floor-standing cabinets; not part of the panel cut list
   if(c.FL>0)(c.feet||[]).forEach(([x,z])=>{
     // black plastic puck Ø15×5 mm on the floor + M6 steel pin screwed into the panel edge
-    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0075,.0075,.005,20),feetMat);
+    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0075,.0075,.005,20),mats.feet);
     puck.position.set(x*MM,.0025,z*MM);puck.castShadow=true;model.add(puck);
-    const pin=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,c.FL*MM-.005,12),pinMat);
+    const pin=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,c.FL*MM-.005,12),mats.pin);
     pin.position.set(x*MM,.005+(c.FL*MM-.005)/2,z*MM);model.add(pin);});
   return {model,doors};
 }
@@ -217,10 +218,36 @@ function roomDim(g,a,b,txt,tick){
   const s=roomLabel(txt);s.position.copy(a).add(b).multiplyScalar(.5);g.add(s);
 }
 
-/* nothing of the furniture shows below the floor, from any side: it rises out of the floor and sinks into it in a flight
-   between views (the room's group moves down) — the floor plane alone would not hide it from below or through gaps */
-const FLOOR_CLIP=[new THREE.Plane(new THREE.Vector3(0,1,0),.001)];
-function clipToFloor(g){g.traverse(o=>{[].concat(o.material||[]).forEach(m=>{if(m.clippingPlanes!==FLOOR_CLIP){m.clippingPlanes=FLOOR_CLIP;m.clipShadows=true;}});});}
+/* nothing of a room's furniture shows below the floor, from any side: it rises out of the floor and sinks into it in a flight
+   between views (the room's group moves down) — the floor plane alone would not hide it from below or through gaps.
+   The top plane cuts it on the plan at the height of the walls (views.js: furnCut). Each room has its own two planes
+   (in a flight one room sinks while another stays) and its own materials; its dimension lines are not cut */
+function furnClip(){
+  const f=new THREE.Plane(new THREE.Vector3(0,1,0),0),t=new THREE.Plane(new THREE.Vector3(0,-1,0),0);
+  f.constant=.001;t.constant=100;return [f,t];   // kept: y ≥ −1 mm and y ≤ the top
+}
+function clipToFloor(g,planes){g.traverse(o=>{if(o.isSprite)return;[].concat(o.material||[]).forEach(m=>{if(m!==roomDimMat&&m.clippingPlanes!==planes){m.clippingPlanes=planes;m.clipShadows=true;}});});}
+/* what of a room stands on the floor, seen from above: for «Контуры» on the plan, where the walls leave only their footprints.
+   The parts that start low (below 300 mm: carcasses, fronts, plinths — not the wall cabinets) and the room's own shapes
+   (extra: [x0,x1,z0,z1,round] — the fridge, the installation, the toilet), room mm. Drawn light with a dark outline of the
+   whole, on one flat mesh in the room's axes; it fades in and out by its opacity. null when nothing stands on the floor */
+function furnFoot(c,extra=[]){
+  const rs=c.parts.filter(p=>p.y0<300).map(p=>[p.x0,p.x1,p.z0,p.z1]).concat(extra);
+  if(!rs.length)return null;
+  const M=12,x0=Math.min(...rs.map(r=>r[0]))-M,x1=Math.max(...rs.map(r=>r[1]))+M,z0=Math.min(...rs.map(r=>r[2]))-M,z1=Math.max(...rs.map(r=>r[3]))+M;
+  const s=Math.min(.5,2048/Math.max(x1-x0,z1-z0));   // px per mm
+  const cv=document.createElement('canvas');cv.width=Math.ceil((x1-x0)*s);cv.height=Math.ceil((z1-z0)*s);
+  const g=cv.getContext('2d');
+  const shape=r=>{const a=(r[0]-x0)*s,b=(r[2]-z0)*s,w=(r[1]-r[0])*s,h=(r[3]-r[2])*s;g.beginPath();
+    if(r[4])g.ellipse(a+w/2,b+h/2,w/2,h/2,0,0,Math.PI*2);else g.rect(a,b,w,h);};
+  // every shape stroked wide, then every shape filled over the strokes: only the outline of the whole is left
+  g.lineWidth=16*s;g.lineJoin='round';g.strokeStyle='#4a4d50';rs.forEach(r=>{shape(r);g.stroke();});
+  g.fillStyle='#f3f1ec';rs.forEach(r=>{shape(r);g.fill();});
+  const t=new THREE.CanvasTexture(cv);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false,opacity:0}));
+  m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.003,(z0+z1)/2*MM);m.renderOrder=1;m.visible=false;m.raycast=()=>{};
+  return m;
+}
 // a built set out of the scene: geometries and the textures not in the decor cache go
 function disposeGroup(gr){if(!gr)return;gr.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material)&&o.material.map&&!Object.values(texCache).includes(o.material.map))o.material.map.dispose();});if(gr.parent)gr.parent.remove(gr);}
 

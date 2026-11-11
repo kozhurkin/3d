@@ -123,15 +123,20 @@ function buildDims(){
 }
 
 /* ---------- the bathroom in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],sani=null,dimsGroup=null,dirty=true;
+let model=null,doors=[],sani=null,dimsGroup=null,foot=null,dirty=true;
+const clip=furnClip();   // the bathroom's floor and top planes
 function build(){
   T=P.T||16;TF=P.TF||16;current=computeParts(P);
   const prev=doors,V=VS.bath;disposeGroup(model);
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   sani=new THREE.Group();buildSanitary(sani);model.add(sani);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);place();
-  scene.add(model);dirty=false;applyVisibility();updatePanel();
+  clipToFloor(model,clip);
+  // its footprint for «Контуры» on the plan: the tall cabinet, the installation box and the toilet (as buildSanitary has them)
+  { const zf=current.zf,cz=zf+P.Lt/2;
+    foot=furnFoot(current,[[0,P.Di,zf,zf+P.Lt],[P.Di-200,P.Di+500,cz-180,cz+180,true]]);
+    if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);} }
+  place();scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
 // the bathroom where it lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
@@ -148,6 +153,9 @@ frameHooks.push((dt,ease)=>{
   if(dirty&&(on||s>.001))build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
+  // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Контуры» its footprint shows
+  const fc=furnCut('bath');clip[1].constant=fc.c+model.position.y;
+  if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
   // its dimension lines only in its own view, once it is reached; the installation and the toilet go with the walls there
   // (as in the bath tab), elsewhere the walls are there
   dimsGroup.visible=on&&VS.bath.dims!==false&&!inTransition();
@@ -327,7 +335,7 @@ addView('bath',{
   // as in the bath tab: the sun aims at the middle of the back wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the bathroom
-  furniture:()=>({model,doors,P,current,sani,dims:dimsGroup}),   // the built bathroom: for the plan (stage 7) and the checks
+  furniture:()=>({model,doors,P,current,sani,dims:dimsGroup,clip,foot}),   // the built bathroom: for the plan (stage 7) and the checks
   defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),

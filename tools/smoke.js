@@ -950,6 +950,29 @@ check('перелёт «Санузел» → «Прихожая»: входна�
   assert.deepStrictEqual(p.run(`[${leaf}===entMat, entranceDoor().g.visible, morph]`), [true, true, null]);
 });
 
+check('перелёт: дверь, чей проём рамка режет, поднимается из пола и уходит в него вместо того, чтобы пропасть в конце', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const sd = p.document.getElementById('hFrameSd'); sd.value = '1000'; sd.dispatch('input');
+  // at rest the bathroom door is hidden: the frame cuts its opening (650…1250)
+  assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false]);
+  p.run('showView("plan")');
+  // on the plan it is whole: on the way it rises out of the floor; the entrance door is whole at both ends
+  assert.deepStrictEqual(p.run('[doorShare("hallBath:0"), doorShare("entry:0")]'), [0, 1]);
+  p.tick(25, 17);
+  near(p.run('doorShare("hallBath:0")'), 0.5, 'halfway up');
+  near(p.run('arcs.children.find(l=>l.userData.hole==="hallBath:0").material.opacity'), 0.5, 'its swing fades in');
+  p.fly();
+  assert.deepStrictEqual(p.run('[doors.map(d=>d.g.visible), doorShare("hallBath:0")]'), [[true, true], 1]);
+  // back to the hall: it sinks, and is hidden when the flight lands
+  p.run('showView("hall")'); p.tick(25, 17);
+  near(p.run('doorShare("hallBath:0")'), 0.5, 'halfway down');
+  p.fly();
+  assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false]);
+  // bath → hall: the entrance opening is wholly past the bathroom frame, so its door is only cut along the wall, not sunk
+  p.run('showView("bath")'); p.fly(); p.run('showView("hall")');
+  assert.deepStrictEqual(p.run('[doorShare("entry:0"), morph.ds.get("entry:0")]'), [1, { f: 1, t: 1 }]);
+});
+
 check('торцы стен: тёмный срез — одна настройка для всех вкладок', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();

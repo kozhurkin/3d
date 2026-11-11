@@ -15,8 +15,7 @@
   --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; color-scheme:dark;}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column}
-.bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.bar h1{font:400 20px/1.2 var(--f-display);margin:0}
+.bar{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tabs{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .tabs a{font:500 14px/1 var(--f-body);color:var(--fg);text-decoration:none;padding:9px 16px;background:var(--panel)}
 .tabs a+a{border-left:1px solid var(--line)}
@@ -28,7 +27,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 </style>
 
 <header class="bar">
-  <h1>Шкафы в квартире</h1>
   <nav class="tabs" aria-label="Шкаф">
     <a href="#plan" data-tab="plan">Планировка</a>
     <a href="#hall" data-tab="hall">Прихожая</a>

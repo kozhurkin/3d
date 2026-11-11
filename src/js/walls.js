@@ -159,7 +159,7 @@ function buildWalls(vw){dropMorph();buildWallSet([...viewWalls(vw).values()],w=>
    up from the floor, down into it, shorter or longer — so nothing pops or blinks on the way. A wall hidden at both ends
    stays hidden. Pieces are built for the span of both rects and cut to the current one by scale, like the cut height;
    at the end the new view's walls are built exactly */
-let morph=null;   // {w: id → {rF,rT,cF,cT,hF,hT,exT,kept}, e, opF,opT, lnF,lnT, doors, mats: id → own materials, doorClips, ds: hole → {f,t}}
+let morph=null;   // {w: id → {rF,rT,cF,cT,hF,hT,exT,kept}, e, opF,opT, lnF,lnT, doors, mats: id → own materials, doorClips, ds: hole → {f,t}: the door's own rect at both ends}
 // is a wall seen by the camera at c (m) under its cut-mode rule: the camera must be on the room's side of its face
 const sideVisible=(side,r,c)=>!side||({'-x':c.x>r[1],'+x':c.x<r[0],'-z':c.z>r[3],'+z':c.z<r[2]})[side];
 // a view's walls at rest with the camera at pos: id → {r, cut: the height it shows (0: hidden), h: its height for the doors, kept}
@@ -190,22 +190,24 @@ function dropMorph(){
   morph=null;
 }
 /* a door in a flight goes with its wall along it too, not only up and down: its leaf, frame, handles and swing on the floor
-   get their own materials cut by two planes across the wall at the ends of the wall's rect on the way (they work for an
-   open leaf as well). w: the flight's walls; → [{id, along, planes, objs: [{o, m: own material, c: the cut copy}]}] */
+   get their own materials cut by two planes across the wall at the ends of the door's rect on the way (they work for an
+   open leaf as well). w: the flight's walls; → [{id, hole, along, planes, objs: [{o, m: own material, c: the cut copy}]}] */
 const walkObj=(o,f)=>{f(o);(o.children||[]).forEach(c=>walkObj(c,f));};
-/* how much of a door stands at one end of a flight. At rest a door shows only with its opening whole; an opening the frame cuts
-   leaves its door hidden — such a door sinks into the floor on the way there (or rises on the way back) instead of reaching
-   the end cut and vanishing. An opening wholly past the wall's rect needs nothing: the cut along the wall takes its door away.
-   end: the wall at that end ({r, kept}) or none; i: the opening's index in the wall → 1, 0, or null without the wall */
+/* the rect a door is cut to at one end of a flight: its wall's. At rest a door shows only with its opening whole, so where the
+   frame cuts its opening (the door is hidden there) the door's rect stops short of the opening on the side the frame cuts:
+   on the way the door shortens the way its wall does, a little faster, and is gone when the flight lands (or grows out of
+   its wall on the way back). end: the wall at that end ({r, kept}) or none; i: the opening's index in the wall */
 function doorEnd(end,id,i){
   if(!end)return null;
-  if(end.kept.includes(i))return 1;
-  const w=WALLS.find(v=>v.id===id),h=w.holes[i],along=(w.r[1]-w.r[0])>=(w.r[3]-w.r[2]),r=end.r;
-  const [u0,u1]=along?[r[0],r[1]]:[r[2],r[3]];
-  return Math.min(h[1],u1)-Math.max(h[0],u0)>=1?0:1;
+  const r=[...end.r];if(end.kept.includes(i))return r;
+  const w=WALLS.find(v=>v.id===id),h=w.holes[i],along=(w.r[1]-w.r[0])>=(w.r[3]-w.r[2]),[k0,k1]=along?[0,1]:[2,3];
+  if(Math.min(h[1],r[k1])-Math.max(h[0],r[k0])<1)return r;   // the opening is past the rect: the wall's end takes the door away
+  if(r[k1]<h[1])r[k1]=Math.min(r[k1],h[0]);   // the frame cuts its far side: the door goes toward its near side
+  if(r[k0]>h[0])r[k0]=Math.max(r[k0],h[1]);   // and the other way round
+  return r;
 }
-// a door's share now: 1 at rest, in a flight from its start share to its end one
-function doorShare(hole){const s=morph&&morph.ds.get(hole);return s?s.f+(s.t-s.f)*morph.e:1;}
+// a door's rect now in a flight (mm), from its rect at the start to the one at the end; null at rest
+function doorRect(hole){const s=morph&&morph.ds.get(hole);return s?s.f.map((v,i)=>v+(s.t[i]-v)*morph.e):null;}
 function clipDoors(w){
   const out=[];
   doors.forEach(d=>{
@@ -214,8 +216,8 @@ function clipDoors(w){
     // kept: the side past the rect's start (x ≥ x0, or z ≥ z0) and before its end
     const planes=[new THREE.Plane(new THREE.Vector3(along?1:0,0,along?0:1),0),new THREE.Plane(new THREE.Vector3(along?-1:0,0,along?0:-1),0)];
     const objs=[],take=(o,arc)=>{const m=o.material;if(!m||Array.isArray(m)||!m.isMaterial)return;
-      const c=m.clone();c.clippingPlanes=planes;c.clipShadows=true;if(arc)c.transparent=true;   // the swing fades with the door's share
-      objs.push({o,m,c,arc,line:!arc&&!!(o.isLine||o.isLineSegments)});o.material=c;};
+      const c=m.clone();c.clippingPlanes=planes;c.clipShadows=true;
+      objs.push({o,m,c,line:!arc&&!!(o.isLine||o.isLineSegments)});o.material=c;};
     [d.g,d.frame].forEach(g=>{if(g)walkObj(g,o=>take(o,false));});
     if(arcs)arcs.children.forEach(l=>{if(l.userData.hole===d.hole)take(l,true);});
     out.push({id,hole:d.hole,along,planes,objs});
@@ -234,11 +236,12 @@ function startWallMorph(from,toId,pos){
     w.set(id,{rF:F?F.r:null,rT:T?T.r:null,cF:F?F.cut:0,cT:T?T.cut:0,hF:F?F.h:0,hT:T?T.h:0,exT:!!T,kept:c.kept});
   });
   const doorsF=doorGroup.visible;   // as on screen now
-  // each door's share at both ends; an end without its wall takes the other end's (the wall rises or sinks by itself)
+  // each door's rect at both ends (a flight cut short starts from where its doors are now); an end without the wall takes
+  // the other end's (the wall rises or sinks by itself, the door with it)
   const ds=new Map();
   doors.forEach(d=>{const [id,k]=d.hole.split(':'),i=+k,F=from.get(id),T=to.get(id);if(!F&&!T)return;
-    const f=F?(morph?doorShare(d.hole):doorEnd(F,id,i)):null,t=doorEnd(T,id,i);
-    ds.set(d.hole,{f:f??t,t:t??f});});
+    const f=F?(doorRect(d.hole)||doorEnd(F,id,i)):null,t=doorEnd(T,id,i);
+    ds.set(d.hole,{f:f||t,t:t||f});});
   dropMorph();buildWallSet(list,()=>()=>true,true);
   // every wall of the flight gets its own materials: near the floor it fades away instead of leaving a dark slab,
   // its footprint fades out or in, its outline fades with its height
@@ -365,11 +368,11 @@ frameHooks.push((dt,ease)=>{
     wallLines.forEach(l=>{const n=at(l.w.id),c=n.cut>=1&&clipWall(l.w,n.r);l.e.visible=!!c;
       if(c){l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(c,Math.min(H,n.cut)));}});
     wallFeet.forEach(f=>{f.m.visible=fitBox(f.m,f.box,at(f.id).r,true);});
-    doorCut=(id,hole)=>morph.w.has(id)?at(id).h*MM*doorShare(hole):0;
-    // and along: cut to the wall's rect on the way; their outlines fade as the walls' do
-    morph.doorClips.forEach(c=>{const r=at(c.id).r;
+    doorCut=id=>morph.w.has(id)?at(id).h*MM:0;
+    // and along: cut to the door's rect on the way; their outlines fade as the walls' do
+    morph.doorClips.forEach(c=>{const r=doorRect(c.hole);
       c.planes[0].constant=-(c.along?r[0]:r[2])*MM;c.planes[1].constant=(c.along?r[1]:r[3])*MM;
-      const k=doorShare(c.hole);c.objs.forEach(x=>{if(x.line)x.c.opacity=edgeMat.opacity;else if(x.arc)x.c.opacity=k;});});
+      c.objs.forEach(x=>{if(x.line)x.c.opacity=edgeMat.opacity;});});
     doorGroup.visible=arcs.visible=morph.doors;
   }else{
     wallsSeeThrough(skel?0:1);edgeMat.opacity=skel?.9:.35;
@@ -388,7 +391,7 @@ frameHooks.push((dt,ease)=>{
     if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.07);
     d.g.rotation.y=d.a;});
-  doorParts.forEach(p=>{const top=Math.min(p.t,doorCut(p.wall,p.hole)),fits=top>p.b+.001;p.m.visible=fits;
+  doorParts.forEach(p=>{const top=Math.min(p.t,doorCut(p.wall)),fits=top>p.b+.001;p.m.visible=fits;
     if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
   wallCut=Math.min(cut,H*MM);wallOutlineMode=outline;
 });

@@ -950,27 +950,28 @@ check('перелёт «Санузел» → «Прихожая»: входна�
   assert.deepStrictEqual(p.run(`[${leaf}===entMat, entranceDoor().g.visible, morph]`), [true, true, null]);
 });
 
-check('перелёт: дверь, чей проём рамка режет, поднимается из пола и уходит в него вместо того, чтобы пропасть в конце', () => {
+check('перелёт: дверь, чей проём рамка режет, укорачивается вместе со стеной и исчезает к посадке', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
   const sd = p.document.getElementById('hFrameSd'); sd.value = '1000'; sd.dispatch('input');
   // at rest the bathroom door is hidden: the frame cuts its opening (650…1250)
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false]);
+  const cut = () => p.run('morph.doorClips.find(c=>c.hole==="hallBath:0").planes.map(q=>q.constant)');
   p.run('showView("plan")');
-  // on the plan it is whole: on the way it rises out of the floor; the entrance door is whole at both ends
-  assert.deepStrictEqual(p.run('[doorShare("hallBath:0"), doorShare("entry:0")]'), [0, 1]);
+  // on the plan it is whole: it grows out of the wall from the near side of its opening, while the wall grows from 1000
+  assert.deepStrictEqual(p.run('morph.ds.get("hallBath:0")'), { f: [-100, 0, 0, 650], t: [-100, 0, 0, 1900] });
   p.tick(25, 17);
-  near(p.run('doorShare("hallBath:0")'), 0.5, 'halfway up');
-  near(p.run('arcs.children.find(l=>l.userData.hole==="hallBath:0").material.opacity'), 0.5, 'its swing fades in');
+  let k = cut(); near(k[0], 0, 'from the entrance wall'); near(k[1], 1.275, 'halfway to 1.9 m');
   p.fly();
-  assert.deepStrictEqual(p.run('[doors.map(d=>d.g.visible), doorShare("hallBath:0")]'), [[true, true], 1]);
-  // back to the hall: it sinks, and is hidden when the flight lands
+  assert.deepStrictEqual(p.run('[doors.map(d=>d.g.visible), morph]'), [[true, true], null]);
+  // back to the hall: it shortens toward the near side of its opening, faster than the wall, and is gone when the flight lands
   p.run('showView("hall")'); p.tick(25, 17);
-  near(p.run('doorShare("hallBath:0")'), 0.5, 'halfway down');
+  k = cut(); near(k[1], 1.275, 'halfway to 0.65 m');
+  near(p.run('morphWall(morph.w.get("hallBath"),morph.e).r[3]'), 1450, 'the wall itself is halfway to 1000');
   p.fly();
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false]);
-  // bath → hall: the entrance opening is wholly past the bathroom frame, so its door is only cut along the wall, not sunk
+  // the entrance opening is wholly past the bathroom frame: its door goes with the wall's end (bath → hall)
   p.run('showView("bath")'); p.fly(); p.run('showView("hall")');
-  assert.deepStrictEqual(p.run('[doorShare("entry:0"), morph.ds.get("entry:0")]'), [1, { f: 1, t: 1 }]);
+  assert.deepStrictEqual(p.run('morph.ds.get("entry:0")'), { f: [-2200, -700, -200, 0], t: [-100, 1400, -200, 0] });
 });
 
 check('торцы стен: тёмный срез — одна настройка для всех вкладок', () => {

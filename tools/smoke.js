@@ -931,6 +931,25 @@ check('перелёт: прерывание, мышь забирает каме�
   assert.deepStrictEqual(p.run('[inTransition(), wallLines.length]'), [false, 2]);
 });
 
+check('перелёт «Санузел» → «Прихожая»: входная дверь едет вместе с несущей стеной, а не появляется сразу', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  assert.deepStrictEqual(p.run('entranceDoor().g.visible'), false, 'the opening is past the bathroom frame');
+  p.run('showView("hall")');
+  // the door shows from the start of the flight (its opening is whole in the hall), cut to the wall's rect on the way
+  const leaf = 'entranceDoor().g.children[0].material';
+  assert.strictEqual(p.run('entranceDoor().g.visible'), true);
+  assert.strictEqual(p.run(`${leaf}.clippingPlanes===morph.doorClips.find(c=>c.id==="entry").planes`), true);
+  assert.strictEqual(p.run('arcs.children.filter(l=>l.userData.hole==="entry:0").every(l=>l.material.clippingPlanes===morph.doorClips[0].planes)'), true, 'its swing too');
+  // the bearing wall goes from the niche (x −2200…−700) to the hall (−100…1400): halfway it is −1150…350, the door
+  // (84…976) is not in yet
+  p.tick(25, 17);
+  const k = p.run('morph.doorClips.find(c=>c.id==="entry").planes.map(q=>q.constant)');
+  near(k[0], 1.15, 'kept from x = −1.15 m'); near(k[1], 0.35, 'up to x = 0.35 m');
+  // landed: the door has its own materials back
+  p.fly();
+  assert.deepStrictEqual(p.run(`[${leaf}===entMat, entranceDoor().g.visible, morph]`), [true, true, null]);
+});
+
 check('торцы стен: тёмный срез — одна настройка для всех вкладок', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();

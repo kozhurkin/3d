@@ -58,8 +58,9 @@ function addView(id,def){
   p.querySelector('[data-wh]').addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
 }
 
-/* a door was clicked or held: the view updates its door controls and remembers */
-function doorsChanged(){const vw=VIEWS[view];if(vw.onDoors)vw.onDoors();saveView();}
+/* a door was clicked or held — a door of the apartment or a cabinet front, maybe of a room seen on the plan:
+   every view updates its door controls from the doors as they are and remembers */
+function doorsChanged(){Object.keys(VIEWS).forEach(id=>{const f=VIEWS[id].onDoors;if(f){f();saveView(id);}});}
 
 /* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows);
    the camera mini view frames the view's frame, or the whole apartment */
@@ -79,8 +80,10 @@ modelHooks.push(()=>{if(tr){tr=null;camDrive=null;}if(view)aimView();});   // th
 const FLY=.85;   // seconds
 let tr=null;     // {p, e, cam0, sun0, sunT, box0, boxT, pres0}
 const inTransition=()=>!!tr;
-// how much of a view's furniture is in the scene: 1 in its view, 0 elsewhere, in between while flying
-function presence(id){return tr?tr.pres0[id]+((view===id?1:0)-tr.pres0[id])*tr.e:(view===id?1:0);}
+// a room's furniture is in the scene in its own view and on the plan with «Шкафы» on (for 'plan': on the plan)
+const furnOn=id=>view===id||(view==='plan'&&id!=='plan'&&VS.plan.furn!==false);
+// how much of a view's furniture is in the scene: 1 or 0 as above, in between while flying
+function presence(id){const t=furnOn(id)?1:0;return tr?tr.pres0[id]+(t-tr.pres0[id])*tr.e:t;}
 function driveCam(){const c=tr.cam0,e=tr.e;
   cam.theta=c.theta+(goal.theta-c.theta)*e;cam.phi=c.phi+(goal.phi-c.phi)*e;cam.r=c.r+(goal.r-c.r)*e;cam.target.copy(c.t).lerp(goalT,e);}
 function endTransition(){

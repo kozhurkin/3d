@@ -205,31 +205,34 @@ function build(){
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   appl=new THREE.Group();buildAppliances(appl);model.add(appl);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);
-  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  clipToFloor(model);place();
   scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
-// what the view shows: fronts, joint lines, appliances (with the walls, as in the kitchen tab), dimensions
+// the kitchen where it lies on the plan
+function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
+// what the kitchen shows wherever it is seen: fronts, joint lines (the appliances and the dimensions: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.kitchen;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
   model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
-  appl.visible=V.walls!==false;dimsGroup.visible=V.dims!==false;
 }
-// every frame: built when on screen and changed; the fronts swing toward where they were sent, or follow a long press
+// every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; the fronts swing toward where
+// they were sent, or follow a long press
 frameHooks.push((dt,ease)=>{
   const on=view==='kitchen',s=presence('kitchen');
-  if(on&&dirty)build();
+  if(dirty&&(on||s>.001))build();
   if(!model)return;
   // in a flight the kitchen sinks into the floor or rises out of it; the floor hides what is below
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
-  dimsGroup.visible=VS.kitchen.dims!==false&&!inTransition();   // dimension lines come when the kitchen is reached
-  if(!on)return;
-  doors.forEach(d=>{
+  // its dimension lines only in its own view, once it is reached; the appliances go with the walls there (as in the kitchen
+  // tab), elsewhere the walls are there
+  dimsGroup.visible=on&&VS.kitchen.dims!==false&&!inTransition();
+  appl.visible=!on||VS.kitchen.walls!==false;
+  if(on&&wallGroup)wallGroup.visible=VS.kitchen.walls!==false;
+  if(model.visible)doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);
     turnDoor(d);});
-  if(wallGroup)wallGroup.visible=VS.kitchen.walls!==false;
 });
 
 /* camera presets of the kitchen (as in the kitchen tab), moved to where the kitchen lies on the plan */
@@ -399,13 +402,14 @@ addView('kitchen',{
   // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the kitchen
-  furniture:()=>({model,doors,P,current}),   // the built kitchen: for the plan (stage 7) and the checks
+  furniture:()=>({model,doors,P,current,appl,dims:dimsGroup}),   // the built kitchen: for clicks on its fronts and the checks
   defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncKitchen,
   onDoors:syncDoorMode
 });
-// the plan changed the sizes: the wall, the ceiling and the kitchen's place come along; the kitchen is rebuilt when next on screen
-modelHooks.push(()=>{fromModel();dirty=true;syncKitchen();});
+// the plan changed the sizes: the wall, the ceiling and the kitchen's place come along. The kitchen is rebuilt (when next in
+// the scene) only if its own sizes changed; otherwise it only moves — on the plan a slider moves every room at once
+modelHooks.push(()=>{const was=JSON.stringify(P);fromModel();if(JSON.stringify(P)!==was)dirty=true;else place();syncKitchen();});
 })();

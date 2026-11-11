@@ -106,8 +106,9 @@ function pickDoor(e){
   ray.setFromCamera(ndc,camera);
   const h=ray.intersectObjects(scene.children,true).find(hittable);
   if(!h)return null;
-  // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of the view's furniture
-  const fd=VIEWS[view]&&VIEWS[view].furniture?VIEWS[view].furniture().doors:[];
+  // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of any room in the scene
+  // (the plan shows them all; a hidden room is never hit)
+  const fd=Object.values(VIEWS).flatMap(v=>v.furniture?v.furniture().doors:[]);
   for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o);if(d)return d;}
   return null;
 }

@@ -109,32 +109,32 @@ function build(){
   const prev=doors,V=VS.hall;disposeGroup(model);
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);
-  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  clipToFloor(model);place();
   scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
-// what the view shows: fronts, joint lines, dimensions (the walls and the entrance door: every frame, below)
+// the cabinet where the hall lies on the plan
+function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
+// what the cabinet shows wherever it is seen: fronts, joint lines (the dimensions, the walls and the entrance door: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.hall;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
   model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
-  dimsGroup.visible=V.dims!==false;
 }
-// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing;
-// «Стена и дверь» off takes away the walls, the entrance door and its swing
+// every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; in a flight it sinks into the floor
+// or rises out of it; the doors swing wherever they are seen; in the hall's own view «Стена и дверь» off takes away the walls,
+// the entrance door and its swing
 frameHooks.push((dt,ease)=>{
   const on=view==='hall',s=presence('hall');
-  if(on&&dirty)build();
+  if(dirty&&(on||s>.001))build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
-  dimsGroup.visible=VS.hall.dims!==false&&!inTransition();   // dimension lines come when the hall is reached
-  if(!on)return;
-  doors.forEach(d=>{
+  dimsGroup.visible=on&&VS.hall.dims!==false&&!inTransition();   // its dimension lines only in its own view, once it is reached
+  if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
+  else if(on&&wallGroup)wallGroup.visible=true;
+  if(model.visible)doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);
     turnDoor(d);});
-  if(VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
-  else if(wallGroup)wallGroup.visible=true;
 });
 
 /* camera presets of the hall tab, moved to where the hall lies on the plan */
@@ -311,6 +311,7 @@ addView('hall',{
   sync:syncHall,
   onDoors:syncDoorMode   // a cabinet door or the entrance door was clicked
 });
-// the plan changed the sizes: the hall, the entrance opening and the ceiling come along; rebuilt when next on screen
-modelHooks.push(()=>{fromModel();dirty=true;syncHall();});
+// the plan changed the sizes: the hall, the entrance opening and the ceiling come along. The cabinet is rebuilt (when next
+// in the scene) only if its own sizes changed; otherwise it only moves
+modelHooks.push(()=>{const was=JSON.stringify(P);fromModel();if(JSON.stringify(P)!==was)dirty=true;else place();syncHall();});
 })();

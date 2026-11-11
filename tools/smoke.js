@@ -202,7 +202,7 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
   assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
   assert.deepStrictEqual(r.fade, { entry: '-z', rightOuter: '+x', leftOuter: '-x', window: '+z' });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', dims: false, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, dims: false, names: true, floors: true });
   const panel = p.document.querySelector('[data-panel="plan"]'), shared = p.document.getElementById('shared');
   assert.strictEqual(panel.hidden, false, 'plan panel shown');
   assert.ok(matches(shared, '[data-panel="plan"] [data-shared-slot] #shared') && !shared.hidden, 'light and wall colour in the plan panel');
@@ -217,16 +217,18 @@ check('приложение: настройки вида и общие наст�
   assert.strictEqual(panel.querySelector('[data-wh-out]').textContent, '10%');
   panel.querySelector('[data-dm="open"]').click();
   const dims = panel.querySelector('#pDims'); dims.checked = true; dims.dispatch('change');
+  const furn = panel.querySelector('#pFurn'); furn.checked = false; furn.dispatch('change');
   p.document.querySelector('[data-wc="greige"]').click();
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', dims: true, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, dims: true, names: true, floors: true });
   assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true, fly: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
   const r = p.run('({wm:VS.plan.Wm, dm:VS.plan.dm, wc:S.wc, az:S.light.az, open:doors.every(d=>d.t===d.max)})');
   assert.deepStrictEqual({ ...r }, { wm: 'row', dm: 'open', wc: 'greige', az: 12, open: true });
+  assert.strictEqual(p.document.getElementById('pFurn').checked, false, 'no cabinets on the plan, as left');
 });
 
 check('приложение: кнопки камеры плана двигают камеру', () => {
@@ -391,12 +393,20 @@ check('кухня: шкафы и техника собираются, панел
   assert.strictEqual(kq('#k-fHx').hidden, true);
 });
 
-check('кухня: шкафы видны только в своей вкладке и следуют размерам «Планировки»', () => {
+check('кухня: шкафы в своей вкладке и на «Планировке», следуют её размерам', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  assert.strictEqual(p.run('VIEWS.kitchen.furniture().model'), null, 'not built while the kitchen is not on screen');
+  const k = () => p.run('(f=>[f.model.visible, f.model.position.y, f.dims.visible, f.appl.visible])(VIEWS.kitchen.furniture())');
+  // on the plan with «Шкафы» (on at first): the kitchen with its appliances, without its dimension lines
+  assert.deepStrictEqual(k(), [true, 0, false, true]);
   p.run('showView("kitchen")'); p.fly();
-  assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), true);
+  assert.deepStrictEqual(k(), [true, 0, true, true]);
+  // the kitchen's «Стены и техника» off takes the appliances away in the kitchen only: the plan keeps its walls
+  const wall = p.document.getElementById('k-tWall'); wall.checked = false; wall.dispatch('change'); p.tick();
+  assert.deepStrictEqual(k(), [true, 0, true, false]);
   p.run('showView("plan")'); p.fly();
+  assert.deepStrictEqual(k(), [true, 0, false, true]);
+  // «Шкафы» off: the kitchen leaves the plan
+  const furn = p.document.getElementById('pFurn'); furn.checked = false; furn.dispatch('change'); p.tick();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), false, 'hidden on the plan');
   slide(p, 'kW', 2300); p.tick();
   p.run('showView("kitchen")'); p.fly();
@@ -624,9 +634,10 @@ check('санузел: фасады, размеры, деталировка, н�
   assert.match(bq('#bSub').textContent, /корпус — Диамант серый U963 ST9; фасады — Базовый коричневый декор$/);
 });
 
-check('санузел: шкафы только в своей вкладке, поднимаются из пола, следуют «Планировке»', () => {
-  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  assert.strictEqual(p.run('VIEWS.bath.furniture().model'), null, 'not built while the bathroom is not on screen');
+check('санузел: без «Шкафов» на плане — только в своей вкладке, поднимаются из пола, следуют «Планировке»', () => {
+  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ furn: false })]]);
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  assert.strictEqual(p.run('VIEWS.bath.furniture().model'), null, 'not built while the bathroom is not in the scene');
   p.run('showView("bath")'); p.tick(25, 17);
   const m = p.run('(f=>({y:f.model.position.y, s:presence("bath")}))(VIEWS.bath.furniture())');
   near(m.s, 0.5, 'halfway'); near(m.y, -1.35, 'halfway up out of the floor');
@@ -742,9 +753,10 @@ check('прихожая: шкаф-портал собирается, «Сост�
   assert.deepStrictEqual([h().P.Feet, h().feet], [true, 8]);
 });
 
-check('прихожая: шкаф только в своей вкладке, поднимается из пола, не выше потолка', () => {
-  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  assert.strictEqual(p.run('VIEWS.hall.furniture().model'), null, 'not built while the hall is not on screen');
+check('прихожая: без «Шкафов» на плане — только в своей вкладке, поднимается из пола, не выше потолка', () => {
+  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ furn: false })]]);
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  assert.strictEqual(p.run('VIEWS.hall.furniture().model'), null, 'not built while the hall is not in the scene');
   p.run('showView("hall")'); p.tick(25, 17);
   const m = p.run('(f=>({y:f.model.position.y, s:presence("hall")}))(VIEWS.hall.furniture())');
   near(m.s, 0.5, 'halfway'); near(m.y, -1.35, 'halfway up out of the floor');
@@ -841,6 +853,38 @@ check('прихожая: шкаф следует проёму с «Планир�
   assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['hall', 3]);
 });
 
+check('«Планировка»: шкафы всех комнат по галочке «Шкафы», строятся, только когда видны', () => {
+  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ furn: false })]]);
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const rooms = '["kitchen","bath","hall"]';
+  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model)`), [null, null, null], 'off: nothing built');
+  const furn = p.document.getElementById('pFurn'); furn.checked = true; furn.dispatch('change'); p.tick();
+  // on: every room stands on the floor where it lies on the plan, without its dimension lines
+  const at = () => p.run(`${rooms}.map(k=>{const f=VIEWS[k].furniture(),m=f.model,o=ROOMS.find(r=>r.id===k).origin;return [m.visible, m.position.y, f.dims.visible, m.position.x-o[0]*MM, m.position.z-o[1]*MM];})`);
+  at().forEach((r) => { assert.deepStrictEqual(r.slice(0, 3), [true, 0, false]); near(r[3], 0, 'x'); near(r[4], 0, 'z'); });
+  assert.strictEqual(JSON.parse(storage.get('apt-view-plan-v1')).furn, true);
+  // a wall moved elsewhere only moves a room's cabinets; its own sizes build them anew
+  p.run(`${rooms}.forEach(k=>{VIEWS[k].furniture().model.userData.tag=k;})`);
+  p.run('setModel({hL1:APT_A.hL1+100})'); p.tick();
+  at().forEach((r) => { near(r[3], 0, 'x'); near(r[4], 0, 'z'); });
+  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), ['kitchen', 'bath', 'hall'], 'moved, not rebuilt');
+  p.run('setModel({hL1:APT_A.hL1+100, kW:2300})'); p.tick();
+  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), [null, 'bath', 'hall'], 'the kitchen rebuilt');
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
+  // the fronts swing on the plan too; the kitchen tab knows they are open and remembers it
+  p.run('(VIEWS.kitchen.furniture().doors.forEach(d=>d.t=DMAX), doorsChanged())'); p.tick(80, 16.67);
+  near(p.run('VIEWS.kitchen.furniture().doors[0].a'), p.run('DMAX'), 'open');
+  assert.deepStrictEqual([p.run('VS.kitchen.fronts'), JSON.parse(storage.get('apt-view-kitchen-v1')).fronts], ['open', 'open']);
+  assert.strictEqual(p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').getAttribute('aria-pressed'), 'true');
+  // back from a room the others rise out of the floor again
+  p.run('showView("bath")'); p.fly();
+  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.visible)`), [false, true, false]);
+  p.run('showView("plan")'); p.tick(25, 17);
+  near(p.run('VIEWS.kitchen.furniture().model.position.y'), -1.35, 'the kitchen halfway up');
+  p.fly();
+  at().forEach((r) => assert.deepStrictEqual(r.slice(0, 3), [true, 0, false]));
+});
+
 check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
   // the plan is seen from the window side: the window wall is hidden by its cut-mode rule
@@ -868,9 +912,11 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   const mat = (id, k) => p.run(`morph.mats.get("${id}").${k}.opacity`);
   near(mat('hallBath', 'foot'), 0.5, 'leaving footprint'); near(mat('window', 'foot'), 0.5, 'footprint of the hidden window wall');
   near(mat('kitchen', 'foot'), 1, 'kitchen wall footprint'); near(mat('hallBath', 'body'), 1, 'a wall 1.3 m high');
-  // the kitchen comes up out of the floor, the sun's shadows close in on it, the camera is halfway
-  const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, half:sunHalf, theta:cam.theta, r:cam.r})');
-  near(k.s, 0.5, 'kitchen presence'); near(k.y, -1.35, 'kitchen below the floor'); near(k.half, 3.8, 'shadow box');
+  // the plan shows the cabinets: the kitchen's stay where they are, the bathroom's and the hall's are halfway into the floor;
+  // the sun's shadows close in on the kitchen, the camera is halfway
+  const k = p.run('({s:presence("kitchen"), y:VIEWS.kitchen.furniture().model.position.y, sb:presence("bath"), yb:VIEWS.bath.furniture().model.position.y, sh:presence("hall"), half:sunHalf, theta:cam.theta, r:cam.r})');
+  near(k.s, 1, 'kitchen presence'); near(k.y, 0, 'kitchen on the floor'); near(k.half, 3.8, 'shadow box');
+  near(k.sb, 0.5, 'bathroom presence'); near(k.yb, -1.35, 'bathroom below the floor'); near(k.sh, 0.5, 'hall presence');
   near(k.theta, (c0.theta + g.theta) / 2, 'camera angle'); near(k.r, (c0.r + g.r) / 2, 'camera distance');
   inset().forEach((v, i) => near(v, (b0[i] + bT[i]) / 2, 'the mini view halfway'));
   p.tick(24, 16.67);   // ≈ 0.97 of the flight: the leaving walls are below 1 cm
@@ -913,9 +959,9 @@ check('перелёт: прерывание, мышь забирает каме�
   p.run('showView("plan")');
   assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 5050], [-2200, -2000, 0, 6750]]);
   near(p.run('morph.w.get("leftOuter").cF'), 1300, 'the left wall starts from halfway down');
-  near(p.run('tr.pres0.kitchen'), 0.5, 'the kitchen starts from halfway');
+  near(p.run('tr.pres0.bath'), 0.5, 'the bathroom starts from halfway');
   p.fly();
-  assert.deepStrictEqual(p.run('[view, wallLines.length, VIEWS.kitchen.furniture().model.visible]'), ['plan', 12, false]);
+  assert.deepStrictEqual(p.run('[view, wallLines.length, presence("bath"), VIEWS.bath.furniture().model.position.y]'), ['plan', 12, 1, 0]);
   // a drag takes the camera back; the walls finish their flight
   p.run('showView("kitchen")'); p.tick(5);
   const c = p.document.getElementById('c');

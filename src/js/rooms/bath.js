@@ -130,30 +130,33 @@ function build(){
   ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
   sani=new THREE.Group();buildSanitary(sani);model.add(sani);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model);
-  const [ox,oz]=O();model.position.set(ox*MM,0,oz*MM);
+  clipToFloor(model);place();
   scene.add(model);dirty=false;applyVisibility();updatePanel();
 }
-// what the view shows: fronts, joint lines, the installation and the toilet (with the walls, as in the bath tab), dimensions
+// the bathroom where it lies on the plan
+function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
+// what the bathroom shows wherever it is seen: fronts, joint lines (the installation, the toilet and the dimensions: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.bath;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
   model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
-  sani.visible=V.walls!==false;dimsGroup.visible=V.dims!==false;
 }
-// every frame: built when on screen and changed; in a flight it sinks into the floor or rises out of it; the doors swing
+// every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; in a flight it sinks into the floor
+// or rises out of it; the doors swing wherever they are seen
 frameHooks.push((dt,ease)=>{
   const on=view==='bath',s=presence('bath');
-  if(on&&dirty)build();
+  if(dirty&&(on||s>.001))build();
   if(!model)return;
   model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
-  dimsGroup.visible=VS.bath.dims!==false&&!inTransition();   // dimension lines come when the bathroom is reached
-  if(!on)return;
-  doors.forEach(d=>{
+  // its dimension lines only in its own view, once it is reached; the installation and the toilet go with the walls there
+  // (as in the bath tab), elsewhere the walls are there
+  dimsGroup.visible=on&&VS.bath.dims!==false&&!inTransition();
+  sani.visible=!on||VS.bath.walls!==false;
+  if(on&&wallGroup)wallGroup.visible=VS.bath.walls!==false;
+  if(model.visible)doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.09);
     turnDoor(d);});
-  if(wallGroup)wallGroup.visible=VS.bath.walls!==false;
 });
 
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */
@@ -331,7 +334,7 @@ addView('bath',{
   sync:syncBath,
   onDoors:syncDoorMode
 });
-// the plan changed the sizes: the niche, the ceiling, the riser box and the bathroom's place come along;
-// the bathroom is rebuilt when next on screen
-modelHooks.push(()=>{fromModel();dirty=true;syncBath();});
+// the plan changed the sizes: the niche, the ceiling, the riser box and the bathroom's place come along. The bathroom is
+// rebuilt (when next in the scene) only if its own sizes changed; otherwise it only moves
+modelHooks.push(()=>{const was=JSON.stringify(P);fromModel();if(JSON.stringify(P)!==was)dirty=true;else place();syncBath();});
 })();

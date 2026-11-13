@@ -195,3 +195,18 @@ check('прихожая: шкаф следует проёму с «Планир�
   p.run('showView("hall")'); p.fly();
   assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['hall', 3]);
 });
+
+check('прихожая: высота шкафа возвращается, когда потолок поднимают обратно', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  const H = () => p.run('VIEWS.hall.furniture().P.H');
+  const hs = hq('[data-p="H"]'); hs.value = '2500'; hs.dispatch('input');
+  slide(p, 'H', 2400); p.tick();
+  assert.strictEqual(H(), 2400);
+  slide(p, 'H', 2700); p.tick();
+  assert.strictEqual(H(), 2500, 'as chosen, not up to the ceiling');
+  slide(p, 'H', 2400); p.tick();
+  hq('#h-saveDef').click();
+  assert.strictEqual(JSON.parse(storage.get('apt-hall-v2')).P.H, 2500);
+});

@@ -1,5 +1,5 @@
 // Санузел: стены ниши, детали, шкафы и сантехника, отделка, фасады, рамка, размеры с плана.
-const { round, matches, runPage, DECOR_PARENT, PAGES, check, fnSource, vec, piece, near, bathWalls, fixture, assert } = require('./harness');
+const { round, matches, runPage, DECOR_PARENT, PAGES, check, slide, fnSource, vec, piece, near, bathWalls, fixture, assert } = require('./harness');
 
 check('санузел: стены ниши, обрезанные рамкой, как в старой вкладке', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
@@ -184,4 +184,28 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['plan', 12]);
   p.run('showView("bath")'); p.fly();
   assert.deepStrictEqual(p.run('[view, wallLines.length]'), ['bath', 7]);
+});
+
+check('санузел: ширина пенала и отступ над инсталляцией возвращаются вслед за нишей и потолком', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick();
+  const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
+  const P = () => p.run('(f=>[f.P.Wc,f.P.Gap])(VIEWS.bath.furniture())');
+  // a narrower niche on the plan cuts the tall cabinet; back to its width, the cabinet is as it was
+  slide(p, 'bNiche', 700); p.tick();
+  assert.strictEqual(P()[0], 450);
+  slide(p, 'bNiche', 1200); p.tick();
+  assert.strictEqual(P()[0], 800);
+  // a higher installation leaves the upper cabinet its 200 mm: the gap gives way and comes back
+  const gap = bq('[data-p="Gap"]'); gap.value = '800'; gap.dispatch('input');
+  const hi = bq('[data-p="Hi"]'); hi.value = '1500'; hi.dispatch('input');
+  assert.strictEqual(P()[1], 800);
+  slide(p, 'H', 2400); p.tick();
+  assert.strictEqual(P()[1], 700);
+  slide(p, 'H', 2600); p.tick();
+  assert.strictEqual(P()[1], 800);
+  // the saved settings keep the sizes as chosen
+  slide(p, 'bNiche', 700); slide(p, 'H', 2400); p.tick();
+  bq('#b-saveDef').click();
+  assert.deepStrictEqual((s => [s.P.Wc, s.P.Gap])(JSON.parse(storage.get('apt-bath-v2'))), [800, 800]);
 });

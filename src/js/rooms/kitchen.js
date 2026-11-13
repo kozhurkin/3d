@@ -91,13 +91,10 @@ function computeParts(p){
 }
 
 const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on the plan, mm
-function clamp(){
-  const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,P.Hx));   // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
-  // the run (three bases + fridge niche) has to fit on the wall
-  const over=P.B1+P.B2+P.B3+P.Fr-P.W;if(over>0)P.Fr=Math.max(500,P.Fr-over);
-}
-// sizes that belong to the walls come from the plan; the run of cabinets and the fridge has to fit on the wall
-function fromModel(){P.W=A.kW;P.H=A.H;clamp();T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
+// the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
+function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
+// sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
+function fromModel(w){P.W=A.kW;P.H=A.H;clamp(w);T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
 
 /* ---------- finishes and materials ---------- */
 // finish per part group: wood decor or plain colour
@@ -229,6 +226,7 @@ function panelText(){
     const pl=P.Plinth!==false?P.Pl:0,hb=P.Ct-P.Tt-pl;
     const free=P.W-(P.B1+P.B2+P.B3+P.Fr);
     kq('#k-gapBase').textContent=`Высота корпуса ${hb} мм · фасады ${hb-2} мм`+(free>0?` · справа свободно ${free} мм`:'');
+    const over=kq('#k-runOver');over.hidden=free>=0;over.textContent=free<0?`Тумбы и ниша холодильника длиннее стены на ${-free} мм`:'';
     const hw=c.yAnt-c.yW,st=(hw-t)/(P.Nw+1);
     kq('#k-gapWall').textContent=`Высота навесных ${hw} мм`+(P.Nw?` · между полками ${f(st-t)} мм`:'')+` · вытяжка ${Math.max(c.yW,P.Ct+P.Gh)-P.Ct} мм над столешницей`; }
 }
@@ -237,6 +235,7 @@ const k=roomKit('kitchen',{
   P,FIN,mats,px:'k',panel,origin:O,fromModel,setCam,panelText,
   fromPlan:['W','H'],
   ids:['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'],
+  wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
   extra:{name:'appl',build:buildAppliances},   // the appliances go with the walls in the kitchen's view

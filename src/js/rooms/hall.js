@@ -81,9 +81,9 @@ const O=()=>ROOMS.find(r=>r.id==='hall').origin;   // the hall's (0,0) on the pl
 const HT_MIN=300;
 const hBottom=()=>A.eDH-(P.reveal?(P.T||16):0);   // where the mezzanine starts: the top of the opening, or of its cladding
 const hRange=()=>{const hi=A.H;return [Math.min(hBottom()+HT_MIN,hi),hi];};
-function fromModel(){
+function fromModel(w){
   T=P.T||16;TF=P.TF||16;const rv=P.reveal?T:0,[h0,h1]=hRange();
-  P.W=A.hallW;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(P.H,h1));
+  P.W=A.hallW;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
   P.Lw=A.eD0+rv;P.Rw=A.hallW-A.eD1+rv;P.Ht=P.H-hBottom();
   return current=computeParts(P);
 }
@@ -145,6 +145,7 @@ const k=roomKit('hall',{
   P,FIN,mats,px:'h',panel,origin:O,fromModel,setCam,panelText,
   fromPlan:['W','Lw','Rw','Ht','Rv'],
   ids:['H','D','N','Pl'],
+  wish:['H'],
   onSyncIds:()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;},   // the height stays between the mezzanine's least and the ceiling
   slider:{sel:'#hFrameSd',key:'Sd',max:()=>hLen},   // how far from the bearing wall the side walls show, up to the kitchen wall
   dims:buildDims,

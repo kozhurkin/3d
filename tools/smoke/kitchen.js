@@ -63,10 +63,11 @@ check('кухня: шкафы и техника собираются, панел
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
   assert.match(kq('#kSub').textContent, /корпус — Белый премиум W1000 ST9; фасады — Серый кашемир U702 ST9; столешница — Дуб Каселла натуральный H1385 ST40/);
   assert.match(kq('#k-gapBase').textContent, /справа свободно 100 мм/);
-  // a wider sink cabinet: the fridge niche gives way, as in the kitchen tab
+  assert.strictEqual(kq('#k-runOver').hidden, true);
+  // a wider sink cabinet: the fridge niche stays, the run is longer than the wall and the panel says so
   const b1 = kq('[data-p="B1"]'); b1.value = '600'; b1.dispatch('input');
-  r = k(); assert.deepStrictEqual([r.P.B1, r.P.Fr], [600, 550]);
-  assert.strictEqual(kq('[data-p-out="Fr"]').textContent, '550 мм');
+  r = k(); assert.deepStrictEqual([r.P.B1, r.P.Fr], [600, 600]);
+  assert.deepStrictEqual([kq('#k-runOver').hidden, kq('#k-runOver').textContent], [false, 'Тумбы и ниша холодильника длиннее стены на 50 мм']);
   // no dishwasher: its front goes, a middle cabinet with a door and a shelf comes
   const dish = kq('#k-tDish'); dish.checked = false; dish.dispatch('change');
   r = p.run('VIEWS.kitchen.furniture().current.parts.map(x=>x.name)');
@@ -171,14 +172,37 @@ check('кухня: фасады, деталировка, настройки по
   kq('[data-decor="H3154"]').click();
   kq('#k-saveDef').click();
   const saved = JSON.parse(storage.get('apt-kitchen-v2'));
-  assert.deepStrictEqual([saved.P.B1, saved.P.Fr, 'W' in saved.P, 'H' in saved.P, saved.FIN.front.decor], [600, 550, false, false, 'H3154']);
+  assert.deepStrictEqual([saved.P.B1, saved.P.Fr, 'W' in saved.P, 'H' in saved.P, saved.FIN.front.decor], [600, 600, false, false, 'H3154']);
   p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
   kp = p.document.querySelector('[data-panel="kitchen"]');
-  assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr,f.P.W])(VIEWS.kitchen.furniture())'), [600, 550, 2200]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr,f.P.W])(VIEWS.kitchen.furniture())'), [600, 600, 2200]);
   assert.match(kq('#kSub').textContent, /Дуб Чарльстон тёмно-коричневый/);
   assert.deepStrictEqual(pressed(), ['hidden'], 'the view remembers the fronts taken off');
   kq('#k-resetDef').click();
   assert.deepStrictEqual(p.run('(f=>[f.P.B1,f.P.Fr])(VIEWS.kitchen.furniture())'), [450, 600]);
   assert.ok(!storage.has('apt-kitchen-v2'));
   assert.match(kq('#kSub').textContent, /корпус — Белый премиум W1000 ST9; фасады — Серый кашемир U702 ST9/);
+});
+
+check('кухня: короткая стена ничего не ужимает, сдвиг варочной панели возвращается', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const kq = (s) => p.document.querySelector('[data-panel="kitchen"]').querySelector(s);
+  const P = () => p.run('(f=>[f.P.W,f.P.Fr,f.P.Hx])(VIEWS.kitchen.furniture())');
+  // the kitchen wall down to its least on the plan and back: the fridge niche stays, the panel says how much is over
+  slide(p, 'kW', 1600); p.tick();
+  assert.deepStrictEqual(P(), [1600, 600, -150]);
+  assert.deepStrictEqual([kq('#k-runOver').hidden, kq('#k-runOver').textContent], [false, 'Тумбы и ниша холодильника длиннее стены на 500 мм']);
+  slide(p, 'kW', 2200); p.tick();
+  assert.deepStrictEqual(P(), [2200, 600, -150]);
+  assert.strictEqual(kq('#k-runOver').hidden, true);
+  // a narrower oven cabinet moves the hob in; a wider one gives it its place back
+  const b3 = kq('[data-p="B3"]'); b3.value = '450'; b3.dispatch('input');
+  assert.strictEqual(P()[2], -75);
+  b3.value = '600'; b3.dispatch('input');
+  assert.strictEqual(P()[2], -150);
+  // the hob moved by hand is taken as it comes out
+  const hx = kq('[data-p="Hx"]'); hx.value = '100'; hx.dispatch('input');
+  b3.value = '450'; b3.dispatch('input'); b3.value = '600'; b3.dispatch('input');
+  assert.strictEqual(P()[2], 100);
 });

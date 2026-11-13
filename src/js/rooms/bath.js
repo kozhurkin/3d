@@ -71,12 +71,12 @@ function computeParts(p){
 }
 
 const O=()=>ROOMS.find(r=>r.id==='bath').origin;   // the bathroom's (0,0) on the plan, mm
-function clamp(){
-  P.Wc=Math.min(P.Wc,P.W-P.Rx);
-  P.Gap=Math.min(P.Gap,Math.max(0,P.H-P.Hi-200));
+function clamp(w){
+  P.Wc=Math.min(w.Wc,P.W-P.Rx);
+  P.Gap=Math.min(w.Gap,Math.max(0,P.H-P.Hi-200));
 }
 // sizes that belong to the walls come from the plan; the tall cabinet and the gap over the installation have to fit
-function fromModel(){P.W=A.bNiche;P.L=A.bL;P.H=A.H;P.Rx=A.rX;P.Rz=A.rZ;clamp();T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
+function fromModel(w){P.W=A.bNiche;P.L=A.bL;P.H=A.H;P.Rx=A.rX;P.Rz=A.rZ;clamp(w);T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
 
 /* ---------- finishes and materials ---------- */
 // finish per part group, as in the bath tab: wood decor or plain colour (no worktop here)
@@ -160,6 +160,7 @@ const k=roomKit('bath',{
   P,FIN,mats,px:'b',panel,origin:O,fromModel,setCam,panelText,
   fromPlan:['W','L','H','Rx','Rz','Lt'],
   ids:['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'],
+  wish:['Wc','Gap'],
   slider:{sel:'#bFrameL',key:'L',max:()=>hLen},   // how far from the back wall the left wall shows, up to the kitchen wall
   dims:buildDims,
   extra:{name:'sani',build:buildSanitary},   // the installation and the toilet go with the walls in the bathroom's view

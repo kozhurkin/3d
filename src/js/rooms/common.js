@@ -5,7 +5,9 @@
    contrast, cut list, settings to start with), the view itself (addView) and following the plan (modelHooks).
    Panel ids are '#'+px+'-…' (px: b, h, k). cfg:
      P, FIN, mats, px, panel, origin ()→[x,z] mm,
-     fromModel ()→current — sizes from the plan, then the parts (also sets the module's T, TF),
+     fromModel (want)→current — sizes from the plan, then the parts (also sets the module's T, TF); the keys of wish are
+               fitted to the walls from want, the sizes the user chose, so a size cut by a wall comes back when the wall does,
+     wish      — keys of P that the walls may cut (want keeps them as chosen in the panel, the saved settings take them from it),
      fromPlan  — keys of P that belong to the plan (left out of the saved settings),
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
      slider    {sel, key, max()} — how far the side wall shows (the view's frame),
@@ -26,14 +28,17 @@ const FIN_WORD={carcass:'корпус',front:'фасады',top:'столешн�
 function roomKit(id,cfg){
   const {P,FIN,mats,px,panel}=cfg,q=s=>panel.querySelector(s),pq=s=>q('#'+px+'-'+s);
   const groups=cfg.groups||['carcass','front'],shown=cfg.shown||(()=>true);
-  let cur=cfg.fromModel();
+  // the sizes as chosen: P has them as they fit the walls now
+  const wish=cfg.wish||[],want={},takeWant=()=>wish.forEach(k=>{want[k]=P[k];});
+  takeWant();
+  let cur=cfg.fromModel(want);
 
   /* ---------- the room in the scene: built when it is on screen and something changed ---------- */
   let model=null,doors=[],extra=null,dimsGroup=null,foot=null,dirty=true;
   const clip=furnClip();   // the room's floor and top planes
   const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
   function build(){
-    cur=cfg.fromModel();
+    cur=cfg.fromModel(want);
     const prev=doors;disposeGroup(model);
     ({model,doors}=buildParts(cur,mats,{prev,open:VS[id].fronts==='open'}));
     if(cfg.extra){extra=new THREE.Group();cfg.extra.build(extra);model.add(extra);}
@@ -81,7 +86,9 @@ function roomKit(id,cfg){
   panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();syncIds();}));
   // cabinet sizes
   const syncIds=()=>{if(cfg.onSyncIds)cfg.onSyncIds();cfg.ids.forEach(j=>{q(`[data-p="${j}"]`).value=P[j];});};
-  cfg.ids.forEach(j=>q(`[data-p="${j}"]`).addEventListener('input',e=>{P[j]=+e.target.value;build();syncIds();}));
+  // a size the walls may cut is chosen as it comes out now (as the slider shows it)
+  cfg.ids.forEach(j=>q(`[data-p="${j}"]`).addEventListener('input',e=>{
+    const w=wish.includes(j);P[j]=+e.target.value;if(w)want[j]=P[j];build();if(w)want[j]=P[j];syncIds();}));
   // fronts: all open, all closed (or nothing pressed when they differ), or taken off
   function syncDoorMode(){
     const V=VS[id];let st=V.fronts;
@@ -168,13 +175,13 @@ function roomKit(id,cfg){
   /* ---------- settings to start with: in this browser, or as a code for the chat ----------
      the cabinets and their finishes; the sizes of the plan are left out, the view settings are remembered by themselves */
   const KEY='apt-'+id+'-v2';
-  const getState=()=>{const p=Object.assign({},P);cfg.fromPlan.forEach(k=>delete p[k]);return {P:p,FIN:JSON.parse(JSON.stringify(FIN))};};
+  const getState=()=>{const p=Object.assign({},P,want);cfg.fromPlan.forEach(k=>delete p[k]);return {P:p,FIN:JSON.parse(JSON.stringify(FIN))};};
   const FACTORY=JSON.stringify(getState());
   function applyState(s){
-    if(s.P)Object.assign(P,s.P);
+    if(s.P)Object.assign(P,s.P);takeWant();
     const okF=f=>f&&(f.type==='uni'||(f.type==='wood'&&DECORS[f.decor]));
     if(s.FIN&&okF(s.FIN.carcass)&&okF(s.FIN.front)){FIN.carcass=s.FIN.carcass;FIN.front=s.FIN.front;if(cfg.takeFin)cfg.takeFin(s.FIN,okF);}
-    cur=cfg.fromModel();applyMaterials(mats,FIN,P.Ec);dirty=true;
+    cur=cfg.fromModel(want);applyMaterials(mats,FIN,P.Ec);dirty=true;
   }
   { const s=readJSON(KEY);if(s)applyState(s); }
   const defMsg=pq('defMsg');
@@ -212,7 +219,7 @@ function roomKit(id,cfg){
   },viewDef));
   // the plan changed the sizes: they come along. The room is rebuilt (when next in the scene) only if its own sizes changed;
   // otherwise it only moves — on the plan a slider moves every room at once
-  modelHooks.push(()=>{const was=JSON.stringify(P);cur=cfg.fromModel();if(JSON.stringify(P)!==was)dirty=true;else place();sync();});
+  modelHooks.push(()=>{const was=JSON.stringify(P);cur=cfg.fromModel(want);if(JSON.stringify(P)!==was)dirty=true;else place();sync();});
 
   const finDesc=()=>{const fc=finName(FIN.carcass),ff=finName(FIN.front);return fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`;};
   return {build,syncThick,syncIds,syncFinish,updatePanel,finDesc};

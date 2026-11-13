@@ -235,6 +235,7 @@ function startWallMorph(from,toId,pos){
   morph.doorClips=clipDoors(w);
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
+// Works while walls are plain colour: a textured wall (tiles) would stretch, its pieces would have to be rebuilt instead.
 function fitBox(m,box,r,flat){
   const x0=Math.max(box[0],r[0]),x1=Math.min(box[1],r[1]),z0=Math.max(box[2],r[2]),z1=Math.min(box[3],r[3]);
   if(x1-x0<.5||z1-z0<.5)return false;

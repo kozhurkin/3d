@@ -93,23 +93,43 @@ check('перелёт: прерывание, мышь забирает каме�
   assert.deepStrictEqual(p.run('[inTransition(), wallLines.length]'), [false, 2]);
 });
 
-check('перелёт «Санузел» → «Прихожая»: входная дверь едет вместе с несущей стеной, а не появляется сразу', () => {
+check('перелёт «Санузел» → «Прихожая»: входная дверь появляется, когда несущая стена накрыла её проём', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
-  assert.deepStrictEqual(p.run('entranceDoor().g.visible'), false, 'the opening is past the bathroom frame');
+  const on = () => p.run('[entranceDoor().g.visible, entranceDoor().frame.visible, arcs.children.filter(l=>l.userData.hole==="entry:0").every(l=>l.visible)]');
+  assert.deepStrictEqual(on(), [false, false, false], 'the opening is past the bathroom frame');
   p.run('showView("hall")');
-  // the door shows from the start of the flight (its opening is whole in the hall), cut to the wall's rect on the way
-  const leaf = 'entranceDoor().g.children[0].material';
-  assert.strictEqual(p.run('entranceDoor().g.visible'), true);
-  assert.strictEqual(p.run(`${leaf}.clippingPlanes===morph.doorClips.find(c=>c.id==="entry").planes`), true);
-  assert.strictEqual(p.run('arcs.children.filter(l=>l.userData.hole==="entry:0").every(l=>l.material.clippingPlanes===morph.doorClips[0].planes)'), true, 'its swing too');
-  // the bearing wall goes from the niche (x −2200…−700) to the hall (−100…1400): halfway it is −1150…350, the door
-  // (84…976) is not in yet
+  // the bearing wall goes from the niche (x −2200…−700) to the hall (−100…1400): halfway it is −1150…350,
+  // the opening (84…976) is not in it yet — no door, no swing
   p.tick(25, 17);
-  const k = p.run('morph.doorClips.find(c=>c.id==="entry").planes.map(q=>q.constant)');
-  near(k[0], 1.15, 'kept from x = −1.15 m'); near(k[1], 0.35, 'up to x = 0.35 m');
-  // landed: the door has its own materials back
+  assert.deepStrictEqual(on(), [false, false, false], 'halfway');
+  // at 0.9 of the way the wall is −1255…1340: the opening is whole, the door is there with its own materials (nothing is cut)
+  p.tick(20, 17);
+  assert.deepStrictEqual(on(), [true, true, true], 'the opening in the wall');
+  assert.strictEqual(p.run('entranceDoor().g.children[0].material===entMat'), true);
   p.fly();
-  assert.deepStrictEqual(p.run(`[${leaf}===entMat, entranceDoor().g.visible, morph]`), [true, true, null]);
+  assert.deepStrictEqual(p.run('[entranceDoor().g.visible, morph]'), [true, null]);
+});
+
+check('перелёт «Планировка» ⇄ «Прихожая»: дверь санузла идёт вместе со стеной — вниз и вверх, по длине — с проёмом', () => {
+  // in the hall the hall/bath wall is hidden by the cut mode and its doorway is past the frame: the door is not there.
+  // [the wall's height, the height its door is cut at] in mm
+  const now = p => p.run('(n=>[n.cut,n.h].map(Math.round))(morphWall(morph.w.get("hallBath"),morph.e))');
+  const door = p => p.run('(d=>[d.g.visible, arcs.children.filter(l=>l.userData.hole===d.hole).every(l=>l.visible)])(doors.find(d=>d.hole==="hallBath:0"))');
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  p.run('showView("hall")'); p.tick(25, 17);
+  // halfway the wall is 0…1275 long and 1.3 m high: the doorway (650…1250) is still in it, the door goes down with it
+  assert.deepStrictEqual([now(p), door(p)], [[1300, 1300], [true, true]], 'halfway down, the door with the wall');
+  p.tick(10, 17);   // e ≈ 0.82: the wall is 0…875, the doorway is cut — the door is gone
+  assert.deepStrictEqual(door(p), [false, false]);
+  p.fly();
+  assert.deepStrictEqual(door(p), [false, false], 'in the hall');
+  // and back: the wall grows from the frame's 650 mm; the door shows only when the doorway is whole in it, at its height
+  p.run('showView("plan")');
+  assert.deepStrictEqual(now(p), [0, 0], 'from the floor');
+  p.tick(10, 17);   // e ≈ 0.10: the wall is 0…780
+  assert.deepStrictEqual(door(p), [false, false], 'the doorway is not in the wall yet');
+  p.tick(15, 17);   // e = 0.5: 0…1275
+  assert.deepStrictEqual([now(p), door(p)], [[1300, 1300], [true, true]], 'halfway up, the doorway in the wall');
 });
 
 check('перелёт: без галочки «Анимированный перелёт» — как раньше: стены сразу, камера доезжает', () => {

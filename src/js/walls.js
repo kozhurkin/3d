@@ -159,16 +159,18 @@ function buildWalls(vw){dropMorph();buildWallSet([...viewWalls(vw).values()],w=>
    up from the floor, down into it, shorter or longer — so nothing pops or blinks on the way. A wall hidden at both ends
    stays hidden. Pieces are built for the span of both rects and cut to the current one by scale, like the cut height;
    at the end the new view's walls are built exactly */
-let morph=null;   // {w: id → {rF,rT,cF,cT,hF,hT,exT,kept}, e, opF,opT, lnF,lnT, doors, mats: id → own materials, doorClips}
+let morph=null;   // {w: id → {rF,rT,cF,cT,hF,hT,exT,kept}, e, opF,opT, lnF,lnT, doors, mats: id → own materials}
 // is a wall seen by the camera at c (m) under its cut-mode rule: the camera must be on the room's side of its face
 const sideVisible=(side,r,c)=>!side||({'-x':c.x>r[1],'+x':c.x<r[0],'-z':c.z>r[3],'+z':c.z<r[2]})[side];
-// a view's walls at rest with the camera at pos: id → {r, cut: the height it shows (0: hidden), h: its height for the doors, kept}
+// a view's walls at rest with the camera at pos: id → {r, cut: the height it shows (0: hidden), h: its height for the doors, kept}.
+// A door whose opening is whole stands at the view's height even when its wall is hidden by the cut mode; one that is not
+// there goes with its wall (up from the floor or down into it)
 function wallsAtRest(id,pos){
   const vw=VIEWS[id],V=VS[id],m=new Map();
   const h=V.Wm==='outline'?0:V.Wm==='row'?H*.1:H*V.Wh/100;
   viewWalls(vw).forEach((c,k)=>{
-    const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),c.r.map(v=>v*MM),pos);
-    m.set(k,{r:c.r,cut:seen?h:0,h,kept:c.kept});});
+    const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),c.r.map(v=>v*MM),pos),cut=seen?h:0;
+    m.set(k,{r:c.r,cut,h:c.kept.length?h:cut,kept:c.kept});});
   return m;
 }
 // a wall of the flight at progress e: its rect (mm), the height it shows and the height its doors are cut at (mm)
@@ -180,34 +182,21 @@ function wallsNow(){
   morph.w.forEach((s,id)=>{const n=morphWall(s,morph.e);m.set(id,{r:n.r,cut:n.cut,h:n.h,kept:s.kept});});
   return m;
 }
-// pos: where the camera ends the flight (m)
-// the walls of a flight have their own materials (they fade by themselves), so have the doors (they are cut along their wall);
-// they go with the flight and the doors get theirs back
+// the walls of a flight have their own materials (they fade by themselves); they go with the flight
 function dropMorph(){
   if(!morph)return;
   morph.mats.forEach(m=>Object.values(m).forEach(x=>x.dispose()));
-  morph.doorClips.forEach(c=>c.objs.forEach(x=>{x.o.material=x.m;x.c.dispose();}));
   morph=null;
 }
-/* a door in a flight goes with its wall along it too, not only up and down: its leaf, frame, handles and swing on the floor
-   get their own materials cut by two planes across the wall at the ends of the wall's rect on the way (they work for an
-   open leaf as well). w: the flight's walls; → [{id, along, planes, objs: [{o, m: own material, c: the cut copy}]}] */
-const walkObj=(o,f)=>{f(o);(o.children||[]).forEach(c=>walkObj(c,f));};
-function clipDoors(w){
-  const out=[];
-  doors.forEach(d=>{
-    const id=d.hole.split(':')[0];if(!w.has(id))return;
-    const wall=WALLS.find(v=>v.id===id),along=(wall.r[1]-wall.r[0])>=(wall.r[3]-wall.r[2]);
-    // kept: the side past the rect's start (x ≥ x0, or z ≥ z0) and before its end
-    const planes=[new THREE.Plane(new THREE.Vector3(along?1:0,0,along?0:1),0),new THREE.Plane(new THREE.Vector3(along?-1:0,0,along?0:-1),0)];
-    const objs=[],take=o=>{const m=o.material;if(!m||Array.isArray(m)||!m.isMaterial)return;
-      const c=m.clone();c.clippingPlanes=planes;c.clipShadows=true;objs.push({o,m,c,line:!!(o.isLine||o.isLineSegments)});o.material=c;};
-    [d.g,d.frame].forEach(g=>{if(g)walkObj(g,take);});
-    if(arcs)arcs.children.forEach(l=>{if(l.userData.hole===d.hole)take(l);});
-    out.push({id,along,planes,objs});
-  });
-  return out;
+/* a door in a flight shows as at rest: while its opening is whole in its wall's rect on the way (and whole at one end
+   of the flight at least); its height goes with the wall (wallsAtRest: h) */
+function doorInFlight(d,at){
+  const [id,i]=d.hole.split(':'),s=morph.w.get(id);
+  if(!s||!s.kept.includes(+i))return false;
+  const c=clipWall(WALLS.find(v=>v.id===id),at(id).r);
+  return !!c&&c.kept.includes(+i);
 }
+// pos: where the camera ends the flight (m)
 function startWallMorph(from,toId,pos){
   const to=wallsAtRest(toId,pos),w=new Map(),list=[],V=VS[toId];
   new Set([...from.keys(),...to.keys()]).forEach(id=>{
@@ -232,7 +221,6 @@ function startWallMorph(from,toId,pos){
   const skel=V.Wm==='skeleton';
   morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:skel?.9:.35,
     doors:doorsF&&V.dm!=='none'&&V.Wm!=='outline',mats};   // doors show only if both ends show them
-  morph.doorClips=clipDoors(w);
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
 // Works while walls are plain colour: a textured wall (tiles) would stretch, its pieces would have to be rebuilt instead.
@@ -348,10 +336,9 @@ frameHooks.push((dt,ease)=>{
       if(c){l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(c,Math.min(H,n.cut)));}});
     wallFeet.forEach(f=>{f.m.visible=fitBox(f.m,f.box,at(f.id).r,true);});
     doorCut=id=>morph.w.has(id)?at(id).h*MM:0;
-    // and along: cut to the wall's rect on the way; their outlines fade as the walls' do
-    morph.doorClips.forEach(c=>{const r=at(c.id).r;
-      c.planes[0].constant=-(c.along?r[0]:r[2])*MM;c.planes[1].constant=(c.along?r[1]:r[3])*MM;
-      c.objs.forEach(x=>{if(x.line&&x.o.parent!==arcs)x.c.opacity=edgeMat.opacity;});});
+    // a door and its swing show while its opening is whole in its wall on the way
+    doors.forEach(d=>{const on=doorInFlight(d,at);d.g.visible=on;if(d.frame)d.frame.visible=on;});
+    arcs.children.forEach(l=>{const d=doors.find(x=>x.hole===l.userData.hole);l.visible=!!d&&d.g.visible;});
     doorGroup.visible=arcs.visible=morph.doors;
   }else{
     wallsSeeThrough(skel?0:1);edgeMat.opacity=skel?.9:.35;

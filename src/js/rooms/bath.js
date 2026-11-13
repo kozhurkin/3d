@@ -101,7 +101,7 @@ function buildSanitary(g){
 }
 
 /* ---------- dimension lines of the bathroom (bath axes; they belong to the bathroom and move with it) ---------- */
-function buildDims(dim){
+function buildDims(dim,gaps){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
   const zf=current.zf,yb=current.yb,z1=zf+P.Lt,xe=Math.max(P.Du,P.Di)+80;
   { const wc=Math.min(P.Wc,P.W-P.Rx),xa=P.W-wc,yd=P.H+120;
@@ -118,6 +118,12 @@ function buildDims(dim){
   dim(V(xe,0,z1-60),V(xe,P.Hi,z1-60),`${P.Hi}`,X);
   if(P.Gap>0)dim(V(xe,P.Hi,z1-60),V(xe,yb,z1-60),`${P.Gap}`,X);
   dim(V(0,yb-80,z1+40),V(P.Du,yb-80,z1+40),`${P.Du}`,Y);
+  // between the shelves: each section of the tall cabinet that has them (the divider closes both), the upper cabinet
+  const by=nms=>current.parts.filter(q=>q.mat==='carcass'&&nms.includes(q.name));
+  const tall=by(['Дно пенала','Полка-разделитель пенала','Полка пенала','Крышка пенала']);
+  if(P.Nb)gaps(tall.filter(q=>q.y0<=P.Hi));
+  if(P.Nh)gaps(tall.filter(q=>q.y1>=P.Hi));
+  if(P.Nu)gaps(by(['Дно верхнего шкафа','Полка верхнего шкафа','Крышка верхнего шкафа']));
 }
 
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */

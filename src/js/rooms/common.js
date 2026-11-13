@@ -11,7 +11,8 @@
      fromPlan  — keys of P that belong to the plan (left out of the saved settings),
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
      slider    {sel, key, max()} — how far the side wall shows (the view's frame),
-     setCam(v), dims(dim) — dimension lines through dim(a,b,txt,tick), extra {name, build(g)} — appliances or sanitary ware,
+     setCam(v), dims(dim,gaps) — dimension lines through dim(a,b,txt,tick), the free heights of a shelf stack through
+               gaps(boards), extra {name, build(g)} — appliances or sanitary ware,
      foot()    — extra footprint rects, walls(on) — walls in its own view (default: «Стена» toggles them),
      syncFlags(), onDoorMode(), panelText(),
      groups    — finish groups (default carcass, front), shown(g), matName(m) (null: the plain board), takeFin(sFIN, ok),
@@ -37,12 +38,22 @@ function roomKit(id,cfg){
   let model=null,doors=[],extra=null,dimsGroup=null,foot=null,dirty=true;
   const clip=furnClip();   // the room's floor and top planes
   const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
+  /* the free height of one shelf stack (the bottom, the shelves, the top — the parts, any order): one dimension, from the top
+     of a board in the middle to the underside of the next, whole mm, in the middle of the width and depth all its boards share. Hidden behind what stands in front
+     of it (closed doors, the carcass), unlike the room's other dimensions; the texts in userData.gaps */
+  function gaps(boards){
+    const b=[...boards].sort((p,q)=>p.y0-q.y0);if(b.length<2)return;
+    const i=Math.floor((b.length-2)/2),lo=b[i],hi=b[i+1],t=String(Math.round(hi.y0-lo.y1));
+    const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),mid=(k0,k1)=>(Math.max(...b.map(q=>q[k0]))+Math.min(...b.map(q=>q[k1])))/2;
+    const x=mid('x0','x1'),z=mid('z0','z1'),wide=lo.x1-lo.x0>=lo.z1-lo.z0;   // ticks across the cabinet's width
+    roomDim(dimsGroup,V(x,lo.y1,z),V(x,hi.y0,z),t,wide?new THREE.Vector3(1,0,0):new THREE.Vector3(0,0,1),true);dimsGroup.userData.gaps.push(t);
+  }
   function build(){
     cur=cfg.fromModel(want);
     const prev=doors;disposeGroup(model);
     ({model,doors}=buildParts(cur,mats,{prev,open:VS[id].fronts==='open'}));
     if(cfg.extra){extra=new THREE.Group();cfg.extra.build(extra);model.add(extra);}
-    dimsGroup=new THREE.Group();cfg.dims(dim);model.add(dimsGroup);
+    dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps);model.add(dimsGroup);
     clipToFloor(model,clip);
     // its footprint for «Контуры» on the plan
     foot=furnFoot(cur,cfg.foot&&cfg.foot());if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}

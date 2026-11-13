@@ -129,8 +129,8 @@ check('прихожая: отделка, фасады, входная дверь
     ctx.querySelector('[data-where="front"]').click();
     assert.match(sub(), /мм · корпус — Базовый коричневый декор; фасады — Белый премиум W1000 ST9$/);
   }
-  // the hall tab's six dimension lines (a line and a label each)
-  assert.strictEqual(p.run('VIEWS.hall.furniture().dims.children.length'), 12);
+  // the hall tab's six dimension lines and three between the shelves (a line and a label each)
+  assert.strictEqual(p.run('VIEWS.hall.furniture().dims.children.length'), 18);
   // fronts
   assert.deepStrictEqual(pressed(), ['closed']);
   hq('[data-door="open"]').click();
@@ -209,4 +209,23 @@ check('прихожая: высота шкафа возвращается, ко�
   slide(p, 'H', 2400); p.tick();
   hq('#h-saveDef').click();
   assert.strictEqual(JSON.parse(storage.get('apt-hall-v2')).P.H, 2500);
+});
+
+check('прихожая: размер между полками — в правой колонне и в каждом корпусе антресоли, в целых мм, за корпусом не виден', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  const f = 'VIEWS.hall.furniture()';
+  const gaps = () => p.run(`${f}.dims.userData.gaps`);
+  // where each stands, hall mm: the middle of the width and depth its boards share
+  const at = () => p.run(`${f}.dims.children.slice(12).filter((o,i)=>i%2).map(s=>[s.position.x,s.position.y,s.position.z].map(v=>Math.round(v/MM)))`);
+  // the column; the mezzanine's central and right boxes, under their shelf
+  assert.deepStrictEqual(gaps(), ['301', '276', '276']);
+  assert.deepStrictEqual(at(), [[1072, 881, 200], [480, 2154, 182], [1080, 2154, 182]]);
+  assert.deepStrictEqual(p.run(`(d=>d.children.map(o=>o.material.depthTest===true))(${f}.dims)`), [...Array(12).fill(false), ...Array(6).fill(true)]);
+  // the mezzanine in one box: its sections, on either side of the partition
+  const one = hq('#h-tMezzOne'); one.checked = true; one.dispatch('change');
+  assert.deepStrictEqual(gaps(), ['301', '276', '276']);
+  assert.deepStrictEqual(at().slice(1), [[484, 2154, 182], [1076, 2154, 182]]);
+  const n = hq('[data-p="N"]'); n.value = '2'; n.dispatch('input');
+  assert.deepStrictEqual(gaps(), ['619', '276', '276']);
 });

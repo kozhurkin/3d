@@ -19,6 +19,8 @@ function stub(name = 'stub') {
       // meshes and lines keep what they were made of, so checks can see their materials
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line'].includes(name)) Object.assign(o, { geometry: args[0], material: args[1] });
       if (name === 'THREE.Sprite') o.material = args[0];
+      // a material keeps whether it hides behind what stands in front (the dimensions between the shelves do, the others do not)
+      if (/Material$/.test(name) && args[0] && 'depthTest' in args[0]) o.depthTest = args[0].depthTest;
       // objects of the scene have a real place and real children, so checks can see where things stand
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group'].includes(name)) {
         Object.assign(o, { position: new Vec3(), children: [] });

@@ -95,7 +95,7 @@ const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
 
 /* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ---------- */
-function buildDims(dim){
+function buildDims(dim,gaps){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),z=P.D+60,Hb=current.Hb;
   const ow=P.W-P.Lw-P.Rw;
   dim(V(0,P.H+140,z),V(P.W,P.H+140,z),`${P.W}`,Y);
@@ -104,6 +104,11 @@ function buildDims(dim){
   dim(V(P.Lw,260,z),V(P.W-P.Rw,260,z),`проём ${ow}`,Y);
   dim(V((P.Lw+P.W-P.Rw)/2,0,z),V((P.Lw+P.W-P.Rw)/2,Hb,z),`${Hb}`,X);
   dim(V(P.W+160,P.H+140,0),V(P.W+160,P.H+140,P.D),`${P.D}`,Y);
+  // between the shelves of the right column; in the mezzanine, each shelf with the bottom and the top over it (two boxes,
+  // or the sections of one)
+  if(P.N)gaps(current.parts.filter(q=>/^(Дно|Полка|Крышка) правой колонны$/.test(q.name)));
+  const mz=current.parts.filter(q=>/^(Дно|Полка|Крышка) антресоли — /.test(q.name)),sh=q=>q.name.startsWith('Полка');
+  mz.filter(sh).forEach(s=>gaps(mz.filter(q=>q===s||!sh(q)&&q.x0<s.x1&&q.x1>s.x0)));
 }
 
 /* camera presets of the hall tab, moved to where the hall lies on the plan */

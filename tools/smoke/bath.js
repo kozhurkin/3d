@@ -101,8 +101,8 @@ check('санузел: фасады, размеры, деталировка, н�
   let bp = p.document.querySelector('[data-panel="bath"]');
   const bq = (s) => bp.querySelector(s);
   const pressed = () => bp.querySelectorAll('[data-door]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.door);
-  // the bath tab's 13 dimension lines (a line and a label each), hidden in a flight
-  assert.strictEqual(p.run('VIEWS.bath.furniture().dims.children.length'), 26);
+  // the bath tab's 13 dimension lines and three between the shelves (a line and a label each), hidden in a flight
+  assert.strictEqual(p.run('VIEWS.bath.furniture().dims.children.length'), 32);
   assert.strictEqual(bq('#b-sizesBox').open, true, 'the sizes are open, as in the bath tab');
   assert.deepStrictEqual(pressed(), ['closed']);
   bq('[data-door="open"]').click();
@@ -208,4 +208,22 @@ check('санузел: ширина пенала и отступ над инст
   slide(p, 'bNiche', 700); slide(p, 'H', 2400); p.tick();
   bq('#b-saveDef').click();
   assert.deepStrictEqual((s => [s.P.Wc, s.P.Gap])(JSON.parse(storage.get('apt-bath-v2'))), [800, 800]);
+});
+
+check('санузел: размер между полками — один на отделение, в целых мм, за дверцами и корпусом не виден', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
+  const gaps = () => p.run('VIEWS.bath.furniture().dims.userData.gaps');
+  // the tall cabinet below the divider, above it, the upper cabinet: between two shelves in the middle
+  assert.deepStrictEqual(gaps(), ['349', '328', '345']);
+  // the room's dimensions are seen through everything, the ones between the shelves only where nothing covers them
+  assert.deepStrictEqual(p.run('(d=>d.children.map(o=>o.material.depthTest===true))(VIEWS.bath.furniture().dims)'), [...Array(26).fill(false), ...Array(6).fill(true)]);
+  const set = (k, v) => { const s = bq(`[data-p="${k}"]`); s.value = String(v); s.dispatch('input'); };
+  // each in the middle of the width and depth its boards share (bath mm): the tall cabinet across x, the upper one (along the left wall) across z
+  const at = p.run('VIEWS.bath.furniture().dims.children.slice(26).filter((o,i)=>i%2).map(s=>[s.position.x,s.position.y,s.position.z].map(v=>Math.round(v/MM)))');
+  assert.deepStrictEqual(at, [[800, 644, 140], [800, 1724, 140], [95, 2050, 700]]);
+  set('Nb', 0); set('Nu', 0);
+  assert.deepStrictEqual(gaps(), ['328'], 'only the section that has shelves');
+  set('Nh', 0);
+  assert.deepStrictEqual(gaps(), []);
 });

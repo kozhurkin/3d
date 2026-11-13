@@ -181,7 +181,7 @@ function buildAppliances(g){
 }
 
 /* ---------- dimension lines of the kitchen (kitchen axes; they belong to the kitchen and move with it) ---------- */
-function buildDims(dim){
+function buildDims(dim,gaps){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
   const c=current,zf=P.Db+40;let x=0;
   [P.B1,P.B2,P.B3].forEach(w=>{dim(V(x,P.Ct+60,zf),V(x+w,P.Ct+60,zf),`${w}`,Y);x+=w;});
@@ -191,6 +191,9 @@ function buildDims(dim){
   dim(V(-60,P.Ct,P.Dw+40),V(-60,c.yW,P.Dw+40),`${c.yW-P.Ct}`,X);
   if(P.Ant!==false)dim(V(P.W+80,c.yAnt,P.Dw+40),V(P.W+80,P.H,P.Dw+40),`${P.Ha}`,X);
   dim(V(P.W+80,0,0),V(P.W+80,0,P.Db),`${P.Db}`,Y);
+  // between the shelves of each wall cabinet
+  if(P.Nw){const b=c.parts.filter(q=>/^(Дно|Полка|Крышка) навесного шкафа/.test(q.name));
+    [...new Set(b.map(q=>q.x0))].forEach(x=>gaps(b.filter(q=>q.x0===x)));}
 }
 
 /* camera presets of the kitchen (as in the kitchen tab), moved to where the kitchen lies on the plan */

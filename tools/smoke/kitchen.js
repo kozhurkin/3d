@@ -206,3 +206,15 @@ check('кухня: короткая стена ничего не ужимает,
   b3.value = '450'; b3.dispatch('input'); b3.value = '600'; b3.dispatch('input');
   assert.strictEqual(P()[2], 100);
 });
+
+check('кухня: размер между полками — один на навесной шкаф, за дверцами не виден, без полок — нет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const kq = (s) => p.document.querySelector('[data-panel="kitchen"]').querySelector(s);
+  const f = 'VIEWS.kitchen.furniture()';
+  // two wall cabinets and the shorter one over the hob; the mezzanines and the base cabinets have no shelf stacks
+  assert.deepStrictEqual(p.run(`${f}.dims.userData.gaps`), ['343', '343', '293']);
+  assert.deepStrictEqual(p.run(`(d=>d.children.slice(-6).map(o=>o.material.depthTest===true))(${f}.dims)`), Array(6).fill(true));
+  const n = kq('[data-p="Nw"]'); n.value = '0'; n.dispatch('input');
+  assert.deepStrictEqual(p.run(`${f}.dims.userData.gaps`), []);
+  assert.ok(p.run(`${f}.dims.children.every(o=>o.material.depthTest===false)`), 'the room\'s own dimensions are seen through everything');
+});

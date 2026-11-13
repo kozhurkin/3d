@@ -128,7 +128,7 @@ const clip=furnClip();   // the bathroom's floor and top planes
 function build(){
   T=P.T||16;TF=P.TF||16;current=computeParts(P);
   const prev=doors,V=VS.bath;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
+  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open'}));
   sani=new THREE.Group();buildSanitary(sani);model.add(sani);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
   clipToFloor(model,clip);
@@ -140,11 +140,10 @@ function build(){
 }
 // the bathroom where it lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
-// what the bathroom shows wherever it is seen: fronts, joint lines (the installation, the toilet and the dimensions: every frame, below)
+// what the bathroom shows wherever it is seen: fronts (the installation, the toilet and the dimensions: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.bath;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
-  model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
 }
 // every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; in a flight it sinks into the floor
 // or rises out of it; the doors swing wherever they are seen
@@ -208,8 +207,8 @@ function syncDoorMode(){
 panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
   const V=VS.bath;V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
   syncDoorMode();applyVisibility();saveView('bath');}));
-// dimensions, walls with the installation and the toilet, joint lines of the parts
-const toggles={dims:'#b-tDims',walls:'#b-tWall',edges:'#b-tEdges'};
+// dimensions, walls with the installation and the toilet
+const toggles={dims:'#b-tDims',walls:'#b-tWall'};
 Object.entries(toggles).forEach(([k,s])=>bq(s).addEventListener('change',e=>{VS.bath[k]=e.target.checked;applyVisibility();saveView('bath');}));
 
 /* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one of them ---------- */
@@ -336,7 +335,7 @@ addView('bath',{
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the bathroom
   furniture:()=>({model,doors,P,current,sani,dims:dimsGroup,clip,foot}),   // the built bathroom: for clicks on its fronts and the checks
-  defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
+  defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncBath,

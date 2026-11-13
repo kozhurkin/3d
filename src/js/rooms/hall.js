@@ -7,7 +7,7 @@
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening
-const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,Ec:30,T:16,TF:16,Feet:false};
+const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false};
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -34,21 +34,27 @@ function computeParts(p){
     const y=i===p.N+1?Hb-T:FL+pl+i*step;
     add(i===0?'Дно правой колонны':i===p.N+1?'Крышка правой колонны':'Полка правой колонны','carcass',rx,W-T,y,y+T,T,Dc);
   }
-  // top: two separate carcasses for easier installation
-  const ym=Hb+p.Ht/2-T/2;
+  /* top: two separate carcasses for easier installation, or one (mezzOne) — its bottom, top and rails across the whole width,
+     a partition centred on the joint of the fronts (each section half a board wider than its box was), the fronts the same.
+     No back panel: two 100 mm rails at the back (top and bottom) keep the box square and take the wall fixings */
+  const ym=Hb+p.Ht/2-T/2,RB=100;
   const topBox=(nm,x0,x1)=>{
-    // no back panel: two 100 mm rails at the back (top and bottom) keep the box square and take the wall fixings
-    const RB=100;
     add('Бок антресоли — '+nm,'carcass',x0,x0+T,Hb,p.H,0,Dc);
     add('Бок антресоли — '+nm,'carcass',x1-T,x1,Hb,p.H,0,Dc);
     add('Дно антресоли — '+nm,'carcass',x0+T,x1-T,Hb,Hb+T,0,Dc);
     add('Крышка антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T,p.H,0,Dc);
     add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,Hb+T,Hb+T+RB,0,T);
     add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T-RB,p.H-T,0,T);
-    add('Полка антресоли — '+nm,'carcass',x0+T,x1-T,ym,ym+T,0,Dc-20);
   };
-  topBox('центральный корпус',0,rx);
-  topBox('правый корпус',rx,W);
+  const shelf=(nm,x0,x1)=>add('Полка антресоли — '+nm,'carcass',x0,x1,ym,ym+T,0,Dc-20);
+  if(p.mezzOne){
+    topBox('единый корпус',0,W);
+    add('Перегородка антресоли','carcass',rx-T/2,rx+T/2,Hb+T,p.H-T,T,Dc);   // in front of the rails
+    shelf('левая секция',T,rx-T/2);shelf('правая секция',rx+T/2,W-T);
+  }else{
+    topBox('центральный корпус',0,rx);shelf('центральный корпус',T,rx-T);
+    topBox('правый корпус',rx,W);shelf('правый корпус',rx+T,W-T);
+  }
   if(p.reveal){
     const z0=-p.Rv;
     add('Обрамление откоса левое','carcass',p.Lw-T,p.Lw,0,Hb,z0,0);
@@ -108,7 +114,7 @@ const clip=furnClip();   // the hall cabinet's floor and top planes
 function build(){
   fromModel();
   const prev=doors,V=VS.hall;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
+  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open'}));
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
   clipToFloor(model,clip);
   // its footprint for «Контуры» on the plan: the false panel, the shelf column, the cladding of the reveals
@@ -117,11 +123,10 @@ function build(){
 }
 // the cabinet where the hall lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
-// what the cabinet shows wherever it is seen: fronts, joint lines (the dimensions, the walls and the entrance door: every frame, below)
+// what the cabinet shows wherever it is seen: fronts (the dimensions, the walls and the entrance door: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.hall;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
-  model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
 }
 // every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; in a flight it sinks into the floor
 // or rises out of it; the doors swing wherever they are seen; in the hall's own view «Стена и дверь» off takes away the walls,
@@ -166,15 +171,17 @@ const frameSd=hq('#hFrameSd');
 const showSd=()=>Math.min(VS.hall.Sd,hLen);
 frameSd.addEventListener('input',e=>{VS.hall.Sd=+e.target.value;saveView('hall');syncHall();
   if(view==='hall'){buildWalls(VIEWS.hall);aimView();}});
-// what the cabinet has: the reveal cladding (the false panel and the column grow by a board), the plinth, feet; panel thickness
+// what the cabinet has: the reveal cladding (the false panel and the column grow by a board), the plinth, feet, the mezzanine
+// in one box; panel thickness
 function syncThick(){
-  hq('#h-tReveal').checked=!!P.reveal;hq('#h-tPlinth').checked=!!P.plinth;hq('#h-tFeet').checked=!!P.Feet;
+  hq('#h-tReveal').checked=!!P.reveal;hq('#h-tPlinth').checked=!!P.plinth;hq('#h-tFeet').checked=!!P.Feet;hq('#h-tMezzOne').checked=!!P.mezzOne;
   hq('#h-Pl').disabled=!P.plinth;hq('#h-fPl').style.opacity=P.plinth?1:.45;
   panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));
 }
 hq('#h-tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;build();syncIds();});
 hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;syncThick();build();});
 hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;build();});
+hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;build();});
 panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();syncIds();}));
 // cabinet sizes; the height stays between the mezzanine's least and the ceiling
 const ids=['H','D','N','Pl'];
@@ -193,8 +200,8 @@ panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>
   syncDoorMode();applyVisibility();saveView('hall');}));
 // the entrance door of the model, opened or closed from here as by a click on it
 hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
-// dimensions, the walls with the entrance door, joint lines of the parts
-const toggles={dims:'#h-tDims',walls:'#h-tWall',edges:'#h-tEdges'};
+// dimensions, the walls with the entrance door
+const toggles={dims:'#h-tDims',walls:'#h-tWall'};
 Object.entries(toggles).forEach(([k,s])=>hq(s).addEventListener('change',e=>{VS.hall[k]=e.target.checked;applyVisibility();saveView('hall');}));
 
 /* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one of them ---------- */
@@ -311,7 +318,7 @@ addView('hall',{
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the hall
   furniture:()=>({model,doors,P,current,dims:dimsGroup,clip,foot}),   // the built cabinet: for clicks on its fronts and the checks
-  defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
+  defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncHall,

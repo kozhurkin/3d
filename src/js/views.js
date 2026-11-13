@@ -91,7 +91,8 @@ const furnWhole=()=>H*MM+.05;
 function furnRest(){
   const V=VS.plan;
   if(view!=='plan'||V.fcut===false)return {c:furnWhole(),f:0};
-  const o=V.Wm==='outline';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM,f:o?1:0};
+  // 1 mm above the walls: a top at exactly the cut (cabinets up to the ceiling at 100%) would flicker, half clipped
+  const o=V.Wm==='outline';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM+.001,f:o?1:0};
 }
 // … now: in a flight from how it was at the start to how the new view shows it; a room that is there at one end only
 // keeps that end's (it sinks or rises as it is cut there)

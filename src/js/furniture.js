@@ -143,8 +143,8 @@ function applyContrast(mats,FIN,ec){
 const DMAX=1.45;
 function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;}
 /* c: computeParts() of a room; prev: the doors of the previous build (by key they keep how open they were);
-   open: how new doors start; edges: joint lines shown. Returns the group (room axes, mm → m) and its doors */
-function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
+   open: how new doors start. Returns the group (room axes, mm → m) and its doors */
+function buildParts(c,mats,{prev=[],open=false}={}){
   const model=new THREE.Group(),doors=[],slideHolders={},partSeed=partSeeder(),prevDoors={};
   prev.forEach(d=>prevDoors[d.key]=d);
   const door=(g,extra)=>{const key=extra.key,pd=prevDoors[key];
@@ -154,7 +154,7 @@ function buildParts(c,mats,{prev=[],open=false,edges=true}={}){
     const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz));
     const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p),p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
     mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
-    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats.edge);e.userData.edge=true;e.visible=edges;e.raycast=()=>{};mesh.add(e);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats.edge);e.raycast=()=>{};mesh.add(e);
     const cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM;
     if(p.mat==='front'){
       const holder=new THREE.Group(),key=p.name+'|'+doors.length;

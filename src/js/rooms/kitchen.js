@@ -203,7 +203,7 @@ const clip=furnClip();   // the kitchen's floor and top planes
 function build(){
   T=P.T||16;TF=P.TF||16;current=computeParts(P);
   const prev=doors,V=VS.kitchen;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open',edges:V.edges!==false}));
+  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open'}));
   appl=new THREE.Group();buildAppliances(appl);model.add(appl);
   dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
   clipToFloor(model,clip);
@@ -213,11 +213,10 @@ function build(){
 }
 // the kitchen where it lies on the plan
 function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
-// what the kitchen shows wherever it is seen: fronts, joint lines (the appliances and the dimensions: every frame, below)
+// what the kitchen shows wherever it is seen: fronts (the appliances and the dimensions: every frame, below)
 function applyVisibility(){
   if(!model)return;const V=VS.kitchen;
   model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
-  model.traverse(o=>{if(o.userData.edge)o.visible=V.edges!==false;});
 }
 // every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; the fronts swing toward where
 // they were sent, or follow a long press
@@ -289,8 +288,8 @@ function syncDoorMode(){
 panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
   const V=VS.kitchen;V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
   syncDoorMode();applyVisibility();saveView('kitchen');}));
-// dimensions, walls with the appliances, joint lines of the parts
-const toggles={dims:'#k-tDims',walls:'#k-tWall',edges:'#k-tEdges'};
+// dimensions, walls with the appliances
+const toggles={dims:'#k-tDims',walls:'#k-tWall'};
 Object.entries(toggles).forEach(([k,s])=>kq(s).addEventListener('change',e=>{VS.kitchen[k]=e.target.checked;applyVisibility();saveView('kitchen');}));
 
 /* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one group ---------- */
@@ -409,7 +408,7 @@ addView('kitchen',{
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the kitchen
   furniture:()=>({model,doors,P,current,appl,dims:dimsGroup,clip,foot}),   // the built kitchen: for clicks on its fronts and the checks
-  defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
+  defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true},
   panel,
   home:()=>setCam('persp'),
   sync:syncKitchen,

@@ -341,7 +341,7 @@ check('кухня: рамка левой стены, переходы и раз�
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2000'; fl.dispatch('input');
   assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true, fronts: 'closed', dims: true, walls: true, edges: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true, fronts: 'closed', dims: true, walls: true });
   fl.value = '9000'; fl.dispatch('input');   // no further than the window wall, which stays out of the kitchen view
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
@@ -491,6 +491,21 @@ const piece = (p, id) => p.run(`(w=>({sx:w.m.scale.x, sy:w.m.scale.y, sz:w.m.sca
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ ${b}`);
 
 const bathWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.bath)}))';
+
+check('шкафы: контуры деталей всегда видны, галочки нет', () => {
+  // an old saved «edges: false» changes nothing
+  const rooms = { kitchen: 'k', bath: 'b', hall: 'h' };
+  const storage = new Map(Object.keys(rooms).map((k) => [`apt-view-${k}-v1`, JSON.stringify({ edges: false })]));
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  Object.entries(rooms).forEach(([k, l]) => {
+    assert.strictEqual(p.document.querySelector(`#${l}-tEdges`), null, k);
+    p.run(`showView("${k}")`); p.fly();
+    // every part has its joint lines, none hidden
+    const r = p.run(`(()=>{const ps=[];const walk=o=>{if(o.userData&&typeof o.userData.part.x0==="number")ps.push(o);(o.children||[]).forEach(walk);};walk(VIEWS.${k}.furniture().model);
+      return [ps.length, ps.filter(m=>m.children.some(e=>e.raycast&&e.visible!==false)).length];})()`);
+    assert.ok(r[0] > 0, k); assert.strictEqual(r[1], r[0], k);
+  });
+});
 
 check('санузел: стены ниши, обрезанные рамкой, как в старой вкладке', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
@@ -663,7 +678,7 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(w.find((x) => x.id === 'leftOuter').r, [-2200, -2000, 0, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shower').r, [-1000, -900, 1100, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shaft').r, [-900, -700, 1400, 1500]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: true, fronts: 'closed', dims: true, walls: true, edges: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: true, fronts: 'closed', dims: true, walls: true });
   // the plan makes the niche wider: the frame, the partition, the cabinets and the panel follow
   p.run('setModel({bNiche:1300})'); p.tick();
   assert.deepStrictEqual(p.run(bathWalls).find((x) => x.id === 'bathStub').r, [-700, -600, 0, 600]);
@@ -751,6 +766,26 @@ check('прихожая: шкаф-портал собирается, «Сост�
   r = h(); assert.ok(!r.parts.includes('Цоколь правой колонны (со стороны проёма)')); assert.strictEqual(hq('#h-Pl').disabled, true);
   const feet = hq('#h-tFeet'); feet.checked = true; feet.dispatch('change');
   assert.deepStrictEqual([h().P.Feet, h().feet], [true, 8]);
+  // the mezzanine in one box: one pair of sides, the bottom, the top and the rails across, a partition between the sections;
+  // the fronts and the two shelves stay
+  const mz = () => p.run('VIEWS.hall.furniture().current.parts.filter(x=>/антресол/i.test(x.name)&&x.mat==="carcass").map(x=>[x.name,x.x0,x.x1])');
+  const one = hq('#h-tMezzOne'); assert.strictEqual(one.checked, false);
+  const two = mz(), rx = h().P.W - h().P.Rw, t = h().P.T, W = h().P.W;
+  assert.strictEqual(two.filter((x) => x[0].startsWith('Бок')).length, 4);
+  one.checked = true; one.dispatch('change');
+  r = h(); const m = mz();
+  assert.strictEqual(r.P.mezzOne, true); assert.strictEqual(r.doors, nDoors);
+  assert.deepStrictEqual(m.filter((x) => x[0].startsWith('Бок')).map((x) => [x[1], x[2]]), [[0, t], [W - t, W]]);
+  ['Дно', 'Крышка', 'Ребро'].forEach((n) => m.filter((x) => x[0].startsWith(n)).forEach((x) => assert.deepStrictEqual([x[1], x[2]], [t, W - t], n)));
+  // the partition is centred on the joint of the fronts
+  const jt = p.run('VIEWS.hall.furniture().current.parts.filter(x=>x.name==="Фасад антресоли правый").map(x=>x.x0)')[0] - 1;
+  assert.strictEqual(jt, rx);
+  assert.deepStrictEqual(m.filter((x) => x[0] === 'Перегородка антресоли').map((x) => [x[1], x[2]]), [[rx - t / 2, rx + t / 2]]);
+  assert.deepStrictEqual(m.filter((x) => x[0].startsWith('Полка')).map((x) => [x[1], x[2]]), [[t, rx - t / 2], [rx + t / 2, W - t]]);
+  assert.strictEqual(two.length, 14);
+  assert.strictEqual(m.length, 9);
+  one.checked = false; one.dispatch('change');
+  assert.deepStrictEqual(mz(), two);
 });
 
 check('прихожая: без «Шкафов» на плане — только в своей вкладке, поднимается из пола, не выше потолка', () => {
@@ -845,7 +880,7 @@ check('прихожая: шкаф следует проёму с «Планир�
   const sd = p.document.getElementById('hFrameSd'); sd.value = '1900'; sd.dispatch('input');
   assert.deepStrictEqual(p.run(hallWalls).find((x) => x.id === 'hallBath').r, [-100, 0, 0, 1900]);
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, true]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900, sizes: true, fronts: 'closed', dims: true, walls: true, edges: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900, sizes: true, fronts: 'closed', dims: true, walls: true });
   // a flight to the bathroom and back
   p.run('showView("bath")'); p.fly();
   assert.strictEqual(p.run('view'), 'bath');
@@ -892,14 +927,16 @@ check('«Планировка»: «Резать шкафы по стенам» �
   // the top plane of a room (m), its footprint shown, its opacity
   const cut = (k) => p.run(`(f=>[f.clip[1].constant, f.foot.visible, f.foot.material.opacity])(VIEWS.${k}.furniture())`);
   assert.strictEqual(plan.querySelector('#pFurnCut').checked, true);
-  near(cut('kitchen')[0], 2.6, '«Разрез» at 100 %: up to the ceiling, whole');
+  // 1 mm above the walls: the tops of the cabinets up to the ceiling are not on the plane (they would flicker)
+  near(cut('kitchen')[0], 2.601, '«Разрез» at 100 %: up to the ceiling, whole');
+  assert.ok(cut('kitchen')[0] > 2.6 + 5e-4, 'the plane above the tops at the ceiling');
   // «Ряд»: every room cut at the walls' 10 %
   plan.querySelector('[data-wm="row"]').click(); p.tick();
-  rooms.forEach((k) => { const c = cut(k); near(c[0], 0.26, k); assert.strictEqual(c[1], false); });
+  rooms.forEach((k) => { const c = cut(k); near(c[0], 0.261, k); assert.strictEqual(c[1], false); });
   // the walls' height slider
   plan.querySelector('[data-wm="show"]').click();
   const wh = plan.querySelector('[data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
-  near(cut('hall')[0], 1.3, 'half the ceiling');
+  near(cut('hall')[0], 1.301, 'half the ceiling');
   // «Контуры»: nothing of the cabinets stands, their footprints are on the floor
   plan.querySelector('[data-wm="outline"]').click(); p.tick();
   rooms.forEach((k) => assert.deepStrictEqual(cut(k), [0, true, 1]));

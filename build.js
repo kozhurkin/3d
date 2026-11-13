@@ -1,4 +1,5 @@
-// Собирает src/* в один файл index.html: страницы встраиваются в shell.html как JSON-строки.
+// Собирает src/* в один файл index.html: приложение (app.html с модулями js/ и панелями panels/) встраивается
+// в shell.html JSON-строкой и открывается в iframe через srcdoc.
 const fs = require('fs');
 const path = require('path');
 
@@ -6,7 +7,8 @@ const src = path.join(__dirname, 'src');
 const read = (name) => fs.readFileSync(path.join(src, name), 'utf8');
 const escapeScript = (s) => s.replaceAll('</', '<\\/');
 
-const bridge = '<script>(function(){var p=parent;["PHOTO_GAIN","DECORS","PALETTE_WOOD","PALETTE_UNI"].forEach(function(k){window[k]=p[k];});window.renderPalette=new Function("return "+p.renderPalette.toString())();})();</script>';
+// декоры (3,4 МБ фотографий) лежат в shell один раз; приложение берёт их у родителя, а не несёт свою копию в srcdoc
+const bridge = '<script>(function(){var p=parent;["PHOTO_GAIN","DECORS","PALETTE_WOOD","PALETTE_UNI"].forEach(function(k){window[k]=p[k];});})();</script>';
 
 // <script src="js/….js"></script> в странице → содержимое модуля прямо в странице;
 // <!--include panels/….html--> → разметка из файла (панели вкладок)

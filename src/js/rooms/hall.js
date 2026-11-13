@@ -310,7 +310,7 @@ addView('hall',{
   // as in the hall tab: the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the hall
-  furniture:()=>({model,doors,P,current,dims:dimsGroup,clip,foot}),   // the built cabinet: for the plan (stage 7) and the checks
+  furniture:()=>({model,doors,P,current,dims:dimsGroup,clip,foot}),   // the built cabinet: for clicks on its fronts and the checks
   defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),

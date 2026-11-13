@@ -178,7 +178,7 @@ const root = path.join(__dirname, '..');
 // the decor library the shell carries (pages read it from their parent through the bridge)
 const decorsCtx = vm.createContext({});
 vm.runInContext(fs.readFileSync(path.join(root, 'src/decors.js'), 'utf8'), decorsCtx);
-const DECOR_PARENT = Object.fromEntries(['PHOTO_GAIN', 'DECORS', 'PALETTE_WOOD', 'PALETTE_UNI', 'renderPalette'].map((k) => [k, decorsCtx[k]]));
+const DECOR_PARENT = Object.fromEntries(['PHOTO_GAIN', 'DECORS', 'PALETTE_WOOD', 'PALETTE_UNI'].map((k) => [k, decorsCtx[k]]));
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const pi = html.indexOf('const PAGES=');
 const PAGES = new Function(html.slice(pi, html.indexOf(';\n', pi) + 1) + 'return PAGES;')();

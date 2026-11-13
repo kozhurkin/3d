@@ -22,7 +22,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 .tabs a[aria-current="page"]{background:var(--accent);color:var(--panel)}
 .tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .frames{flex:1;min-height:0;position:relative}
-.err{position:absolute;left:16px;top:16px;margin:0;color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 12px;z-index:2}
 .frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
 </style>
 
@@ -35,7 +34,6 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
   </nav>
 </header>
 <main class="frames">
-  <p id="err" class="err" hidden></p>
   <iframe id="f-app" title="Квартира" hidden></iframe>
 </main>
 

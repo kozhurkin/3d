@@ -335,7 +335,7 @@ addView('bath',{
   // as in the bath tab: the sun aims at the middle of the back wall, shadows cover 6 × 6 m
   sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
   anchor:O,   // the remembered camera moves with the bathroom
-  furniture:()=>({model,doors,P,current,sani,dims:dimsGroup,clip,foot}),   // the built bathroom: for the plan (stage 7) and the checks
+  furniture:()=>({model,doors,P,current,sani,dims:dimsGroup,clip,foot}),   // the built bathroom: for clicks on its fronts and the checks
   defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true,edges:true},
   panel,
   home:()=>setCam('persp'),

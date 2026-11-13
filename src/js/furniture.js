@@ -252,7 +252,7 @@ function furnFoot(c,extra=[]){
 function disposeGroup(gr){if(!gr)return;gr.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material&&!Array.isArray(o.material)&&o.material.map&&!Object.values(texCache).includes(o.material.map))o.material.map.dispose();});if(gr.parent)gr.parent.remove(gr);}
 
 /* ---------- finishes in the panel: palette, context menu, long press ---------- */
-// the decor and plain-colour swatches inside one room's panel (decors.js renderPalette fills the first match in the whole page)
+// the decor and plain-colour swatches inside one room's panel (every room has its own palette)
 function fillPalette(root){
   const esc=t=>String(t).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
   const w=root.querySelector('[aria-label="Декор"]');

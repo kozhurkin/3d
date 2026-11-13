@@ -97,8 +97,7 @@ function clamp(){
   const over=P.B1+P.B2+P.B3+P.Fr-P.W;if(over>0)P.Fr=Math.max(500,P.Fr-over);
 }
 // sizes that belong to the walls come from the plan; the run of cabinets and the fridge has to fit on the wall
-function fromModel(){P.W=A.kW;P.H=A.H;clamp();T=P.T||16;TF=P.TF||16;current=computeParts(P);}
-fromModel();
+function fromModel(){P.W=A.kW;P.H=A.H;clamp();T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
 
 /* ---------- finishes and materials ---------- */
 // finish per part group: wood decor or plain colour
@@ -121,7 +120,7 @@ const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metal
 /* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m) */
 function buildAppliances(g){
   const c=current;
-  const box=(x0,x1,y0,y1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,y1-y0,z1-z0),mat);m.position.set((x0+x1)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
+  const box=boxIn(g);
   const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
   // sink with mixer in the first base cabinet
   { const cx=b1/2,cz=.3;
@@ -185,8 +184,7 @@ function buildAppliances(g){
 }
 
 /* ---------- dimension lines of the kitchen (kitchen axes; they belong to the kitchen and move with it) ---------- */
-const dim=(a,b,txt,tick)=>roomDim(dimsGroup,a,b,txt,tick);
-function buildDims(){
+function buildDims(dim){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
   const c=current,zf=P.Db+40;let x=0;
   [P.B1,P.B2,P.B3].forEach(w=>{dim(V(x,P.Ct+60,zf),V(x+w,P.Ct+60,zf),`${w}`,Y);x+=w;});
@@ -197,49 +195,6 @@ function buildDims(){
   if(P.Ant!==false)dim(V(P.W+80,c.yAnt,P.Dw+40),V(P.W+80,P.H,P.Dw+40),`${P.Ha}`,X);
   dim(V(P.W+80,0,0),V(P.W+80,0,P.Db),`${P.Db}`,Y);
 }
-
-/* ---------- the kitchen in the scene: built when it is on screen and something changed ---------- */
-let model=null,doors=[],appl=null,dimsGroup=null,foot=null,dirty=true;
-const clip=furnClip();   // the kitchen's floor and top planes
-function build(){
-  T=P.T||16;TF=P.TF||16;current=computeParts(P);
-  const prev=doors,V=VS.kitchen;disposeGroup(model);
-  ({model,doors}=buildParts(current,mats,{prev,open:V.fronts==='open'}));
-  appl=new THREE.Group();buildAppliances(appl);model.add(appl);
-  dimsGroup=new THREE.Group();buildDims();model.add(dimsGroup);
-  clipToFloor(model,clip);
-  // its footprint for «Контуры» on the plan: the base run and the fridge
-  foot=furnFoot(current,[[current.xr+10,current.xF-10,20,P.Fd-10]]);if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}
-  place();scene.add(model);dirty=false;applyVisibility();updatePanel();
-}
-// the kitchen where it lies on the plan
-function place(){if(!model)return;const [ox,oz]=O();model.position.x=ox*MM;model.position.z=oz*MM;}
-// what the kitchen shows wherever it is seen: fronts (the appliances and the dimensions: every frame, below)
-function applyVisibility(){
-  if(!model)return;const V=VS.kitchen;
-  model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
-}
-// every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; the fronts swing toward where
-// they were sent, or follow a long press
-frameHooks.push((dt,ease)=>{
-  const on=view==='kitchen',s=presence('kitchen');
-  if(dirty&&(on||s>.001))build();
-  if(!model)return;
-  // in a flight the kitchen sinks into the floor or rises out of it; the floor hides what is below
-  model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
-  // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Контуры» its footprint shows
-  const fc=furnCut('kitchen');clip[1].constant=fc.c+model.position.y;
-  if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
-  // its dimension lines only in its own view, once it is reached; the appliances go with the walls there (as in the kitchen
-  // tab), elsewhere the walls are there
-  dimsGroup.visible=on&&VS.kitchen.dims!==false&&!inTransition();
-  appl.visible=!on||VS.kitchen.walls!==false;
-  if(on&&wallGroup)wallGroup.visible=VS.kitchen.walls!==false;
-  if(model.visible)doors.forEach(d=>{
-    if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
-    else d.a+=(d.t-d.a)*ease(.09);
-    turnDoor(d);});
-});
 
 /* camera presets of the kitchen (as in the kitchen tab), moved to where the kitchen lies on the plan */
 function setCam(v){
@@ -256,167 +211,50 @@ function setCam(v){
   shortWay();
 }
 
-/* ---------- panel ---------- */
+/* ---------- panel: what the kitchen has, the apron's finish and its texts ---------- */
 const panel=document.querySelector('[data-panel="kitchen"]'),kq=s=>panel.querySelector(s);
-kq('[data-cams]').querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>setCam(b.dataset.cam)));
-// how far from the kitchen wall the left wall shows: the view's frame, up to the window wall
-const frameL=kq('#kFrameL');
-const showL=()=>Math.min(VS.kitchen.L,A.kL);
-frameL.addEventListener('input',e=>{VS.kitchen.L=+e.target.value;saveView('kitchen');syncKitchen();
-  if(view==='kitchen'){buildWalls(VIEWS.kitchen);aimView();}});
-// cabinet sizes
-const ids=['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'];
-const syncIds=()=>ids.forEach(j=>{kq(`[data-p="${j}"]`).value=P[j];});
-ids.forEach(id=>kq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;clamp();syncIds();build();}));
-// what the kitchen has
-function syncThick(){kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
 function syncHob(){panel.querySelectorAll('[data-hob]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.hob===(P.Hob||'built')));}
-panel.querySelectorAll('[data-hob]').forEach(b=>b.addEventListener('click',()=>{P.Hob=b.dataset.hob;syncHob();build();}));
-kq('#k-tOvDr').addEventListener('change',e=>{P.OvDr=e.target.checked;build();});
-kq('#k-tHobAlong').addEventListener('change',e=>{P.HobAlong=e.target.checked;syncThick();build();});
-kq('#k-tApron').addEventListener('change',e=>{P.Apron=e.target.checked;build();});
-kq('#k-tDish').addEventListener('change',e=>{P.Dish=e.target.checked;build();});
-kq('#k-tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;syncThick();build();});   // without them «вверх» is greyed out
-kq('#k-tAntUp').addEventListener('change',e=>{P.AntUp=e.target.checked;build();});
-panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
-
-// fronts: all open, all closed (or nothing pressed when they differ), or taken off
-function syncDoorMode(){
-  const V=VS.kitchen;let st=V.fronts;
-  if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=DMAX-.01).length,z=doors.filter(d=>d.t<=.01).length;
-    st=n===doors.length?'open':z===doors.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
-  panel.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===st));
-}
-panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
-  const V=VS.kitchen;V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
-  syncDoorMode();applyVisibility();saveView('kitchen');}));
-// dimensions, walls with the appliances
-const toggles={dims:'#k-tDims',walls:'#k-tWall'};
-Object.entries(toggles).forEach(([k,s])=>kq(s).addEventListener('change',e=>{VS.kitchen[k]=e.target.checked;applyVisibility();saveView('kitchen');}));
-
-/* ---------- finishes: a swatch paints the carcass and the fronts; its menu paints one group ---------- */
-fillPalette(panel);
-const palette=[...panel.querySelectorAll('[data-decor],[data-uc]')];
-palette.forEach(b=>{const t=document.createElement('span');t.className='tags';b.appendChild(t);});
-const sameFin=(b,f)=>f.type==='wood'?b.dataset.decor===f.decor:(b.dataset.uc||'').toLowerCase()===(f.color||'').toLowerCase();
-const WHERE=['carcass','front','top','apron'];
-function syncFinish(){
-  palette.forEach(b=>{
-    const c=sameFin(b,FIN.carcass),f=sameFin(b,FIN.front),t=sameFin(b,FIN.top),a=P.Apron&&sameFin(b,finOf(FIN,'apron'));
-    b.setAttribute('aria-pressed',c||f||t||a);
-    b.querySelector('.tags').innerHTML=(c?'<b>К</b>':'')+(f?'<b>Ф</b>':'')+(t?'<b>С</b>':'')+(a?'<b>А</b>':'');
-  });
-  const custom=f=>f.type==='uni'&&!palette.some(b=>sameFin(b,f));
-  const cf=custom(FIN.front)?FIN.front:custom(FIN.carcass)?FIN.carcass:null;
-  kq('#k-uniColor').value=cf?cf.color:'#C2B8AA';
-  kq('#k-ccCard').classList.toggle('on',!!cf);
-  kq('#k-ccCode').textContent=cf?cf.color.toUpperCase():'палитра';
-  kq('#k-ccTags').innerHTML=(custom(FIN.carcass)?'<b>К</b>':'')+(custom(FIN.front)?'<b>Ф</b>':'')+(custom(FIN.top)?'<b>С</b>':'')+(P.Apron&&custom(finOf(FIN,'apron'))?'<b>А</b>':'');
-  kq('#k-finNow').innerHTML=`<span>Корпус</span><span>${finName(FIN.carcass)}</span><span>Фасады</span><span>${finName(FIN.front)}</span><span>Столешница</span><span>${finName(FIN.top)}</span>`+(P.Apron?`<span>Фартук</span><span>${FIN.apron?finName(FIN.apron)+' <button class="lnk" id="k-apronReset">как столешница</button>':'как столешница'}</span>`:'');
-  const ar=kq('#k-apronReset');if(ar)ar.addEventListener('click',()=>{FIN.apron=null;applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();});
-}
-function setFinish(f,where){
-  // a plain click paints the carcass and fronts; the worktop changes only through the menu
-  if(where==='both'){FIN.carcass=Object.assign({},f);FIN.front=Object.assign({},f);}else FIN[where]=Object.assign({},f);
-  applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();
-}
-const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};
-palette.forEach(b=>{
-  b.addEventListener('click',()=>setFinish(pickFor(b),'both'));
-  b.title='Клик — весь шкаф. Правая кнопка или долгое нажатие — только корпус, фасады, столешница или фартук';
-  b.addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>setFinish(pickFor(b),w),WHERE);});
-  longPress(b,(x,y)=>openCtx(x,y,w=>setFinish(pickFor(b),w),WHERE));
-});
-// own colour: the picker paints the whole cabinet, or the group chosen in its menu
-let ccWhere='both';
-const ccInput=kq('#k-uniColor');
-ccInput.addEventListener('click',()=>{if(!ccInput.dataset.keep)ccWhere='both';delete ccInput.dataset.keep;});
-kq('#k-ccCard').addEventListener('contextmenu',e=>{e.preventDefault();openCtx(e.clientX,e.clientY,w=>{ccWhere=w;ccInput.dataset.keep='1';ccInput.click();},WHERE);});
-ccInput.addEventListener('input',e=>setFinish({type:'uni',color:e.target.value,name:'Свой цвет '+e.target.value.toUpperCase()},ccWhere));
-// contrast of the end faces and joint lines
-const syncEc=()=>{kq('#k-Ec').value=P.Ec;kq('#k-oEc').textContent=P.Ec+'%';};
-kq('#k-Ec').addEventListener('input',e=>{P.Ec=+e.target.value;applyContrast(mats,FIN,P.Ec);syncEc();});
-
-/* ---------- cut list ---------- */
-const matName=m=>m==='apron'?'Фартук 6 мм · '+finName(finOf(FIN,'apron')):m==='back'?'ХДФ 4':m==='top'?`Столешница ${P.Tt} мм · `+finName(finOf(FIN,'top')):`ЛДСП ${m==='front'?TF:T} · `+finName(finOf(FIN,m));
-function cutList(){
-  const map=new Map();
-  current.parts.forEach(p=>{
-    const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0].map(v=>Math.round(v)).sort((a,b)=>b-a);
-    const key=p.name+'|'+d[0]+'|'+d[1];
-    if(!map.has(key))map.set(key,{name:p.name,mat:p.mat,L:d[0],B:d[1],t:d[2],n:0});map.get(key).n++;
-  });
-  return [...map.values()];
-}
-function updateCut(){
-  // group by material so each sheet decor can be ordered separately
-  const rows=cutList().sort((a,b)=>matName(a.mat).localeCompare(matName(b.mat)));const area={};
-  let last='';
-  kq('#k-cut').innerHTML=rows.map(r=>{const mn=matName(r.mat);area[mn]=(area[mn]||0)+r.L*r.B*r.n/1e6;
-    const head=mn!==last?`<tr><th colspan="3" class="mh">${mn}</th></tr>`:'';last=mn;
-    return head+`<tr><td>${r.name}</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.n}</td></tr>`;}).join('');
-  const total=rows.reduce((s,r)=>s+r.n,0);
-  kq('#k-tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')+(current.FL>0?`<span>Опоры регулируемые М6, шайба Ø15×5: ${current.feet.length} шт</span>`:'');
-  kq('#k-csv').value='Деталь;Материал;Длина;Ширина;Толщина;Кол-во\n'+rows.map(r=>[r.name,matName(r.mat),r.L,r.B,r.t,r.n].join(';')).join('\n');
-}
-kq('#k-copy').addEventListener('click',()=>{const ta=kq('#k-csv');copyText(ta,ta.value,kq('#k-copied'),'Скопировано');});
-
-/* ---------- settings to start with: in this browser, or as a code for the chat ----------
-   the cabinets and their finishes; the wall and the ceiling belong to the plan, the view settings are remembered by themselves */
-const KEY='apt-kitchen-v2';
-const getState=()=>{const p=Object.assign({},P);delete p.W;delete p.H;return {P:p,FIN:JSON.parse(JSON.stringify(FIN))};};
-const FACTORY=JSON.stringify(getState());
-function applyState(s){
-  if(s.P)Object.assign(P,s.P);
-  const okF=f=>f&&(f.type==='uni'||(f.type==='wood'&&DECORS[f.decor]));
-  if(s.FIN&&okF(s.FIN.carcass)&&okF(s.FIN.front)){FIN.carcass=s.FIN.carcass;FIN.front=s.FIN.front;if(okF(s.FIN.top))FIN.top=s.FIN.top;FIN.apron=okF(s.FIN.apron)?s.FIN.apron:null;}
-  fromModel();applyMaterials(mats,FIN,P.Ec);dirty=true;
-}
-{ const s=readJSON(KEY);if(s)applyState(s); }
-const defMsg=kq('#k-defMsg');
-kq('#k-saveDef').addEventListener('click',()=>{try{localStorage.setItem(KEY,JSON.stringify(getState()));defMsg.textContent='Сохранено в этом браузере';}catch(e){defMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
-kq('#k-resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY));syncKitchen();defMsg.textContent='Исходные настройки возвращены';});
-kq('#k-copyDef').addEventListener('click',()=>copyText(kq('#k-defCode'),JSON.stringify(getState()),defMsg,'Код скопирован'));
-// sizes, the wall and the ceiling (from the plan), what the finishes are, what is left between the cabinets
-function updatePanel(){
-  ids.forEach(id=>{kq(`[data-p-out="${id}"]`).textContent=/^N/.test(id)?P[id]:P[id]+' мм';});
+panel.querySelectorAll('[data-hob]').forEach(b=>b.addEventListener('click',()=>{P.Hob=b.dataset.hob;syncHob();k.build();}));
+kq('#k-tOvDr').addEventListener('change',e=>{P.OvDr=e.target.checked;k.build();});
+kq('#k-tHobAlong').addEventListener('change',e=>{P.HobAlong=e.target.checked;k.syncThick();k.build();});
+kq('#k-tApron').addEventListener('change',e=>{P.Apron=e.target.checked;k.build();});
+kq('#k-tDish').addEventListener('change',e=>{P.Dish=e.target.checked;k.build();});
+kq('#k-tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;k.syncThick();k.build();});   // without them «вверх» is greyed out
+kq('#k-tAntUp').addEventListener('change',e=>{P.AntUp=e.target.checked;k.build();});
+// the wall and the ceiling (from the plan), what the finishes are, what is left between the cabinets
+function panelText(){
   kq('#k-W').textContent=P.W+' мм';kq('#k-H').textContent=P.H+' мм';
-  const fc=finName(finOf(FIN,'carcass')),ff=finName(finOf(FIN,'front'));
-  const dn=fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`;
-  kq('#kSub').textContent=`стена ${P.W} мм · потолок ${P.H} мм · ${dn}; столешница — ${finName(FIN.top)}`;
+  kq('#kSub').textContent=`стена ${P.W} мм · потолок ${P.H} мм · ${k.finDesc()}; столешница — ${finName(FIN.top)}`;
   { const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),c=current;
     const pl=P.Plinth!==false?P.Pl:0,hb=P.Ct-P.Tt-pl;
     const free=P.W-(P.B1+P.B2+P.B3+P.Fr);
     kq('#k-gapBase').textContent=`Высота корпуса ${hb} мм · фасады ${hb-2} мм`+(free>0?` · справа свободно ${free} мм`:'');
     const hw=c.yAnt-c.yW,st=(hw-t)/(P.Nw+1);
     kq('#k-gapWall').textContent=`Высота навесных ${hw} мм`+(P.Nw?` · между полками ${f(st-t)} мм`:'')+` · вытяжка ${Math.max(c.yW,P.Ct+P.Gh)-P.Ct} мм над столешницей`; }
-  updateCut();
-}
-// the sizes block stays open or closed as it was left
-const sizesBox=kq('#k-sizesBox');
-sizesBox.addEventListener('toggle',()=>{if(VS.kitchen.sizes!==sizesBox.open){VS.kitchen.sizes=sizesBox.open;saveView('kitchen');}});
-function syncKitchen(){
-  frameL.max=A.kL;frameL.value=showL();kq('#kFrameLOut').textContent=showL();
-  sizesBox.open=VS.kitchen.sizes!==false;
-  Object.entries(toggles).forEach(([k,s])=>{kq(s).checked=VS.kitchen[k]!==false;});
-  syncIds();syncThick();syncDoorMode();syncFinish();syncEc();updatePanel();applyVisibility();
 }
 
-addView('kitchen',{
-  rooms:['kitchen'],
-  // the kitchen wall whole and the left wall up to L from it, as the kitchen tab showed them
-  frame:()=>{const [ox,oz]=O();return [ox-A.bear,ox+A.kW,kZ0,oz+showL()];},
-  // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
-  sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
-  anchor:O,   // the remembered camera moves with the kitchen
-  furniture:()=>({model,doors,P,current,appl,dims:dimsGroup,clip,foot}),   // the built kitchen: for clicks on its fronts and the checks
-  defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true},
-  panel,
-  home:()=>setCam('persp'),
-  sync:syncKitchen,
-  onDoors:syncDoorMode
+const k=roomKit('kitchen',{
+  P,FIN,mats,px:'k',panel,origin:O,fromModel,setCam,panelText,
+  fromPlan:['W','H'],
+  ids:['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'],
+  slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
+  dims:buildDims,
+  extra:{name:'appl',build:buildAppliances},   // the appliances go with the walls in the kitchen's view
+  foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10]],   // its footprint: the fridge besides the base run
+  syncFlags:()=>{kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();},
+  // finishes: the worktop and the apron (as the worktop unless it has its own) besides the carcass and the fronts
+  groups:['carcass','front','top','apron'],
+  shown:g=>g!=='apron'||!!P.Apron,
+  matName:m=>m==='apron'?'Фартук 6 мм · '+finName(finOf(FIN,'apron')):m==='top'?`Столешница ${P.Tt} мм · `+finName(finOf(FIN,'top')):null,
+  takeFin:(f,ok)=>{if(ok(f.top))FIN.top=f.top;FIN.apron=ok(f.apron)?f.apron:null;},
+  finNowTail:()=>P.Apron?`<span>Фартук</span><span>${FIN.apron?finName(FIN.apron)+' <button class="lnk" id="k-apronReset">как столешница</button>':'как столешница'}</span>`:'',
+  afterSyncFinish:()=>{const ar=kq('#k-apronReset');if(ar)ar.addEventListener('click',()=>{FIN.apron=null;applyMaterials(mats,FIN,P.Ec);k.syncFinish();k.updatePanel();});},
+  view:{
+    // the kitchen wall whole and the left wall up to L from it, as the kitchen tab showed them
+    frame:L=>{const [ox,oz]=O();return [ox-A.bear,ox+A.kW,kZ0,oz+L];},
+    // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
+    sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
+    defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true}
+  }
 });
-// the plan changed the sizes: the wall, the ceiling and the kitchen's place come along. The kitchen is rebuilt (when next in
-// the scene) only if its own sizes changed; otherwise it only moves — on the plan a slider moves every room at once
-modelHooks.push(()=>{const was=JSON.stringify(P);fromModel();if(JSON.stringify(P)!==was)dirty=true;else place();syncKitchen();});
 })();

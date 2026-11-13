@@ -5,7 +5,7 @@
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W and H are the plan's kitchen wall and ceiling
-const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38};
+const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,AntUp:false,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38};
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -72,7 +72,8 @@ function computeParts(p){
     for(let j=1;j<=p.Nw;j++){const y=y0+j*st;add('Полка навесного шкафа'+nm,'carcass',r.x0+T,r.x1-T,y-T/2,y+T/2,T,zcW-10);}
     add('Фасад навесного шкафа','front',r.x0+G/2,r.x1-G/2,y0,yAnt-G/2,zcW,zfW,{hinge:i===0?'L':'R'});
   });
-  // mezzanine row up to the ceiling: three equal boxes over the worktop and one over the fridge; bottoms are overlaid
+  // mezzanine row up to the ceiling: three equal boxes over the worktop and one over the fridge; bottoms are overlaid.
+  // Their fronts open to the sides in turn, or up (AntUp)
   if(p.Ant!==false&&p.Ha>2*T+40){
     const aw=xr/3,boxes=[[0,aw],[aw,2*aw],[2*aw,xr],[xr,xF]];
     boxes.forEach(([x0,x1],i)=>{
@@ -82,7 +83,7 @@ function computeParts(p){
       add('Бок антресоли'+nm,'carcass',x1-T,x1,yAnt+T,H,0,zcA);
       add('Крышка антресоли'+nm,'carcass',x0+T,x1-T,H-T,H,0,zcA);
       add('Ребро жёсткости антресоли'+nm,'carcass',x0+T,x1-T,yAnt+T,yAnt+T+Math.min(80,(p.Ha-2*T)/3),0,T);
-      add('Фасад антресоли','front',x0+G/2,x1-G/2,yAnt+G/2,H-G/2,zcA,zfA,{hinge:i%2?'R':'L'});
+      add('Фасад антресоли','front',x0+G/2,x1-G/2,yAnt+G/2,H-G/2,zcA,zfA,{hinge:p.AntUp?'U':i%2?'R':'L'});
     });
   }
   const feet=[];
@@ -268,14 +269,15 @@ const ids=['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha'
 const syncIds=()=>ids.forEach(j=>{kq(`[data-p="${j}"]`).value=P[j];});
 ids.forEach(id=>kq(`[data-p="${id}"]`).addEventListener('input',e=>{P[id]=+e.target.value;clamp();syncIds();build();}));
 // what the kitchen has
-function syncThick(){kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
+function syncThick(){kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();panel.querySelectorAll('[data-thick]').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.thick===(P[x.dataset.for]||16)));}
 function syncHob(){panel.querySelectorAll('[data-hob]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.hob===(P.Hob||'built')));}
 panel.querySelectorAll('[data-hob]').forEach(b=>b.addEventListener('click',()=>{P.Hob=b.dataset.hob;syncHob();build();}));
 kq('#k-tOvDr').addEventListener('change',e=>{P.OvDr=e.target.checked;build();});
 kq('#k-tHobAlong').addEventListener('change',e=>{P.HobAlong=e.target.checked;syncThick();build();});
 kq('#k-tApron').addEventListener('change',e=>{P.Apron=e.target.checked;build();});
 kq('#k-tDish').addEventListener('change',e=>{P.Dish=e.target.checked;build();});
-kq('#k-tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;build();});
+kq('#k-tAnt').addEventListener('change',e=>{P.Ant=e.target.checked;syncThick();build();});   // without them «вверх» is greyed out
+kq('#k-tAntUp').addEventListener('change',e=>{P.AntUp=e.target.checked;build();});
 panel.querySelectorAll('[data-thick]').forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.thick;syncThick();build();}));
 
 // fronts: all open, all closed (or nothing pressed when they differ), or taken off

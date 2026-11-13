@@ -139,9 +139,9 @@ function applyContrast(mats,FIN,ec){
 }
 
 /* ---------- parts → meshes ---------- */
-// cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F: axis x) or slides (S: axis z)
+// cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F/U: axis x, s: its way) or slides (S: axis z)
 const DMAX=1.45;
-function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;}
+function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.s*d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;}
 /* c: computeParts() of a room; prev: the doors of the previous build (by key they keep how open they were);
    open: how new doors start. Returns the group (room axes, mm → m) and its doors */
 function buildParts(c,mats,{prev=[],open=false}={}){
@@ -171,6 +171,10 @@ function buildParts(c,mats,{prev=[],open=false}={}){
         // tilting flap: turns forward around its lower front edge
         holder.position.set(0,p.y0*MM,p.z1*MM);mesh.position.set(cx,cy-p.y0*MM,cz-p.z1*MM);
         door(holder,{s:1,axis:'x',key});
+      }else if(p.hinge==='U'){
+        // lift-up front: turns up around its upper front edge
+        holder.position.set(0,p.y1*MM,p.z1*MM);mesh.position.set(cx,cy-p.y1*MM,cz-p.z1*MM);
+        door(holder,{s:-1,axis:'x',key});
       }else if(p.hinge==='S'){
         // pull-out drawer: the front and the drawer box slide forward together
         mesh.position.set(cx,cy,cz);slideHolders[p.slide]=holder;

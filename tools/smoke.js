@@ -391,6 +391,18 @@ check('кухня: шкафы и техника собираются, панел
   // along the worktop the offset slider hides
   const along = kq('#k-tHobAlong'); along.checked = true; along.dispatch('change');
   assert.strictEqual(kq('#k-fHx').hidden, true);
+  // the mezzanine fronts: to the sides in turn, or up around their upper front edge (to the ceiling, 1 mm below it)
+  const ant = () => p.run('(f=>f.current.parts.filter(x=>x.name==="Фасад антресоли").map(x=>x.hinge))(VIEWS.kitchen.furniture())');
+  const lifts = () => p.run('(f=>f.doors.filter(d=>d.axis==="x"&&d.s===-1).map(d=>Math.round(d.g.position.y*1000)))(VIEWS.kitchen.furniture())');
+  const up = kq('#k-tAntUp'); assert.strictEqual(up.checked, false);
+  assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
+  up.checked = true; up.dispatch('change');
+  assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
+  assert.strictEqual(k().doors, nDoors, 'every front still opens');
+  // without the mezzanines there is nothing to lift: greyed out
+  const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
+  assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
+  antOn.checked = true; antOn.dispatch('change'); assert.strictEqual(up.disabled, false);
 });
 
 check('кухня: шкафы в своей вкладке и на «Планировке», следуют её размерам', () => {
@@ -770,6 +782,7 @@ check('прихожая: шкаф-портал собирается, «Сост�
   // the fronts and the two shelves stay
   const mz = () => p.run('VIEWS.hall.furniture().current.parts.filter(x=>/антресол/i.test(x.name)&&x.mat==="carcass").map(x=>[x.name,x.x0,x.x1])');
   const one = hq('#h-tMezzOne'); assert.strictEqual(one.checked, false);
+  assert.match(PAGES.app, /створка, навешенная на неё, — на полунакладных петлях/, 'the hinges in the assumptions');
   const two = mz(), rx = h().P.W - h().P.Rw, t = h().P.T, W = h().P.W;
   assert.strictEqual(two.filter((x) => x[0].startsWith('Бок')).length, 4);
   one.checked = true; one.dispatch('change');

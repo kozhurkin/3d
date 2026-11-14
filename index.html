@@ -17,13 +17,26 @@
   --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; color-scheme:dark;}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column}
-.bar{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:nowrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tabs{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden}
 .tabs a{font:500 14px/1 var(--f-body);color:var(--fg);text-decoration:none;padding:9px 16px;background:var(--panel)}
 .tabs a+a{border-left:1px solid var(--line)}
 .tabs a[aria-current="page"]{background:var(--accent);color:var(--panel)}
 .tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
-.save{width:34px;height:34px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--fg);cursor:pointer}
+/* too narrow for the row of tabs: the open one with a menu of all of them (data-compact, set by fitBar) */
+.pick{position:relative;display:none;min-width:0}
+.bar[data-compact] .tabs{display:none}
+.bar[data-compact] .pick{display:block}
+.pick-btn{display:flex;align-items:center;gap:8px;height:34px;box-sizing:border-box;max-width:100%;padding:0 10px 0 16px;background:var(--accent);color:var(--panel);border:1px solid var(--accent);border-radius:4px;font:500 14px/1 var(--f-body);cursor:pointer}
+.pick-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pick-btn svg{flex:none;transition:transform .15s}
+.pick-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.pick-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pick-menu{position:absolute;z-index:10;left:0;top:calc(100% + 4px);min-width:100%;box-sizing:border-box;display:flex;flex-direction:column;padding:4px;background:var(--panel);border:1px solid var(--line);border-radius:4px;box-shadow:0 6px 18px rgba(0,0,0,.14)}
+.pick-menu a{font:500 14px/1 var(--f-body);color:var(--fg);text-decoration:none;padding:10px 12px;border-radius:3px;white-space:nowrap}
+.pick-menu a:hover,.pick-menu a:focus-visible{background:var(--accent-soft);outline:none}
+.pick-menu a[aria-current="page"]{color:var(--accent)}
+.save{flex:none;width:34px;height:34px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--fg);cursor:pointer}
 .save:hover{border-color:var(--accent);color:var(--accent)}
 .save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .save[aria-busy="true"]{cursor:progress;color:var(--muted)}
@@ -44,6 +57,10 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     <a href="#kitchen" data-tab="kitchen">Кухня</a>
     <a href="#walk" data-tab="walk">Обход</a>
   </nav>
+  <div class="pick">
+    <button class="pick-btn" id="pickBtn" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="pickMenu"><span id="pickLabel"></span><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="pick-menu" id="pickMenu" role="menu" aria-label="Вкладки" hidden></div>
+  </div>
   <button class="save" id="saveGlb" type="button" aria-label="Скачать 3D-модель (GLB)" title="Скачать 3D-модель (.glb): то, что видно сейчас"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3v9m-4-4 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13v2.5h12V13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </header>
 <main class="frames">
@@ -100,7 +117,46 @@ const PAGES={"app":"<!doctype html>\n<html lang=\"ru\"><head><meta charset=\"utf
     // a fresh app reads its view from appView; a loaded one flies there
     try{const w=fr.contentWindow;if(w&&w.showView)w.showView(cur);}catch(e){}
     tabs.forEach(t=>document.querySelector(`[data-tab="${t}"]`).setAttribute('aria-current',t===cur?'page':'false'));
+    tabs.forEach(t=>document.querySelector(`[data-pick="${t}"]`).setAttribute('aria-current',t===cur?'page':'false'));
+    pickLabel.textContent=document.querySelector(`[data-tab="${cur}"]`).textContent;
+    pickClose(false);
   }
+  /* the tabs and the save button in one row: when the row of tabs does not fit, the open tab only, the others in its menu */
+  const bar=document.querySelector('.bar'),nav=document.querySelector('.tabs'),
+    pickBtn=document.getElementById('pickBtn'),pickMenu=document.getElementById('pickMenu'),pickLabel=document.getElementById('pickLabel');
+  tabs.forEach(t=>{const src=document.querySelector(`[data-tab="${t}"]`),a=document.createElement('a');
+    a.href='#'+t;a.dataset.pick=t;a.setAttribute('role','menuitem');a.textContent=src.textContent;pickMenu.appendChild(a);});
+  function fitBar(){
+    // the row as it would be: measured with the tabs shown, in the same frame, so nothing flickers
+    bar.removeAttribute('data-compact');
+    const cs=getComputedStyle(bar),have=bar.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
+    const need=nav.scrollWidth+(parseFloat(cs.columnGap)||16)+save.offsetWidth;
+    if(need>have)bar.setAttribute('data-compact','');else pickClose(false);
+  }
+  const items=()=>[...pickMenu.querySelectorAll('[data-pick]')];
+  function pickOpen(){
+    pickMenu.hidden=false;pickBtn.setAttribute('aria-expanded','true');
+    (items().find(a=>a.getAttribute('aria-current')==='page')||items()[0]).focus();
+  }
+  function pickClose(focus){
+    if(pickMenu.hidden)return;
+    pickMenu.hidden=true;pickBtn.setAttribute('aria-expanded','false');if(focus)pickBtn.focus();
+  }
+  pickBtn.addEventListener('click',()=>pickMenu.hidden?pickOpen():pickClose(false));
+  pickBtn.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();pickOpen();}});
+  pickMenu.addEventListener('keydown',e=>{
+    const l=items(),i=l.indexOf(document.activeElement);
+    if(e.key==='Escape'||e.key==='Tab'){if(e.key==='Escape')e.preventDefault();pickClose(e.key==='Escape');}
+    else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();l[(i+(e.key==='ArrowDown'?1:l.length-1))%l.length].focus();}
+    else if(e.key==='Home'||e.key==='End'){e.preventDefault();l[e.key==='Home'?0:l.length-1].focus();}
+  });
+  // the chosen tab goes through the hash (show closes the menu); the same tab again only closes it
+  pickMenu.addEventListener('click',()=>pickClose(true));
+  // a click elsewhere, also into the app's frame (this window loses the focus then)
+  document.addEventListener('click',e=>{if(!pickMenu.hidden&&!pickBtn.parentElement.contains(e.target))pickClose(false);});
+  addEventListener('blur',()=>pickClose(false));
+  addEventListener('resize',fitBar);
+  if(document.fonts)document.fonts.ready.then(fitBar);
   // the model as it is on screen → kvartira.glb: the app makes the bytes (js/export.js), this page saves them
   const save=document.getElementById('saveGlb'),saveTitle=save.title;
   save.addEventListener('click',()=>{
@@ -114,7 +170,7 @@ const PAGES={"app":"<!doctype html>\n<html lang=\"ru\"><head><meta charset=\"utf
       .finally(()=>save.removeAttribute('aria-busy'));
   });
   new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
-  addEventListener('hashchange',show);show();
+  addEventListener('hashchange',show);show();fitBar();
 })();
 </script>
 

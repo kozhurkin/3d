@@ -233,8 +233,7 @@ check('shell: все вкладки — виды одного приложени
 check('shell: кнопка справа от вкладок сохраняет модель приложения в kvartira.glb', () => {
   const p = runPage('<html>' + html.slice(html.indexOf('<header')), { hash: '#plan' });
   const bar = p.document.querySelector('header'), save = p.document.getElementById('saveGlb');
-  assert.deepStrictEqual(bar.children.map((c) => c.tagName), ['NAV', 'BUTTON'], 'the button right after the tabs');
-  assert.strictEqual(save, bar.children[1]);
+  assert.strictEqual(save, bar.children[bar.children.length - 1], 'the button right of the tabs');
   // the page saves what the app gives: a link to the bytes, clicked once
   const blobs = [], links = [];
   p.document.body = el('body');
@@ -252,9 +251,9 @@ check('shell: кнопка справа от вкладок сохраняет �
   // the exporter could not come: the button says so, and the next click tries again
   const err = console.error; console.error = () => {};
   p.ctx.document.getElementById('f-app').contentWindow = { exportGLB: () => (calls++, now(false, new Error('offline'))) };
-  save.click(); console.error = err;
+  save.click();
   assert.ok(/Не удалось/.test(save.title) && !save.hasAttribute('aria-busy'));
-  save.click(); assert.strictEqual(calls, 3);
+  save.click(); console.error = err; assert.strictEqual(calls, 3);
 });
 
 check('экспорт GLB: в файле только видимые сетки, непрозрачные текстуры — JPEG; всё возвращается как было', () => {
@@ -278,4 +277,33 @@ check('экспорт GLB: в файле только видимые сетки,
   p.run('(THREE.GLTFExporter=undefined,exportGLB(),exportGLB(),0)');
   assert.deepStrictEqual(p.document.head.children.map((s) => s.src), ['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js']);
   assert.ok(/three\.js\/r128\/three\.min\.js/.test(PAGES.app), 'the page runs r128');
+});
+
+check('shell: вкладки и кнопка в одну строку; не влезают — открытая вкладка и меню остальных', () => {
+  const p = runPage('<html>' + html.slice(html.indexOf('<header')), { hash: '#plan' });
+  const $ = (id) => p.document.getElementById(id), bar = p.document.querySelector('header'), nav = p.document.querySelector('nav');
+  const btn = $('pickBtn'), menu = $('pickMenu'), save = $('saveGlb');
+  const picks = () => menu.querySelectorAll('[data-pick]');
+  const cur = (sel) => p.document.querySelectorAll(sel).filter((a) => a.getAttribute('aria-current') === 'page').length;
+  assert.deepStrictEqual(bar.children.map((c) => c.className), ['tabs', 'pick', 'save'], 'one row: the tabs, their menu, the button');
+  assert.deepStrictEqual(picks().map((a) => [a.dataset.pick, a.href, a.getAttribute('role')]),
+    ['plan', 'hall', 'bath', 'kitchen', 'walk'].map((t) => [t, '#' + t, 'menuitem']), 'the menu holds every tab');
+  assert.deepStrictEqual([bar.hasAttribute('data-compact'), menu.hidden, picks()[0].getAttribute('aria-current')], [false, true, 'page']);
+  // the window narrower than the tabs and the button: the open tab only
+  Object.assign(nav, { scrollWidth: 520 }); Object.assign(save, { offsetWidth: 34 }); bar.clientWidth = 500;
+  p.ctx.dispatch('resize');
+  assert.ok(bar.hasAttribute('data-compact'));
+  btn.click();
+  assert.deepStrictEqual([menu.hidden, btn.getAttribute('aria-expanded')], [false, 'true']);
+  // a tab chosen in the menu: the hash moves, the menu closes, both lists mark it
+  p.ctx.location.hash = '#bath'; p.ctx.dispatch('hashchange');
+  assert.deepStrictEqual([menu.hidden, btn.getAttribute('aria-expanded'), $('f-app').hidden], [true, 'false', false]);
+  assert.deepStrictEqual([menu.querySelector('[data-pick="bath"]').getAttribute('aria-current'), cur('[data-tab]'), cur('[data-pick]')], ['page', 1, 1]);
+  // Esc closes it; a click elsewhere too; the button again too
+  btn.click(); menu.dispatch('keydown', { key: 'Escape' }); assert.ok(menu.hidden);
+  btn.click(); p.document.listeners.click.forEach((f) => f({ target: nav })); assert.ok(menu.hidden);
+  btn.click(); btn.click(); assert.ok(menu.hidden);
+  // the window wide again: the row of tabs
+  bar.clientWidth = 600; p.ctx.dispatch('resize');
+  assert.ok(!bar.hasAttribute('data-compact'));
 });

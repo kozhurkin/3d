@@ -72,19 +72,23 @@ function partSeeder(){
   return function partSeed(p){let h=2166136261;const n=seedCount[p.name]=(seedCount[p.name]||0)+1;const k=p.name+'|'+n;for(let i=0;i<k.length;i++){h^=k.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}return h%100000+13;}
 }
 /* a box sx × sy × sz (m) with its edges and corners rounded by r (m): a box grid of 2k+1 segments a side, k of them in each
-   rounding, every vertex pushed out from the inner box (r in from the faces) to r from it — its normal the way it was pushed */
+   rounding, every vertex pushed out from the inner box (r in from the faces) to r from it — its normal the way it was pushed.
+   A picture on a face lies over it evenly, as on a plain box (its roundings at the picture's edges), not squeezed into its one
+   flat segment: u, v by where the vertex is on the face, each face's axes and ways as BoxGeometry's (px, nx, py, ny, pz, nz) */
+const RB_UV=[[2,-1,1,-1],[2,1,1,-1],[0,1,2,1],[0,1,2,-1],[0,1,1,-1],[0,-1,1,-1]];   // per face: u's axis and way, v's axis and way
 function roundBoxGeo(sx,sy,sz,r,k=4){
-  const n=2*k+1,g=new THREE.BoxGeometry(sx,sy,sz,n,n,n),pos=g.attributes.position,nor=g.attributes.normal,h=[sx/2,sy/2,sz/2];
+  const n=2*k+1,g=new THREE.BoxGeometry(sx,sy,sz,n,n,n),pos=g.attributes.position,nor=g.attributes.normal,uv=g.attributes.uv,h=[sx/2,sy/2,sz/2];
   r=Math.min(r,...h)*.999;
   const map=(c,hh)=>{const i=Math.round((c/(2*hh)+.5)*n);return i<=k?-hh+r*i/k:hh-r*(n-i)/k;};   // k steps over each rounding, one over the flat
   const p=new THREE.Vector3(),q=new THREE.Vector3(),d=new THREE.Vector3();
   for(let i=0;i<pos.count;i++){
     p.set(map(pos.getX(i),h[0]),map(pos.getY(i),h[1]),map(pos.getZ(i),h[2]));
+    const [ua,us,va,vs]=RB_UV[Math.floor(i/((n+1)*(n+1)))],c=[p.x,p.y,p.z];uv.setXY(i,.5+us*c[ua]/(2*h[ua]),.5-vs*c[va]/(2*h[va]));
     q.set(Math.max(-h[0]+r,Math.min(h[0]-r,p.x)),Math.max(-h[1]+r,Math.min(h[1]-r,p.y)),Math.max(-h[2]+r,Math.min(h[2]-r,p.z)));
     d.subVectors(p,q);if(d.lengthSq()<1e-12)d.set(nor.getX(i),nor.getY(i),nor.getZ(i));d.normalize();
     p.copy(q).addScaledVector(d,r);pos.setXYZ(i,p.x,p.y,p.z);nor.setXYZ(i,d.x,d.y,d.z);
   }
-  pos.needsUpdate=nor.needsUpdate=true;
+  pos.needsUpdate=nor.needsUpdate=uv.needsUpdate=true;
   return g;
 }
 function boxGeo(sx,sy,sz,seed,axis){

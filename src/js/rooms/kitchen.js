@@ -311,24 +311,21 @@ function buildMacbook(desk,opts){
   const {W,D,feet,base,keys,lid,at,open}=MB,yb=feet+base;mbMats();
   const place=new THREE.Group();place.position.set((DK.W-W)/2*MM,DK.H*MM,at*MM);place.userData.macbook=true;place.userData.info=INFO.macbook;desk.add(place);
   const q=new THREE.Group();place.add(q);   // the door's holder: everything, so a click anywhere on it opens it
-  // a rounded box; face (the box's: 2 top, 3 bottom) with a picture laid flat over it: u from x's left, v by uv(z) (sizes mm)
-  const rb=(g,x0,x1,y0,y1,z0,z1,r,face,mat,v)=>{const sx=(x1-x0)*MM,sz=(z1-z0)*MM,m=new THREE.Mesh(roundBoxGeo(sx,(y1-y0)*MM,sz,r*MM),[0,1,2,3,4,5].map(i=>i===face?mat:mbSilverMat));
-    const p=m.geometry.attributes.position,uv=m.geometry.attributes.uv;for(let i=0;i<p.count;i++)uv.setXY(i,p.getX(i)/sx+.5,v(p.getZ(i)/sz));uv.needsUpdate=true;
+  // a rounded box, silver but one face (the box's: 2 top, 3 bottom) with its picture (sizes mm)
+  const rb=(g,x0,x1,y0,y1,z0,z1,r,face,mat)=>{const m=new THREE.Mesh(roundBoxGeo((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM,r*MM),[0,1,2,3,4,5].map(i=>i===face?mat:mbSilverMat));
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
-  // the body on four round feet: its top's picture with its top at the back
-  rb(q,0,W,feet,yb,0,D,4,2,mbTopMat,z=>.5-z);
+  // the body on four round feet: its top's picture (a box's top face: the picture's top at the back)
+  rb(q,0,W,feet,yb,0,D,4,2,mbTopMat);
   [[24,24],[W-24,24],[24,D-24],[W-24,D-24]].forEach(([x,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,feet*MM,20),mbFootMat);f.position.set(x*MM,feet/2*MM,z*MM);q.add(f);});
   // the lid on its hinge at the back, half its thickness over the keys' room; closed, it lies over the top, from its back to its front.
-  // Its inner face's picture with its top away from the hinge
+  // Its inner face's picture (a box's bottom face: the picture's top away from the hinge)
   const L=new THREE.Group();L.position.set(0,(yb+keys+lid/2)*MM,2*MM);q.add(L);
-  rb(L,0,W,-lid/2,lid/2,0,D-2,2.5,3,mbLidMat,z=>.5+z);
+  rb(L,0,W,-lid/2,lid/2,0,D-2,2.5,3,mbLidMat);
   // the display lights up as the lid opens past 30°, full by 63°
   const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
   const follow=a=>{L.rotation.x=-a;mbLidMat.emissiveIntensity=sm((a-.5)/.6);};
-  // it starts open (closed only once it was closed: it keeps how open it was through a rebuild)
-  const fresh=!((opts&&opts.prev)||[]).some(d=>d.key==='macbook'),d=applDoor(q,{key:'macbook',axis:'none',max:open,follow},opts);
-  if(fresh){d.a=d.t=open;turnDoor(d);}
-  return [d];
+  // it starts open
+  return [applDoor(q,{key:'macbook',axis:'none',max:open,startOpen:true,follow},opts)];
 }
 
 /* the display cabinet as IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
@@ -468,10 +465,11 @@ function buildSofa(g,opts){
 }
 
 /* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps
-   how open it was through a rebuild; it opens and closes with the kitchen's fronts (clicks, «Открыты/Закрыты», the walk) */
+   how open it was through a rebuild; it opens and closes with the kitchen's fronts (clicks, «Открыты/Закрыты», the walk).
+   A new one starts closed (opening, if the fronts are open), or open already if it has startOpen */
 function applDoor(g,extra,{prev=[],open=false}={}){
-  const pd=prev.find(d=>d.key===extra.key),max=extra.max||DMAX;
-  const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?max:0),last:pd&&pd.last},extra,{max});turnDoor(d);return d;
+  const pd=prev.find(d=>d.key===extra.key),max=extra.max||DMAX,a0=extra.startOpen?max:0;
+  const d=Object.assign({g,a:pd?pd.a:a0,t:pd?pd.t:(open?max:a0),last:pd&&pd.last},extra,{max});turnDoor(d);return d;
 }
 
 /* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m).

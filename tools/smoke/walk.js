@@ -271,17 +271,18 @@ check('обход: на сенсорном экране палец в левом
   const p = open();
   const c = p.document.getElementById('c'), st = p.document.getElementById('walkStick'), hint = p.document.getElementById('walkHint');
   const touch = (t, id, x, y) => c.dispatch(t, { pointerType: 'touch', button: 0, pointerId: id, clientX: x, clientY: y });
-  const info = p.document.getElementById('infoBtn');
-  assert.deepStrictEqual([st.hidden, info.hidden], [true, false], 'no stick before a touch: the checks have no touch screen');
+  const info = p.document.getElementById('infoBtn'), cam = p.document.getElementById('camBtn');
+  cam.click(); p.tick();   // the mini view open
+  assert.deepStrictEqual([st.hidden, info.hidden, cam.hidden, p.run('showDebug')], [true, false, false, true], 'no stick before a touch: the checks have no touch screen');
   // the corner is a square of 264 px (a third of the canvas's 800 × 600): above it or right of it a finger looks, not walks
   touch('pointerdown', 5, 120, 300); touch('pointermove', 5, 120, 200); touch('pointerup', 5, 120, 200);
   touch('pointerdown', 6, 300, 400); touch('pointermove', 6, 300, 300); touch('pointerup', 6, 300, 300); p.tick(30);
   assert.strictEqual(st.className, 'stick', 'no stick outside the corner'); near(eye(p)[2], 0.45, 'no step');
-  near(p.run('goal.phi'), Math.PI / 2 + 200 * 0.0025, 'the two drags looked up'); p.run('look(0,200)'); near(p.run('goal.phi'), Math.PI / 2, 'level again');
+  near(p.run('goal.phi'), Math.PI / 2 + 2 * 200 * 0.0025, 'the two drags looked up, a finger twice as fast as the mouse'); p.run('look(0,400)'); near(p.run('goal.phi'), Math.PI / 2, 'level again');
   // in the corner: the stick comes under the finger
   touch('pointerdown', 7, 120, 400); p.tick();
   assert.deepStrictEqual([st.hidden, st.className, st.style.left, st.style.top, hint.hidden, hint.textContent], [false, 'stick on', '120px', '400px', false, hint.dataset.touch]);
-  assert.ok(info.hidden, 'no «i» in the walk on a touch screen');
+  assert.deepStrictEqual([info.hidden, cam.hidden, p.run('showDebug'), p.run('inset.hidden')], [true, true, false, true], 'no «i» and no mini view in the walk on a touch screen');
   // a finger moved a little: no step yet
   touch('pointermove', 7, 120, 396); p.tick(30);
   near(eye(p)[2], 0.45, 'within the dead zone');
@@ -295,9 +296,9 @@ check('обход: на сенсорном экране палец в левом
   assert.strictEqual(p.run('knobEl.style.transform'), 'translate(0px,-48px)', 'the knob stops at the circle');
   near(eye(p)[0], 0.6, 'straight on');
   // a second finger on the right half looks; the stick finger let go, the look goes on
-  touch('pointerdown', 8, 600, 300); touch('pointerup', 7, 120, 300); touch('pointermove', 8, 600 - Math.PI / 2 / 0.0025, 300); p.tick(30);
+  touch('pointerdown', 8, 600, 300); touch('pointerup', 7, 120, 300); touch('pointermove', 8, 600 - Math.PI / 4 / 0.0025, 300); p.tick(30);
   near(yaw(p), Math.PI * 1.5, 'turned left'); const z1 = eye(p)[2]; p.tick(30); near(eye(p)[2], z1, 'stops when let go');
-  touch('pointerup', 8, 600 - Math.PI / 2 / 0.0025, 300);
+  touch('pointerup', 8, 600 - Math.PI / 4 / 0.0025, 300);
   assert.deepStrictEqual([st.hidden, st.className, hint.hidden], [false, 'stick', true], 'faint at home; the hint gone once walked');
   // a tap in the corner: the door under the finger, no step
   p.run('pickDoor=()=>doors.find(d=>d.hole==="hallBath:0")');
@@ -305,5 +306,5 @@ check('обход: на сенсорном экране палец в левом
   assert.ok(p.run('doors.find(d=>d.hole==="hallBath:0").t>0'), 'the tap opened the door');
   // a mouse: no stick
   c.dispatch('pointerdown', { pointerType: 'mouse', button: 0, pointerId: 1, clientX: 100, clientY: 100 }); c.dispatch('pointerup', { pointerId: 1, clientX: 100, clientY: 100 }); p.tick();
-  assert.deepStrictEqual([st.hidden, hint.hidden, info.hidden], [true, false, false]);
+  assert.deepStrictEqual([st.hidden, hint.hidden, info.hidden, cam.hidden], [true, false, false, false]);
 });

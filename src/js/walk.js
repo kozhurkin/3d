@@ -17,6 +17,7 @@ const JUMP=3.3,GRAV=12;             // m/s, m/s²: a jump of about 45 cm
 const CROUCH_K=.32;                 // crouching lowers the eyes by this share
 const OPEN_A=1;                     // rad: a door open this far lets the walker through
 const SENS=.0025;                   // rad per pixel of the mouse
+const SENS_TOUCH=2;                 // a finger turns the eyes this many times more: a phone's screen is small
 const FOV0=camera.fov,FOV_WALK=62;  // the walk sees wider, like a game
 
 const keys=new Set();let jumpQ=false;
@@ -47,9 +48,9 @@ function eyeNow(){const d=lookDir();return [goalT.x+goal.r*d[0],goalT.y+goal.r*d
 function setEye(x,y,z){const d=lookDir();goalT.set(x-goal.r*d[0],y-goal.r*d[1],z-goal.r*d[2]);}
 // the eye height standing (m): as set, low enough for a jump under the ceiling
 const eyeH=()=>Math.min(VS.walk.eye*MM,H*MM-.6);
-function look(dx,dy){
+function look(dx,dy,k=1){
   const e=eyeNow();
-  goal.theta-=dx*SENS;goal.phi=Math.min(Math.PI-.08,Math.max(.08,goal.phi-dy*SENS));
+  goal.theta-=dx*SENS*k;goal.phi=Math.min(Math.PI-.08,Math.max(.08,goal.phi-dy*SENS*k));
   setEye(...e);
 }
 // the first visit: in the hall by the entrance, looking toward the kitchen
@@ -157,14 +158,14 @@ canvas.addEventListener('pointerdown',e=>{
   if(e.button===2){drag=null;if(locked()&&document.exitPointerLock)document.exitPointerLock();return;}
   if(e.button!==undefined&&e.button!==0)return;
   if(locked()){useDoor();return;}
-  drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,id:e.pointerId};canvas.setPointerCapture(e.pointerId);
+  drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,id:e.pointerId,k:e.pointerType==='touch'?SENS_TOUCH:1};canvas.setPointerCapture(e.pointerId);
   if(e.pointerType!=='touch'&&canvas.requestPointerLock){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{});}catch(err){}}
 });
 canvas.addEventListener('pointermove',e=>{
   if(!walking())return;
   if(stick&&stick.id===e.pointerId){stick.x=e.clientX;stick.y=e.clientY;if(Math.hypot(stick.x-stick.x0,stick.y-stick.y0)>=6)stickUsed=true;return;}
   if(locked())look(e.movementX||0,e.movementY||0);
-  else if(drag&&drag.id===e.pointerId){look(e.clientX-drag.x,e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;}
+  else if(drag&&drag.id===e.pointerId){look(e.clientX-drag.x,e.clientY-drag.y,drag.k);drag.x=e.clientX;drag.y=e.clientY;}
 });
 // each finger ends its own: the stick's going leaves the look going on, and back
 canvas.addEventListener('pointerup',e=>{
@@ -221,7 +222,8 @@ frameHooks.push(()=>{
   // the hint: how to take the mouse, or on a touch screen how to walk, till the stick has once walked
   const hf=touchUI?'touch':'mouse';if(hf!==hintFor){hintFor=hf;hintEl.textContent=HINT[hf];}
   aimEl.hidden=!on;hintEl.hidden=!on||lk||touchUI&&stickUsed;showStick(on);
-  infoBtn.hidden=view==='walk'&&touchUI;   // the walk on a touch screen: its hint is the keys' and the mouse's, the stick's place
+  // the walk on a touch screen: no «i» (its hint is the keys' and the mouse's; the stick has its place) and no mini view
+  const bare=view==='walk'&&touchUI;infoBtn.hidden=camBtn.hidden=bare;if(bare&&showDebug)camBtn.click();
   if(!on&&lk&&document.exitPointerLock)document.exitPointerLock();
   if(on){canvas.style.cursor=lk?'none':'crosshair';ownCursor=true;}else if(ownCursor){canvas.style.cursor='';ownCursor=false;}
   const fov=FOV0+(FOV_WALK-FOV0)*presence('walk');

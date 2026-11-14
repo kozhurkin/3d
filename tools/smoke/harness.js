@@ -59,7 +59,7 @@ class Box3 {
   getSize(v) { return v.copy(this.max).sub(this.min); }
   isEmpty() { return !(this.max.x >= this.min.x && this.max.y >= this.min.y && this.max.z >= this.min.z); }
   /* the box of an object in the scene: its box and cylinder meshes, with their places and scales up the parents
-     (nothing in the checks is turned, so rotations are left out) */
+     (rotations are left out, but a mesh turned a quarter about x — the washing machine's door — swaps its height and depth) */
   setFromObject(obj) {
     this.min.set(Infinity, Infinity, Infinity); this.max.set(-Infinity, -Infinity, -Infinity);
     const walk = (o) => {
@@ -67,6 +67,7 @@ class Box3 {
       if (g && Array.isArray(g.args)) {
         const a = g.args, h = g.kind === 'THREE.BoxGeometry' ? [a[0] / 2, a[1] / 2, a[2] / 2]
           : g.kind === 'THREE.CylinderGeometry' ? [Math.max(a[0], a[1]), a[2] / 2, Math.max(a[0], a[1])] : null;
+        if (h && o.rotation && Math.abs(Math.sin(+o.rotation.x || 0)) > 0.5) [h[1], h[2]] = [h[2], h[1]];
         if (h) {
           const c = [0, 0, 0], s = [1, 1, 1];
           // up the real parents only (the scene itself is a plain stub)

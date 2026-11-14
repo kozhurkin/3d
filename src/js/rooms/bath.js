@@ -98,7 +98,40 @@ function buildSanitary(g){
   bowl.scale.set(.7/.36,1,1);bowl.position.set(di+.15,.22,cz);bowl.castShadow=bowl.receiveShadow=true;g.add(bowl);   // 700 mm long: 200 mm sunk into the box, 500 mm out
   const seat=new THREE.Mesh(new THREE.CylinderGeometry(.185,.185,.02,32),whiteMat);
   seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
+  wash=new THREE.Group();wash.userData.wash=true;buildWash(wash);g.add(wash);
 }
+
+/* ---------- the washing machine and the sink over it: in the niche right of the bathroom door ----------
+   The niche runs from the partition next to the tall cabinet to the hall wall, from the back wall (sizes from the plan).
+   The machine stands in it facing the room, a flat «water lily» sink with its mixer hangs over it. Bath axes, mm.
+   The bath tab's frame ends at the partition, so its own view hides them; the plan and the walk show them */
+const WASH={W:595,H:850,D:540,back:40,sinkD:600,sinkY:880,sinkT:1000};
+let wash=null;
+const washNiche=()=>{const x0=A.bNiche+A.wt,x1=xB1-xL;return {x0,x1,cx:(x0+x1)/2,w:x1-x0};};
+const washRect=()=>{const n=washNiche(),w=Math.min(WASH.W,n.w-4)/2;return [n.cx-w,n.cx+w,WASH.back,WASH.back+WASH.D];};
+const darkMat=new THREE.MeshStandardMaterial({color:0x2b2d2f,roughness:.35,metalness:.2});
+const portMat=new THREE.MeshStandardMaterial({color:0x22313a,roughness:.05,metalness:.3,transparent:true,opacity:.8});
+function buildWash(g){
+  const box=boxIn(g),n=washNiche(),[x0,x1,z0,z1]=washRect().map(v=>v*MM),cx=n.cx*MM,h=WASH.H*MM;
+  const disc=(r,d,x,y,z,mat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d,40),mat);m.rotation.x=Math.PI/2;m.position.set(x,y,z);g.add(m);return m;};
+  // the machine: body, control panel with the display and the detergent drawer, the round door
+  box(x0,x1,0,h,z0,z1,whiteMat);
+  box(x0+.01,x0+.17,h-.1,h-.03,z1,z1+.006,whiteMat);   // drawer
+  box(cx+.03,cx+.17,h-.085,h-.045,z1,z1+.004,darkMat);   // display
+  disc(.2,.03,cx,.42,z1+.015,chromeMat);
+  disc(.155,.035,cx,.42,z1+.02,portMat);
+  // the sink: a shallow bowl (bottom, rims) with the mixer on its back deck, 30 mm over the machine
+  const sw=Math.min(600,n.w)/2*MM,sx0=cx-sw,sx1=cx+sw,y0=WASH.sinkY*MM,y1=WASH.sinkT*MM,sd=WASH.sinkD*MM,r=.035,deck=.13;
+  box(sx0,sx1,y0,y0+.02,0,sd,whiteMat);
+  box(sx0,sx1,y0,y1,0,deck,whiteMat);
+  box(sx0,sx1,y0,y1,sd-r,sd,whiteMat);
+  box(sx0,sx0+r,y0,y1,deck,sd-r,whiteMat);
+  box(sx1-r,sx1,y0,y1,deck,sd-r,whiteMat);
+  const drain=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.004,24),chromeMat);drain.position.set(cx,y0+.022,(deck+sd)/2);g.add(drain);
+  const tap=new THREE.Mesh(new THREE.CylinderGeometry(.016,.02,.2,16),chromeMat);tap.position.set(cx,y1+.1,deck/2);g.add(tap);
+  box(cx-.012,cx+.012,y1+.17,y1+.2,deck/2,deck/2+.15,chromeMat);
+}
+frameHooks.push(()=>{if(wash)wash.visible=view!=='bath';});
 
 /* ---------- dimension lines of the bathroom (bath axes; they belong to the bathroom and move with it) ---------- */
 function buildDims(dim,gaps){
@@ -169,9 +202,9 @@ const k=roomKit('bath',{
   wish:['Wc','Gap'],
   slider:{sel:'#bFrameL',key:'L',max:()=>hLen},   // how far from the back wall the left wall shows, up to the kitchen wall
   dims:buildDims,
-  extra:{name:'sani',build:buildSanitary},   // the installation and the toilet go with the walls in the bathroom's view
-  // its footprint: the installation box and the toilet (as buildSanitary has them) besides the tall cabinet
-  foot:()=>{const zf=current.zf,cz=zf+P.Lt/2;return [[0,P.Di,zf,zf+P.Lt],[P.Di-200,P.Di+500,cz-180,cz+180,true]];},
+  extra:{name:'sani',build:buildSanitary},   // the installation, the toilet, the washing machine and the sink go with the walls in the bathroom's view
+  // its footprint: the installation box, the toilet (as buildSanitary has them) and the washing machine besides the tall cabinet
+  foot:()=>{const zf=current.zf,cz=zf+P.Lt/2;return [[0,P.Di,zf,zf+P.Lt],[P.Di-200,P.Di+500,cz-180,cz+180,true],washRect()];},
   syncFlags:()=>{bq('#b-tMid').checked=P.Mid!==false;bq('#b-tFeet').checked=!!P.Feet;},
   view:{
     // the niche: the back wall up to the outer face of the partition next to the tall cabinet, the left wall up to L from the back wall

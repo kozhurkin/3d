@@ -22,8 +22,10 @@ function stub(name = 'stub') {
       // a material keeps whether it hides behind what stands in front (the dimensions between the shelves do, the others do not)
       if (/Material$/.test(name) && args[0] && 'depthTest' in args[0]) o.depthTest = args[0].depthTest;
       // objects of the scene have a real place and real children, so checks can see where things stand
+      // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
+      if (/Geometry$/.test(name)) o.args = args, o.kind = name;
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group'].includes(name)) {
-        Object.assign(o, { position: new Vec3(), children: [] });
+        Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [] });
         o.add = (...c) => { c.forEach((x) => { x.parent = o; o.children.push(x); }); return o; };
         o.remove = (...c) => { o.children = o.children.filter((x) => !c.includes(x)); return o; };
       }
@@ -54,6 +56,27 @@ class Box3 {
   constructor(min = new Vec3(), max = new Vec3()) { this.min = min; this.max = max; }
   getCenter(v) { return v.copy(this.min).lerp(this.max, 0.5); }
   getSize(v) { return v.copy(this.max).sub(this.min); }
+  isEmpty() { return !(this.max.x >= this.min.x && this.max.y >= this.min.y && this.max.z >= this.min.z); }
+  /* the box of an object in the scene: its box and cylinder meshes, with their places and scales up the parents
+     (nothing in the checks is turned, so rotations are left out) */
+  setFromObject(obj) {
+    this.min.set(Infinity, Infinity, Infinity); this.max.set(-Infinity, -Infinity, -Infinity);
+    const walk = (o) => {
+      const g = o.geometry;
+      if (g && Array.isArray(g.args)) {
+        const a = g.args, h = g.kind === 'THREE.BoxGeometry' ? [a[0] / 2, a[1] / 2, a[2] / 2]
+          : g.kind === 'THREE.CylinderGeometry' ? [Math.max(a[0], a[1]), a[2] / 2, Math.max(a[0], a[1])] : null;
+        if (h) {
+          const c = [0, 0, 0], s = [1, 1, 1];
+          // up the real parents only (the scene itself is a plain stub)
+          for (let p = o; p && p.position instanceof Vec3; p = p.parent) { ['x', 'y', 'z'].forEach((k, i) => { c[i] = c[i] * p.scale[k] + p.position[k]; s[i] *= p.scale[k]; }); }
+          ['x', 'y', 'z'].forEach((k, i) => { this.min[k] = Math.min(this.min[k], c[i] - h[i] * s[i]); this.max[k] = Math.max(this.max[k], c[i] + h[i] * s[i]); });
+        }
+      }
+      if (Array.isArray(o.children)) o.children.forEach(walk);
+    };
+    walk(obj); return this;
+  }
 }
 const round = (v, d = 4) => +(+v).toFixed(d);
 
@@ -143,8 +166,11 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
     documentElement: docEl, fonts: undefined,
     getElementById: (id) => all(doc).find((x) => x.attrs.id === id) || null,
     querySelector: (s) => doc.querySelector(s), querySelectorAll: (s) => doc.querySelectorAll(s),
-    createElement: (t) => el(t), addEventListener() {},
+    createElement: (t) => el(t),
+    listeners: {}, addEventListener(t, f) { (this.listeners[t] ||= []).push(f); },
   };
+  // a key pressed or let go on the page (e.code: 'KeyW', 'Space'…), as the browser sends it to the document
+  const key = (type, code, ev = {}) => (document.listeners[type] || []).forEach((f) => f({ code, key: code, target: doc, preventDefault() {}, ...ev }));
   const localStorage = {
     getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
@@ -169,7 +195,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
   // n frames of ms each; a flight between views takes 0.85 s, so fly() lets it finish
   const tick = (n = 3, ms = 16) => { for (let i = 0; i < n; i++) { clock.t += ms; const q = frames.splice(0); q.forEach((f) => f()); } };
   const fly = () => tick(60);
-  return { ctx, doc, document, storage, tick, fly, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
+  return { ctx, doc, document, storage, tick, fly, key, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
 }
 
 /* ---------- the built file ---------- */

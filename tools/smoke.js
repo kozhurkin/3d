@@ -5,7 +5,7 @@
 // Запуск: npm run check (после npm run build); только часть: npm run check -- kitchen bath; список проверок: --list
 // Обвязка (заглушки, runPage, помощники) — tools/smoke/harness.js, проверки — tools/smoke/<часть>.js.
 const { checks } = require('./smoke/harness');
-const PARTS = ['app', 'kitchen', 'bath', 'hall', 'flight'];
+const PARTS = ['app', 'kitchen', 'bath', 'hall', 'flight', 'walk'];
 const args = process.argv.slice(2), list = args.includes('--list'), only = args.filter((a) => a !== '--list');
 const bad = only.filter((a) => !PARTS.includes(a));
 if (bad.length) { console.error('нет такой части:', bad.join(', '), '— есть', PARTS.join(', ')); process.exit(1); }

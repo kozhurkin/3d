@@ -351,7 +351,7 @@ frameHooks.push((dt,ease)=>{
     // wall edges are redrawn only when the cut height changes
     if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(l.w,Math.min(H,cutMm)));});}
     wallLines.forEach(l=>l.e.visible=!outline&&(V.Wm==='auto'?l.f():true));
-    doorGroup.visible=V.dm!=='none'&&!outline;arcs.visible=V.dm!=='none';
+    doorGroup.visible=V.dm!=='none'&&!outline;arcs.visible=V.dm!=='none'&&V.arcs!==false;   // the walk has doors without swings
   }
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}

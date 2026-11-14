@@ -221,8 +221,8 @@ function roomKit(id,cfg){
     rooms:[id],
     frame:()=>frame(show()),
     anchor:cfg.origin,   // the remembered camera moves with the room
-    // the built room: for clicks on its fronts and the checks
-    furniture:()=>Object.assign({model,doors,P,current:cur,dims:dimsGroup,clip,foot},cfg.extra?{[cfg.extra.name]:extra}:{}),
+    // the built room: for clicks on its fronts, the walk (what is in the way) and the checks
+    furniture:()=>Object.assign({model,doors,P,current:cur,dims:dimsGroup,clip,foot,extra},cfg.extra?{[cfg.extra.name]:extra}:{}),
     panel,
     home:()=>cfg.setCam('persp'),
     sync,

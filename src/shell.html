@@ -31,6 +31,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     <a href="#hall" data-tab="hall">Прихожая</a>
     <a href="#bath" data-tab="bath">Санузел</a>
     <a href="#kitchen" data-tab="kitchen">Кухня</a>
+    <a href="#walk" data-tab="walk">Обход</a>
   </nav>
 </header>
 <main class="frames">
@@ -40,7 +41,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 <script>
 (function(){
   // every tab is a view of the one apartment app: the tab's id is its view
-  const tabs=['plan','hall','bath','kitchen'];
+  const tabs=['plan','hall','bath','kitchen','walk'];
   const fr=document.getElementById('f-app');
   // keep the explicit light/dark choice in sync inside the frame
   function syncTheme(){

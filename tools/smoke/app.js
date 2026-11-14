@@ -13,7 +13,7 @@ check('приложение: «Планировка» открывается', (
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const r = p.run('({view, n:Object.keys(VIEWS), lines:wallLines.length, parts:wallParts.length, fade:VIEWS.plan.fade, vs:VS.plan, doors:doors.map(d=>d.g.visible)})');
   assert.strictEqual(r.view, 'plan');
-  assert.deepStrictEqual(r.n, ['plan', 'kitchen', 'bath', 'hall']);
+  assert.deepStrictEqual(r.n, ['plan', 'kitchen', 'bath', 'hall', 'walk']);
   assert.deepStrictEqual(r.doors, [true, true], 'both doors on the plan');
   assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
   assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
@@ -224,12 +224,12 @@ check('shell: все вкладки — виды одного приложени
   const cur = () => p.document.querySelectorAll('[data-tab]').filter((a) => a.getAttribute('aria-current') === 'page').map((a) => a.dataset.tab);
   assert.deepStrictEqual(p.document.querySelectorAll('iframe').map((f) => f.id), ['f-app'], 'no old pages');
   assert.deepStrictEqual([fr.hidden, fr.srcdoc === PAGES.app, p.ctx.appView], [false, true, 'plan']);
-  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen']);
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-tab]').map((a) => a.dataset.tab), ['plan', 'hall', 'bath', 'kitchen', 'walk']);
   assert.deepStrictEqual(cur(), ['plan']);
   fr.contentWindow = { showView: (v) => shown.push(v) };   // the loaded app: the shell switches its view
-  ['hall', 'bath', 'kitchen', 'plan'].forEach((t) => {
+  ['hall', 'bath', 'kitchen', 'walk', 'plan'].forEach((t) => {
     p.ctx.location.hash = '#' + t; p.ctx.dispatch('hashchange');
     assert.deepStrictEqual([cur(), p.ctx.appView, fr.hidden], [[t], t, false]);
   });
-  assert.deepStrictEqual(shown, ['hall', 'bath', 'kitchen', 'plan']);
+  assert.deepStrictEqual(shown, ['hall', 'bath', 'kitchen', 'walk', 'plan']);
 });

@@ -67,9 +67,12 @@ function pan(dx,dy){
   cam.target.addScaledVector(_r,-dx*k).addScaledVector(_u,dy*k);goalT.copy(cam.target);
 }
 let downAt=null;
+// a view that takes the mouse itself (the walk, walk.js): no orbit, pan, zoom or door clicks of its own here
+const ownMouse=()=>!!(VIEWS[view]&&VIEWS[view].mouse);
 // long press on a door moves it gradually: closed → opens, fully open → closes, part-open → reverses the last direction
 const HOLD_MS=500,HOLD_RATE=60*Math.PI/180;let held=null,holdTimer=null;
 canvas.addEventListener('pointerdown',e=>{
+  if(ownMouse())return;
   if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1&&e.button!==2)return;
   downAt=e.button===0&&!e.shiftKey&&ptrs.size===0?{x:e.clientX,y:e.clientY}:null;
   clearTimeout(holdTimer);
@@ -83,7 +86,7 @@ canvas.addEventListener('pointerdown',e=>{
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}
 });
 canvas.addEventListener('pointermove',e=>{
-  if(!ptrs.has(e.pointerId))return;const pr=ptrs.get(e.pointerId),dx=e.clientX-pr.x,dy=e.clientY-pr.y;
+  if(!ptrs.has(e.pointerId)||ownMouse())return;const pr=ptrs.get(e.pointerId),dx=e.clientX-pr.x,dy=e.clientY-pr.y;
   if(!held&&downAt&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)>=6)clearTimeout(holdTimer);
   if(held){ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:pr.pan});return;}
   if(ptrs.size>=1)camDrive=null;   // the user takes the camera back from a flight between views
@@ -120,7 +123,7 @@ canvas.addEventListener('pointerup',e=>{
   }
   downAt=null;lost(e);
 });
-canvas.addEventListener('pointermove',e=>{if(ptrs.size===0)canvas.style.cursor=pickDoor(e)?'pointer':'';});canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse())canvas.style.cursor=pickDoor(e)?'pointer':'';});canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 // wheel zooms toward the point under the cursor (surface hit, or the plane through the pivot)
@@ -131,7 +134,7 @@ const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
 const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
-  e.preventDefault();camDrive=null;
+  e.preventDefault();if(ownMouse())return;camDrive=null;
   const r0=cam.r,r1=Math.min(30,Math.max(.3,r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012)))));
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);

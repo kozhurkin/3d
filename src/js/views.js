@@ -2,7 +2,8 @@
    A view names the walls it shows (rooms), which walls hide in the cut mode and from which side (fade),
    its own settings (remembered per view) and its panel. Light and wall colour are shared by all views:
    their block (#shared) moves into the panel of the view on screen. */
-const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), furniture(), defaults, panel, home(), sync(), onDoors()}
+const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), furniture(), defaults, panel, home(), sync(), onDoors(),
+                   //       mouse: the view takes the mouse itself (no orbit), info: its hint under «i» (data-info)}
 const VS={};        // id → the view's own settings
 let view=null;      // the view on screen
 const vs=()=>VS[view];
@@ -41,9 +42,10 @@ document.getElementById('lightReset').addEventListener('click',()=>{S.light={...
 syncLight();
 frameHooks.push(dt=>{if(spin){const L=S.light;L.az+=30*dt;if(L.az>180)L.az-=360;syncLight();}});   // one turn in 12 s
 
-/* walls segment and height slider: every view has them in its panel ([data-wm], [data-wh], [data-wh-out]) */
+/* walls segment and height slider: a view has them in its panel ([data-wm], [data-wh], [data-wh-out]) or keeps its walls as set */
 function syncWallCtl(id){
   const p=VIEWS[id].panel,V=VS[id],wh=p.querySelector('[data-wh]');
+  if(!wh)return;
   wh.value=V.Wh;p.querySelector('[data-wh-out]').textContent=(V.Wm==='row'?10:V.Wh)+'%';
   wh.disabled=V.Wm==='row'||V.Wm==='outline';wh.parentElement.style.opacity=wh.disabled?.45:1;
   p.querySelectorAll('[data-wm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.wm===V.Wm));
@@ -55,7 +57,7 @@ function addView(id,def){
   VS[id]=Object.assign(JSON.parse(JSON.stringify(def.defaults)),readJSON(viewKey(id))||{});
   const p=def.panel;
   p.querySelectorAll('[data-wm]').forEach(b=>b.addEventListener('click',()=>{VS[id].Wm=b.dataset.wm;syncWallCtl(id);saveView(id);}));
-  p.querySelector('[data-wh]').addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
+  const wh=p.querySelector('[data-wh]');if(wh)wh.addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
 }
 
 /* a door was clicked or held — a door of the apartment or a cabinet front, maybe of a room seen on the plan:
@@ -80,8 +82,8 @@ modelHooks.push(()=>{if(tr){tr=null;camDrive=null;}if(view)aimView();});   // th
 const FLY=.85;   // seconds
 let tr=null;     // {p, e, cam0, sun0, sunT, box0, boxT, pres0, fur0: how each room's furniture showed at the start (furnCut)}
 const inTransition=()=>!!tr;
-// a room's furniture is in the scene in its own view and on the plan with «Шкафы» on (for 'plan': on the plan)
-const furnOn=id=>view===id||(view==='plan'&&id!=='plan'&&VS.plan.furn!==false);
+// a room's furniture is in the scene in its own view, in the walk and on the plan with «Шкафы» on (for a view that is not a room: in it)
+const furnOn=id=>view===id||(ROOMS.some(r=>r.id===id)&&(view==='walk'||(view==='plan'&&VS.plan.furn!==false)));
 // how much of a view's furniture is in the scene: 1 or 0 as above, in between while flying
 function presence(id){const t=furnOn(id)?1:0;return tr?tr.pres0[id]+(t-tr.pres0[id])*tr.e:t;}
 /* how a room's furniture shows: up to the height c (m, its own floor up), and its footprint on the floor f (0…1).
@@ -135,7 +137,9 @@ function showView(id,animate=true){
   if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
-  vw.panel.querySelector('[data-shared-slot]').appendChild(sharedEl);sharedEl.hidden=false;
+  // light and wall colour in its panel, if it has a place for them; the hint under «i» of the view
+  const slot=vw.panel.querySelector('[data-shared-slot]');if(slot)slot.appendChild(sharedEl);sharedEl.hidden=!slot;
+  document.querySelectorAll('#infoBtn [data-info]').forEach(t=>{t.hidden=t.dataset.info!==(vw.info||'orbit');});
   const m=camMem[id];
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(fly){

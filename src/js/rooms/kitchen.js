@@ -115,6 +115,11 @@ const handleMat=new THREE.MeshStandardMaterial({color:0x5c5d5f,roughness:.35,met
 const dishMat=new THREE.MeshStandardMaterial({color:0x9fa3a6,roughness:.4,metalness:.6});
 const dishInMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metalness:.2});
+const linerMat=new THREE.MeshStandardMaterial({color:0xf1f2f0,roughness:.45});   // the fridge inside, its bins
+const binMat=new THREE.MeshStandardMaterial({color:0xdfe5e7,roughness:.3});
+const shelfMat=new THREE.MeshStandardMaterial({color:0xcfe0e2,roughness:.05,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
+const ovenGlassMat=new THREE.MeshStandardMaterial({color:0x111214,roughness:.08,metalness:.3,transparent:true,opacity:.75,depthWrite:false});   // tinted: the cavity shows through
+const cavityMat=new THREE.MeshStandardMaterial({color:0x2a2c2f,roughness:.55});   // the oven's enamel
 
 /* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js) */
 const INFO={
@@ -319,9 +324,17 @@ function buildSofa(g){
   [[arm+40,-0.18],[xr-40-480,0.18]].forEach(([x,tz])=>{const p=S(x,x+480,seat+10,seat+370,back+225,back+345,55);p.rotation.x=-.3;p.rotation.z=tz;});
 }
 
-/* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m) */
-function buildAppliances(g){
-  const c=current;
+/* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps
+   how open it was through a rebuild; it opens and closes with the kitchen's fronts (clicks, «Открыты/Закрыты», the walk) */
+function applDoor(g,extra,{prev=[],open=false}={}){
+  const pd=prev.find(d=>d.key===extra.key),max=extra.max||DMAX;
+  const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?max:0),last:pd&&pd.last},extra,{max});turnDoor(d);return d;
+}
+
+/* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m).
+   Returns the doors of the oven and the fridge */
+function buildAppliances(g,opts){
+  const c=current,doors=[];
   const box=boxIn(g);
   const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
   // sink with mixer in the first base cabinet
@@ -362,27 +375,63 @@ function buildAppliances(g){
     const tub=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:zo-zb-w,bevelEnabled:false,curveSegments:10}),dishMat);
     tub.position.z=zb+w;tub.castShadow=tub.receiveShadow=true;g.add(tub);
     box(x0,x1,0,yt,zb,zb+w,dishInMat); }
-  // built-in oven under the hob
-  { const x0=b1+b2,yo=c.ovY*MM,zf=c.zfB*MM;
-    box(x0+.003,x0+b3-.003,yo,yo+.595,zf-.02,zf+.004,ovenMat);   // standard 595 mm oven fills its niche
-    box(x0+.06,x0+b3-.06,yo+.08,yo+.46,zf+.004,zf+.007,glassMat);
-    box(x0+.08,x0+b3-.08,yo+.5,yo+.52,zf+.007,zf+.03,chromeMat); }
+  // built-in oven under the hob: a dark enamel cavity with a wire rack, the control panel on top, a door that tilts down
+  // on its lower front edge (glass, a bar handle)
+  { const x0=b1+b2+.003,x1=b1+b2+b3-.003,cx=(x0+x1)/2,yo=c.ovY*MM,zf=c.zfB*MM,yp=yo+.465,zr=zf-.02,zc=zf-.52,w=.03,zt=zf+.004;
+    box(x0,x1,yp,yo+.595,zr,zt,ovenMat);                            // control panel
+    box(cx-.08,cx+.08,yp+.04,yp+.09,zt,zt+.002,glassMat);            // its display
+    [cx-.14,cx+.14].forEach(x=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.018,20),chromeMat);k.rotation.x=Math.PI/2;k.position.set(x,yp+.065,zt+.009);g.add(k);});
+    box(x0,x0+w,yo,yp,zc,zr,cavityMat);box(x1-w,x1,yo,yp,zc,zr,cavityMat);                       // cavity: sides,
+    box(x0+w,x1-w,yo,yo+w,zc,zr,cavityMat);box(x0+w,x1-w,yp-w,yp,zc,zr,cavityMat);               // bottom, top,
+    box(x0+w,x1-w,yo+w,yp-w,zc,zc+w,cavityMat);                                                 // back
+    const yr=yo+.19,n=9;   // the rack: wires front to back between two cross wires
+    for(let i=0;i<n;i++){const x=x0+w+.02+i*(x1-x0-2*w-.04)/(n-1);box(x-.002,x+.002,yr,yr+.004,zc+w+.01,zr-.02,chromeMat);}
+    [zc+w+.01,zr-.024].forEach(z=>box(x0+w,x1-w,yr+.004,yr+.008,z,z+.004,chromeMat));
+    const dg=new THREE.Group();dg.position.set(0,yo,zt);g.add(dg);
+    const db=boxIn(dg),D=(a,b,y0,y1,z0,z1,m)=>db(a,b,y0-yo,y1-yo,z0-zt,z1-zt,m);
+    const wx0=x0+.06,wx1=x1-.06,wy0=yo+.07,wy1=yo+.4,yh=yo+.425;                          // the door: a frame round its window
+    D(x0,x1,yo+.002,wy0,zr,zt,ovenMat);D(x0,x1,wy1,yp-.003,zr,zt,ovenMat);D(x0,wx0,wy0,wy1,zr,zt,ovenMat);D(wx1,x1,wy0,wy1,zr,zt,ovenMat);
+    D(wx0,wx1,wy0,wy1,zt,zt+.003,ovenGlassMat);                       // its window, tinted
+    D(wx0-.01,wx1+.01,wy0-.01,wy1+.01,zr-.003,zr,ovenGlassMat);                      // the inner pane
+    D(x0+.08,x1-.08,yh,yh+.02,zt+.022,zt+.036,chromeMat);                        // the handle: a П, its legs at the bar's ends
+    [x0+.08,x1-.095].forEach(x=>D(x,x+.015,yh,yh+.02,zt,zt+.022,chromeMat));
+    doors.push(applDoor(dg,{key:'oven',axis:'x',s:1,max:Math.PI/2},opts)); }
   // cooker hood under the wall cabinet over the hob
   { const x0=b1+b2,yh=Math.max(c.yW,P.Ct+P.Gh)*MM;
     if(yh>c.yW*MM+.01||true)box(x0+.01,x0+b3-.01,yh-.05,yh,.02,P.Dw*MM+.03,chromeMat); }
-  // freestanding fridge in the style of a Haier 3-door: stainless door and two drawers, display, edge handles, feet
-  { const x0=xr+.01,x1=c.xF*MM-.01,fh=P.Fh*MM,fd=P.Fd*MM,ft=.03,lift=.02,bodyD=fd-.06;
-    box(x0,x1,lift,fh,.02,bodyD,fridgeSideMat);
+  // freestanding fridge in the style of a Haier 3-door: a hollow body (steel outside, white inside, glass shelves), a stainless
+  // door on hinges at the right (its handle on the left edge, bins inside it), two pull-out drawers with bins; display, feet
+  { const x0=xr+.01,x1=c.xF*MM-.01,fh=P.Fh*MM,fd=P.Fd*MM,lift=.02,bodyD=fd-.06,zf=bodyD+.05,zb=.02,w=.03;
     const yD=lift+fh*.44,yM=lift+(yD-lift)*.6,gap=.006;   // lower drawer 60 %, upper 40 % of the drawer zone
-    box(x0,x1,yD+gap/2,fh,bodyD,bodyD+.05,steelMat);                   // main door
-    box(x0,x1,yM+gap/2,yD-gap/2,bodyD,bodyD+.05,steelMat);               // upper drawer
-    box(x0,x1,lift,yM-gap/2,bodyD,bodyD+.05,steelMat);                   // lower drawer
-    [yD,yM].forEach(y=>box(x0+.02,x1-.02,y-.028,y-.006,bodyD+.05,bodyD+.052,handleMat));   // drawer grips under each gap
-    box(x0-.005,x0,yD+.25,yD+.25+fh*.3,bodyD+.006,bodyD+.044,handleMat);   // vertical edge handle on the left side of the door (no overlap, no flicker)
-    const cx=(x0+x1)/2;
-    box(cx-.028,cx+.028,fh-.42,fh-.22,bodyD+.05,bodyD+.052,glassMat);          // display
-    box(cx-.03,cx+.03,fh-.085,fh-.075,bodyD+.05,bodyD+.052,handleMat);        // logo strip
+    // a wall of the body: steel, white on the faces listed (BoxGeometry order: +x −x +y −y +z −z)
+    const wall=(a,b,y0,y1,z0,z1,white)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(b-a,y1-y0,z1-z0),[0,1,2,3,4,5].map(i=>white.includes(i)?linerMat:fridgeSideMat));
+      m.position.set((a+b)/2,(y0+y1)/2,(z0+z1)/2);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
+    wall(x0,x0+w,lift,fh,zb,bodyD,[0,4]);wall(x1-w,x1,lift,fh,zb,bodyD,[1,4]);
+    wall(x0+w,x1-w,fh-w,fh,zb,bodyD,[3,4]);wall(x0+w,x1-w,lift,lift+w,zb,bodyD,[2,4]);
+    wall(x0+w,x1-w,lift+w,fh-w,zb,zb+w,[4]);
+    [yM,yD].forEach(y=>box(x0+w,x1-w,y-.02,y+.02,zb+w,bodyD,linerMat));   // between the drawers and the main compartment
+    const m0=yD+.02,m1=fh-w;
+    [1,2,3].forEach(i=>{const y=m0+(m1-m0)*i/4;box(x0+w,x1-w,y-.003,y+.003,zb+w,bodyD-.075,shelfMat);});
+    // the door: turns on its front right edge
+    const dg=new THREE.Group();dg.position.set(x1,0,zf);g.add(dg);
+    const db=boxIn(dg),D=(a,b,y0,y1,z0,z1,m)=>db(a-x1,b-x1,y0,y1,z0-zf,z1-zf,m),cx=(x0+x1)/2;
+    D(x0,x1,yD+gap/2,fh,bodyD,zf,steelMat);
+    D(x0-.005,x0,yD+.25,yD+.25+fh*.3,bodyD+.006,bodyD+.044,handleMat);   // vertical edge handle on the left side of the door (no overlap, no flicker)
+    D(cx-.028,cx+.028,fh-.42,fh-.22,zf,zf+.002,glassMat);                // display
+    D(cx-.03,cx+.03,fh-.085,fh-.075,zf,zf+.002,handleMat);               // logo strip
+    D(x0+w,x1-w,yD+.03,fh-.03,bodyD-.004,bodyD,linerMat);                // its inside
+    [.12,.42,.72].forEach(f=>{const y=yD+(fh-yD)*f;                       // the bins on it
+      D(x0+.045,x1-.045,y,y+.008,bodyD-.065,bodyD-.004,binMat);D(x0+.045,x1-.045,y,y+.07,bodyD-.07,bodyD-.065,binMat);});
+    doors.push(applDoor(dg,{key:'fridge',s:1},opts));
+    // the drawers: the front, its grip at the top and a bin slide out together
+    [['fridge-d1',lift,yM-gap/2,lift+w,yM-.02],['fridge-d2',yM+gap/2,yD-gap/2,yM+.02,yD-.02]].forEach(([key,y0,y1,c0,c1])=>{
+      const sg=new THREE.Group();g.add(sg);const s=boxIn(sg),bx0=x0+w+.01,bx1=x1-w-.01,by0=c0+.005,by1=c1-.04,bz0=bodyD-.42,t=.006;
+      s(x0,x1,y0,y1,bodyD,zf,steelMat);
+      s(x0+.02,x1-.02,y1-.028+gap/2,y1-.006+gap/2,zf,zf+.002,handleMat);
+      s(bx0,bx1,by0,by0+t,bz0,bodyD,binMat);s(bx0,bx0+t,by0,by1,bz0,bodyD,binMat);s(bx1-t,bx1,by0,by1,bz0,bodyD,binMat);s(bx0+t,bx1-t,by0,by1,bz0,bz0+t,binMat);
+      doors.push(applDoor(sg,{key,axis:'z',s:1,travel:.38},opts));});
     [[x0+.04,bodyD-.03],[x1-.04,bodyD-.03],[x0+.04,.06],[x1-.04,.06]].forEach(([x,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,lift,16),blackMat);f.position.set(x,lift/2,z);g.add(f);}); }
+  return doors;
 }
 
 /* ---------- dimension lines of the kitchen (kitchen axes; they belong to the kitchen and move with it) ---------- */
@@ -453,7 +502,7 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{buildAppliances(g);buildTable(g);buildSofa(g);return buildDesk(g,o).concat(buildVitrine(g,o));}},   // the appliances, the tables, the display cabinet and the sofa go with the walls in the kitchen's view
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildSofa(g);return ap.concat(buildDesk(g,o),buildVitrine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the display cabinet and the sofa go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk,
   // the display cabinet and the sofa stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

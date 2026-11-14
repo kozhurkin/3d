@@ -57,7 +57,7 @@ check('кухня: шкафы и техника собираются, панел
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 10, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 14, want.parts.length, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
@@ -84,7 +84,7 @@ check('кухня: шкафы и техника собираются, панел
   assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
   up.checked = true; up.dispatch('change');
   assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
-  assert.strictEqual(k().doors, nDoors + 10, 'every front still opens');
+  assert.strictEqual(k().doors, nDoors + 14, 'every front still opens');
   // without the mezzanines there is nothing to lift: greyed out
   const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
   assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
@@ -226,6 +226,27 @@ check('кухня: стол у левой стены — 1350 от стены к
   assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 1300), [[-2000, -700, 3350, 4050, 720, 750]], 'the top');
   assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 40).map((b) => [b[0], b[2], b[4], b[5]]),
     [[-1950, 3400, 0, 720], [-790, 3400, 0, 720], [-1950, 3960, 0, 720], [-790, 3960, 0, 720]], 'four legs 40 × 40, 50 in from the edges');
+});
+
+check('кухня: дверь холодильника открывается на петлях справа, два его ящика выдвигаются, дверь духовки откидывается вниз', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const ap = () => p.run(`(f=>["fridge","fridge-d1","fridge-d2","oven"].map(k=>{const d=f.doors.find(x=>x.key===k);
+    return d&&[d.axis||'y',d.s,Math.round((d.travel||0)*1000),+d.max.toFixed(2),+d.t.toFixed(2),+d.g.rotation.x.toFixed(2),+d.g.rotation.y.toFixed(2),Math.round(d.g.position.z*1000),d.g.parent===f.appl];}))(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(ap().map((d) => d && d.slice(0, 5)), [['y', 1, 0, 1.45, 0], ['z', 1, 380, 1.45, 0], ['z', 1, 380, 1.45, 0], ['x', 1, 0, 1.57, 0]], 'closed: the door on its hinges, two drawers, the oven door');
+  assert.ok(ap().every((d) => d[8]), 'with the appliances');
+  // the hinges: the fridge door turns on its front right edge (the fridge niche's right end, 10 mm in), the oven door on its lower front edge
+  const piv = p.run(`(f=>{const d=k=>f.doors.find(x=>x.key===k).g.position,c=f.current;return [Math.round(d("fridge").x*1000),c.xF-10,Math.round(d("oven").y*1000),c.ovY];})(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(piv.slice(0, 2), [piv[1], piv[1]]); assert.strictEqual(piv[2], piv[3]);
+  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(120);
+  const r = ap();
+  assert.ok(r[0][6] > 1.4, 'the fridge door swings out'); assert.ok(r[1][7] > 370 && r[2][7] > 370, 'the drawers slide out');
+  assert.ok(r[3][5] > 1.5, 'the oven door lies down');
+  // they keep how open they are through a rebuild
+  const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
+  assert.ok(ap().every((d) => d[4] === d[3]), 'still open after a rebuild');
+  // the oven door closes alone
+  p.run('(d=>{d.t=0;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="oven"))');
+  assert.deepStrictEqual(ap().map((d) => d[4] === 0), [false, false, false, true]);
 });
 
 check('кухня: письменный стол HEMNES у левой стены — 150 от стены с окном, дверца открывается, ящики выдвигаются, следует «Планировке»', () => {

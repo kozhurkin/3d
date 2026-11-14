@@ -161,7 +161,7 @@ check('«Планировка»: шкафы всех комнат по гало�
   assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), [null, 'bath', 'hall'], 'the kitchen rebuilt');
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
   // the fronts swing on the plan too; the kitchen tab knows they are open and remembers it
-  p.run('(VIEWS.kitchen.furniture().doors.forEach(d=>d.t=DMAX), doorsChanged())'); p.tick(80, 16.67);
+  p.run('(VIEWS.kitchen.furniture().doors.forEach(d=>d.t=d.max), doorsChanged())'); p.tick(80, 16.67);
   near(p.run('VIEWS.kitchen.furniture().doors[0].a'), p.run('DMAX'), 'open');
   assert.deepStrictEqual([p.run('VS.kitchen.fronts'), JSON.parse(storage.get('apt-view-kitchen-v1')).fronts], ['open', 'open']);
   assert.strictEqual(p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').getAttribute('aria-pressed'), 'true');

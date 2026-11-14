@@ -70,6 +70,7 @@ let downAt=null;
 // a view that takes the mouse itself (the walk, walk.js): no orbit, pan, zoom or door clicks of its own here
 const ownMouse=()=>!!(VIEWS[view]&&VIEWS[view].mouse);
 // long press on a door moves it gradually: closed → opens, fully open → closes, part-open → reverses the last direction
+// (at 60°/s, or at the door's own holdRate per second if it has one)
 const HOLD_MS=500,HOLD_RATE=60*Math.PI/180;let held=null,holdTimer=null;
 canvas.addEventListener('pointerdown',e=>{
   if(ownMouse())return;

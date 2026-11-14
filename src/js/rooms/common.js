@@ -13,7 +13,8 @@
      slider    {sel, key, max()} — how far the side wall shows (the view's frame),
      setCam(v), dims(dim,gaps,group) — dimension lines through dim(a,b,txt,tick) into group, the free heights of a shelf stack through
                gaps(boards), extra {name, build(g, {prev, open})} — appliances or sanitary ware; a cabinet of its own among
-               them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk),
+               them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk;
+               easing (by its own ease if it has one), or evenly by its rate per second if it has one; held, at its holdRate if it has one),
      foot()    — extra footprint rects, walls(on) — walls in its own view (default: «Стена» toggles them),
      frame(on, {extra, dims, show}) — every frame after the kit's own: what of the extras and the dimensions shows (show: the frame
                slider as it is now),
@@ -85,8 +86,9 @@ function roomKit(id,cfg){
     if(cfg.walls)cfg.walls(on);else if(on&&wallGroup)wallGroup.visible=V.walls!==false;
     if(cfg.frame)cfg.frame(on,{extra,dims:dimsGroup,show:show()});
     if(model.visible)doors.forEach(d=>{
-      if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
-      else d.a+=(d.t-d.a)*ease(.09);
+      if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*(d.holdRate||HOLD_RATE)*dt));d.a=d.t;}
+      else if(d.rate&&!reduce){const v=d.rate*dt;d.a+=Math.max(-v,Math.min(v,d.t-d.a));}   // one that goes evenly (its stages ease themselves)
+      else d.a+=(d.t-d.a)*ease(d.ease||.09);
       turnDoor(d);});
   });
 

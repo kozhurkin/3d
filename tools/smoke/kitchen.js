@@ -57,7 +57,7 @@ check('кухня: шкафы и техника собираются, панел
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 15, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 16, want.parts.length, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
@@ -84,7 +84,7 @@ check('кухня: шкафы и техника собираются, панел
   assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
   up.checked = true; up.dispatch('change');
   assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
-  assert.strictEqual(k().doors, nDoors + 15, 'every front still opens');
+  assert.strictEqual(k().doors, nDoors + 16, 'every front still opens');
   // without the mezzanines there is nothing to lift: greyed out
   const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
   assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
@@ -338,9 +338,9 @@ check('кухня: сиденье оттоманки дивана целиком
     return {axis:d.axis,s:d.s,max:+d.max.toFixed(3),t:+d.t.toFixed(3),rot:+d.g.rotation.x.toFixed(2),inChaise:d.g.parent===c,hinge:[Math.round(d.g.position.y*1000),Math.round(d.g.position.z*1000)],
       size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.y-b.min.y)*1000),Math.round((b.max.z-b.min.z)*1000)],title:infoOf(d.g.children[0]).title,
       ride:[[.644,.46],[.48,.36]].map(([w,h])=>{const m=c.children.find(o=>o.geometry&&o.geometry.args&&Math.abs(o.geometry.args[0]-w)<1e-6&&Math.abs(o.geometry.args[1]-h)<1e-6);return m&&[Math.round(m.position.y*1000),Math.round(m.position.z*1000)];}),
-      stitches:(fl=>{const seam=fl(sf)[0].material,st=fl(c).filter(m=>m.material===seam).map(m=>m.geometry.args);
+      stitches:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material,st=fl(c).filter(m=>m.material===seam).map(m=>m.geometry.args);
         return [st.filter(a=>a[2]<.002).length,st.filter(a=>a[0]<.002).length/2,st.filter(a=>a[0]<.002).length/2];})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3)),
-      white:(fl=>{const seam=fl(sf)[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(VIEWS.kitchen.furniture())`);
+      white:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(VIEWS.kitchen.furniture())`);
   let r = lid();
   // its upper back edge at the seat's height, at the thin back (100); the whole seat of the chaise
   assert.deepStrictEqual([r.axis, r.s, r.max, r.t, r.rot, r.inChaise, r.hinge], ['x', -1, 0.698, 0, 0, true, [450, 100]], 'closed, on its hinge in the chaise');
@@ -350,10 +350,16 @@ check('кухня: сиденье оттоманки дивана целиком
   assert.strictEqual(r.title, 'Угловой диван Hoff «Слим»');
   assert.deepStrictEqual(r.stitches, [5, 4, 4], 'stitched up its front and both its sides, 130 apart');
   assert.strictEqual(r.white, 5, 'the box white inside (flat boards besides the stitches): its bottom and four walls');
-  // with the kitchen's fronts: up (its front edge rises over the seat), and down again
-  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(120);
+  // with the kitchen's fronts: up (its front edge rises over the seat), half as fast as a front: about 69 % of the way at 0.21 s
+  // (a front: 90 %), and down again
+  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(13);
+  const early = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
+  assert.ok(early > .62 && early < .76, 'on its way: ' + early);
+  p.tick(107);
   // (a turn about x by a < 0 lifts what lies in front of the hinge: y = −z·sin a)
   r = lid(); assert.ok(r.t === 0.698 && r.rot === -0.7, 'open at 40°: its front edge up');
+  // held: 30°/s
+  assert.strictEqual(p.run('+(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid").holdRate*180/Math.PI).toFixed(1)'), 30);
   // straight up till their lower front edges are on the lid's top: the cushion's at 450 + (320 − 100)·tan 40° = 635; the pillow's
   // (496, 486) at 783, its middle 640 + 296
   assert.deepStrictEqual(r.ride, [[865, 210], [936, 385]], 'the pillows up out of its way');
@@ -364,6 +370,40 @@ check('кухня: сиденье оттоманки дивана целиком
   p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
   const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
   assert.strictEqual(lid().t, 0.698);
+});
+
+check('кухня: диван раскладывается «дельфином» — ящик выкатывается, спальный блок из него поднимается вровень с сиденьем', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const bed = (a) => p.run(`(f=>{const d=f.doors.find(x=>x.key==="sofa-bed"),sf=f.appl.children.filter(o=>o.userData.sofa===true)[0];
+    ${a === undefined ? '' : `d.a=d.t=d.max*${a};turnDoor(d);`}
+    const dr=d.g.children[0],bl=dr.children[0],st=bl.children[0],b=new THREE.Box3().setFromObject(sf),R=v=>Math.round(v*1000);
+    return {axis:d.axis,inSofa:d.g.parent===sf,seat:d.g.children[1].geometry.args.slice(0,3).map(R),max:d.max,t:+d.t.toFixed(2),drawer:R(dr.position.z),
+      block:[R(bl.position.y),R(bl.position.z),+bl.rotation.x.toFixed(2)],size:bl.children[1].geometry.args.slice(0,3).map(R),strap:st.visible,depth:R(b.max.z-b.min.z)};})(VIEWS.kitchen.furniture())`);
+  let r = bed();
+  // the seat in its holder (a click on it lays the bed out); closed: the drawer in, the block on its bottom (its back lower edge
+  // 75 up, 130 from the sofa's back), the strap hidden; the sofa 850 deep
+  assert.deepStrictEqual([r.axis, r.inSofa, r.seat, r.t, r.drawer, r.block, r.strap, r.depth], ['none', true, [1300, 170, 750], 0, 0, [75, 130, 0], false, 850]);
+  assert.deepStrictEqual(r.size, [1272, 170, 680], 'the block between the drawer\'s sides, as thick as the seat, as deep as the chaise is in front of it');
+  // 40 %: the drawer out by 680, its front in line with the chaise's (1510)
+  r = bed(.4); assert.deepStrictEqual([r.drawer, r.block], [680, [75, 130, 0]]);
+  // 55 %: the block's front up 22°; 70 %: slid forward till its back upper edge is past the seat's front: 850 + 170·sin 22° = 914 (− 680)
+  r = bed(.55); assert.deepStrictEqual(r.block, [75, 130, -0.38]);
+  r = bed(.7); assert.deepStrictEqual(r.block, [75, 234, -0.38]);
+  // out: level with the seat (280 + 170 = 450), its back against the seat's front (850 − 680), the strap hanging
+  r = bed(1); assert.deepStrictEqual([r.drawer, r.block, r.strap, r.depth], [680, [280, 170, 0], true, 1535], 'one bed with the chaise, out to 1530 (its strap 5 in front)');
+  bed(0);
+  // with the kitchen's fronts, evenly in 1.4 s: half way at 0.7 s (the drawer out, the block on its way), and back
+  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(44);
+  const half = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))');
+  assert.ok(half > .45 && half < .55, 'half way: ' + half); assert.strictEqual(bed().drawer, 680);
+  p.tick(156);
+  r = bed(); assert.deepStrictEqual([r.t, r.drawer, r.block, r.strap], [1.45, 680, [280, 170, 0], true]);
+  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click(); p.tick(200);
+  r = bed(); assert.deepStrictEqual([r.drawer, r.block, r.strap], [0, [75, 130, 0], false]);
+  // held, the whole way in 3 s: slower than a click, as the other doors (they ease in about 0.3 s, held at 60°/s)
+  p.run('held={d:VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"),dir:1}'); p.tick(94);
+  const held = p.run('(d=>(held=null,d.a/d.max))(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))');
+  assert.ok(held > .45 && held < .55, 'half way in 1.5 s held: ' + held);
 });
 
 check('кухня: во вкладке — только шкафы и обеденный стол (когда рамка левой стены его вмещает); стол, витрина и диван — на плане и в обходе', () => {

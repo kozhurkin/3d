@@ -6,13 +6,13 @@
 <style>
 /* Layout: a slim tab bar over a full-height frame that holds the selected cabinet model */
 :root{
-  --bg:#ECEDE9; --panel:#F7F7F4; --fg:#1E2321; --muted:#626B66; --line:#D3D6D0; --accent:#2F5D50; --accent-soft:#DCE7E2;
+  --bg:#ECEDE9; --panel:#F7F7F4; --fg:#1E2321; --muted:#626B66; --line:#D3D6D0; --accent:#2F5D50; --accent-soft:#DCE7E2; --warn:#A5561C;
   --f-display:"Tenor Sans", Georgia, serif; --f-body:"Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; color-scheme:dark;}}
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; color-scheme:dark;}}
 :root[data-theme="dark"]{
-  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; color-scheme:dark;}
+  --bg:#151917; --panel:#1C211F; --fg:#E6E9E6; --muted:#9AA39E; --line:#2E3532; --accent:#86BBA8; --accent-soft:#243530; --warn:#E3A06A; color-scheme:dark;}
 html,body{height:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex;flex-direction:column}
 .bar{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap;padding-top:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -21,6 +21,14 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 .tabs a+a{border-left:1px solid var(--line)}
 .tabs a[aria-current="page"]{background:var(--accent);color:var(--panel)}
 .tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.save{width:34px;height:34px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--line);border-radius:4px;color:var(--fg);cursor:pointer}
+.save:hover{border-color:var(--accent);color:var(--accent)}
+.save:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.save[aria-busy="true"]{cursor:progress;color:var(--muted)}
+.save[aria-busy="true"] svg{animation:savePulse 1s ease-in-out infinite alternate}
+.save.err{border-color:var(--warn);color:var(--warn)}
+@keyframes savePulse{to{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.save[aria-busy="true"] svg{animation:none}}
 .frames{flex:1;min-height:0;position:relative}
 .frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
 </style>
@@ -33,6 +41,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     <a href="#kitchen" data-tab="kitchen">Кухня</a>
     <a href="#walk" data-tab="walk">Обход</a>
   </nav>
+  <button class="save" id="saveGlb" type="button" aria-label="Скачать 3D-модель (GLB)" title="Скачать 3D-модель (.glb): то, что видно сейчас"><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="M10 3v9m-4-4 4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 13v2.5h12V13" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 </header>
 <main class="frames">
   <iframe id="f-app" title="Квартира" hidden></iframe>
@@ -59,6 +68,18 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
     try{const w=fr.contentWindow;if(w&&w.showView)w.showView(cur);}catch(e){}
     tabs.forEach(t=>document.querySelector(`[data-tab="${t}"]`).setAttribute('aria-current',t===cur?'page':'false'));
   }
+  // the model as it is on screen → kvartira.glb: the app makes the bytes (js/export.js), this page saves them
+  const save=document.getElementById('saveGlb'),saveTitle=save.title;
+  save.addEventListener('click',()=>{
+    const w=fr.contentWindow;if(save.getAttribute('aria-busy')==='true'||!w||!w.exportGLB)return;
+    save.setAttribute('aria-busy','true');save.classList.remove('err');save.title='Готовлю файл…';
+    w.exportGLB().then(buf=>{
+      const url=URL.createObjectURL(new Blob([buf],{type:'model/gltf-binary'})),a=document.createElement('a');
+      a.href=url;a.download='kvartira.glb';document.body.appendChild(a);a.click();a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),10000);save.title=saveTitle;
+    },e=>{console.error(e);save.classList.add('err');save.title='Не удалось сохранить модель (нужен интернет для загрузки экспортёра). Нажмите, чтобы повторить.';})
+      .finally(()=>save.removeAttribute('aria-busy'));
+  });
   new MutationObserver(syncTheme).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
   addEventListener('hashchange',show);show();
 })();

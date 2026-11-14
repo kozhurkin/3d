@@ -229,3 +229,53 @@ check('shell: все вкладки — виды одного приложени
   });
   assert.deepStrictEqual(shown, ['hall', 'bath', 'kitchen', 'walk', 'plan']);
 });
+
+check('shell: кнопка справа от вкладок сохраняет модель приложения в kvartira.glb', () => {
+  const p = runPage('<html>' + html.slice(html.indexOf('<header')), { hash: '#plan' });
+  const bar = p.document.querySelector('header'), save = p.document.getElementById('saveGlb');
+  assert.deepStrictEqual(bar.children.map((c) => c.tagName), ['NAV', 'BUTTON'], 'the button right after the tabs');
+  assert.strictEqual(save, bar.children[1]);
+  // the page saves what the app gives: a link to the bytes, clicked once
+  const blobs = [], links = [];
+  p.document.body = el('body');
+  p.ctx.Blob = class { constructor(parts, o) { this.parts = parts; this.type = o.type; blobs.push(this); } };
+  p.ctx.URL = { createObjectURL: () => 'blob:x', revokeObjectURL() {} };
+  const mk = p.document.createElement;
+  p.document.createElement = (t) => { const e = mk(t); if (t === 'a') Object.assign(e, { click: () => links.push([e.href, e.download, !!e.parentElement]), remove: () => { e.parentElement.children = e.parentElement.children.filter((x) => x !== e); e.parentElement = null; } }); return e; };
+  // a thenable that settles at once, so the click is done when it returns
+  const now = (ok, v) => ({ then(a, b) { ok ? a(v) : b(v); return { finally(f) { f(); } }; } });
+  let calls = 0;
+  p.ctx.document.getElementById('f-app').contentWindow = { exportGLB: () => (calls++, now(true, 'bytes')) };
+  save.click();
+  assert.deepStrictEqual(JSON.parse(JSON.stringify([calls, links, blobs.map((b) => [b.parts, b.type])])), [1, [['blob:x', 'kvartira.glb', true]], [[['bytes'], 'model/gltf-binary']]]);
+  assert.deepStrictEqual([save.hasAttribute('aria-busy'), p.document.body.children.length], [false, 0]);
+  // the exporter could not come: the button says so, and the next click tries again
+  const err = console.error; console.error = () => {};
+  p.ctx.document.getElementById('f-app').contentWindow = { exportGLB: () => (calls++, now(false, new Error('offline'))) };
+  save.click(); console.error = err;
+  assert.ok(/Не удалось/.test(save.title) && !save.hasAttribute('aria-busy'));
+  save.click(); assert.strictEqual(calls, 3);
+});
+
+check('экспорт GLB: в файле только видимые сетки, непрозрачные текстуры — JPEG; всё возвращается как было', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const r = p.run(`(()=>{
+    const RGBA=THREE.RGBAFormat,photo={format:RGBA},label={format:RGBA},both={format:RGBA};
+    const o=(k,x)=>Object.assign({name:k,visible:true},x);
+    const list=[o('wall',{isMesh:true,material:{map:photo}}),o('name',{isMesh:true,material:{map:label,transparent:true}}),
+      o('glass',{isMesh:true,material:[{map:both},{map:both,transparent:true}]}),o('gone',{isMesh:true,material:{opacity:0}}),
+      o('sun',{isLight:true}),o('dim',{isLine:true}),o('text',{isSprite:true}),o('off',{isMesh:true,visible:false})];
+    dbg.visible=true;list.push(dbg);
+    scene.traverse=f=>list.forEach(f);scene.traverseVisible=f=>list.filter(x=>x.visible).forEach(f);
+    const show=exportHide(),fmt=exportJpeg();
+    const during=[list.filter(x=>x.visible).map(x=>x.name),[photo,label,both].map(t=>t.format===RGBA)];
+    fmt();show();
+    return [during,list.filter(x=>x.visible).length,[photo,label,both].map(t=>t.format===RGBA)];})()`);
+  assert.deepStrictEqual(r[0], [['wall', 'name', 'glass'], [false, true, true]], 'what goes; a map shared with a transparent material keeps its alpha');
+  assert.deepStrictEqual([r[1], r[2]], [8, [true, true, true]], 'shown again, formats back');
+  // the exporter is loaded once, from the three.js of the page (r128)
+  p.document.head = el('head');
+  p.run('(THREE.GLTFExporter=undefined,exportGLB(),exportGLB(),0)');
+  assert.deepStrictEqual(p.document.head.children.map((s) => s.src), ['https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js']);
+  assert.ok(/three\.js\/r128\/three\.min\.js/.test(PAGES.app), 'the page runs r128');
+});

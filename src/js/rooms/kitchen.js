@@ -126,6 +126,7 @@ const INFO={
   table:()=>({title:'Обеденный стол',lines:[`${TB.l/10} × ${TB.w/10} см, высота ${TB.h/10} см, торцом к левой стене.`,`Столешница ${TB.t} мм — ${finName(FIN.top)}, как у кухни.`,`Четыре стальные ножки ${TB.leg} × ${TB.leg} мм.`]}),
   desk:{title:'Письменный стол HEMNES (IKEA)',lines:['Чёрно-коричневый, массив сосны.','155 × 65 см, высота 74 см, под столом 67 см.','Слева тумба с дверцей и полкой, справа два ящика.']},
   addon:{title:'Надстройка HEMNES для стола (IKEA)',lines:['Чёрно-коричневая, массив сосны.','152 × 25 см, высота 63 см; стол с ней — 137 см.','По краям две секции с ящиком и полками, посередине открытая полка.']},
+  macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
@@ -234,7 +235,75 @@ function buildDesk(g,opts){
   hemnesFronts(d.doors,deskMats);
   d.model.rotation.y=Math.PI/2;d.model.position.set(0,0,(P.L-DK.gap)*MM);d.model.userData.desk=true;d.model.userData.info=INFO.desk;
   g.add(d.model);
-  return d.doors;
+  return d.doors.concat(buildMacbook(d.model,opts));
+}
+
+/* the laptop on the desk: MacBook Pro 16″, silver — 355.7 × 248.1, 16.8 thick (Apple's sizes): 1.5 feet, a 9.4 body, its keys 0.6 over
+   it, a 5.3 lid. In the middle of the desk's length, in front of the add-on unit, its back 360 from the wall. The lid opens on its
+   hinge at the back to 110°, open from the start (a click anywhere on the laptop, «Открыты/Закрыты», the walk); the screen lights up as it opens.
+   Its own axes (mm): x along the desk, y up from the desk's top, z from its back toward its front, as the desk's */
+const MB={W:355.7,D:248.1,feet:1.5,base:9.4,keys:.6,lid:5.3,at:360,open:110*Math.PI/180};
+const srgb=c=>new THREE.Color(c).convertSRGBToLinear();
+const mbSilverMat=new THREE.MeshStandardMaterial({color:srgb('#e3e4e5'),roughness:.4,metalness:.15});
+/* what lies on a face (the keyboard's well, the speakers, the trackpad on the body, the keys on the well; the glass, the display, the
+   notch on the lid) is drawn over it by its layer: from a few metres the depth buffer tells apart less than a millimetre, it would flicker
+   or hide. Flat ones are planes facing out: seen from behind they are not drawn, so a layer never shows through the lid or the body */
+const over=(k,o)=>Object.assign(o,{polygonOffset:true,polygonOffsetFactor:-k,polygonOffsetUnits:-4*k});
+const mbPadMat=new THREE.MeshStandardMaterial(over(1,{color:srgb('#d6d7d9'),roughness:.25,metalness:.15}));   // the trackpad: glass, a shade darker
+const mbGrilleMat=new THREE.MeshStandardMaterial(over(1,{color:srgb('#a9abae'),roughness:.6}));   // the speakers' perforation
+const mbWellMat=new THREE.MeshStandardMaterial(over(1,{color:0x0c0c0d,roughness:.3}));   // the keyboard's well
+const mbGlassMat=new THREE.MeshStandardMaterial(over(1,{color:0x0c0c0d,roughness:.15}));   // the screen's glass round the display
+const mbNotchMat=new THREE.MeshStandardMaterial(over(3,{color:0x0c0c0d,roughness:.15}));
+const mbKeyMat=new THREE.MeshStandardMaterial(over(2,{color:0x151617,roughness:.55}));   // over the well
+const mbFootMat=new THREE.MeshStandardMaterial({color:0x2a2b2d,roughness:.8});
+// the display: a gradient as a wallpaper, unlit; its colour goes from black (off) to white (on) as the lid opens
+const mbScreenMat=new THREE.MeshBasicMaterial(over(2,{color:0x000000,vertexColors:true}));
+function buildMacbook(desk,opts){
+  const {W,D,feet,base,keys,lid,at,open}=MB,yb=feet+base,yk=yb+keys;
+  const place=new THREE.Group();place.position.set((DK.W-W)/2*MM,DK.H*MM,at*MM);place.userData.macbook=true;place.userData.info=INFO.macbook;desk.add(place);
+  const q=new THREE.Group();place.add(q);   // the door's holder: everything, so a click anywhere on it opens it
+  // the keyboard, the speakers, the trackpad: on a deck of their own, not drawn while the lid is shut over them (layered over the body,
+  // from far and askew they would show through the lid)
+  const deck=new THREE.Group();q.add(deck);
+  const b=boxIn(deck),B=(x0,x1,y0,y1,z0,z1,mat)=>b(x0*MM,x1*MM,y0*MM,y1*MM,z0*MM,z1*MM,mat);
+  // a plane on the body's top (up) or on the lid's inner face (down), at y
+  const flat=(g,x0,x1,z0,z1,y,mat,down)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),mat);m.rotation.x=down?Math.PI/2:-Math.PI/2;
+    m.position.set((x0+x1)/2*MM,y*MM,(z0+z1)/2*MM);m.receiveShadow=true;g.add(m);return m;};
+  const rb=(g,x0,x1,y0,y1,z0,z1,r,mat)=>{const m=new THREE.Mesh(roundBoxGeo((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM,r*MM),mat);
+    m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;g.add(m);return m;};
+  // the body on four round feet
+  rb(q,0,W,feet,yb,0,D,4,mbSilverMat);
+  [[24,24],[W-24,24],[24,D-24],[W-24,D-24]].forEach(([x,z])=>{const f=new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,feet*MM,20),mbFootMat);f.position.set(x*MM,feet/2*MM,z*MM);q.add(f);});
+  // the keyboard: 14.5 keys of 19 mm across, a row of function keys (11 deep) and five rows (17 deep), in a black well; the speakers by its sides
+  const u=19,kx=(W-14.5*u+2)/2,kz=14,rows=[[[1.5],...Array(12).fill([1]),[1]],[...Array(13).fill([1]),[1.5]],[[1.5],...Array(12).fill([1]),[1]],
+    [[1.75],...Array(11).fill([1]),[1.75]],[[2.25],...Array(10).fill([1]),[2.25]],[[1],[1],[1],[1.25],[5],[1.25],[1],[1],[1,'ud'],[1]]];
+  flat(deck,kx-3,W-kx+3,kz-3,kz+13+4*u+17+3,yb+.02,mbWellMat);
+  rows.forEach((r,i)=>{const z0=i?kz+13+(i-1)*u:kz,z1=z0+(i?17:11);let x=kx;
+    r.forEach(([w,ud])=>{const x1=x+w*u-2;
+      if(ud){const zm=(z0+z1)/2;B(x,x1,yb,yk,z0,zm-.5,mbKeyMat);B(x,x1,yb,yk,zm+.5,z1,mbKeyMat);}   // the arrows up and down, half keys
+      else B(x,x1,yb,yk,z0,z1,mbKeyMat);
+      x+=w*u;});});
+  [[12,36],[W-36,W-12]].forEach(([x0,x1])=>flat(deck,x0,x1,kz,kz+13+4*u+17,yb+.02,mbGrilleMat));
+  flat(deck,(W-160)/2,(W+160)/2,135,235,yb+.02,mbPadMat);
+  // the lid on its hinge at the back, half its thickness over the keys; closed, it lies over them, from its back to its front
+  const L=new THREE.Group();L.position.set(0,(yk+lid/2)*MM,2*MM);q.add(L);
+  const h=lid/2,ld=D-2;
+  rb(L,0,W,-h,h,0,ld,2.5,mbSilverMat);
+  flat(L,2,W-2,2,ld-2,-h-.02,mbGlassMat,true);
+  // the display 16.2″ (3456 × 2234): 345.6 × 223.4, its top 7 from the lid's edge; the notch in the middle of its top
+  const sw=345.6,sh=223.4,s1=ld-7,s0=s1-sh,sg=new THREE.PlaneGeometry(sw*MM,sh*MM,4,4),pos=sg.attributes.position,col=[];
+  const c0=srgb('#1d2a6e'),c1=srgb('#6a3fa3'),c2=srgb('#e5799b'),mix=new THREE.Color();
+  for(let i=0;i<pos.count;i++){const k=(pos.getX(i)/(sw*MM)+.5)*.4+(.5-pos.getY(i)/(sh*MM))*.6;   // from the top left corner to the bottom right one
+    mix.copy(c0).lerp(c1,Math.min(1,k*2));if(k>.5)mix.copy(c1).lerp(c2,(k-.5)*2);col.push(mix.r,mix.g,mix.b);}
+  sg.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  const scr=new THREE.Mesh(sg,mbScreenMat);scr.rotation.x=Math.PI/2;scr.position.set(W/2*MM,(-h-.04)*MM,(s0+s1)/2*MM);L.add(scr);
+  flat(L,W/2-15.5,W/2+15.5,s1-6,s1,-h-.06,mbNotchMat,true);
+  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+  const follow=a=>{L.rotation.x=-a;deck.visible=a>.01;mbScreenMat.color.setScalar(sm((a-.5)/.6));};
+  // it starts open (closed only once it was closed: it keeps how open it was through a rebuild)
+  const fresh=!((opts&&opts.prev)||[]).some(d=>d.key==='macbook'),d=applDoor(q,{key:'macbook',axis:'none',max:open,follow},opts);
+  if(fresh){d.a=d.t=open;turnDoor(d);}
+  return [d];
 }
 
 /* the display cabinet as IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.

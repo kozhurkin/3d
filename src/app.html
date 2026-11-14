@@ -196,6 +196,7 @@ textarea.code{width:100%;height:80px;font:11px var(--f-mono);margin-top:8px;back
 // the view to open: the shell names it (appView; the app runs in its frame), or its hash; later the shell switches views with showView()
 let first="plan";try{const v=parent.appView||parent.location.hash.slice(1);if(VIEWS[v])first=v;}catch(e){}
 resize();showView(first,false);
-if(document.fonts)document.fonts.ready.then(paintNames);
+// the room names on the floor are drawn in the web font: again once it has come (walls.js: paintNames widens them)
+if(document.fonts){document.fonts.ready.then(paintNames);document.fonts.load('400 96px "Tenor Sans"').then(paintNames,()=>{});}
 loop();
 </script>

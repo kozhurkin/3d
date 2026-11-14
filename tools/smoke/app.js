@@ -202,6 +202,16 @@ check('«Планировка»: «Резать шкафы по стенам» �
   assert.strictEqual(box.disabled, true);
 });
 
+check('названия комнат на полу: холст по ширине текста в шрифте, как он есть сейчас (веб-шрифт пришёл позже — шире)', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  // the fallback font: 100 px wide; then the web font has come: 150 px
+  const paint = (w) => p.run(`(()=>{nameTexts.forEach(n=>{n.g.measureText=()=>({width:${w}});n.t.__d=0;n.t.dispose=()=>{n.t.__d++;};});paintNames();
+    return nameTexts.map(n=>[n.c.width,+(n.m.scale.x/n.h).toFixed(4),n.t.__d]);})()`);
+  assert.deepStrictEqual(paint(100), Array(3).fill([124, +(124 / 126).toFixed(4), 1]));
+  assert.deepStrictEqual(paint(150), Array(3).fill([174, +(174 / 126).toFixed(4), 1]), 'wider with the web font, the texture made anew');
+  assert.deepStrictEqual(paint(150).map((r) => r[2]), [0, 0, 0], 'the same width: the texture stays');
+});
+
 check('shell: все вкладки — виды одного приложения в одном окне', () => {
   const shellPage = html.slice(html.indexOf('<header'));
   const shown = [];

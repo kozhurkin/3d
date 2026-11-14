@@ -45,18 +45,24 @@ function buildRooms(){
 /* room names lying on the floor */
 const namesGroup=new THREE.Group();scene.add(namesGroup);
 const nameTexts=[];
+const nameFont=f=>`400 ${f}px "Tenor Sans", Georgia, serif`;
+// the canvas is as wide as the text in the font as it is now: built before the web font has come, a name is measured in
+// the fallback, narrower one, and paintNames widens it (canvas and plane) once the font is there
+const nameW=n=>{n.g.font=nameFont(n.f);return Math.ceil(n.g.measureText(n.text).width)+24;};
 function floorText(text,x,z,h){
   const c=document.createElement('canvas'),g=c.getContext('2d'),f=96;
-  g.font=`400 ${f}px "Tenor Sans", Georgia, serif`;const w=Math.ceil(g.measureText(text).width)+24;
-  c.width=w;c.height=f+30;
+  c.height=f+30;
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(h*w/c.height,h),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(1,h),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
   m.rotation.x=-Math.PI/2;m.position.set(x*MM,.004,z*MM);m.renderOrder=2;namesGroup.add(m);
-  nameTexts.push({c,g,t,text,f});
+  nameTexts.push({c,g,t,m,h,text,f});
 }
 function paintNames(){
   const col=css('--fg');
-  nameTexts.forEach(n=>{n.g.clearRect(0,0,n.c.width,n.c.height);n.g.font=`400 ${n.f}px "Tenor Sans", Georgia, serif`;
+  nameTexts.forEach(n=>{
+    const w=nameW(n);
+    if(w!==n.c.width){n.c.width=w;n.t.dispose();n.m.scale.x=n.h*w/n.c.height;}   // a new size: the texture is made anew
+    n.g.clearRect(0,0,n.c.width,n.c.height);n.g.font=nameFont(n.f);
     n.g.fillStyle=col;n.g.globalAlpha=.55;n.g.textBaseline='middle';n.g.fillText(n.text,12,n.c.height/2+4);n.t.needsUpdate=true;});
 }
 buildRooms();

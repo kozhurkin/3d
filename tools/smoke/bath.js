@@ -45,7 +45,7 @@ check('санузел: шкафы, инсталляция и унитаз соб
   // the installation box, its flush plate, the bowl and the seat: the last group of the bathroom
   const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.sani.children.filter(m=>m.userData.wash!==true).map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
   let r = b();
-  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 34, true], 'built on screen, every door on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors + 3, 34, true], 'built on screen, every door on a hinge, and the washing machine\'s and the two of the cabinet over the sink');
   assert.strictEqual(nDoors, 6, 'four tall cabinet doors, two upper cabinet doors');
   assert.deepStrictEqual(r.sani.map((y) => round(y, 4)), [0.6, 1.0025, 0.22, 0.41]);
   // the panel: sizes, the niche and the ceiling from the plan, what is between the shelves
@@ -74,19 +74,77 @@ check('санузел: стиральная машина и раковина н�
   const box = () => p.run('(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*1000)))(new THREE.Box3().setFromObject(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true)))');
   // the bath tab's frame ends at the partition next to the tall cabinet: its own view hides them
   assert.strictEqual(shown(), false, 'built with the sanitary ware, hidden in the bathroom view');
-  // between the partition (−700) and the hall wall (−100), from the back wall up to the machine's door (617); the tap over the sink
+  // between the partition (−700) and the hall wall (−100), from the back wall up to the machine's door (640), up to the lamp on the cabinet over the sink
   const b = box();
-  assert.deepStrictEqual([b[0], b[1], b[4], b[5]], [-700, -100, 0, 617]);
-  assert.ok(b[3] > 1000 && b[3] < 1300, 'the tap over the sink');
-  // the machine 595 × 850 × 540, 40 mm off the back wall, in the middle of the niche; its footprint goes on the plan
-  const m = p.run('(g=>{const c=g.children[0];return [c.geometry.args,c.position.x,c.position.z].flat().map(v=>Math.round(v*1000));})(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))');
-  assert.deepStrictEqual(m, [595, 850, 540, 1600, 310]);
+  assert.deepStrictEqual([b[0], b[1], b[4], b[5]], [-700, -100, 0, 640]);
+  assert.strictEqual(b[3], 2055);
+  // the machine 595 × 850 × 540, 40 mm off the back wall, in the middle of the niche (x 1302.5…1897.5 → −697.5…−102.5 on the plan,
+  // its front panel with the opening is not in the stub's box, the drawer is: 6 mm out to 586): hollow, a drum inside (cuff, drum, front ring, back)
+  const mc = 'VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true).children.find(m=>m.userData.machine===true)';
+  assert.deepStrictEqual(p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*10000)))(new THREE.Box3().setFromObject(${mc}))`), [-6975, -1025, 0, 8500, 400, 5860]);
+  assert.strictEqual(p.run(`${mc}.children.filter(m=>m.userData.drum===true).length`), 4);
+  // the drum Ø470 × 340 behind a 40 mm cuff, its axis through the door's centre (440 up)
+  assert.deepStrictEqual(p.run(`(m=>[m.geometry.args[0]*2,m.geometry.args[2],m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${mc}.children.filter(m=>m.userData.drum===true)[1])`), [470, 340, 440, 358]);
   // the sink's bottom: 600 × 600 from the back wall, 30 mm over the machine
-  const sink = p.run('(g=>{const c=g.children[5];return [c.geometry.args,c.position.y,c.position.z].flat().map(v=>Math.round(v*1000));})(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))');
+  const sink = p.run('(g=>{const c=g.children[2];return [c.geometry.args,c.position.y,c.position.z].flat().map(v=>Math.round(v*1000));})(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))');
   assert.deepStrictEqual(sink, [600, 20, 600, 890, 300]);
   // on the plan it shows
   p.run('showView("plan")'); p.tick();
   assert.strictEqual(shown(), true, 'shown on the plan');
+});
+
+check('санузел: дверца стиральной машины открывается в ту сторону, по которой кликнули', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const D = `VIEWS.bath.furniture().doors.find(d=>d.key==='washer')`;
+  const st = () => p.run(`(d=>[d.side,d.s,Math.round(d.g.position.x*1000),Math.round(d.max*1000),d.g.children[0].children[0].userData.ring===true,Math.round(d.g.children[0].children[1].geometry.args[0]*2000)])(${D})`);
+  const run = (n) => { for (let i = 0; i < n; i++) p.tick(); };
+  // a click as pickDoor makes it: the point it hit (the door's middle is at x −400 on the plan), then open or closed
+  const click = (x) => { p.run(`(d=>{if(${x}!==null)d.hit={x:${x}};d.t=d.t!==0?0:d.max;})(${D})`); run(2); };
+  const shut = () => { p.run(`(d=>{d.t=0;})(${D})`); run(200); };
+  // Ø480 door (a ring, the Ø330 glass in its middle); the hinge 12 mm past its edge: x 1600 ∓ 252. The niche's walls stop it at 90° (48 mm to each wall, its 50 mm bulge)
+  assert.deepStrictEqual(st(), [-1, -1, 1348, 1571, true, 330], 'closed, on the left hinge');
+  click(-0.3); run(80);
+  assert.deepStrictEqual(st().slice(0, 3), [1, 1, 1852], 'clicked right of its middle: opens to the right');
+  assert.ok(p.run(`${D}.a`) > 1.5, 'swung open');
+  shut(); click(-0.3);
+  assert.strictEqual(st()[0], 1, 'right again');
+  shut(); click(-0.5);
+  assert.deepStrictEqual(st().slice(0, 3), [-1, -1, 1348], 'clicked left: to the left');
+  // not closed yet: a click on the other half closes it on the same hinge
+  click(-0.3); run(5); click(-0.3);
+  assert.strictEqual(st()[0], -1, 'not closed all the way: the same hinge');
+  // opened with no click («Открыты»): the side it had
+  shut(); click(null);
+  assert.strictEqual(st()[0], -1);
+  // «Открыты» in the bathroom panel opens it to its stop, and the panel sees every front open
+  p.run(`(d=>{d.t=0;})(${D})`); run(200);
+  const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
+  bq('[data-door="open"]').click(); run(2);
+  assert.strictEqual(p.run(`${D}.t`), p.run(`${D}.max`));
+  assert.strictEqual(bq('[data-door="open"]').getAttribute('aria-pressed'), 'true');
+});
+
+check('санузел: шкафчик над раковиной — отдельное изделие с зеркальными дверцами', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const W = 'VIEWS.bath.furniture()', cab = `${W}.sani.children.find(m=>m.userData.wash===true).children.slice(-1)[0]`;
+  // its boards: 600 wide (the niche), 200 deep with the doors, 300 over the sink (1000): from 1300 to 2000, two shelves; not in the bathroom's parts
+  const parts = p.run(`${cab}.children.map(o=>(o.userData.part&&o.userData.part.name?o.userData.part:o.children[0].userData.part)).map(q=>[q.name,q.x0,q.x1,q.y0,q.y1,q.z0,q.z1])`);
+  assert.strictEqual(parts.length, 10);
+  assert.deepStrictEqual(parts[0], ['Бок шкафчика над раковиной', 1300, 1316, 1300, 2000, 0, 184]);
+  assert.strictEqual(parts.filter((q) => q[0] === 'Полка шкафчика над раковиной').length, 2);
+  assert.deepStrictEqual(parts.filter((q) => q[0] === 'Фасад шкафчика над раковиной').map((q) => q.slice(1)), [[1301, 1599, 1301, 1999, 184, 200], [1601, 1899, 1301, 1999, 184, 200]]);
+  assert.ok(!p.run(`${W}.current.parts.some(q=>/раковин/.test(q.name))`), 'not in the bathroom cut list');
+  assert.ok(!/раковин/.test(p.document.querySelector('[data-panel="bath"]').querySelector('#b-csv').value));
+  // a mirror on each door, in front of its face, edge to edge; the doors are the room's: a click opens them
+  const doors = `${W}.doors.filter(d=>d.g.children[0].userData.part.name==='Фасад шкафчика над раковиной')`;
+  assert.deepStrictEqual(p.run(`${doors}.map(d=>{const m=d.g.children.find(c=>c.userData.mirror===true);return [m.geometry.args,m.position.z+d.g.position.z].flat().map(v=>Math.round(v*1000));})`), [[298, 698, 4, 202], [298, 698, 4, 202]]);
+  p.run(`${doors}.forEach(d=>{d.t=d.max;})`); for (let i = 0; i < 60; i++) p.tick();
+  assert.ok(p.run(`${doors}.every(d=>d.a>1)`), 'they swing open with the room\'s doors');
+  // a lamp on its top (2000): a bracket, the bar 450 × 25 × 25 mm 45 mm past the mirrors and 30 mm over the top, its glowing underside
+  const lamp = p.run(`${W}.sani.children.find(m=>m.userData.wash===true).children.filter(m=>['body','glow'].includes(m.userData.lamp)).map(m=>[m.geometry.args,m.position.y-m.geometry.args[1]/2,m.position.z-m.geometry.args[2]/2,m.userData.lamp==='glow'].flat().map(v=>typeof v==='boolean'?v:Math.round(v*1000)))`);
+  assert.deepStrictEqual(lamp.map((m) => m[5]), [false, false, true]);
+  assert.strictEqual(lamp[0][3], 2000, 'the bracket on the top');
+  assert.deepStrictEqual(lamp[1], [450, 25, 25, 2030, 245, false]);
 });
 
 check('санузел: отделка — палитра, меню образца «корпус / фасады», свой цвет', () => {

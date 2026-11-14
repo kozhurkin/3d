@@ -12,7 +12,8 @@
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
      slider    {sel, key, max()} — how far the side wall shows (the view's frame),
      setCam(v), dims(dim,gaps) — dimension lines through dim(a,b,txt,tick), the free heights of a shelf stack through
-               gaps(boards), extra {name, build(g)} — appliances or sanitary ware,
+               gaps(boards), extra {name, build(g, {prev, open})} — appliances or sanitary ware; a cabinet of its own among
+               them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk),
      foot()    — extra footprint rects, walls(on) — walls in its own view (default: «Стена» toggles them),
      syncFlags(), onDoorMode(), panelText(),
      groups    — finish groups (default carcass, front), shown(g), matName(m) (null: the plain board), takeFin(sFIN, ok),
@@ -52,7 +53,7 @@ function roomKit(id,cfg){
     cur=cfg.fromModel(want);
     const prev=doors;disposeGroup(model);
     ({model,doors}=buildParts(cur,mats,{prev,open:VS[id].fronts==='open'}));
-    if(cfg.extra){extra=new THREE.Group();cfg.extra.build(extra);model.add(extra);}
+    if(cfg.extra){extra=new THREE.Group();const more=cfg.extra.build(extra,{prev,open:VS[id].fronts==='open'});if(more)doors=doors.concat(more);model.add(extra);}
     dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps);model.add(dimsGroup);
     clipToFloor(model,clip);
     // its footprint for «Контуры» on the plan
@@ -81,7 +82,7 @@ function roomKit(id,cfg){
     if(extra)extra.visible=!on||V.walls!==false;
     if(cfg.walls)cfg.walls(on);else if(on&&wallGroup)wallGroup.visible=V.walls!==false;
     if(model.visible)doors.forEach(d=>{
-      if(held&&held.d===d){d.t=Math.min(DMAX,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
+      if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
       else d.a+=(d.t-d.a)*ease(.09);
       turnDoor(d);});
   });
@@ -103,13 +104,13 @@ function roomKit(id,cfg){
   // fronts: all open, all closed (or nothing pressed when they differ), or taken off
   function syncDoorMode(){
     const V=VS[id];let st=V.fronts;
-    if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=DMAX-.01).length,z=doors.filter(d=>d.t<=.01).length;
+    if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=d.max-.01).length,z=doors.filter(d=>d.t<=.01).length;
       st=n===doors.length?'open':z===doors.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
     panel.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===st));
     if(cfg.onDoorMode)cfg.onDoorMode();
   }
   panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
-    const V=VS[id];V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?DMAX:0);
+    const V=VS[id];V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?d.max:0);
     syncDoorMode();applyVisibility();saveView(id);}));
   // dimensions, walls (with the room's extras)
   const toggles={dims:pq('tDims'),walls:pq('tWall')};

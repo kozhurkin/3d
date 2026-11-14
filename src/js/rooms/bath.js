@@ -89,7 +89,7 @@ const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,meta
 
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
    under the upper cabinet, its flush plate, the wall-hung bowl facing +x with its seat */
-function buildSanitary(g){
+function buildSanitary(g,opts){
   const box=boxIn(g);
   const zf=current.zf*MM,di=P.Di*MM,hi=P.Hi*MM,lt=P.Lt*MM,cz=zf+lt/2;
   box(0,di,0,hi,zf,zf+lt,tileMat);
@@ -98,28 +98,59 @@ function buildSanitary(g){
   bowl.scale.set(.7/.36,1,1);bowl.position.set(di+.15,.22,cz);bowl.castShadow=bowl.receiveShadow=true;g.add(bowl);   // 700 mm long: 200 mm sunk into the box, 500 mm out
   const seat=new THREE.Mesh(new THREE.CylinderGeometry(.185,.185,.02,32),whiteMat);
   seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
-  wash=new THREE.Group();wash.userData.wash=true;buildWash(wash);g.add(wash);
+  wash=new THREE.Group();wash.userData.wash=true;const doors=buildWash(wash,opts);g.add(wash);
+  return doors;
 }
 
 /* ---------- the washing machine and the sink over it: in the niche right of the bathroom door ----------
    The niche runs from the partition next to the tall cabinet to the hall wall, from the back wall (sizes from the plan).
-   The machine stands in it facing the room, a flat «water lily» sink with its mixer hangs over it. Bath axes, mm.
+   The machine stands in it facing the room, a flat «water lily» sink with its mixer hangs over it, and over the sink a wall
+   cabinet with two hinged mirror doors and shelves, a lamp on its top (the machine's door opens, see washerDoor): a product of its own, not in the bathroom's cut list, no sizes in the panel
+   (its finishes are the bathroom's). Bath axes, mm.
    The bath tab's frame ends at the partition, so its own view hides them; the plan and the walk show them */
 const WASH={W:595,H:850,D:540,back:40,sinkD:600,sinkY:880,sinkT:1000};
+const SINK_CAB={D:200,Gap:300,H:700,N:2};   // the cabinet over the sink: depth with its doors, from the sink's top up to its bottom, height, shelves
 let wash=null;
 const washNiche=()=>{const x0=A.bNiche+A.wt,x1=xB1-xL;return {x0,x1,cx:(x0+x1)/2,w:x1-x0};};
 const washRect=()=>{const n=washNiche(),w=Math.min(WASH.W,n.w-4)/2;return [n.cx-w,n.cx+w,WASH.back,WASH.back+WASH.D];};
 const darkMat=new THREE.MeshStandardMaterial({color:0x2b2d2f,roughness:.35,metalness:.2});
-const portMat=new THREE.MeshStandardMaterial({color:0x22313a,roughness:.05,metalness:.3,transparent:true,opacity:.8});
-function buildWash(g){
+const portMat=new THREE.MeshStandardMaterial({color:0x4a9be0,roughness:.05,metalness:.1,transparent:true,opacity:.4,depthWrite:false});
+const lampBodyMat=new THREE.MeshStandardMaterial({color:0x4a4c50,roughness:.3,metalness:.8});
+const lampMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff3dc,emissiveIntensity:1,roughness:.4});
+const mirrorMat=new THREE.MeshStandardMaterial({color:0xdfe7ec,roughness:.06,metalness:.55});
+// the cabinet over the sink: the width of the niche, up to the ceiling at most, back rails at the wall, the doors overlay
+function sinkCabParts(){
+  const n=washNiche(),S=SINK_CAB,x0=n.x0,x1=n.x1,y0=WASH.sinkT+S.Gap,y1=Math.min(y0+S.H,A.H),dc=S.D-TF,xm=(x0+x1)/2,parts=[];
+  const add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>parts.push(Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{}));
+  add('Бок шкафчика над раковиной','carcass',x0,x0+T,y0,y1,0,dc);
+  add('Бок шкафчика над раковиной','carcass',x1-T,x1,y0,y1,0,dc);
+  add('Дно шкафчика над раковиной','carcass',x0+T,x1-T,y0,y0+T,0,dc);
+  add('Крышка шкафчика над раковиной','carcass',x0+T,x1-T,y1-T,y1,0,dc);
+  const rb=Math.min(100,(y1-y0-2*T)/3);
+  add('Ребро жёсткости шкафчика над раковиной','carcass',x0+T,x1-T,y0+T,y0+T+rb,0,T);
+  add('Ребро жёсткости шкафчика над раковиной','carcass',x0+T,x1-T,y1-T-rb,y1-T,0,T);
+  const su=(y1-y0-T)/(S.N+1);
+  for(let i=1;i<=S.N;i++){const y=y0+i*su;add('Полка шкафчика над раковиной','carcass',x0+T,x1-T,y,y+T,T,dc-10);}
+  add('Фасад шкафчика над раковиной','front',x0+G/2,xm-G/2,y0+G/2,y1-G/2,dc,S.D,{hinge:'L'});
+  add('Фасад шкафчика над раковиной','front',xm+G/2,x1-G/2,y0+G/2,y1-G/2,dc,S.D,{hinge:'R'});
+  return parts;
+}
+function buildWash(g,opts){
   const box=boxIn(g),n=washNiche(),[x0,x1,z0,z1]=washRect().map(v=>v*MM),cx=n.cx*MM,h=WASH.H*MM;
-  const disc=(r,d,x,y,z,mat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d,40),mat);m.rotation.x=Math.PI/2;m.position.set(x,y,z);g.add(m);return m;};
-  // the machine: body, control panel with the display and the detergent drawer, the round door
-  box(x0,x1,0,h,z0,z1,whiteMat);
-  box(x0+.01,x0+.17,h-.1,h-.03,z1,z1+.006,whiteMat);   // drawer
-  box(cx+.03,cx+.17,h-.085,h-.045,z1,z1+.004,darkMat);   // display
-  disc(.2,.03,cx,.42,z1+.015,chromeMat);
-  disc(.155,.035,cx,.42,z1+.02,portMat);
+  // the machine (its own group): a hollow body, the drum in it behind the loading opening, the drawer and the display; the round door
+  const mc=new THREE.Group();mc.userData.machine=true;g.add(mc);
+  const mb=boxIn(mc),t=.012,fz=z1-t,dy=WD.y*MM,hr=WD.glass*MM;
+  mb(x0,x0+t,0,h,z0,fz,whiteMat);mb(x1-t,x1,0,h,z0,fz,whiteMat);                 // sides
+  mb(x0+t,x1-t,h-t,h,z0,fz,whiteMat);mb(x0+t,x1-t,0,t,z0,fz,whiteMat);            // top, bottom
+  mb(x0+t,x1-t,t,h-t,z0,z0+t,whiteMat);                                           // back
+  { const sh=new THREE.Shape();sh.moveTo(x0,0);sh.lineTo(x1,0);sh.lineTo(x1,h);sh.lineTo(x0,h);sh.lineTo(x0,0);   // front with the loading opening
+    const hole=new THREE.Path();hole.absarc(cx,dy,hr,0,Math.PI*2,true);sh.holes.push(hole);
+    const fr=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:t,bevelEnabled:false,curveSegments:32}),whiteMat);
+    fr.position.z=fz;fr.castShadow=fr.receiveShadow=true;mc.add(fr); }
+  buildDrum(mc,cx,dy,fz,hr);
+  mb(x0+.01,x0+.17,h-.1,h-.03,z1,z1+.006,whiteMat);   // drawer
+  mb(cx+.03,cx+.17,h-.085,h-.045,z1,z1+.004,darkMat);   // display
+  const wd=washerDoor(cx,z1,opts.prev.find(d=>d.key==='washer'),opts.open);g.add(wd.g);
   // the sink: a shallow bowl (bottom, rims) with the mixer on its back deck, 30 mm over the machine
   const sw=Math.min(600,n.w)/2*MM,sx0=cx-sw,sx1=cx+sw,y0=WASH.sinkY*MM,y1=WASH.sinkT*MM,sd=WASH.sinkD*MM,r=.035,deck=.13;
   box(sx0,sx1,y0,y0+.02,0,sd,whiteMat);
@@ -130,8 +161,68 @@ function buildWash(g){
   const drain=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.004,24),chromeMat);drain.position.set(cx,y0+.022,(deck+sd)/2);g.add(drain);
   const tap=new THREE.Mesh(new THREE.CylinderGeometry(.016,.02,.2,16),chromeMat);tap.position.set(cx,y1+.1,deck/2);g.add(tap);
   box(cx-.012,cx+.012,y1+.17,y1+.2,deck/2,deck/2+.15,chromeMat);
+  // the cabinet over the sink; a 4 mm mirror glued on each door edge to edge, swings with it
+  const cab=buildParts({parts:sinkCabParts()},mats,opts);
+  cab.doors.forEach(d=>{const p=d.g.children[0].userData.part,hp=d.g.position;
+    const mr=new THREE.Mesh(new THREE.BoxGeometry((p.x1-p.x0)*MM,(p.y1-p.y0)*MM,.004),mirrorMat);
+    mr.position.set((p.x0+p.x1)/2*MM-hp.x,(p.y0+p.y1)/2*MM-hp.y,p.z1*MM+.002-hp.z);mr.userData.mirror=true;d.g.add(mr);});
+  // a lamp on the cabinet's top: a bracket holding a bar 450 mm long out in front of the mirrors, its underside glowing
+  { const top=Math.max(...cab.doors.map(d=>d.g.children[0].userData.part.y1))*MM+G/2*MM,zd=SINK_CAB.D*MM,y0=top+.03,y1=y0+.025,z0=zd+.045,z1=z0+.025;
+    const lamp=(mat,...a)=>{box(...a,mat).userData.lamp=mat===lampMat?'glow':'body';};
+    lamp(lampBodyMat,cx-.02,cx+.02,top,y1,zd-.06,z0);              // bracket
+    lamp(lampBodyMat,cx-.225,cx+.225,y0,y1,z0,z1);                 // bar
+    lamp(lampMat,cx-.222,cx+.222,y0-.002,y0,z0+.002,z1-.002); }    // diffuser
+  g.add(cab.model);
+  return [wd,...cab.doors];
 }
-frameHooks.push(()=>{if(wash)wash.visible=view!=='bath';});
+/* the machine's door, as real ones: Ø480 mm with a Ø330 mm glass, on a hinge 12 mm past its edge; a free door opens to 180°,
+   here the niche's walls stop it (the partition next to the tall cabinet on the left, the hall wall on the right).
+   It opens toward the half that was clicked: as it starts to open from closed it hinges on that side (the click's point is
+   d.hit, engine.js: pickDoor); opened otherwise («Открыты») it keeps the side it had, the left one at first.
+   One of the room's doors (key 'washer'): a click, «Открыты/Закрыты», the walk. Bath axes, m */
+const WD={R:240,glass:165,hinge:12,y:440};
+/* a plain drum behind the loading opening (radius hr, centre at y, front panel's back at fz; m): the rubber cuff, the steel drum
+   Ø470 × 340 with its front ring and back. Lit as if the body were open (no shadows inside) so it reads */
+const drumMat=new THREE.MeshStandardMaterial({color:0xb9bdc1,roughness:.35,metalness:.6,side:THREE.DoubleSide});
+const rubberMat=new THREE.MeshStandardMaterial({color:0x2b2c2e,roughness:.85,side:THREE.DoubleSide});
+function buildDrum(g,cx,y,fz,hr){
+  const R=.235,cuff=.04,z1=fz-cuff,z0=z1-.34;
+  const put=(m,z)=>{m.position.set(cx,y,z);m.userData.drum=true;g.add(m);return m;};
+  const tube=(r,d,z,mat)=>{const m=put(new THREE.Mesh(new THREE.CylinderGeometry(r,r,d,48,1,true),mat),z);m.rotation.x=Math.PI/2;return m;};
+  tube(hr,cuff,fz-cuff/2,rubberMat);                                       // cuff
+  tube(R,z1-z0,(z0+z1)/2,drumMat);                                         // drum
+  put(new THREE.Mesh(new THREE.RingGeometry(hr,R,48),drumMat),z1);         // its front ring
+  put(new THREE.Mesh(new THREE.CircleGeometry(R,48),drumMat),z0);          // its back
+}
+function washerMax(side){
+  const n=washNiche(),hx=WD.R+WD.hinge,reach=hx+WD.R,front=WASH.back+WASH.D;
+  const room=side<0?n.cx-hx-n.x0:n.x1-n.cx-hx,wall=side<0?A.bStub:A.hL1;   // hinge to the side wall; how far that wall comes out
+  return wall>front?Math.PI/2+Math.asin(Math.min(1,Math.max(0,(room-50)/reach))):Math.PI;   // past 90° its 50 mm bulge meets the wall
+}
+function washerDoor(cx,zf,prev,open){
+  const R=WD.R*MM,hx=(WD.R+WD.hinge)*MM,g=new THREE.Group(),door=new THREE.Group();g.position.set(cx,WD.y*MM,zf);g.add(door);
+  const cyl=(r,d,z,mat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,d,48),mat);m.rotation.x=Math.PI/2;m.position.z=z;m.castShadow=true;door.add(m);return m;};
+  // the dark ring with the glass in its middle: a translucent blue bowl, the drum seen through it
+  { const sh=new THREE.Shape();sh.absarc(0,0,R,0,Math.PI*2,false);const hole=new THREE.Path();hole.absarc(0,0,WD.glass*MM,0,Math.PI*2,true);sh.holes.push(hole);
+    const ring=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:.04,bevelEnabled:false,curveSegments:48}),chromeMat);ring.castShadow=true;ring.userData.ring=true;door.add(ring); }
+  cyl(WD.glass*MM,.06,.03,portMat).castShadow=false;
+  const part=(w,h,d,z,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.z=z;door.add(m);return m;};
+  const handle=part(.025,.11,.03,.045,darkMat),hinge=part(.03,.12,.03,.015,darkMat);
+  const d=Object.assign({g,a:0,t:0,key:'washer',closed:true},prev&&{a:prev.a,t:prev.t,last:prev.last,closed:prev.closed,side:prev.side});
+  d.turn=side=>{d.side=side;d.s=side;d.max=washerMax(side);
+    g.position.x=cx+side*hx;door.position.x=-side*hx;handle.position.x=-side*(R-.04);hinge.position.x=side*(R+.006);};
+  d.turn(d.side||-1);if(!prev&&open)d.t=d.max;turnDoor(d);
+  return d;
+}
+// every frame (before the room turns its doors): the bath view hides the niche; the door takes the clicked side as it starts to open
+frameHooks.push(()=>{
+  if(wash)wash.visible=view!=='bath';
+  const d=VIEWS.bath&&VIEWS.bath.furniture().doors.find(x=>x.key==='washer');if(!d)return;
+  if(d.t>0&&d.closed&&d.a<.002){const full=d.t>=d.max-.01,mid=(O()[0]+washNiche().cx)*MM;d.turn(d.hit?(d.hit.x>mid?1:-1):d.side);d.hit=null;d.t=full?d.max:Math.min(d.t,d.max);d.closed=false;}
+  else if(d.t===0&&d.a<.002)d.closed=true;
+  if(!(held&&held.d===d))d.hit=null;   // a click that did not open it from closed (or a hover) leaves no side behind; a long press keeps it
+  if(d.t>d.max)d.t=d.max;
+});
 
 /* ---------- dimension lines of the bathroom (bath axes; they belong to the bathroom and move with it) ---------- */
 function buildDims(dim,gaps){

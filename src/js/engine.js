@@ -112,7 +112,8 @@ function pickDoor(e){
   // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of any room in the scene
   // (the plan shows them all; a hidden room is never hit)
   const fd=Object.values(VIEWS).flatMap(v=>v.furniture?v.furniture().doors:[]);
-  for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o);if(d)return d;}
+  // the door keeps where it was hit (d.hit, the scene's m): the washing machine's opens toward that side
+  for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o);if(d){d.hit=h.point;return d;}}
   return null;
 }
 canvas.addEventListener('pointerup',e=>{

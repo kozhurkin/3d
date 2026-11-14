@@ -10,10 +10,31 @@
     </div>
 
     <div>
+      <h2>Вид</h2>
+      <div class="seg" role="group" aria-label="Стены">
+        <button data-wm="show" aria-pressed="false">Монолит</button>
+        <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
+        <button data-wm="auto" aria-pressed="true" title="Внешние стены квартиры убираются, когда камера снаружи">Разрез</button>
+        <button data-wm="skeleton" aria-pressed="false">Скелет</button>
+        <button data-wm="outline" aria-pressed="false">Контуры</button>
+      </div>
+      <div class="field" style="margin-top:10px"><label for="walkWh">Высота стен</label><output data-wh-out></output><input type="range" id="walkWh" data-wh min="5" max="100" step="5"></div>
+      <h3>Двери</h3>
+      <div class="seg" role="group" aria-label="Двери">
+        <button data-dm="closed" aria-pressed="true">Закрыты</button>
+        <button data-dm="open" aria-pressed="false">Открыты</button>
+        <button data-dm="none" aria-pressed="false">Без дверей</button>
+      </div>
+      <p class="note" style="margin:8px 0 0">Стены не пускают при любом виде; потолок — только при монолитных стенах в полную высоту (в «Разрезе» — пока камера в квартире). Без дверей проёмы свободны.</p>
+    </div>
+
+    <div data-shared-slot style="display:contents"></div>
+
+    <div>
       <h2>Управление</h2>
       <dl class="facts">
         <dt>Идти</dt><dd>W A S D или стрелки</dd>
-        <dt>Смотреть</dt><dd>мышь: клик по сцене, Esc — отпустить</dd>
+        <dt>Смотреть</dt><dd>мышь: клик по сцене, Esc или правая кнопка — отпустить</dd>
         <dt>Прыжок</dt><dd>пробел</dd>
         <dt>Присесть</dt><dd>Ctrl или C</dd>
         <dt>Тихий шаг</dt><dd>Shift</dd>

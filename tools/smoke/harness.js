@@ -21,6 +21,7 @@ function stub(name = 'stub') {
       if (name === 'THREE.Sprite') o.material = args[0];
       // a material keeps whether it hides behind what stands in front (the dimensions between the shelves do, the others do not)
       if (/Material$/.test(name) && args[0] && 'depthTest' in args[0]) o.depthTest = args[0].depthTest;
+      if (/Material$/.test(name) && args[0] && args[0].polygonOffset) Object.assign(o, { polygonOffset: true, polygonOffsetFactor: args[0].polygonOffsetFactor });
       // objects of the scene have a real place and real children, so checks can see where things stand
       // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;

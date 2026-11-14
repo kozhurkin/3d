@@ -1,4 +1,4 @@
-// «Обход»: вид от первого лица, ходьба, стены, двери, шкафы, прыжок, присед, высота камеры.
+// «Обход»: вид от первого лица, ходьба, стены, двери, шкафы, прыжок, присед, высота камеры, вид стен и дверей.
 const { runPage, PAGES, check, near, assert } = require('./harness');
 
 const eye = (p) => p.run('[camera.position.x, camera.position.y, camera.position.z]');
@@ -15,16 +15,18 @@ function drag(p, dx, dy = 0) {
 const yaw = (p) => { const t = p.run('goal.theta') % (2 * Math.PI); return t < -1e-9 ? t + 2 * Math.PI : t; };
 const open = (storage) => { const p = runPage(PAGES.app, { parentWin: { appView: 'walk' }, storage }); p.tick(); return p; };
 
-check('обход: вид от первого лица у входа, в панели только высота камеры', () => {
+check('обход: вид от первого лица у входа, в панели высота камеры (первой), вид стен, двери', () => {
   const p = open();
   const [x, y, z] = eye(p);
   near(x, 0.6, 'middle of the hall'); near(y, 1.65, 'eye height'); near(z, 0.45, 'by the entrance');
   const r = p.run(`({view, fov:camera.fov, ceil:ceiling.visible, aim:document.getElementById('walkAim').hidden, hint:document.getElementById('walkHint').hidden,
-    rooms:["hall","bath","kitchen"].map(presence), lines:wallLines.length, arcs:arcs.visible, doors:doorGroup.visible, shared:document.getElementById('shared').hidden})`);
-  assert.deepStrictEqual(r, { view: 'walk', fov: 62, ceil: true, aim: false, hint: false, rooms: [1, 1, 1], lines: 12, arcs: false, doors: true, shared: true });
+    rooms:["hall","bath","kitchen"].map(presence), lines:wallLines.length, arcs:arcs.visible, doors:doorGroup.visible, shared:document.getElementById('shared').hidden, slot:document.getElementById('shared').parentElement===document.querySelector('[data-panel="walk"] [data-shared-slot]')})`);
+  assert.deepStrictEqual(r, { view: 'walk', fov: 62, ceil: true, aim: false, hint: false, rooms: [1, 1, 1], lines: 12, arcs: false, doors: true, shared: false, slot: true });
   const panel = p.document.querySelector('[data-panel="walk"]');
-  assert.deepStrictEqual([panel.hidden, panel.querySelectorAll('input').map((i) => i.id), panel.querySelector('#walkEyeOut').textContent], [false, ['walkEye'], '1650 мм']);
-  assert.strictEqual(panel.querySelector('[data-wm]'), null, 'no wall modes in the walk');
+  assert.deepStrictEqual([panel.hidden, panel.querySelectorAll('input').map((i) => i.id), panel.querySelector('#walkEyeOut').textContent], [false, ['walkEye', 'walkWh', 'wEdge', 'Laz', 'Lel', 'Li', 'La', 'wFly'], '1650 мм']);
+  const pressed = (k) => panel.querySelectorAll(`[data-${k}]`).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset[k]);
+  assert.deepStrictEqual(panel.querySelectorAll('[data-wm]').map((b) => b.dataset.wm), ['show', 'row', 'auto', 'skeleton', 'outline']);
+  assert.deepStrictEqual([pressed('wm'), pressed('dm'), panel.querySelector('[data-wh-out]').textContent], [['auto'], ['closed'], '100%']);
   const info = (k) => p.document.querySelector(`#infoBtn [data-info="${k}"]`).hidden;
   assert.deepStrictEqual([info('orbit'), info('walk')], [true, false], 'the hint of the walk under «i»');
 });
@@ -81,6 +83,108 @@ check('обход: стены и закрытая дверь не пускают
   assert.ok(eye(p)[0] > 0.3, 'out of the closed doorway back into the hall: ' + eye(p)[0]);
   // the window is never a way out
   assert.ok(p.run('walkObstacles().some(b=>b[0]===(winX-A.winW/2)*MM&&b[1]===(winX+A.winW/2)*MM&&b[2]===zEnd*MM&&b[4]===0&&b[5]===H*MM)'), 'the window opening is in the way');
+});
+
+check('обход: вид стен и двери из панели, сохраняются; без дверей проёмы свободны', () => {
+  const storage = new Map();
+  let p = open(storage);
+  const panel = () => p.document.querySelector('[data-panel="walk"]');
+  const pressed = (k) => panel().querySelectorAll(`[data-${k}]`).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset[k]);
+  // the walls cut to half: no ceiling over them, the walls still stop the walker
+  const wh = panel().querySelector('[data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
+  assert.deepStrictEqual(p.run('[ceiling.visible, wallParts.filter(w=>w.m.visible).every(w=>w.m.position.y+w.h*w.m.scale.y/2<=H*MM/2+1e-6), wallBoxes.length>0]'), [false, true, true]);
+  panel().querySelector('[data-wm="skeleton"]').click(); p.tick();
+  assert.deepStrictEqual([pressed('wm'), panel().querySelector('[data-wh-out]').textContent, p.run('[wallMat.opacity, ceiling.visible]')], [['skeleton'], '50%', [0, false]]);
+  wh.value = '100'; wh.dispatch('input'); panel().querySelector('[data-wm="show"]').click(); p.tick();
+  assert.strictEqual(p.run('ceiling.visible'), true, 'solid walls up to the ceiling: the ceiling is back');
+  panel().querySelector('[data-wm="outline"]').click(); p.tick();
+  assert.deepStrictEqual(p.run('[wallParts.some(w=>w.m.visible), doorGroup.visible, ceiling.visible]'), [false, false, false], 'outlines: no walls, no doors');
+  // the doors: open, the plan's segment follows; a door shut by a click: nothing pressed
+  panel().querySelector('[data-dm="open"]').click(); p.tick(60);
+  assert.deepStrictEqual([pressed('dm'), p.run('doors.every(d=>d.t===d.max)'), p.run('VS.plan.dm')], [['open'], true, 'open']);
+  const planOpen = p.document.querySelector('[data-panel="plan"] [data-dm="open"]').getAttribute('aria-pressed');
+  assert.strictEqual(planOpen, 'true', 'the plan shows the doors open too');
+  p.run('doors[0].t=0'); p.run('doorsChanged()');
+  assert.deepStrictEqual(pressed('dm'), [], 'doors differ: nothing pressed');
+  // no doors: none shown, none to click, and the closed bathroom door does not stop the walker
+  panel().querySelector('[data-wm="show"]').click();
+  p.run('doors.forEach(d=>{d.t=d.a=0;})'); p.run('doorsChanged()');
+  panel().querySelector('[data-dm="none"]').click(); p.tick();
+  assert.deepStrictEqual([pressed('dm'), p.run('doorGroup.visible'), p.run('doors.every(d=>d.t===0)')], [['none'], false, true]);
+  drag(p, Math.PI / 2 / 0.0025); p.run('setEye(0.6,1.65,0.95)'); p.tick();
+  hold(p, 'KeyW', 60);
+  assert.ok(eye(p)[0] < -0.12, 'through the doorway without a door: ' + eye(p)[0]);
+  p.run('doorsChanged()'); assert.deepStrictEqual(pressed('dm'), ['none'], 'a click elsewhere keeps «Без дверей»');
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-walk-v1')), { Wm: 'show', Wh: 100, dm: 'none', arcs: false, eye: 1650 });
+  p = open(storage);
+  assert.deepStrictEqual([pressed('wm'), pressed('dm'), p.run('doorGroup.visible')], [['show'], ['none'], false], 'remembered');
+});
+
+check('обход: разрез — снаружи квартиры внешние стены и потолок убираются, изнутри всё на месте', () => {
+  const p = open();
+  const seen = () => p.run('({walls:wallParts.filter(w=>w.m.visible).length, all:wallParts.length, ceil:ceiling.visible})');
+  let r = seen(); assert.deepStrictEqual([r.walls, r.ceil], [r.all, true], 'inside: every wall and the ceiling');
+  // out of the entrance, looking at it: the entrance wall goes, the ceiling too; the walls still stop the walker
+  p.run('doors.forEach(d=>{d.t=d.a=d.max;})'); p.run('setEye(0.6,1.65,-0.8)'); p.tick();
+  r = seen(); assert.ok(r.walls < r.all, 'outside: the outer wall hides ' + r.walls + '/' + r.all); assert.strictEqual(r.ceil, false, 'no ceiling outside');
+  assert.ok(p.run('walkObstacles().length') >= p.run('wallBoxes.length'), 'the hidden walls still stop');
+  // solid walls: everything stays, outside as well
+  p.document.querySelector('[data-panel="walk"] [data-wm="show"]').click(); p.tick();
+  r = seen(); assert.deepStrictEqual([r.walls, r.ceil], [r.all, true]);
+});
+
+check('обход: цвет стен и свет из общего блока', () => {
+  const storage = new Map();
+  const p = open(storage);
+  const panel = p.document.querySelector('[data-panel="walk"]');
+  const sw = panel.querySelectorAll('#wcs [data-wc]').find((b) => b.dataset.wc !== p.run('S.wc'));
+  sw.click(); p.tick();
+  assert.strictEqual(p.run('S.wc'), sw.dataset.wc);
+  assert.strictEqual(sw.getAttribute('aria-pressed'), 'true');
+  const az = panel.querySelector('#Laz'); az.value = '40'; az.dispatch('input');
+  assert.strictEqual(p.run('S.light.az'), 40);
+  const saved = [...storage.values()].map((v) => { try { return JSON.parse(v); } catch (e) { return null; } }).find((v) => v && v.light);
+  assert.deepStrictEqual([saved.wc, saved.light.az], [sw.dataset.wc, 40], 'saved with the common settings');
+});
+
+check('«Контур стен» — общая галочка: 50% или никаких, в скелете тёмные всегда, одна для всех вкладок', () => {
+  const storage = new Map();
+  let p = open(storage);
+  const eg = () => p.document.getElementById('wEdge');
+  assert.deepStrictEqual([p.run('edgeMat.opacity'), eg().checked], [0.5, true]);
+  eg().checked = false; eg().dispatch('change'); p.tick();
+  assert.deepStrictEqual([p.run('edgeMat.opacity'), JSON.parse(storage.get('apt-shared-v1')).edge], [0, false], 'off: no outlines');
+  p.document.querySelector('[data-panel="walk"] [data-wm="skeleton"]').click(); p.tick();
+  near(p.run('edgeMat.opacity'), 0.9, 'the skeleton keeps its dark outlines');
+  p.document.querySelector('[data-panel="walk"] [data-wm="auto"]').click(); p.tick();
+  // the plan: the same setting, no outlines there either; on again — on the plan too
+  p.run('showView("plan")'); p.fly(); near(p.run('edgeMat.opacity'), 0, 'off on the plan as well');
+  eg().checked = true; eg().dispatch('change'); p.tick(); near(p.run('edgeMat.opacity'), 0.5, 'on: half dark');
+  // remembered for every tab
+  eg().checked = false; eg().dispatch('change');
+  p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
+  assert.deepStrictEqual([p.run('S.edge'), eg().checked, p.run('edgeMat.opacity')], [false, false, 0]);
+});
+
+check('обход: контуры видны и во внутренних углах — стены, полы и потолок чуть за линиями по глубине', () => {
+  const p = open();
+  const r = p.run(`({walls:wallParts.every(w=>[].concat(w.m.material).filter(m=>m!==glassMat).every(m=>m.polygonOffset===true&&m.polygonOffsetFactor>0)),
+    floors:roomMats.every(m=>m.polygonOffset===true&&m.polygonOffsetFactor>0), ceil:ceilMat.polygonOffset===true&&ceilMat.polygonOffsetFactor>0,
+    lines:wallLines.every(l=>l.e.material===edgeMat)&&edgeMat.polygonOffset!==true, feet:footMat.polygonOffsetFactor<0})`);
+  assert.deepStrictEqual(r, { walls: true, floors: true, ceil: true, lines: true, feet: true });
+});
+
+check('обход: правая кнопка отпускает мышь, как Esc', () => {
+  const p = open();
+  p.run('(()=>{document.pointerLockElement=canvas;window.__exit=0;document.exitPointerLock=()=>{document.pointerLockElement=null;window.__exit++;};})()');
+  const c = p.document.getElementById('c'), t0 = p.run('doors.map(d=>d.t)');
+  c.dispatch('pointerdown', { button: 2, clientX: 100, clientY: 100, pointerId: 1 }); p.tick();
+  assert.deepStrictEqual([p.run('window.__exit'), p.run('locked()'), p.run('doors.map(d=>d.t)')], [1, false, t0], 'mouse given back, no door touched');
+  // not taken: the right button neither drags the look nor takes the mouse
+  const th = p.run('goal.theta');
+  c.dispatch('pointerdown', { button: 2, clientX: 100, clientY: 100, pointerId: 2 });
+  c.dispatch('pointermove', { clientX: 300, clientY: 100, pointerId: 2 }); c.dispatch('pointerup', { button: 2, clientX: 300, clientY: 100, pointerId: 2 });
+  assert.deepStrictEqual([p.run('goal.theta'), p.run('window.__exit')], [th, 1]);
 });
 
 check('обход: шкафы мешают пройти', () => {

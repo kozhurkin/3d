@@ -9,9 +9,14 @@ const WALLC={
 };
 const wallCol=w=>w.c.startsWith('--')?css(w.c):w.c;
 const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
-const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide});
-const capMat=new THREE.MeshStandardMaterial({color:0x5b5f61,roughness:.9,side:THREE.DoubleSide});   // cut top of the walls, like the poché on a drawing
+/* the faces the outlines lie on (walls, the room floors, the walk's ceiling) are set a hair back in depth:
+   a line along an inner corner lies on both faces exactly and would lose the depth test to them; on an outer corner it shows
+   only because half of it is past the wall's edge */
+const BEHIND={polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
+const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide,...BEHIND});
 const edgeMat=new THREE.LineBasicMaterial({color:0x4a4d50,transparent:true,opacity:.35});
+// how dark the walls' and doors' outlines are in a view: the skeleton's are dark, else as «Контур стен» (one setting for every view)
+const edgeOp=V=>V.Wm==='skeleton'?.9:S.edge?.5:0;
 const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
@@ -31,7 +36,7 @@ let roomMats=[];
 function buildRooms(){
   emptyGroup(roomGroup);emptyGroup(namesGroup);nameTexts.length=0;
   roomMats=ROOMS.map(r=>{
-    const m=new THREE.MeshStandardMaterial({roughness:.9});
+    const m=new THREE.MeshStandardMaterial({roughness:.9,...BEHIND});
     const p=new THREE.Mesh(new THREE.PlaneGeometry((r.r[1]-r.r[0])*MM,(r.r[3]-r.r[2])*MM),m);
     p.rotation.x=-Math.PI/2;p.position.set((r.r[0]+r.r[1])/2*MM,0,(r.r[2]+r.r[3])/2*MM);p.receiveShadow=true;roomGroup.add(p);return m;});
   ROOMS.forEach(r=>floorText(r.name,r.at[0],r.at[1],.2));
@@ -111,13 +116,13 @@ function viewWalls(vw){
 /* builds the given (clipped) walls: full-height pieces between openings, a lintel over each opening, a sill under a window,
    their footprints, and the window when its opening is whole. Every piece keeps its wall id and its box on the plan (mm),
    so a flight between views can cut it shorter and lower without new geometry. ruleOf: the cut-mode rule of a wall;
-   lines: the outline of every whole wall. The tops are capMat: dark cut tops or the wall colour (a shared setting) */
+   lines: the outline of every whole wall */
 function buildWallSet(list,ruleOf,lines){
   if(wallGroup){scene.remove(wallGroup);wallGroup.traverse(o=>{if(o.geometry)o.geometry.dispose();});}
   wallGroup=new THREE.Group();wallParts=[];wallLines=[];wallFeet=[];linesTop=-1;holesShown=new Set();
   const solid=(id,x0,x1,y0,y1,z0,z1,f)=>{
     const g=new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM);
-    const m=new THREE.Mesh(g,[wallMat,wallMat,capMat,wallMat,wallMat,wallMat]);
+    const m=new THREE.Mesh(g,wallMat);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     wallGroup.add(m);wallParts.push({m,f,id,box:[x0,x1,z0,z1],b:y0*MM,t:y1*MM,h:(y1-y0)*MM});
   };
@@ -213,13 +218,13 @@ function startWallMorph(from,toId,pos){
   // every wall of the flight gets its own materials: near the floor it fades away instead of leaving a dark slab,
   // its footprint fades out or in, its outline fades with its height
   const mats=new Map();
-  list.forEach(c=>mats.set(c.id,{body:wallMat.clone(),cap:capMat.clone(),line:edgeMat.clone(),foot:footMat.clone()}));
-  wallParts.forEach(p=>{const m=mats.get(p.id);if(m&&Array.isArray(p.m.material))p.m.material=[m.body,m.body,m.cap,m.body,m.body,m.body];});
+  list.forEach(c=>mats.set(c.id,{body:wallMat.clone(),line:edgeMat.clone(),foot:footMat.clone()}));
+  wallParts.forEach(p=>{const m=mats.get(p.id);if(m&&p.m.material===wallMat)p.m.material=m.body;});
   wallLines.forEach(l=>{l.e.material=mats.get(l.w.id).line;});
   wallFeet.forEach(p=>{p.m.material=mats.get(p.id).foot;});
   // the walls' see-through and their outlines go from how they look now to the new view's mode (the skeleton is see-through)
   const skel=V.Wm==='skeleton';
-  morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:skel?.9:.35,
+  morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:edgeOp(V),
     doors:doorsF&&V.dm!=='none'&&V.Wm!=='outline',mats};   // doors show only if both ends show them
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
@@ -300,8 +305,6 @@ function applyTheme(){
   floorMat.color.set(css('--scene-floor'));
   const wc=WALLC[S.wc]||WALLC.white;wallMat.color.set(wallCol(wc));
   wallMat.roughness=wc.r;
-  // the cut tops of the walls: dark, like the poché of a drawing, or the wall colour (one setting for every view)
-  if(S.poche!==false){capMat.color.set(0x5b5f61);capMat.roughness=.9;}else{capMat.color.copy(wallMat.color);capMat.roughness=wc.r;}
   const fl=(vs()||{}).floors!==false;
   roomMats.forEach((m,i)=>m.color.set(fl?css(ROOMS[i].col):css('--scene-floor')));
   paintNames();
@@ -311,7 +314,7 @@ function applyTheme(){
    in a flight between views every wall follows the flight instead (see morph) */
 let wallCut=H*MM, wallOutlineMode=false;   // where the walls end now (m) and whether only their outlines show — for the dimension lines
 const lineGeo=pts=>new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
-function wallsSeeThrough(op){const see=op<.999;[wallMat,capMat].forEach(m=>{m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}});}
+function wallsSeeThrough(op){const see=op<.999;const m=wallMat;m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}}
 frameHooks.push((dt,ease)=>{
   const V=vs();
   const row=V.Wm==='row',skel=V.Wm==='skeleton',outline=V.Wm==='outline';
@@ -321,11 +324,11 @@ frameHooks.push((dt,ease)=>{
     const e=morph.e,at=id=>morphWall(morph.w.get(id),e),op=morph.opF+(morph.opT-morph.opF)*e;
     const ln=morph.lnF+(morph.lnT-morph.lnF)*e;
     wallsSeeThrough(op);edgeMat.opacity=ln;
-    // the last 150 mm of a wall fade away (with its dark top), its outline from 200 mm; its footprint fades between the views
+    // the last 150 mm of a wall fade away, its outline from 200 mm; its footprint fades between the views
     const fade=(m,o)=>{m.opacity=o;const see=o<.999;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}};
     const low=id=>Math.min(1,at(id).cut/150);
     morph.mats.forEach((m,id)=>{const s=morph.w.get(id),n=at(id),fF=s.rF?1:0;
-      fade(m.body,op*low(id));fade(m.cap,op*low(id));m.line.opacity=ln*Math.min(1,n.cut/200);fade(m.foot,fF+((s.exT?1:0)-fF)*e);});
+      fade(m.body,op*low(id));m.line.opacity=ln*Math.min(1,n.cut/200);fade(m.foot,fF+((s.exT?1:0)-fF)*e);});
     wallParts.forEach(w=>{
       const n=at(w.id),top=Math.min(w.t,n.cut*MM),fits=fitBox(w.m,w.box,n.r,false)&&top>w.b+.001;
       w.m.visible=fits;w.m.castShadow=op*low(w.id)>.5&&!w.glass;
@@ -341,7 +344,7 @@ frameHooks.push((dt,ease)=>{
     arcs.children.forEach(l=>{const d=doors.find(x=>x.hole===l.userData.hole);l.visible=!!d&&d.g.visible;});
     doorGroup.visible=arcs.visible=morph.doors;
   }else{
-    wallsSeeThrough(skel?0:1);edgeMat.opacity=skel?.9:.35;
+    wallsSeeThrough(skel?0:1);edgeMat.opacity=edgeOp(V);
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
       w.m.visible=fits&&!outline&&(V.Wm==='auto'?w.f():true);

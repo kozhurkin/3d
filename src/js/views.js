@@ -16,8 +16,8 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='apt-shared-v1';
-const S={wc:'white',light:{...LIGHT0},poche:true,fly:true};   // poche: dark cut tops of the walls; fly: the animated flight between tabs
-{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.poche===false)S.poche=false;if(s.fly===false)S.fly=false;} }
+const S={wc:'white',light:{...LIGHT0},edge:true,fly:true};   // edge: the walls' and doors' outlines; fly: the animated flight between tabs
+{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
 // wall colour swatches
@@ -26,9 +26,9 @@ wcs.innerHTML=Object.entries(WALLC).map(([k,w])=>`<button class="wc" data-wc="${
 const syncWc=()=>wcs.querySelectorAll('[data-wc]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wc===S.wc));
 wcs.querySelectorAll('[data-wc]').forEach(b=>b.addEventListener('click',()=>{S.wc=b.dataset.wc;syncWc();applyTheme();saveShared();}));
 syncWc();
-// the cut tops of the walls: dark or the wall colour, the same in every view
-const pocheBox=document.getElementById('wPoche');pocheBox.checked=S.poche;
-pocheBox.addEventListener('change',e=>{S.poche=e.target.checked;applyTheme();saveShared();});
+// the walls' and doors' outlines (walls.js: edgeOp), the same in every view
+const edgeBox=document.getElementById('wEdge');edgeBox.checked=S.edge;
+edgeBox.addEventListener('change',e=>{S.edge=e.target.checked;saveShared();});
 // the animated flight between tabs; without it the new view's walls are there at once and the camera glides to it
 const flyBox=document.getElementById('wFly');flyBox.checked=S.fly;
 flyBox.addEventListener('change',e=>{S.fly=e.target.checked;saveShared();});
@@ -50,6 +50,15 @@ function syncWallCtl(id){
   wh.disabled=V.Wm==='row'||V.Wm==='outline';wh.parentElement.style.opacity=wh.disabled?.45:1;
   p.querySelectorAll('[data-wm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.wm===V.Wm));
 }
+/* doors segment ([data-dm]) of a view: the apartment's doors all closed, all open (nothing pressed when they differ),
+   or no doors at all in this view. The doors are one for every view: a view with the segment follows them */
+function syncDoorCtl(id){
+  const bs=VIEWS[id].panel.querySelectorAll('[data-dm]'),V=VS[id];
+  if(!bs.length)return;
+  let st=V.dm;
+  if(st!=='none'){const open=doors.filter(d=>d.t!==0).length;st=open===doors.length?'open':open===0?'closed':'mixed';if(st!=='mixed')V.dm=st;}
+  bs.forEach(x=>x.setAttribute('aria-pressed',x.dataset.dm===st));
+}
 
 /* a view joins the app: its settings come from this browser, its panel gets the common controls */
 function addView(id,def){
@@ -58,11 +67,15 @@ function addView(id,def){
   const p=def.panel;
   p.querySelectorAll('[data-wm]').forEach(b=>b.addEventListener('click',()=>{VS[id].Wm=b.dataset.wm;syncWallCtl(id);saveView(id);}));
   const wh=p.querySelector('[data-wh]');if(wh)wh.addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
+  p.querySelectorAll('[data-dm]').forEach(b=>b.addEventListener('click',()=>{
+    const dm=VS[id].dm=b.dataset.dm;if(dm!=='none')doors.forEach(d=>d.t=dm==='open'?d.max:0);
+    saveView(id);doorsChanged();}));
 }
 
 /* a door was clicked or held — a door of the apartment or a cabinet front, maybe of a room seen on the plan:
    every view updates its door controls from the doors as they are and remembers */
-function doorsChanged(){Object.keys(VIEWS).forEach(id=>{const f=VIEWS[id].onDoors;if(f){f();saveView(id);}});}
+function doorsChanged(){Object.keys(VIEWS).forEach(id=>{const v=VIEWS[id],seg=!!v.panel.querySelector('[data-dm]');
+  if(seg)syncDoorCtl(id);if(v.onDoors)v.onDoors();if(seg||v.onDoors)saveView(id);});}
 
 /* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows);
    the camera mini view frames the view's frame, or the whole apartment */
@@ -149,5 +162,5 @@ function showView(id,animate=true){
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();
     if(!animate||reduce){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}
   }
-  syncWallCtl(id);if(vw.sync)vw.sync();applyTheme();
+  syncWallCtl(id);syncDoorCtl(id);if(vw.sync)vw.sync();applyTheme();
 }

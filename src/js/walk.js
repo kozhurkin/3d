@@ -1,9 +1,11 @@
 /* ---------- «Обход»: the apartment from the eyes, walked through as in a game ----------
-   W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc gives it back; where the browser
+   W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
    does not let the page take it, drag to look), Space — jump, Ctrl or C — crouch, Shift — a slow step, E or a click — the door or
-   cabinet front in the middle of the screen (under the cursor while dragging). The panel sets only the eye height.
+   cabinet front in the middle of the screen (under the cursor while dragging). The panel sets the eye height, the walls' look, the
+   doors, and has the common wall colour (with the outlines) and light.
    The camera is the orbit's, its centre a step (LOOK) in front of the eyes: a flight to the walk and from it, and the camera
-   remembered for the view, work as in any view. Walls, closed doors, cabinets and appliances stop the walker */
+   remembered for the view, work as in any view. Walls (however they look), closed doors, cabinets and appliances stop the walker;
+   with «Без дверей» the doorways are free */
 const walkPanel=document.querySelector('[data-panel="walk"]');
 const LOOK=1;                       // m: the orbit's centre in front of the eyes
 const BODY=.15;                     // m: the walker seen from above is a circle of this radius (a person turned sideways)
@@ -67,7 +69,7 @@ function furnBoxes(){
   return out;
 }
 function walkObstacles(){
-  const shut=new Set(doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
+  const shut=new Set(VS.walk.dm==='none'?[]:doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
   return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),furnBoxes());
 }
 // how far the circle's centre at u is from the box b along axis i (0: x, 1: z); 0 inside its span
@@ -124,7 +126,10 @@ function useDoor(cx,cy){
 }
 let drag=null;
 canvas.addEventListener('pointerdown',e=>{
-  if(!walking()||(e.button!==undefined&&e.button!==0))return;
+  if(!walking())return;
+  // the right button gives the mouse back, as Esc does
+  if(e.button===2){drag=null;if(locked()&&document.exitPointerLock)document.exitPointerLock();return;}
+  if(e.button!==undefined&&e.button!==0)return;
   if(locked()){useDoor();return;}
   drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,id:e.pointerId};canvas.setPointerCapture(e.pointerId);
   if(e.pointerType!=='touch'&&canvas.requestPointerLock){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{});}catch(err){}}
@@ -152,17 +157,24 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='Space')jumpQ=false;});
 addEventListener('blur',()=>{keys.clear();jumpQ=false;});
 
-/* ---------- what the walk shows: a ceiling, the aim, the hint; the camera's wider angle comes and goes with the flight ---------- */
-const ceilMat=new THREE.MeshStandardMaterial({roughness:.95});
+/* ---------- what the walk shows: a ceiling (over solid walls up to it), the aim, the hint; the camera's wider angle comes and
+   goes with the flight ---------- */
+const ceilMat=new THREE.MeshStandardMaterial({roughness:.95,...BEHIND});   // the walls' top outlines lie on it
 const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(1,1),ceilMat);
 ceiling.rotation.x=Math.PI/2;ceiling.visible=false;scene.add(ceiling);   // faces down: seen from the rooms only, it casts no shadow
 function placeCeiling(){ceiling.scale.set((BOX.x1-BOX.x0)*MM,(BOX.z1-BOX.z0)*MM,1);ceiling.position.set(CX,H*MM,CZ);}
 placeCeiling();modelHooks.push(placeCeiling);
+// the ceiling closes solid walls up to it; in the cut mode, only while the eyes are in the apartment (outside, its walls open)
+function ceilingOver(){
+  const V=VS.walk;if(V.Wh<100||(V.Wm!=='show'&&V.Wm!=='auto'))return false;
+  if(V.Wm==='show')return true;
+  const [x,,z]=eyeNow();return x>BOX.x0*MM&&x<BOX.x1*MM&&z>BOX.z0*MM&&z<BOX.z1*MM;
+}
 const aimEl=document.getElementById('walkAim'),hintEl=document.getElementById('walkHint');
 let ownCursor=false;
 frameHooks.push(()=>{
   const on=walking(),lk=locked();
-  ceiling.visible=on;
+  ceiling.visible=on&&ceilingOver();
   if(on){ceilMat.color.copy(wallMat.color);ceilMat.emissive.copy(wallMat.color).multiplyScalar(.3);}
   aimEl.hidden=!on;hintEl.hidden=!on||lk;
   if(!on&&lk&&document.exitPointerLock)document.exitPointerLock();
@@ -171,15 +183,17 @@ frameHooks.push(()=>{
   if(Math.abs(camera.fov-fov)>1e-4){camera.fov=fov;camera.updateProjectionMatrix();}
 });
 
-/* ---------- the panel: the eye height ---------- */
+/* ---------- the panel: the eye height (the walls and the doors are the common controls: views.js) ---------- */
 const eyeIn=walkPanel.querySelector('#walkEye'),eyeOut=walkPanel.querySelector('#walkEyeOut');
 function syncWalk(){eyeIn.value=VS.walk.eye;eyeOut.textContent=VS.walk.eye+' мм';}
 eyeIn.addEventListener('input',e=>{VS.walk.eye=+e.target.value;syncWalk();saveView('walk');});
 
 addView('walk',{
   rooms:'all',
+  // the cut mode: as on the plan, an outer wall of the apartment hides while the eyes are outside it
+  fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
   mouse:true,info:'walk',
-  defaults:{Wm:'show',Wh:100,dm:'closed',arcs:false,eye:1650},
+  defaults:{Wm:'auto',Wh:100,dm:'closed',arcs:false,eye:1650},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),
   panel:walkPanel,
   home:walkHome,

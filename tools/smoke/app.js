@@ -38,7 +38,7 @@ check('приложение: настройки вида и общие наст�
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, fcut: true, dims: true, names: true, floors: true });
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, poche: true, fly: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, edge: true, fly: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
@@ -201,20 +201,6 @@ check('«Планировка»: «Резать шкафы по стенам» �
   const furn = plan.querySelector('#pFurn'); furn.checked = false; furn.dispatch('change');
   assert.strictEqual(box.disabled, true);
 });
-
-check('торцы стен: тёмный срез — одна настройка для всех вкладок', () => {
-  const storage = new Map();
-  let p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
-  const box = p.document.getElementById('wPoche');
-  assert.strictEqual(box.checked, true);
-  box.checked = false; box.dispatch('change');
-  assert.strictEqual(JSON.parse(storage.get('apt-shared-v1')).poche, false);
-  p.run('showView("kitchen")'); p.fly();
-  assert.ok(matches(box, '[data-panel="kitchen"] #wPoche'), 'the setting moved with the shared block');
-  p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
-  assert.deepStrictEqual([p.run('S.poche'), p.document.getElementById('wPoche').checked], [false, false]);
-});
-
 
 check('shell: все вкладки — виды одного приложения в одном окне', () => {
   const shellPage = html.slice(html.indexOf('<header'));

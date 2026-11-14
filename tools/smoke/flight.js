@@ -38,7 +38,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   p.tick(24, 16.67);   // ≈ 0.97 of the flight: the leaving walls are below 1 cm
   const lowCut = p.run('morphWall(morph.w.get("hallBath"),morph.e).cut');
   assert.ok(lowCut > 1 && lowCut < 40, 'a low wall ' + lowCut);
-  near(mat('hallBath', 'body'), lowCut / 150, 'low wall fades'); near(mat('hallBath', 'cap'), lowCut / 150, 'its dark top too');
+  near(mat('hallBath', 'body'), lowCut / 150, 'low wall fades');
   assert.ok(mat('hallBath', 'foot') < 0.1 && mat('hallBath', 'line') < 0.05, 'footprint and outline almost gone');
   // landed: the kitchen's own walls with outlines, the kitchen on the floor, the camera free; the left wall hidden by the
   // cut mode just as the flight ended it
@@ -49,7 +49,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   inset().forEach((v, i) => near(v, bT[i], 'the mini view on the kitchen'));
   assert.deepStrictEqual([piece(p, 'leftOuter').visible, piece(p, 'kitchen').visible], [false, true]);
   // the flight's own materials are gone: the walls are back on the shared ones (the wall colour setting reaches them)
-  assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.m.material[0]===wallMat&&w.m.material[2]===capMat), wallFeet.every(f=>f.m.material===footMat)]'), [null, true, true]);
+  assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.glass||w.m.material===wallMat), wallFeet.every(f=>f.m.material===footMat)]'), [null, true, true]);
 });
 
 check('перелёт: разный вид стен у вкладок — высота и «Скелет» меняются плавно', () => {

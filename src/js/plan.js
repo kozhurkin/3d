@@ -92,23 +92,13 @@ function renderFacts(){
 }
 renderFacts();
 
-/* the plan's own settings: doors, the rooms' cabinets, dimensions, room names, floor colours */
+/* the plan's own settings: the rooms' cabinets, dimensions, room names, floor colours */
 function syncPlan(){
   const V=VS.plan;
-  planPanel.querySelectorAll('[data-dm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.dm===V.dm));
   pq('#pFurn').checked=V.furn!==false;pq('#pFurnCut').checked=V.fcut!==false;
   pq('#pFurnCut').disabled=V.furn===false;pq('#pFurnCutRow').style.opacity=V.furn===false?.45:1;   // nothing to cut without the cabinets
   pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;pq('#pFloors').checked=V.floors;
 }
-// doors segment: all open, all closed, or nothing pressed when the doors differ
-function syncDoorSeg(){
-  const V=VS.plan;
-  if(V.dm==='none')return;
-  const open=doors.filter(d=>d.t!==0).length,st=open===doors.length?'open':open===0?'closed':'mixed';
-  if(st!=='mixed')V.dm=st;
-  planPanel.querySelectorAll('[data-dm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.dm===st));
-}
-planPanel.querySelectorAll('[data-dm]').forEach(b=>b.addEventListener('click',()=>{const V=VS.plan;V.dm=b.dataset.dm;if(V.dm!=='none')doors.forEach(d=>d.t=V.dm==='open'?d.max:0);syncPlan();saveView('plan');}));
 // the cabinets of every room, as their tabs set them up (each room module shows its own: presence)
 pq('#pFurn').addEventListener('change',e=>{VS.plan.furn=e.target.checked;syncPlan();saveView('plan');});
 // … cut at the walls' height, or whole whatever the walls are (views.js: furnCut)
@@ -209,7 +199,6 @@ addView('plan',{
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole apartment from any direction
   panel:planPanel,
   home:()=>setCam('plan'),
-  sync:syncPlan,
-  onDoors:syncDoorSeg
+  sync:syncPlan
 });
 if(VS.plan.dm!=='none')doors.forEach(d=>d.t=VS.plan.dm==='open'?d.max:0);

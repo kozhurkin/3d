@@ -155,9 +155,10 @@ function applyContrast(mats,FIN,ec){
 }
 
 /* ---------- parts → meshes ---------- */
-// cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F/U: axis x, s: its way) or slides (S: axis z)
+// cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F/U: axis x, s: its way) or slides (S: axis z);
+// follow(a), if it has one, moves what goes with it
 const DMAX=1.45;
-function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.s*d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;}
+function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.s*d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else d.g.rotation.y=d.s*d.a;if(d.follow)d.follow(d.a);}
 /* c: computeParts() of a room; prev: the doors of the previous build (by key they keep how open they were);
    open: how new doors start. Returns the group (room axes, mm → m) and its doors */
 function buildParts(c,mats,{prev=[],open=false}={}){

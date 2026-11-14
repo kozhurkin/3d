@@ -288,40 +288,61 @@ function buildVitrine(g,opts){
    20 mm back under the seat, stitched upright. Every soft piece rounded (furniture.js: roundBoxGeo). Its back against the right wall, opposite the desk, its window end 150 mm from the
    window wall, lined up with the desk's; the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
    Own axes (mm): x across its front, y up, z from its back to its front, described with the chaise at x 0 and mirrored onto x W − x;
-   turned onto the kitchen's: its x along z, its z along −x. Two groups — the sofa and the chaise's part in front of the seat —
-   so the walk is stopped by its L, not by the whole rectangle */
+   turned onto the kitchen's: its x along z, its z along −x. Two groups — the sofa and the chaise —
+   so the walk is stopped by its L, not by the whole rectangle.
+   The chaise's seat, whole, is a lid: it turns up on its upper back edge, at the thin back (LID_MAX: 40°), over a box for bedding,
+   white inside; the back cushion and the throw pillow on it rise out of its way. It opens as the kitchen's fronts do
+   (clicks, «Открыты/Закрыты», the walk) */
 const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20};
+const LID_MAX=40*Math.PI/180;   // rad: how far the chaise's lid opens: 40°, as far as its gas struts go
 // beige-grey velour as in the shop's pictures; the colours are sRGB, as the plain finishes (furniture.js: applyMaterials)
 const velourMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#b4aba3').convertSRGBToLinear(),roughness:.95});
 const seamMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#968c84').convertSRGBToLinear(),roughness:.95});
 const sofaLegMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6});
+const sofaBoxMat=new THREE.MeshStandardMaterial({color:0xeeeeea,roughness:.8});   // the chaise's box inside: white board
 const sofaAt=()=>P.L-DK.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
-function buildSofa(g){
+function buildSofa(g,opts){
   const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
   const group=()=>{const q=new THREE.Group();q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,sofaAt()*MM);q.userData.info=INFO.sofa;q.userData.sofa=true;g.add(q);return q;};
-  // a soft piece: rounded by r (mm) all round; mirrored, so the chaise is at x W
-  const mk=q=>(x0,x1,y0,y1,z0,z1,r,mat=velourMat)=>{
+  // a soft piece: rounded by r (mm) all round; mirrored, so the chaise is at x W; in a holder at (oy, oz) of its group
+  const mk=(q,oy=0,oz=0)=>(x0,x1,y0,y1,z0,z1,r,mat=velourMat)=>{
     const m=new THREE.Mesh(roundBoxGeo((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM,r*MM),mat);
-    m.position.set((W-(x0+x1)/2)*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;q.add(m);return m;};
+    m.position.set((W-(x0+x1)/2)*MM,((y0+y1)/2-oy)*MM,((z0+z1)/2-oz)*MM);m.castShadow=m.receiveShadow=true;q.add(m);return m;};
   const flat=q=>{const b=boxIn(q);return (x0,x1,y0,y1,z0,z1,mat)=>b((W-x1)*MM,(W-x0)*MM,y0*MM,y1*MM,z0*MM,z1*MM,mat);};
   const sofa=group(),chaise=group(),S=mk(sofa),C=mk(chaise),Sf=flat(sofa),Cf=flat(chaise);
-  // the sofa: the base between the arms, the seat cushion, the thin back, the two arms (rounded well over the top), the back cushions
-  S(arm,xr,lg,ys,0,D-base,12);
+  // the sofa: the base under the seat, the seat cushion, the thin back, the two arms (rounded well over the top), the back cushions
+  // (the chaise's one is the chaise's: it rises with its lid)
+  S(xc,xr,lg,ys,0,D-base,12);
   S(xc,xr,ys,seat,back,D,45);
   S(arm,xr,ys,backH,0,back,35);
   [0,xr].forEach(x=>S(x,x+arm,lg,armH,0,D,26));   // the arms, alike, down to the legs
-  for(let i=0;i<3;i++)S(arm+i*650+3,arm+(i+1)*650-3,seat,H,back,back+220,80);
-  // the chaise: its seat in one piece from the back to its front (a seam left against the seat), its base in front of the sofa's
-  C(0,xc,ys,seat,back,Dc,45);
-  C(0,xc,lg,ys,D-base,Dc-base,12);
+  const cushion=[0,1,2].map(i=>(i?S:C)(arm+i*650+3,arm+(i+1)*650-3,seat,H,back,back+220,80))[0];
+  // the chaise: its box for bedding from the back to its front, walls 20 mm (white inside, 1 mm), its bottom 15 mm: inside
+  // 145 × 21 × 61 cm; in front of the arm (it ends with the seat) the base fills out to the chaise's side
+  const bz=Dc-base,t=20;
+  C(0,xc,lg,ys,bz-t,bz,8);C(arm,xc,lg,ys,0,t,8);C(arm,arm+t,lg,ys,t,bz-t,8);C(xc-t,xc,lg,ys,t,bz-t,8);C(0,arm,lg,ys,D,bz-t,8);
+  Cf(arm+t,xc-t,lg,lg+15,t,bz-t,sofaBoxMat);
+  Cf(arm+t,xc-t,lg+15,ys,bz-t-1,bz-t,sofaBoxMat);Cf(arm+t,xc-t,lg+15,ys,t,t+1,sofaBoxMat);
+  Cf(arm+t,arm+t+1,lg+15,ys,t+1,bz-t-1,sofaBoxMat);Cf(xc-t-1,xc-t,lg+15,ys,t+1,bz-t-1,sofaBoxMat);
+  // its seat in one piece from the back to its front (a seam left against the sofa's seat): the lid on its hinge
+  const lid=new THREE.Group();lid.position.set(0,seat*MM,back*MM);chaise.add(lid);
+  mk(lid,seat,back)(0,xc,ys,seat,back,Dc,45);
   // stitches up the fronts of the bases, 130 mm apart
   for(let x=xc+130;x<xr-40;x+=130)Sf(x-2,x+2,lg+15,ys-15,D-base,D-base+1.5,seamMat);
   for(let x=130;x<xc-40;x+=130)Cf(x-2,x+2,lg+15,ys-15,Dc-base,Dc-base+1.5,seamMat);
+  // and up the chaise base's sides in front of the arm and of the sofa's base, as far apart, from its front back
+  for(let z=bz-130;z>D+40;z-=130)[[-1.5,0],[xc,xc+1.5]].forEach(([x0,x1])=>Cf(x0,x1,lg+15,ys-15,z-2,z+2,seamMat));
   // legs
   [[30,30],[W-80,30],[W-80,D-base-80],[xc+30,D-base-80]].forEach(([x,z])=>S(x,x+50,0,lg,z,z+50,8,sofaLegMat));
   [[30,Dc-base-80],[xc-80,Dc-base-80]].forEach(([x,z])=>C(x,x+50,0,lg,z,z+50,8,sofaLegMat));
-  // throw pillows leaning on the back cushions, by the left arm and the right one, tilted toward the arms (mirrored)
-  [[arm+40,-0.18],[xr-40-480,0.18]].forEach(([x,tz])=>{const p=S(x,x+480,seat+10,seat+370,back+225,back+345,55);p.rotation.x=-.3;p.rotation.z=tz;});
+  // throw pillows leaning on the back cushions, by the left arm (on the chaise) and the right one, tilted toward the arms (mirrored)
+  const PR=-.3,pillow=[[arm+40,-0.18,C],[xr-40-480,0.18,S]].map(([x,tz,f])=>{const p=f(x,x+480,seat+10,seat+370,back+225,back+345,55);p.rotation.x=PR;p.rotation.z=tz;return p;})[0];
+  // what lies on the lid rises out of its way, straight up, its edges kept over the lid's top (y = seat + (z − back)·tan a).
+  // Their edges (z, y) at rest: the back cushion's lower front one; the pillow's four, as it is tilted
+  const edges=(yc,zc,hy,hz,rx)=>[[-1,-1],[-1,1],[1,-1],[1,1]].map(([u,v])=>[zc+u*hy*Math.sin(rx)+v*hz*Math.cos(rx),yc+u*hy*Math.cos(rx)-v*hz*Math.sin(rx)]);
+  const riders=[[cushion,[[back+220,seat]]],[pillow,edges(seat+190,back+285,180,60,PR)]].map(([m,e])=>({m,e,y:m.position.y}));
+  const follow=a=>{const tn=Math.tan(a);riders.forEach(r=>{r.m.position.y=r.y+Math.max(0,...r.e.map(([z,y])=>seat+(z-back)*tn-y))*MM;});};
+  return [applDoor(lid,{key:'sofa-lid',axis:'x',s:-1,max:LID_MAX,follow},opts)];
 }
 
 /* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps
@@ -502,7 +523,7 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildSofa(g);return ap.concat(buildDesk(g,o),buildVitrine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the display cabinet and the sofa go with the walls in the kitchen's view
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);return ap.concat(buildDesk(g,o),buildVitrine(g,o),buildSofa(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the display cabinet and the sofa go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk,
   // the display cabinet and the sofa stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

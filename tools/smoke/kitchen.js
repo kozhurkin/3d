@@ -57,7 +57,7 @@ check('кухня: шкафы и техника собираются, панел
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 14, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 15, want.parts.length, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
@@ -79,12 +79,12 @@ check('кухня: шкафы и техника собираются, панел
   assert.strictEqual(kq('#k-fHx').hidden, true);
   // the mezzanine fronts: to the sides in turn, or up around their upper front edge (to the ceiling, 1 mm below it)
   const ant = () => p.run('(f=>f.current.parts.filter(x=>x.name==="Фасад антресоли").map(x=>x.hinge))(VIEWS.kitchen.furniture())');
-  const lifts = () => p.run('(f=>f.doors.filter(d=>d.axis==="x"&&d.s===-1).map(d=>Math.round(d.g.position.y*1000)))(VIEWS.kitchen.furniture())');
+  const lifts = () => p.run('(f=>f.doors.filter(d=>d.axis==="x"&&d.s===-1&&d.key!=="sofa-lid").map(d=>Math.round(d.g.position.y*1000)))(VIEWS.kitchen.furniture())');
   const up = kq('#k-tAntUp'); assert.strictEqual(up.checked, false);
   assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
   up.checked = true; up.dispatch('change');
   assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
-  assert.strictEqual(k().doors, nDoors + 14, 'every front still opens');
+  assert.strictEqual(k().doors, nDoors + 15, 'every front still opens');
   // without the mezzanines there is nothing to lift: greyed out
   const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
   assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
@@ -325,10 +325,45 @@ check('кухня: угловой диван Hoff «Слим» у правой �
   // kitchen axes: the right wall at x 3200; its window end 150 from the window wall at 4750, as the desk's: from z 4600 − 2060 = 2540
   assert.deepStrictEqual(r.map((q) => q.at), [[3200, 2540], [3200, 2540]], 'the sofa and its chaise, one place');
   assert.ok(r.every((q) => q.turn === -Math.PI / 2 && q.title === 'Угловой диван Hoff «Слим»'), 'its back to the wall, its seat toward the desk');
-  // own axes before the turn (the stub's boxes leave turns out): 2060 across, 850 deep, 910 high; the chaise 705 across, its seat from the back (100) out to 1530,
-  // at its far end (own x 1355…2060 → kitchen z 3895…4600: the window end)
+  // own axes before the turn (the stub's boxes leave turns out): 2060 across, 850 deep, 910 high; the chaise 705 across, its box from the back
+  // out to 1530, up to its back cushion's 910, at its far end (own x 1355…2060 → kitchen z 3895…4600: the window end; the stitches on
+  // its sides stand 1.5 out of them)
   assert.deepStrictEqual(r[0].size, [2060, 850, 910]);
-  assert.deepStrictEqual([r[1].x0 - r[0].x0, r[1].size], [2060 - 705, [705, 1430, 450]]);
+  assert.deepStrictEqual([r[1].x0 - r[0].x0, r[1].size], [2060 - 705 - 2, [705 + 3, 1530, 910]]);
+});
+
+check('кухня: сиденье оттоманки дивана целиком — крышка на петле у спинки, под ней короб для белья, подушки на ней поднимаются; открывается с фасадами кухни', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const lid = () => p.run(`(f=>{const d=f.doors.find(x=>x.key==="sofa-lid"),[sf,c]=f.appl.children.filter(o=>o.userData.sofa===true),b=new THREE.Box3().setFromObject(d.g);
+    return {axis:d.axis,s:d.s,max:+d.max.toFixed(3),t:+d.t.toFixed(3),rot:+d.g.rotation.x.toFixed(2),inChaise:d.g.parent===c,hinge:[Math.round(d.g.position.y*1000),Math.round(d.g.position.z*1000)],
+      size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.y-b.min.y)*1000),Math.round((b.max.z-b.min.z)*1000)],title:infoOf(d.g.children[0]).title,
+      ride:[[.644,.46],[.48,.36]].map(([w,h])=>{const m=c.children.find(o=>o.geometry&&o.geometry.args&&Math.abs(o.geometry.args[0]-w)<1e-6&&Math.abs(o.geometry.args[1]-h)<1e-6);return m&&[Math.round(m.position.y*1000),Math.round(m.position.z*1000)];}),
+      stitches:(fl=>{const seam=fl(sf)[0].material,st=fl(c).filter(m=>m.material===seam).map(m=>m.geometry.args);
+        return [st.filter(a=>a[2]<.002).length,st.filter(a=>a[0]<.002).length/2,st.filter(a=>a[0]<.002).length/2];})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3)),
+      white:(fl=>{const seam=fl(sf)[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(VIEWS.kitchen.furniture())`);
+  let r = lid();
+  // its upper back edge at the seat's height, at the thin back (100); the whole seat of the chaise
+  assert.deepStrictEqual([r.axis, r.s, r.max, r.t, r.rot, r.inChaise, r.hinge], ['x', -1, 0.698, 0, 0, true, [450, 100]], 'closed, on its hinge in the chaise');
+  assert.deepStrictEqual(r.size, [705, 170, 1430], 'the chaise\'s seat, from the thin back to its front');
+  // on it, the chaise's back cushion and the throw pillow in the corner (their middles: y, z)
+  assert.deepStrictEqual(r.ride, [[680, 210], [640, 385]]);
+  assert.strictEqual(r.title, 'Угловой диван Hoff «Слим»');
+  assert.deepStrictEqual(r.stitches, [5, 4, 4], 'stitched up its front and both its sides, 130 apart');
+  assert.strictEqual(r.white, 5, 'the box white inside (flat boards besides the stitches): its bottom and four walls');
+  // with the kitchen's fronts: up (its front edge rises over the seat), and down again
+  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(120);
+  // (a turn about x by a < 0 lifts what lies in front of the hinge: y = −z·sin a)
+  r = lid(); assert.ok(r.t === 0.698 && r.rot === -0.7, 'open at 40°: its front edge up');
+  // straight up till their lower front edges are on the lid's top: the cushion's at 450 + (320 − 100)·tan 40° = 635; the pillow's
+  // (496, 486) at 783, its middle 640 + 296
+  assert.deepStrictEqual(r.ride, [[865, 210], [936, 385]], 'the pillows up out of its way');
+  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click(); p.tick(120);
+  r = lid(); assert.ok(Math.abs(r.rot) < .02, 'closed again');
+  assert.ok(r.ride.every(([y, z], i) => Math.abs(y - [680, 640][i]) < 3 && Math.abs(z - [210, 385][i]) < 2), 'the pillows back down');
+  // a click opens it alone, and it stays open through a rebuild
+  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
+  const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
+  assert.strictEqual(lid().t, 0.698);
 });
 
 check('кухня: во вкладке — только шкафы и обеденный стол (когда рамка левой стены его вмещает); стол, витрина и диван — на плане и в обходе', () => {

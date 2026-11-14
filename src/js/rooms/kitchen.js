@@ -96,7 +96,14 @@ const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on 
 // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
 function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
 // sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
-function fromModel(w){P.W=A.kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+A.kW;clamp(w);T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
+function fromModel(w){P.W=A.kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+A.kW;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);
+  // the worktop's cut-out for the sink's bowl, under its rim (not in the cut list's parts: they stay as the old kitchen's)
+  const top=current.parts.find(q=>q.name==='Столешница'),x=P.B1/2;
+  if(top)top.hole=[x-SK.w/2,x+SK.w/2,SK.z-SK.d/2,SK.z+SK.d/2];
+  return current;}
+/* the sink in the first base cabinet, in the middle of it (mm): its rim 400 × 440 on the worktop, 10 thick (4 of them sunk in it);
+   its bowl 340 × 380 outside, its corners rounded by 20, walls 1 thick, down to 170 under the worktop's top; a drain 70 across */
+const SK={z:300,rw:400,rd:440,w:340,d:380,r:20,wall:1,deep:170,drain:35};
 
 /* ---------- finishes and materials ---------- */
 // finish per part group: wood decor or plain colour
@@ -478,10 +485,23 @@ function buildAppliances(g,opts){
   const c=current,doors=[];
   const box=boxIn(g);
   const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
-  // sink with mixer in the first base cabinet
-  { const cx=b1/2,cz=.3;
-    box(cx-.2,cx+.2,ct-.004,ct+.006,cz-.22,cz+.22,blackMat);
-    box(cx-.17,cx+.17,ct-.17,ct+.0065,cz-.19,cz+.19,sinkMat);
+  // the sink with its mixer in the first base cabinet: the rim round the bowl, the bowl open on top down through the worktop's cut-out,
+  // its bottom round the drain — each fills the other's hole, nothing lies over anything (it would flicker from far)
+  { const cx=b1/2,cz=SK.z*MM,yt=ct+.006,yb=ct-SK.deep*MM,m=v=>v*MM;
+    // a rounded rectangle (mm, from the sink's middle; x across, y toward the room) on a shape or a hole
+    const rect=(sh,w,d,r)=>{const x=m(w/2),y=m(d/2);r=m(r);sh.moveTo(-x+r,-y);sh.lineTo(x-r,-y);sh.quadraticCurveTo(x,-y,x,-y+r);sh.lineTo(x,y-r);
+      sh.quadraticCurveTo(x,y,x-r,y);sh.lineTo(-x+r,y);sh.quadraticCurveTo(-x,y,-x,y-r);sh.lineTo(-x,-y+r);sh.quadraticCurveTo(-x,-y,-x+r,-y);return sh;};
+    // a flat piece from y down by depth (the shape lies on the worktop: its y along the kitchen's z)
+    const slab=(sh,depth,y,mat)=>{const q=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:false,curveSegments:8}),mat);
+      q.rotation.x=Math.PI/2;q.position.set(cx,y,cz);q.castShadow=q.receiveShadow=true;g.add(q);return q;};
+    const ring=(w,d,r,t)=>{const sh=rect(new THREE.Shape(),w,d,r);sh.holes.push(rect(new THREE.Path(),w-2*t,d-2*t,r-t));return sh;};
+    const {w,d,r,wall:t}=SK;
+    const rim=rect(new THREE.Shape(),SK.rw,SK.rd,10);rim.holes.push(rect(new THREE.Path(),w,d,r));   // the rim: its hole the bowl's outside
+    slab(rim,.01,yt,blackMat).userData.sinkRim=true;
+    slab(ring(w,d,r,t),yt-yb,yt,sinkMat).userData.sinkBowl=true;   // the bowl's walls
+    const bottom=rect(new THREE.Shape(),w-2*t,d-2*t,r-t);bottom.holes.push(new THREE.Path().absarc(0,0,m(SK.drain),0,Math.PI*2,true));
+    slab(bottom,.001,yb+.001,sinkMat);
+    const dr=new THREE.Mesh(new THREE.CylinderGeometry(m(SK.drain),m(SK.drain),.001,32),chromeMat);dr.position.set(cx,yb+.0005,cz);g.add(dr);
     const tap=new THREE.Mesh(new THREE.CylinderGeometry(.014,.016,.32,16),blackMat);tap.position.set(cx,ct+.16,.06);g.add(tap);
     box(cx-.012,cx+.012,ct+.28,ct+.31,.06,.26,blackMat); }
   // two-zone hob over the oven cabinet

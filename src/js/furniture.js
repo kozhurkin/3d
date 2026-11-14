@@ -91,16 +91,30 @@ function roundBoxGeo(sx,sy,sz,r,k=4){
   pos.needsUpdate=nor.needsUpdate=uv.needsUpdate=true;
   return g;
 }
-function boxGeo(sx,sy,sz,seed,axis){
+/* hole: [x0, x1, z0, z1] (m, from the box's middle) cut through its top face (a worktop's cut-out for a sink): the box on a 3 × 3
+   grid across, its middle lines on the hole's edges, the top's middle cell left out. What fills the hole closes it */
+function boxGeo(sx,sy,sz,seed,axis,hole){
   // grain follows the longest side of each panel, like a real cut from a board
-  const g=new THREE.BoxGeometry(sx,sy,sz),uv=g.attributes.uv,r=rng(seed),ox=r(),oy=r();
+  const g=hole?new THREE.BoxGeometry(sx,sy,sz,3,1,3):new THREE.BoxGeometry(sx,sy,sz),pos=g.attributes.position,uv=g.attributes.uv,r=rng(seed),ox=r(),oy=r();
   const dims=[sx,sy,sz],ax=axis??dims.indexOf(Math.max(sx,sy,sz));   // axis forces the grain direction
+  const idx=g.index,face=[];g.groups.forEach(q=>{for(let k=q.start;k<q.start+q.count;k++)face[idx.getX(k)]=q.materialIndex;});
+  if(hole){
+    const at=(c,s,a,b)=>[-s/2,a,b,s/2][Math.round((c/s+.5)*3)];
+    for(let i=0;i<pos.count;i++)pos.setXYZ(i,at(pos.getX(i),sx,hole[0],hole[1]),pos.getY(i),at(pos.getZ(i),sz,hole[2],hole[3]));
+    const keep=[],groups=g.groups.map(q=>Object.assign({},q)),mid=(t,c)=>(c(t[0])+c(t[1])+c(t[2]))/3;g.clearGroups();
+    groups.forEach(q=>{const s=keep.length;
+      for(let k=q.start;k<q.start+q.count;k+=3){const t=[idx.getX(k),idx.getX(k+1),idx.getX(k+2)];
+        if(q.materialIndex===2){const x=mid(t,i=>pos.getX(i)),z=mid(t,i=>pos.getZ(i));if(x>hole[0]&&x<hole[1]&&z>hole[2]&&z<hole[3])continue;}
+        keep.push(...t);}
+      g.addGroup(s,keep.length-s,q.materialIndex);});
+    g.setIndex(keep);
+  }
+  // u, v by where the vertex is on its face (as BoxGeometry has them: roundBoxGeo's RB_UV), in decor repeats
   const faces=[[2,1],[2,1],[0,2],[0,2],[0,1],[0,1]]; // which axes a face's u,v run along
-  for(let f=0;f<6;f++){
-    const [au,av]=faces[f],du=dims[au],dv=dims[av];
-    const swap=(au===ax)||(av!==ax&&du>dv);
-    for(let i=0;i<4;i++){const j=f*4+i,u=uv.getX(j),v=uv.getY(j);
-      if(swap)uv.setXY(j,v*dv/RU+ox,u*du/RV+oy);else uv.setXY(j,u*du/RU+ox,v*dv/RV+oy);}
+  for(let j=0;j<pos.count;j++){
+    const f=face[j],[au,us,av,vs]=RB_UV[f],du=dims[au],dv=dims[av],c=[pos.getX(j),pos.getY(j),pos.getZ(j)];
+    const swap=(au===ax)||(av!==ax&&du>dv),u=.5+us*c[au]/du,v=.5-vs*c[av]/dv;
+    if(swap)uv.setXY(j,v*dv/RU+ox,u*du/RV+oy);else uv.setXY(j,u*du/RU+ox,v*dv/RV+oy);
   }
   return g;
 }
@@ -172,11 +186,11 @@ function buildParts(c,mats,{prev=[],open=false}={}){
     const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?DMAX:0),last:pd&&pd.last,max:DMAX},extra);turnDoor(d);doors.push(d);};
   c.parts.forEach(p=>{
     const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
-    const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz));
-    const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p),p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
+    const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz)),cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM;
+    const hole=p.hole&&[p.hole[0]*MM-cx,p.hole[1]*MM-cx,p.hole[2]*MM-cz,p.hole[3]*MM-cz];   // a cut-out through its top (mm, room axes)
+    const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p),p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
     mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
     const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats.edge);e.raycast=()=>{};mesh.add(e);
-    const cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM;
     if(p.mat==='front'){
       const holder=new THREE.Group(),key=p.name+'|'+doors.length;
       if(p.pivot){

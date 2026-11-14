@@ -219,6 +219,28 @@ check('кухня: размер между полками — один на на
   assert.ok(p.run(`${f}.dims.children.every(o=>o.material.depthTest===false)`), 'the room\'s own dimensions are seen through everything');
 });
 
+check('кухня: мойка — рамка с отверстием, в нём открытая чаша на 170 вниз сквозь вырез в столешнице, дно вокруг слива; ничто не лежит поверх другого', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const sink = () => p.run(`(f=>{const w=f.model.children.find(o=>o.userData.part&&o.userData.part.name==='Столешница'),a=f.appl.children;
+    const rim=a.find(o=>o.userData.sinkRim===true),bowl=a.find(o=>o.userData.sinkBowl===true),mm=v=>Math.round(v*1000);
+    return {hole:w.userData.part.hole,grid:w.geometry.args.slice(3),ct:f.P.Ct,
+      rim:[rim.geometry.kind,mm(rim.geometry.args[1].depth),mm(rim.position.x),mm(rim.position.y),mm(rim.position.z)],
+      bowl:[bowl.geometry.kind,mm(bowl.geometry.args[1].depth),mm(bowl.position.y)],
+      boxes:a.filter(o=>o.geometry&&o.geometry.kind==='THREE.BoxGeometry'&&mm(o.geometry.args[0])===340).length};})(VIEWS.kitchen.furniture())`);
+  let r = sink();
+  // the sink in the middle of the first base cabinet (450): its bowl 340 × 380 round z 300, the worktop cut out under it (its top face
+  // on a 3 × 3 grid, the middle cell left out)
+  assert.deepStrictEqual(r.hole, [225 - 170, 225 + 170, 300 - 190, 300 + 190]);
+  assert.deepStrictEqual(r.grid, [3, 1, 3]);
+  // the rim 10 thick from 6 over the worktop, the bowl's walls from there to 170 under its top; no solid box for a bowl any more
+  assert.deepStrictEqual(r.rim, ['THREE.ExtrudeGeometry', 10, 225, r.ct + 6, 300]);
+  assert.deepStrictEqual(r.bowl, ['THREE.ExtrudeGeometry', 176, r.ct + 6]);
+  assert.strictEqual(r.boxes, 0);
+  // a wider sink cabinet: the sink and the cut-out move with its middle
+  const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
+  r = sink(); assert.deepStrictEqual([r.hole[0], r.rim[2]], [250 - 170, 250]);
+});
+
 check('кухня: стол у левой стены — 1350 от стены кухни, 700 вдоль стены, 1300 в комнату, столешница 30 мм на высоте 750', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   // the kitchen's origin on the plan: −2000, 2000; the table's top and legs among the appliances, in the walker's way

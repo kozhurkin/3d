@@ -1,9 +1,9 @@
 /* ---------- «Обход»: the apartment from the eyes, walked through as in a game ----------
    W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
    does not let the page take it, drag to look), Space — jump, Ctrl or C — crouch, Shift — a slow step, E or a click — the door or
-   cabinet front in the middle of the screen (under the cursor while dragging). On a touch screen a finger on the left half of the
-   scene holds a stick (the circle comes under it): the farther from its centre, the faster the walk; the right half looks; a tap
-   is the door under the finger. The panel sets the eye height, the walls' look, the doors, and has the common wall colour (with
+   cabinet front in the middle of the screen (under the cursor while dragging). On a touch screen a finger in the lower left corner of
+   the scene (a square of STICK_ZONE of its width) holds a stick (the circle comes under it): the farther from its centre, the
+   faster the walk; elsewhere a finger looks; a tap is the door under the finger. The panel sets the eye height, the walls' look, the doors, and has the common wall colour (with
    the outlines) and light.
    The camera is the orbit's, its centre a step (LOOK) in front of the eyes: a flight to the walk and from it, and the camera
    remembered for the view, work as in any view. Walls (however they look), closed doors, cabinets and appliances stop the walker;
@@ -23,6 +23,7 @@ const keys=new Set();let jumpQ=false;
 /* the stick of a touch screen: the finger's offset from where it came down, a share of STICK_R; a little of it (STICK_DEAD) is
    no step yet, so a tap does not walk */
 const STICK_R=48,STICK_DEAD=.15;    // px (the circle's radius in the page), share
+const STICK_ZONE=.33;               // the stick's corner: a square this share of the scene's width (no taller than the scene)
 let stick=null;                     // {id, x0, y0: where the finger came down, x, y: where it is} (client px)
 let touchUI=!!(window.matchMedia&&matchMedia('(hover: none) and (pointer: coarse)').matches),stickUsed=false;
 function stickOff(){   // the knob's offset, px, no farther than the circle
@@ -147,10 +148,10 @@ function useDoor(cx,cy){
 let drag=null;
 canvas.addEventListener('pointerdown',e=>{
   if(!walking())return;
-  // a finger on the left half of the scene holds the stick (one at a time); elsewhere it looks, as the mouse drags
+  // a finger in the lower left corner holds the stick (one at a time); elsewhere it looks, as the mouse drags
   if(e.pointerType==='touch'){
-    touchUI=true;const rc=canvas.getBoundingClientRect();
-    if(!stick&&e.clientX<rc.left+rc.width/2){stick={id:e.pointerId,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);return;}
+    touchUI=true;const rc=canvas.getBoundingClientRect(),side=Math.min(rc.width*STICK_ZONE,rc.height);
+    if(!stick&&e.clientX<rc.left+side&&e.clientY>rc.top+rc.height-side){stick={id:e.pointerId,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);return;}
   }else if(e.pointerType==='mouse')touchUI=false;
   // the right button gives the mouse back, as Esc does
   if(e.button===2){drag=null;if(locked()&&document.exitPointerLock)document.exitPointerLock();return;}

@@ -4,9 +4,11 @@
    how far the left wall shows is the view's frame (VS.kitchen.L). Own scope: the room modules share names (P, T, computeParts…). */
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
-// cabinet sizes; W and H are the plan's kitchen wall and ceiling
-const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,AntUp:false,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38};
+// cabinet sizes; W and H are the plan's kitchen wall and ceiling, L and Rx where the window wall and the right wall are (kitchen axes): from the plan too
+const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,AntUp:false,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38,L:4750,Rx:3200};
 let current=null;
+// dining table by the left wall: from the kitchen wall z, along the wall w (its short side, the end against the wall), into the room l, top t thick, h high
+const TB={z:1350,w:700,l:1300,t:30,h:750,leg:40,in:50};
 
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
@@ -94,7 +96,7 @@ const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on 
 // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
 function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
 // sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
-function fromModel(w){P.W=A.kW;P.H=A.H;clamp(w);T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
+function fromModel(w){P.W=A.kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+A.kW;clamp(w);T=P.T||16;TF=P.TF||16;return current=computeParts(P);}
 
 /* ---------- finishes and materials ---------- */
 // finish per part group: wood decor or plain colour
@@ -113,6 +115,209 @@ const handleMat=new THREE.MeshStandardMaterial({color:0x5c5d5f,roughness:.35,met
 const dishMat=new THREE.MeshStandardMaterial({color:0x9fa3a6,roughness:.4,metalness:.6});
 const dishInMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metalness:.2});
+
+/* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js) */
+const INFO={
+  table:()=>({title:'Обеденный стол',lines:[`${TB.l/10} × ${TB.w/10} см, высота ${TB.h/10} см, торцом к левой стене.`,`Столешница ${TB.t} мм — ${finName(FIN.top)}, как у кухни.`,`Четыре стальные ножки ${TB.leg} × ${TB.leg} мм.`]}),
+  desk:{title:'Письменный стол HEMNES (IKEA)',lines:['Чёрно-коричневый, массив сосны.','155 × 65 см, высота 74 см, под столом 67 см.','Слева тумба с дверцей и полкой, справа два ящика.']},
+  addon:{title:'Надстройка HEMNES для стола (IKEA)',lines:['Чёрно-коричневая, массив сосны.','152 × 25 см, высота 63 см; стол с ней — 137 см.','По краям две секции с ящиком и полками, посередине открытая полка.']},
+  vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
+  sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
+};
+
+/* the dining table: a worktop-decor top on four steel legs, its end against the left wall (kitchen axes, m) */
+function buildTable(g){
+  const box=boxIn(g),x1=TB.l*MM,z0=TB.z*MM,z1=(TB.z+TB.w)*MM,y1=TB.h*MM,y0=(TB.h-TB.t)*MM;
+  const sx=x1,sy=y1-y0,sz=z1-z0,thin=1;
+  const top=new THREE.Mesh(boxGeo(sx,sy,sz,77),[0,0,1,1,2,2].map(a=>a===thin?mats.top:mats.topEnd));
+  top.position.set(x1/2,(y0+y1)/2,(z0+z1)/2);top.castShadow=top.receiveShadow=true;
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry),mats.edge);e.raycast=()=>{};top.add(e);g.add(top);
+  const l=TB.leg*MM,i=TB.in*MM,legs=[[i,z0+i],[x1-i-l,z0+i],[i,z1-i-l],[x1-i-l,z1-i-l]].map(([x,z])=>box(x,x+l,0,y0,z,z+l,blackMat));
+  [top,...legs].forEach(m=>{m.userData.info=INFO.table;m.userData.table=true;});
+}
+
+/* the writing desk as IKEA HEMNES 155×65, black-brown, with its add-on unit: 1550 × 650, 740 high, 670 free under its knee rail. A top on two
+   pedestals of 50 mm legs: on the left a cabinet with a frame-and-panel door and a shelf, on the right two drawers; inset
+   fronts with knobs. Along the left wall of the kitchen, its end 150 mm from the window wall. Its own axes (mm): x along it from
+   the window end, y up, z from the wall into the room; turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
+const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:150};   // gap: from the window wall
+const deskFIN={carcass:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},front:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},top:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},apron:null};
+const deskMats=makeMats();applyMaterials(deskMats,deskFIN,0);   // solid wood: the end faces as dark as the rest (no edge-band contrast)
+function deskParts(){
+  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const {W,D,H,top,leg:l,ov,ped,free}=DK,yt=H-top,zF=D-ov,zb=zF-l,t=16,ft=18,fz1=zF-5,fz0=fz1-ft,y0=130,y1=640;
+  add('Столешница письменного стола','top',0,W,yt,H,0,D);
+  [[ov,ov+ped,'left'],[W-ov-ped,W-ov,'right']].forEach(([a,b,side])=>{
+    const nm=side==='left'?' — тумба с дверцей':' — тумба с ящиками',ia=a+l,ib=b-l;
+    [a,b-l].forEach(x=>[0,zb].forEach(z=>add('Ножка'+nm,'carcass',x,x+l,0,yt,z,z+l)));
+    [a,b-l].forEach(x=>add('Боковина'+nm,'carcass',x+(l-t)/2,x+(l+t)/2,80,yt,l,zb));
+    add('Задняя стенка'+nm,'carcass',ia,ib,80,yt,(l-t)/2,(l+t)/2);
+    add('Нижняя царга'+nm,'carcass',ia,ib,80,y0,zF-5-20,zF-5);
+    add('Верхняя царга'+nm,'carcass',ia,ib,y1,yt,zF-5-20,zF-5);
+    add('Дно'+nm,'carcass',ia,ib,y0-t,y0,(l+t)/2,zF-25);
+    const fx0=ia+2,fx1=ib-2,cx0=a+(l+t)/2,cx1=b-(l+t)/2;   // fronts between the legs; inside between the sides
+    if(side==='left'){
+      add('Полка'+nm,'carcass',cx0,cx1,390,390+t,(l+t)/2,fz0-10);
+      add('Дверца'+nm,'front',fx0,fx1,y0+2,y1-2,fz0,fz1,{hinge:'L',knobs:[[fx1-40,380]],panel:true});
+    }else{
+      const ym=440;
+      [[y0+2,ym-2,'d1','нижний'],[ym+2,y1-2,'d2','верхний']].forEach(([f0,f1,k,w])=>{
+        const n=' — '+w+' ящик';
+        add('Фасад ящика'+n,'front',fx0,fx1,f0,f1,fz0,fz1,{hinge:'S',slide:k,travel:450,knobs:[[(fx0+fx1)/2,(f0+f1)/2]]});
+        const bx0=cx0+13,bx1=cx1-13,by0=f0+12,by1=f1-40,bz0=fz0-520;
+        add('Бок ящика'+n,'carcass',bx0,bx0+12,by0,by1,bz0,fz0,{inSlide:k});
+        add('Бок ящика'+n,'carcass',bx1-12,bx1,by0,by1,bz0,fz0,{inSlide:k});
+        add('Задняя стенка ящика'+n,'carcass',bx0+12,bx1-12,by0,by1,bz0,bz0+12,{inSlide:k});
+        add('Дно ящика'+n,'back',bx0,bx1,by0-4,by0,bz0,fz0,{inSlide:k});
+      });
+    }
+  });
+  // between the pedestals: the knee rail in front (free height under it), a rail at the back
+  add('Царга передняя','carcass',ov+ped,W-ov-ped,free,yt,zF-20,zF);
+  add('Царга задняя','carcass',ov+ped,W-ov-ped,yt-100,yt,0,20);
+  addOnParts(add);
+  return parts;
+}
+/* the HEMNES add-on unit on the desk's top, at the wall, in the middle of its length: 1520 × 250, 630 high (the desk with it 1370).
+   Two towers at the ends, each with a drawer at the bottom and two shelves; between them an open part with a shelf;
+   a rail under the top across the whole front. Desk axes, mm */
+const AU={W:1520,D:250,H:630,tower:400};
+function addOnParts(add){
+  const ox=(DK.W-AU.W)/2,oy=DK.H,{W,D,H,tower:tw}=AU,t=16,zF=D-15,yt=H-20,nm=' надстройки';
+  const a=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>add(name+nm,mat,ox+x0,ox+x1,oy+y0,oy+y1,z0,z1,Object.assign({info:INFO.addon},extra));
+  a('Столешница','top',0,W,yt,H,0,D);
+  const sides=[15,15+tw-t,W-15-tw,W-15-t];   // the outer sides and the towers' inner sides
+  sides.forEach(x=>a('Боковина','carcass',x,x+t,0,yt,0,zF));
+  a('Задняя стенка','carcass',15+t,W-15-t,0,yt,0,8);
+  a('Верхняя царга','carcass',15+t,W-15-t,yt-55,yt,zF-20,zF);
+  // the middle: a shelf, a low rail at the front
+  a('Полка','carcass',15+tw,W-15-tw,350,350+t,8,zF-20);
+  a('Нижняя царга','carcass',15+tw,W-15-tw,0,40,zF-40,zF-20);
+  // the towers: a drawer at the bottom, a board over it, two shelves (as in IKEA's picture: not the same in both)
+  [[15+t,15+tw-t,'a1','левый',[216,461]],[W-15-tw+t,W-15-t,'a2','правый',[366,435]]].forEach(([x0,x1,k,w,sh])=>{
+    const n=' — '+w+' ящик';
+    a('Полка над ящиком','carcass',x0,x1,108,108+t,8,zF);
+    sh.forEach(y=>a('Полка','carcass',x0,x1,y,y+t,8,zF-20));
+    const fx0=x0+2,fx1=x1-2,fz1=zF,fz0=fz1-18;
+    a('Фасад ящика'+n,'front',fx0,fx1,4,104,fz0,fz1,{hinge:'S',slide:k,travel:180,knobs:[[ox+(fx0+fx1)/2,oy+54]]});
+    const bx0=x0+8,bx1=x1-8,by0=12,by1=84,bz0=20;
+    a('Бок ящика'+n,'carcass',bx0,bx0+12,by0,by1,bz0,fz0,{inSlide:k});
+    a('Бок ящика'+n,'carcass',bx1-12,bx1,by0,by1,bz0,fz0,{inSlide:k});
+    a('Задняя стенка ящика'+n,'carcass',bx0+12,bx1-12,by0,by1,bz0,bz0+12,{inSlide:k});
+    a('Дно ящика'+n,'back',bx0,bx1,by0-4,by0,bz0,fz0,{inSlide:k});
+  });
+}
+/* the fronts of the HEMNES pieces, on their doors (they swing and slide with them): knobs [[x,y]…], a frame round a door's
+   panel (panel), or a glass door (glass): its front a 4 mm pane in the middle of a frame of the front's thickness. Part mm, m */
+const glassPaneMat=new THREE.MeshStandardMaterial({color:0xd6e6e8,roughness:.05,metalness:.1,transparent:true,opacity:.18,depthWrite:false});
+function hemnesFronts(doors,mats){
+  doors.forEach(dr=>{
+    const m=dr.g.children.find(o=>o.userData.part&&o.userData.part.mat==='front'),p=m.userData.part,mp=m.position,hz=(p.z1-p.z0)/2*MM;
+    const at=(x,y)=>[x*MM-(p.x0+p.x1)/2*MM+mp.x,y*MM-(p.y0+p.y1)/2*MM+mp.y],b=boxIn(dr.g);
+    const frame=(f,z0,z1)=>[[p.x0,p.x1,p.y1-f,p.y1],[p.x0,p.x1,p.y0,p.y0+f],[p.x0,p.x0+f,p.y0+f,p.y1-f],[p.x1-f,p.x1,p.y0+f,p.y1-f]]
+      .forEach(([x0,x1,y0,y1])=>{const [a,c]=at(x0,y0),[e,h]=at(x1,y1);b(a,e,c,h,z0,z1,mats.front);});
+    (p.knobs||[]).forEach(([x,y])=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.014,.011,.024,20),handleMat);k.rotation.x=Math.PI/2;
+      const [kx,ky]=at(x,y);k.position.set(kx,ky,mp.z+hz+.012);k.castShadow=true;dr.g.add(k);});
+    if(p.panel)frame(60,mp.z+hz,mp.z+hz+.004);   // the door's frame round its panel
+    if(p.info)dr.g.userData.info=p.info;   // its knobs and frame tell what it is a front of
+    if(p.glass){m.material=glassPaneMat;m.scale.z=4/(p.z1-p.z0);m.castShadow=false;m.children.forEach(c=>{c.visible=false;});frame(p.glass,mp.z-hz,mp.z+hz);}
+  });
+}
+// the desk in g: its parts on its own group, turned along the left wall
+function buildDesk(g,opts){
+  const d=buildParts({parts:deskParts()},deskMats,opts);
+  hemnesFronts(d.doors,deskMats);
+  d.model.rotation.y=Math.PI/2;d.model.position.set(0,0,(P.L-DK.gap)*MM);d.model.userData.desk=true;d.model.userData.info=INFO.desk;
+  g.add(d.model);
+  return d.doors;
+}
+
+/* the display cabinet as IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
+   45 mm corner posts, two glass doors over three adjustable shelves, three drawers under them; all of it dark, as the desk.
+   Its back against the desk's end by the kitchen wall, its side against the left wall, its fronts toward the kitchen wall.
+   Own axes (mm): x across its front from the left wall's far side as seen from the front, y up, z from its back to its front;
+   turned onto the kitchen's: its x along −x, its z along −z */
+const VT={W:900,D:370,H:1970,post:45,top:22};
+const vitAt=()=>P.L-DK.gap-DK.W;   // kitchen z of its back: the desk's end
+function vitrineParts(){
+  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const {W,D,H,post:l,top}=VT,yt=H-top,zF=D-15,t=16,fz1=zF-3,fz0=fz1-20,rz0=zF-25,rz1=zF-5,nm=' витрины';
+  const xa=10,xb=W-10,ia=xa+l,ib=xb-l,sa=xa+(l+t)/2,sb=xb-(l+t)/2,zb=27;   // posts' outer x; between the posts; inner faces of the sides; back panel's front
+  add('Столешница'+nm,'top',0,W,yt,H,0,D);
+  [xa,xb-l].forEach(x=>[5,zF-l].forEach(z=>add('Стойка'+nm,'carcass',x,x+l,0,yt,z,z+l)));
+  [xa,xb-l].forEach(x=>add('Боковина'+nm,'carcass',x+(l-t)/2,x+(l+t)/2,90,yt,5+l,zF-l));
+  add('Задняя стенка'+nm,'carcass',ia,ib,90,yt,zb-8,zb);
+  add('Нижняя царга'+nm,'carcass',ia,ib,70,100,rz0,rz1);
+  add('Дно'+nm,'carcass',sa,sb,100-t,100,zb,rz0);
+  add('Царга между ящиками и дверцами'+nm,'carcass',ia,ib,756,778,rz0,rz1);
+  add('Дно отделения за стеклом'+nm,'carcass',sa,sb,756,778,zb,rz0);
+  add('Верхняя царга'+nm,'carcass',ia,ib,1920,yt,rz0,rz1);
+  [1050,1330,1610].forEach(y=>add('Полка'+nm,'carcass',sa,sb,y,y+18,zb,zF-l-5));
+  const fx0=ia+2,fx1=ib-2,xm=(fx0+fx1)/2;
+  add('Стеклянная дверца'+nm,'front',fx0,xm-2,780,1918,fz0,fz1,{hinge:'L',glass:50,knobs:[[xm-2-30,1320]]});
+  add('Стеклянная дверца'+nm,'front',xm+2,fx1,780,1918,fz0,fz1,{hinge:'R',glass:50,knobs:[[xm+2+30,1320]]});
+  const kx=[fx0+(fx1-fx0)*.2,fx0+(fx1-fx0)*.8];
+  [[102,370,'v3','нижний'],[374,586,'v2','средний'],[590,752,'v1','верхний']].forEach(([f0,f1,k,w])=>{
+    const n=' — '+w+' ящик'+nm;
+    add('Фасад ящика'+n,'front',fx0,fx1,f0,f1,fz0,fz1,{hinge:'S',slide:k,travel:270,knobs:kx.map(x=>[x,(f0+f1)/2])});
+    const bx0=ia+7,bx1=ib-7,by0=f0+12,by1=f1-30,bz0=fz0-290;
+    add('Бок ящика'+n,'carcass',bx0,bx0+12,by0,by1,bz0,fz0,{inSlide:k});
+    add('Бок ящика'+n,'carcass',bx1-12,bx1,by0,by1,bz0,fz0,{inSlide:k});
+    add('Задняя стенка ящика'+n,'carcass',bx0+12,bx1-12,by0,by1,bz0,bz0+12,{inSlide:k});
+    add('Дно ящика'+n,'back',bx0,bx1,by0-4,by0,bz0,fz0,{inSlide:k});
+  });
+  return parts;
+}
+function buildVitrine(g,opts){
+  const d=buildParts({parts:vitrineParts()},deskMats,opts);
+  hemnesFronts(d.doors,deskMats);
+  d.model.rotation.y=Math.PI;d.model.position.set(VT.W*MM,0,vitAt()*MM);d.model.userData.vitrine=true;d.model.userData.info=INFO.vitrine;
+  g.add(d.model);
+  return d.doors;
+}
+
+/* the corner sofa as Hoff «Слим», beige-grey velour: 2060 × 1530, 910 high with its back cushions, the seat 450 high on 55 mm black
+   plastic legs. The seat 1300 wide and 750 deep in front of a thin back (100 mm, 680 high: the height laid out without the cushions),
+   530 in front of the cushions; the chaise 650 wide out to 1530. Two arms alike, 55 wide, from the legs up to 635, as deep as the seat;
+   three back cushions 650 × 460 × 220 over the seat and the chaise, two throw pillows 480 × 360; the base stands
+   20 mm back under the seat, stitched upright. Every soft piece rounded (furniture.js: roundBoxGeo). Its back against the right wall, opposite the desk, its window end 150 mm from the
+   window wall, lined up with the desk's; the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
+   Own axes (mm): x across its front, y up, z from its back to its front, described with the chaise at x 0 and mirrored onto x W − x;
+   turned onto the kitchen's: its x along z, its z along −x. Two groups — the sofa and the chaise's part in front of the seat —
+   so the walk is stopped by its L, not by the whole rectangle */
+const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20};
+// beige-grey velour as in the shop's pictures; the colours are sRGB, as the plain finishes (furniture.js: applyMaterials)
+const velourMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#b4aba3').convertSRGBToLinear(),roughness:.95});
+const seamMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#968c84').convertSRGBToLinear(),roughness:.95});
+const sofaLegMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6});
+const sofaAt=()=>P.L-DK.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
+function buildSofa(g){
+  const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
+  const group=()=>{const q=new THREE.Group();q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,sofaAt()*MM);q.userData.info=INFO.sofa;q.userData.sofa=true;g.add(q);return q;};
+  // a soft piece: rounded by r (mm) all round; mirrored, so the chaise is at x W
+  const mk=q=>(x0,x1,y0,y1,z0,z1,r,mat=velourMat)=>{
+    const m=new THREE.Mesh(roundBoxGeo((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM,r*MM),mat);
+    m.position.set((W-(x0+x1)/2)*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;q.add(m);return m;};
+  const flat=q=>{const b=boxIn(q);return (x0,x1,y0,y1,z0,z1,mat)=>b((W-x1)*MM,(W-x0)*MM,y0*MM,y1*MM,z0*MM,z1*MM,mat);};
+  const sofa=group(),chaise=group(),S=mk(sofa),C=mk(chaise),Sf=flat(sofa),Cf=flat(chaise);
+  // the sofa: the base between the arms, the seat cushion, the thin back, the two arms (rounded well over the top), the back cushions
+  S(arm,xr,lg,ys,0,D-base,12);
+  S(xc,xr,ys,seat,back,D,45);
+  S(arm,xr,ys,backH,0,back,35);
+  [0,xr].forEach(x=>S(x,x+arm,lg,armH,0,D,26));   // the arms, alike, down to the legs
+  for(let i=0;i<3;i++)S(arm+i*650+3,arm+(i+1)*650-3,seat,H,back,back+220,80);
+  // the chaise: its seat in one piece from the back to its front (a seam left against the seat), its base in front of the sofa's
+  C(0,xc,ys,seat,back,Dc,45);
+  C(0,xc,lg,ys,D-base,Dc-base,12);
+  // stitches up the fronts of the bases, 130 mm apart
+  for(let x=xc+130;x<xr-40;x+=130)Sf(x-2,x+2,lg+15,ys-15,D-base,D-base+1.5,seamMat);
+  for(let x=130;x<xc-40;x+=130)Cf(x-2,x+2,lg+15,ys-15,Dc-base,Dc-base+1.5,seamMat);
+  // legs
+  [[30,30],[W-80,30],[W-80,D-base-80],[xc+30,D-base-80]].forEach(([x,z])=>S(x,x+50,0,lg,z,z+50,8,sofaLegMat));
+  [[30,Dc-base-80],[xc-80,Dc-base-80]].forEach(([x,z])=>C(x,x+50,0,lg,z,z+50,8,sofaLegMat));
+  // throw pillows leaning on the back cushions, by the left arm and the right one, tilted toward the arms (mirrored)
+  [[arm+40,-0.18],[xr-40-480,0.18]].forEach(([x,tz])=>{const p=S(x,x+480,seat+10,seat+370,back+225,back+345,55);p.rotation.x=-.3;p.rotation.z=tz;});
+}
 
 /* appliances stand in the cabinets: sink, hob, dishwasher, oven, cooker hood, fridge (kitchen axes, m) */
 function buildAppliances(g){
@@ -181,7 +386,7 @@ function buildAppliances(g){
 }
 
 /* ---------- dimension lines of the kitchen (kitchen axes; they belong to the kitchen and move with it) ---------- */
-function buildDims(dim,gaps){
+function buildDims(dim,gaps,group){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0);
   const c=current,zf=P.Db+40;let x=0;
   [P.B1,P.B2,P.B3].forEach(w=>{dim(V(x,P.Ct+60,zf),V(x+w,P.Ct+60,zf),`${w}`,Y);x+=w;});
@@ -191,6 +396,13 @@ function buildDims(dim,gaps){
   dim(V(-60,P.Ct,P.Dw+40),V(-60,c.yW,P.Dw+40),`${c.yW-P.Ct}`,X);
   if(P.Ant!==false)dim(V(P.W+80,c.yAnt,P.Dw+40),V(P.W+80,P.H,P.Dw+40),`${P.Ha}`,X);
   dim(V(P.W+80,0,0),V(P.W+80,0,P.Db),`${P.Db}`,Y);
+  // the table: how far from the kitchen wall, its sides, its height (shown with the table: see frame below)
+  const tz1=TB.z+TB.w,tx=TB.l+60,n0=group.children.length;
+  dim(V(40,TB.h,0),V(40,TB.h,TB.z),`${TB.z}`,Y);
+  dim(V(tx,TB.h,TB.z),V(tx,TB.h,tz1),`${TB.w}`,Y);
+  dim(V(0,TB.h,tz1+60),V(TB.l,TB.h,tz1+60),`${TB.l}`,Y);
+  dim(V(tx,0,tz1+60),V(tx,TB.h,tz1+60),`${TB.h}`,X);
+  group.children.slice(n0).forEach(o=>{o.userData.table=true;});
   // between the shelves of each wall cabinet
   if(P.Nw){const b=c.parts.filter(q=>/^(Дно|Полка|Крышка) навесного шкафа/.test(q.name));
     [...new Set(b.map(q=>q.x0))].forEach(x=>gaps(b.filter(q=>q.x0===x)));}
@@ -236,13 +448,21 @@ function panelText(){
 
 const k=roomKit('kitchen',{
   P,FIN,mats,px:'k',panel,origin:O,fromModel,setCam,panelText,
-  fromPlan:['W','H'],
+  fromPlan:['W','H','L','Rx'],
   ids:['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'],
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:buildAppliances},   // the appliances go with the walls in the kitchen's view
-  foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10]],   // its footprint: the fridge besides the base run
+  extra:{name:'appl',build:(g,o)=>{buildAppliances(g);buildTable(g);buildSofa(g);return buildDesk(g,o).concat(buildVitrine(g,o));}},   // the appliances, the tables, the display cabinet and the sofa go with the walls in the kitchen's view
+  // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk,
+  // the display cabinet and the sofa stand in the apartment (the plan, the walk), not in the kitchen tab
+  frame:(on,{extra,dims,show})=>{
+    const fits=show>=TB.z+TB.w;
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.vitrine===true||u.sofa===true)o.visible=!on;else if(u.table===true)o.visible=!on||fits;});
+    if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
+  },
+  foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
+    [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W]],   // its footprint: the fridge besides the base run, the table, the desk, the display cabinet, the sofa
   syncFlags:()=>{kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();},
   // finishes: the worktop and the apron (as the worktop unless it has its own) besides the carcass and the fronts
   groups:['carcass','front','top','apron'],

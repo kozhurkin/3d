@@ -11,10 +11,12 @@
      fromPlan  — keys of P that belong to the plan (left out of the saved settings),
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
      slider    {sel, key, max()} — how far the side wall shows (the view's frame),
-     setCam(v), dims(dim,gaps) — dimension lines through dim(a,b,txt,tick), the free heights of a shelf stack through
+     setCam(v), dims(dim,gaps,group) — dimension lines through dim(a,b,txt,tick) into group, the free heights of a shelf stack through
                gaps(boards), extra {name, build(g, {prev, open})} — appliances or sanitary ware; a cabinet of its own among
                them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk),
      foot()    — extra footprint rects, walls(on) — walls in its own view (default: «Стена» toggles them),
+     frame(on, {extra, dims, show}) — every frame after the kit's own: what of the extras and the dimensions shows (show: the frame
+               slider as it is now),
      syncFlags(), onDoorMode(), panelText(),
      groups    — finish groups (default carcass, front), shown(g), matName(m) (null: the plain board), takeFin(sFIN, ok),
      finNowTail(), afterSyncFinish(),
@@ -54,7 +56,7 @@ function roomKit(id,cfg){
     const prev=doors;disposeGroup(model);
     ({model,doors}=buildParts(cur,mats,{prev,open:VS[id].fronts==='open'}));
     if(cfg.extra){extra=new THREE.Group();const more=cfg.extra.build(extra,{prev,open:VS[id].fronts==='open'});if(more)doors=doors.concat(more);model.add(extra);}
-    dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps);model.add(dimsGroup);
+    dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps,dimsGroup);model.add(dimsGroup);
     clipToFloor(model,clip);
     // its footprint for «Контуры» on the plan
     foot=furnFoot(cur,cfg.foot&&cfg.foot());if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}
@@ -81,6 +83,7 @@ function roomKit(id,cfg){
     dimsGroup.visible=on&&V.dims!==false&&!inTransition();
     if(extra)extra.visible=!on||V.walls!==false;
     if(cfg.walls)cfg.walls(on);else if(on&&wallGroup)wallGroup.visible=V.walls!==false;
+    if(cfg.frame)cfg.frame(on,{extra,dims:dimsGroup,show:show()});
     if(model.visible)doors.forEach(d=>{
       if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
       else d.a+=(d.t-d.a)*ease(.09);

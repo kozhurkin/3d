@@ -58,6 +58,13 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 .inset .dist em{font-style:normal}
 .inset .inset-cv{position:absolute;inset:0;width:100%;height:100%;display:block}
 .inset .cam-arrow{position:absolute;width:0;height:0;border-top:7px solid transparent;border-bottom:7px solid transparent;border-left:12px solid #ff6a00;filter:drop-shadow(0 0 1px rgba(0,0,0,.5))}
+.item-dot{position:absolute;z-index:4;width:24px;height:24px;display:grid;place-items:center;padding:0;background:var(--panel);border:1px solid var(--accent);border-radius:50%;color:var(--accent);font:600 italic 14px/1 Georgia,serif;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+.item-dot:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.item-card{position:absolute;z-index:5;width:min(280px,calc(100% - 16px));box-sizing:border-box;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font:400 12px/1.45 var(--f-body);color:var(--fg);box-shadow:0 4px 16px rgba(0,0,0,.2)}
+.item-card h3{margin:0 22px 4px 0;font:600 13px/1.3 var(--f-body)}
+.item-card p{margin:2px 0 0;color:var(--muted)}
+.item-card .x{position:absolute;right:4px;top:3px;width:22px;height:22px;padding:0;border:0;background:none;color:var(--muted);font:400 18px/1 var(--f-body);cursor:pointer}
+.item-card .x:hover{color:var(--accent)}
 .dbg-on .info{max-width:calc(100% - min(260px,42%) - 36px)}
 .dbg-on .info[aria-expanded="true"] .it{white-space:normal}
 .btn{font:500 13px/1 var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:8px 4px;cursor:pointer}
@@ -162,6 +169,8 @@ textarea.code{width:100%;height:80px;font:11px var(--f-mono);margin-top:8px;back
     <canvas id="c" aria-label="3D-план квартиры: прихожая, санузел и кухня"></canvas>
     <button class="camb" id="camBtn" aria-expanded="false" aria-label="Мини-вид камеры" title="Камера: точка вращения и мини-вид"><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><rect x="2" y="6" width="11" height="9" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M13 9l5-3v9l-5-3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>
     <button class="info" id="infoBtn" aria-expanded="false" aria-label="Как управлять"><span class="ii">i</span><span class="it" data-info="orbit">Тяните — вращение <b class="sep">•</b> Shift + тяните, средняя кнопка или два пальца — сдвиг <b class="sep">•</b> колесо — масштаб к курсору <b class="sep">•</b> клик по двери — открыть или закрыть, удержание — открывать постепенно</span><span class="it" data-info="walk" hidden>W A S D — идти <b class="sep">•</b> мышь — смотреть (клик по сцене, Esc или правая кнопка — отпустить) <b class="sep">•</b> пробел — прыжок <b class="sep">•</b> Ctrl или C — присесть <b class="sep">•</b> Shift — тихий шаг <b class="sep">•</b> E или клик — дверь в прицеле <b class="sep">•</b> на сенсорном экране: палец в левом нижнем углу — идти (чем дальше от центра круга, тем быстрее), в остальной части — смотреть, тап — дверь</span></button>
+    <button class="item-dot" id="itemDot" hidden aria-label="Что это"><span aria-hidden="true">i</span></button>
+    <div class="item-card" id="itemCard" hidden role="dialog"></div>
     <i class="aim" id="walkAim" hidden></i>
     <div class="stick" id="walkStick" hidden><i></i></div>
     <div class="walk-hint" id="walkHint" hidden data-touch="Палец в левом нижнем углу — идти, в остальной части — смотреть · тап по двери — открыть">Кликните по сцене, чтобы смотреть мышью · Esc или правая кнопка — отпустить</div>

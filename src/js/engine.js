@@ -102,12 +102,16 @@ canvas.addEventListener('pointermove',e=>{
 });
 const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;};
 // a click (no drag) on a door leaf opens or closes that door
-function pickDoor(e){
-  if(inTransition())return null;   // nothing to click while flying between views
+// what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at)
+function hitAt(e){
+  if(inTransition())return null;
   const rc=canvas.getBoundingClientRect();
   ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
   ray.setFromCamera(ndc,camera);
-  const h=ray.intersectObjects(scene.children,true).find(hittable);
+  return ray.intersectObjects(scene.children,true).find(hittable)||null;
+}
+function pickDoor(e,hit){
+  const h=hit===undefined?hitAt(e):hit;
   if(!h)return null;
   // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of any room in the scene
   // (the plan shows them all; a hidden room is never hit)
@@ -124,7 +128,8 @@ canvas.addEventListener('pointerup',e=>{
   }
   downAt=null;lost(e);
 });
-canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse())canvas.style.cursor=pickDoor(e)?'pointer':'';});canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
+canvas.addEventListener('pointerleave',()=>itemHover(null));canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 // wheel zooms toward the point under the cursor (surface hit, or the plane through the pivot)
@@ -232,9 +237,61 @@ const infoBtn=document.getElementById('infoBtn');
 infoBtn.addEventListener('click',()=>infoBtn.setAttribute('aria-expanded',infoBtn.getAttribute('aria-expanded')!=='true'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')infoBtn.setAttribute('aria-expanded','false');});
 
+/* ---------- what a thing is: the cursor resting on something that knows it (userData.info on it or up its parents, or on its
+   part: {title, lines} or a function giving them) brings up an «i» by the cursor; a click on it opens a short card.
+   With the mouse in the views that orbit (the walk keeps the mouse to itself); the camera moving takes the «i» away ---------- */
+const ITEM_REST=700,ITEM_GRACE=600;
+const itemDot=document.getElementById('itemDot'),itemCard=document.getElementById('itemCard');
+let itemTimer=null,itemHide=null,itemInfo=null,itemCam=null;
+function infoOf(o){
+  for(let n=0;o&&n<40;o=o.parent,n++){const u=o.userData;if(!u)continue;
+    for(const v of [u.info,u.part&&u.part.info]){const i=typeof v==='function'?v():v;if(i&&typeof i.title==='string')return i;}}
+  return null;
+}
+function hideItemDot(){clearTimeout(itemHide);itemHide=null;itemDot.hidden=true;itemInfo=null;}
+function closeItemCard(){itemCard.hidden=true;}
+// the «i» for info at x, y (px in the scene), a little up and right of the cursor, inside the scene
+function showItemDot(info,x,y){
+  clearTimeout(itemHide);itemHide=null;itemInfo=info;itemCam=camera.position.clone();
+  itemDot.style.left=Math.max(4,Math.min(viewer.clientWidth-28,x+10))+'px';itemDot.style.top=Math.max(4,Math.min(viewer.clientHeight-28,y-30))+'px';
+  itemDot.title=info.title;itemDot.hidden=false;
+}
+function itemHover(info,e){
+  clearTimeout(itemTimer);
+  if(info&&itemInfo&&info.title===itemInfo.title){clearTimeout(itemHide);itemHide=null;return;}   // still on it: the «i» stays where it came up
+  if(itemInfo&&!itemHide)itemHide=setTimeout(hideItemDot,ITEM_GRACE);   // time to reach the «i»
+  if(!info||!e)return;
+  const rc=viewer.getBoundingClientRect(),x=e.clientX-rc.left,y=e.clientY-rc.top;
+  itemTimer=setTimeout(()=>showItemDot(info,x,y),ITEM_REST);   // every move starts the wait again: it comes when the cursor rests
+}
+itemDot.addEventListener('pointerenter',()=>{clearTimeout(itemHide);itemHide=null;});
+itemDot.addEventListener('pointerleave',()=>{if(!itemDot.hidden)itemHide=setTimeout(hideItemDot,ITEM_GRACE);});
+// the card: the title and a few lines, next to the «i», inside the scene
+function openItemCard(info){
+  itemCard.innerHTML='';
+  const x=document.createElement('button');x.className='x';x.setAttribute('aria-label','Закрыть');x.textContent='×';x.addEventListener('click',closeItemCard);
+  const h=document.createElement('h3');h.textContent=info.title;itemCard.appendChild(x);itemCard.appendChild(h);
+  (info.lines||[]).forEach(t=>{const p=document.createElement('p');p.textContent=t;itemCard.appendChild(p);});
+  itemCard.hidden=false;
+  const dx=parseFloat(itemDot.style.left)||0,dy=parseFloat(itemDot.style.top)||0,w=itemCard.offsetWidth||280,hh=itemCard.offsetHeight||120;
+  itemCard.style.left=Math.max(8,Math.min(viewer.clientWidth-w-8,dx))+'px';
+  itemCard.style.top=(dy+32+hh<viewer.clientHeight-8?dy+32:Math.max(8,dy-hh-8))+'px';
+  hideItemDot();
+}
+itemDot.addEventListener('click',()=>{if(itemInfo)openItemCard(itemInfo);});
+canvas.addEventListener('pointerdown',()=>{clearTimeout(itemTimer);hideItemDot();closeItemCard();});
+canvas.addEventListener('wheel',()=>{clearTimeout(itemTimer);hideItemDot();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){hideItemDot();closeItemCard();}});
+
 /* ---------- render loop ---------- */
 const preHooks=[];     // (dt) => void: before the camera moves (a flight between views advances here)
 const frameHooks=[];   // (dt, ease) => void: walls, doors, labels… — called every frame after the camera has moved
+// the «i» belongs to where the cursor rested: the camera moving takes it away; another view takes the card away too
+let itemView=null;
+frameHooks.push(()=>{
+  if(!itemDot.hidden&&itemCam&&camera.position.distanceTo(itemCam)>1e-4)hideItemDot();
+  if(view!==itemView){itemView=view;hideItemDot();closeItemCard();}
+});
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 const insetHide=[];    // objects kept out of the mini view (dimension labels are sized for the main camera)
 const _d=new THREE.Vector3();

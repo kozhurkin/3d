@@ -9,6 +9,15 @@ check('страницы в index.html', () => {
   });
 });
 
+check('приложение: на узком экране сцена во всю ширину, без скруглений', () => {
+  const css = PAGES.app.match(/@media \(max-width:900px\)\{([\s\S]*?)\n\}/)[1];
+  const viewer = css.match(/\.viewer\{([^}]*)\}/)[1];
+  assert.match(viewer, /border-radius:0/);
+  assert.match(viewer, /margin-left:calc\(-1\*max\(16px,env\(safe-area-inset-left,0px\)\)\)/, 'out over the page padding on the left');
+  assert.match(viewer, /margin-right:calc\(-1\*max\(16px,env\(safe-area-inset-right,0px\)\)\)/, 'and on the right');
+  assert.ok(PAGES.app.includes('padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))'), 'the same padding as the page has');
+});
+
 check('приложение: «Планировка» открывается', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const r = p.run('({view, n:Object.keys(VIEWS), lines:wallLines.length, parts:wallParts.length, fade:VIEWS.plan.fade, vs:VS.plan, doors:doors.map(d=>d.g.visible)})');

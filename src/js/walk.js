@@ -1,8 +1,10 @@
 /* ---------- «Обход»: the apartment from the eyes, walked through as in a game ----------
    W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
    does not let the page take it, drag to look), Space — jump, Ctrl or C — crouch, Shift — a slow step, E or a click — the door or
-   cabinet front in the middle of the screen (under the cursor while dragging). The panel sets the eye height, the walls' look, the
-   doors, and has the common wall colour (with the outlines) and light.
+   cabinet front in the middle of the screen (under the cursor while dragging). On a touch screen a finger on the left half of the
+   scene holds a stick (the circle comes under it): the farther from its centre, the faster the walk; the right half looks; a tap
+   is the door under the finger. The panel sets the eye height, the walls' look, the doors, and has the common wall colour (with
+   the outlines) and light.
    The camera is the orbit's, its centre a step (LOOK) in front of the eyes: a flight to the walk and from it, and the camera
    remembered for the view, work as in any view. Walls (however they look), closed doors, cabinets and appliances stop the walker;
    with «Без дверей» the doorways are free */
@@ -18,6 +20,22 @@ const SENS=.0025;                   // rad per pixel of the mouse
 const FOV0=camera.fov,FOV_WALK=62;  // the walk sees wider, like a game
 
 const keys=new Set();let jumpQ=false;
+/* the stick of a touch screen: the finger's offset from where it came down, a share of STICK_R; a little of it (STICK_DEAD) is
+   no step yet, so a tap does not walk */
+const STICK_R=48,STICK_DEAD=.15;    // px (the circle's radius in the page), share
+let stick=null;                     // {id, x0, y0: where the finger came down, x, y: where it is} (client px)
+let touchUI=!!(window.matchMedia&&matchMedia('(hover: none) and (pointer: coarse)').matches),stickUsed=false;
+function stickOff(){   // the knob's offset, px, no farther than the circle
+  if(!stick)return [0,0];
+  const dx=stick.x-stick.x0,dy=stick.y-stick.y0,m=Math.hypot(dx,dy),k=m>STICK_R?STICK_R/m:1;
+  return [dx*k,dy*k];
+}
+function stickVec(){   // right, down: 0…1 together
+  const [dx,dy]=stickOff(),m=Math.hypot(dx,dy)/STICK_R;
+  if(m<STICK_DEAD)return [0,0];
+  const k=(m-STICK_DEAD)/(1-STICK_DEAD)/m/STICK_R;
+  return [dx*k,dy*k];
+}
 const pl={on:false,feet:0,vy:0,c:0,vx:0,vz:0};   // the walker: feet above the floor (m), vertical speed, crouch 0…1, speed (m/s)
 const walking=()=>view==='walk'&&!inTransition();
 const locked=()=>!!document.pointerLockElement&&document.pointerLockElement===canvas;
@@ -101,10 +119,12 @@ function walkStep(dt){
   if(!pl.on)Object.assign(pl,{on:true,feet:0,vy:0,c:0,vx:0,vz:0});
   pl.c+=(Math.max(keyOn('KeyC'),keyOn('ControlLeft'),keyOn('ControlRight'))-pl.c)*Math.min(1,dt*10);
   const eye=eyeH()*(1-CROUCH_K*pl.c),ground=pl.feet<=0;
-  // where the keys lead, at the speed of the gait; on the ground the speed follows at once, in the air hardly
-  const f=Math.max(keyOn('KeyW'),keyOn('ArrowUp'))-Math.max(keyOn('KeyS'),keyOn('ArrowDown')),s=Math.max(keyOn('KeyD'),keyOn('ArrowRight'))-Math.max(keyOn('KeyA'),keyOn('ArrowLeft'));
+  // where the keys and the stick lead, at the speed of the gait (the stick: its share of it); on the ground the speed follows at
+  // once, in the air hardly
+  const [sx,sy]=stickVec();
+  const f=Math.max(keyOn('KeyW'),keyOn('ArrowUp'))-Math.max(keyOn('KeyS'),keyOn('ArrowDown'))-sy,s=Math.max(keyOn('KeyD'),keyOn('ArrowRight'))-Math.max(keyOn('KeyA'),keyOn('ArrowLeft'))+sx;
   const th=goal.theta;let wx=-Math.sin(th)*f+Math.cos(th)*s,wz=-Math.cos(th)*f-Math.sin(th)*s;
-  const n=Math.hypot(wx,wz),top=pl.c>.5?LOW:keys.has('ShiftLeft')||keys.has('ShiftRight')?SLOW:RUN;
+  const n=Math.hypot(wx,wz),top=(pl.c>.5?LOW:keys.has('ShiftLeft')||keys.has('ShiftRight')?SLOW:RUN)*Math.min(1,n);
   if(n){wx*=top/n;wz*=top/n;}
   const a=Math.min(1,dt*(ground?20:2));pl.vx+=(wx-pl.vx)*a;pl.vz+=(wz-pl.vz)*a;
   if(ground&&jumpQ){pl.vy=JUMP;jumpQ=false;}
@@ -114,7 +134,7 @@ function walkStep(dt){
   setEye(x,pl.feet+eye,z);
 }
 preHooks.push(dt=>{
-  if(!walking()){pl.on=false;if(view!=='walk'){keys.clear();jumpQ=false;}if(camDrive===walkCam)camDrive=null;return;}
+  if(!walking()){pl.on=false;if(view!=='walk'){keys.clear();jumpQ=false;stick=null;}if(camDrive===walkCam)camDrive=null;return;}
   walkStep(dt);camDrive=walkCam;
 });
 
@@ -127,6 +147,11 @@ function useDoor(cx,cy){
 let drag=null;
 canvas.addEventListener('pointerdown',e=>{
   if(!walking())return;
+  // a finger on the left half of the scene holds the stick (one at a time); elsewhere it looks, as the mouse drags
+  if(e.pointerType==='touch'){
+    touchUI=true;const rc=canvas.getBoundingClientRect();
+    if(!stick&&e.clientX<rc.left+rc.width/2){stick={id:e.pointerId,x0:e.clientX,y0:e.clientY,x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);return;}
+  }else if(e.pointerType==='mouse')touchUI=false;
   // the right button gives the mouse back, as Esc does
   if(e.button===2){drag=null;if(locked()&&document.exitPointerLock)document.exitPointerLock();return;}
   if(e.button!==undefined&&e.button!==0)return;
@@ -136,15 +161,21 @@ canvas.addEventListener('pointerdown',e=>{
 });
 canvas.addEventListener('pointermove',e=>{
   if(!walking())return;
+  if(stick&&stick.id===e.pointerId){stick.x=e.clientX;stick.y=e.clientY;if(Math.hypot(stick.x-stick.x0,stick.y-stick.y0)>=6)stickUsed=true;return;}
   if(locked())look(e.movementX||0,e.movementY||0);
   else if(drag&&drag.id===e.pointerId){look(e.clientX-drag.x,e.clientY-drag.y);drag.x=e.clientX;drag.y=e.clientY;}
 });
+// each finger ends its own: the stick's going leaves the look going on, and back
 canvas.addEventListener('pointerup',e=>{
-  const d=drag;drag=null;
-  // a click without a drag, the mouse not taken: the door under the cursor
-  if(d&&walking()&&!locked()&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<6)useDoor(e.clientX,e.clientY);
+  // a click or a tap without a move, the mouse not taken: the door under the cursor or the finger
+  const tap=d=>d&&walking()&&!locked()&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<6&&useDoor(e.clientX,e.clientY);
+  if(stick&&stick.id===e.pointerId){const d=stick;stick=null;tap(d);return;}
+  if(drag&&drag.id!==e.pointerId)return;
+  const d=drag;drag=null;tap(d);
 });
-canvas.addEventListener('pointercancel',()=>{drag=null;});
+canvas.addEventListener('pointercancel',e=>{
+  if(stick&&stick.id===e.pointerId)stick=null;else if(!drag||drag.id===e.pointerId)drag=null;
+});
 const GAME=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyC','ControlLeft','ControlRight','KeyE','ShiftLeft','ShiftRight']);
 // the keys are the game's in the walk, unless typing or a slider has them. With Ctrl held the browser keeps its own shortcuts
 // that a page cannot take (Ctrl+W closes the tab, Ctrl+T, Ctrl+N); the others with a game key (Ctrl+D, Ctrl+S…) are the game's
@@ -171,12 +202,25 @@ function ceilingOver(){
   const [x,,z]=eyeNow();return x>BOX.x0*MM&&x<BOX.x1*MM&&z>BOX.z0*MM&&z<BOX.z1*MM;
 }
 const aimEl=document.getElementById('walkAim'),hintEl=document.getElementById('walkHint');
-let ownCursor=false;
+const stickEl=document.getElementById('walkStick'),knobEl=stickEl.querySelector('i');
+const HINT={mouse:hintEl.textContent,touch:hintEl.dataset.touch};
+let ownCursor=false,hintFor='mouse';
+// the stick: on a touch screen only; under the finger while held, else faint at its home in the lower left (the «i» hides there)
+function showStick(on){
+  stickEl.hidden=!on||!touchUI;if(stickEl.hidden)return;
+  const rc=canvas.getBoundingClientRect(),[dx,dy]=stickOff();
+  const x=stick?stick.x0-rc.left:20+STICK_R,y=stick?stick.y0-rc.top:rc.height-20-STICK_R;
+  stickEl.style.left=x+'px';stickEl.style.top=y+'px';knobEl.style.transform=`translate(${dx}px,${dy}px)`;
+  stickEl.className=stick?'stick on':'stick';
+}
 frameHooks.push(()=>{
   const on=walking(),lk=locked();
   ceiling.visible=on&&ceilingOver();
   if(on){ceilMat.color.copy(wallMat.color);ceilMat.emissive.copy(wallMat.color).multiplyScalar(.3);}
-  aimEl.hidden=!on;hintEl.hidden=!on||lk;
+  // the hint: how to take the mouse, or on a touch screen how to walk, till the stick has once walked
+  const hf=touchUI?'touch':'mouse';if(hf!==hintFor){hintFor=hf;hintEl.textContent=HINT[hf];}
+  aimEl.hidden=!on;hintEl.hidden=!on||lk||touchUI&&stickUsed;showStick(on);
+  infoBtn.hidden=view==='walk'&&touchUI;   // the walk on a touch screen: its hint is the keys' and the mouse's, the stick's place
   if(!on&&lk&&document.exitPointerLock)document.exitPointerLock();
   if(on){canvas.style.cursor=lk?'none':'crosshair';ownCursor=true;}else if(ownCursor){canvas.style.cursor='';ownCursor=false;}
   const fov=FOV0+(FOV_WALK-FOV0)*presence('walk');

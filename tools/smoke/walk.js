@@ -266,3 +266,39 @@ check('обход: от входа можно дойти в душ, санузе
   })()`);
   assert.deepStrictEqual(r, { shower: true, bath: true, kitchen: true });
 });
+
+check('обход: на сенсорном экране палец слева — стик (скорость по отклонению), справа — взгляд, тап — дверь', () => {
+  const p = open();
+  const c = p.document.getElementById('c'), st = p.document.getElementById('walkStick'), hint = p.document.getElementById('walkHint');
+  const touch = (t, id, x, y) => c.dispatch(t, { pointerType: 'touch', button: 0, pointerId: id, clientX: x, clientY: y });
+  const info = p.document.getElementById('infoBtn');
+  assert.deepStrictEqual([st.hidden, info.hidden], [true, false], 'no stick before a touch: the checks have no touch screen');
+  // the left half (the canvas is 800 px wide): the stick comes under the finger
+  touch('pointerdown', 7, 120, 400); p.tick();
+  assert.deepStrictEqual([st.hidden, st.className, st.style.left, st.style.top, hint.hidden, hint.textContent], [false, 'stick on', '120px', '400px', false, hint.dataset.touch]);
+  assert.ok(info.hidden, 'no «i» in the walk on a touch screen');
+  // a finger moved a little: no step yet
+  touch('pointermove', 7, 120, 396); p.tick(30);
+  near(eye(p)[2], 0.45, 'within the dead zone');
+  // half way to the edge: slower than walking; all the way: as W
+  touch('pointermove', 7, 120, 376); p.tick(30);
+  const half = eye(p)[2] - 0.45;
+  assert.ok(half > 0.3 && half < 0.6, 'half the stick, half a second: ' + half);
+  touch('pointermove', 7, 120, 300); p.tick(30);
+  const full = eye(p)[2] - 0.45 - half;
+  assert.ok(full > 1.0 && full < 1.25, 'the whole stick, half a second at 2.4 m/s: ' + full);
+  assert.strictEqual(p.run('knobEl.style.transform'), 'translate(0px,-48px)', 'the knob stops at the circle');
+  near(eye(p)[0], 0.6, 'straight on');
+  // a second finger on the right half looks; the stick finger let go, the look goes on
+  touch('pointerdown', 8, 600, 300); touch('pointerup', 7, 120, 300); touch('pointermove', 8, 600 - Math.PI / 2 / 0.0025, 300); p.tick(30);
+  near(yaw(p), Math.PI * 1.5, 'turned left'); const z1 = eye(p)[2]; p.tick(30); near(eye(p)[2], z1, 'stops when let go');
+  touch('pointerup', 8, 600 - Math.PI / 2 / 0.0025, 300);
+  assert.deepStrictEqual([st.hidden, st.className, hint.hidden], [false, 'stick', true], 'faint at home; the hint gone once walked');
+  // a tap on the left half: the door under the finger, no step
+  p.run('pickDoor=()=>doors.find(d=>d.hole==="hallBath:0")');
+  touch('pointerdown', 9, 100, 300); touch('pointerup', 9, 102, 301); p.tick();
+  assert.ok(p.run('doors.find(d=>d.hole==="hallBath:0").t>0'), 'the tap opened the door');
+  // a mouse: no stick
+  c.dispatch('pointerdown', { pointerType: 'mouse', button: 0, pointerId: 1, clientX: 100, clientY: 100 }); c.dispatch('pointerup', { pointerId: 1, clientX: 100, clientY: 100 }); p.tick();
+  assert.deepStrictEqual([st.hidden, hint.hidden, info.hidden], [true, false, false]);
+});

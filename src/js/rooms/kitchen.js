@@ -848,7 +848,8 @@ function buildSofa(g,opts){
   Cf(arm+t,xc-t,lg,lg+15,t,bz-t,sofaBoxMat);
   Cf(arm+t,xc-t,lg+15,ys,bz-t-1,bz-t,sofaBoxMat);Cf(arm+t,xc-t,lg+15,ys,t,t+1,sofaBoxMat);
   Cf(arm+t,arm+t+1,lg+15,ys,t+1,bz-t-1,sofaBoxMat);Cf(xc-t-1,xc-t,lg+15,ys,t+1,bz-t-1,sofaBoxMat);
-  // its seat in one piece from the back to its front (a seam left against the sofa's seat): the lid on its hinge
+  // its seat in one piece from the back to its front (a seam left against the sofa's seat): the lid on its hinge; a click on the
+  // chaise's box lifts it too (its frame), as one on the drawer lays out the bed
   const lid=new THREE.Group();lid.position.set(0,seat*MM,back*MM);chaise.add(lid);
   mk(lid,seat,back)(0,xc,ys,seat,back,Dc,45);
   // stitches up the fronts of the bases, 130 mm apart
@@ -887,7 +888,7 @@ function buildSofa(g,opts){
     let th=BED_TILT*u1,zb=zb0+dz+(z2-zs)*u2,yb=yb0;
     if(u3>0){th=BED_TILT*(1-u3);yb=yb0+(ys-yb0)*u3;zb=D+bt*Math.sin(th);}
     drawer.position.z=dz*MM;block.position.set(0,yb*MM,(zb-dz)*MM);block.rotation.x=-th;strap.rotation.x=th;strap.visible=u3>.6;};
-  return [applDoor(lid,{key:'sofa-lid',axis:'x',s:-1,max:LID_MAX,ease:LID_EASE,holdRate:LID_HOLD,follow},opts),applDoor(fold,{key:'sofa-bed',axis:'none',rate:DMAX/BED_S,holdRate:DMAX/BED_HOLD_S,follow:lay},opts)];
+  return [applDoor(lid,{key:'sofa-lid',axis:'x',s:-1,max:LID_MAX,ease:LID_EASE,holdRate:LID_HOLD,follow,frame:chaise},opts),applDoor(fold,{key:'sofa-bed',axis:'none',rate:DMAX/BED_S,holdRate:DMAX/BED_HOLD_S,follow:lay},opts)];
 }
 
 /* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps

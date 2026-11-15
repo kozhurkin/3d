@@ -659,6 +659,9 @@ check('кухня: сиденье оттоманки дивана целиком
         return [st.filter(a=>a[2]<.002).length,st.filter(a=>a[0]<.002).length/2,st.filter(a=>a[0]<.002).length/2];})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3)),
       white:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(VIEWS.kitchen.furniture())`);
   let r = lid();
+  // a click on the box under it lifts it too, as one on the bed's drawer lays out the bed
+  assert.deepStrictEqual(p.run(`(f=>{const d=f.doors.find(x=>x.key==="sofa-lid"),c=d.g.parent,box=c.children.find(o=>o.geometry&&o.position.y<.3);   // its walls and legs, under the seat
+    const pick=o=>(x=>x&&x.key)(pickDoor(null,{object:o,point:new THREE.Vector3()}));return [pick(box),pick(d.g.children[0])];})(VIEWS.kitchen.furniture())`), ['sofa-lid', 'sofa-lid']);
   // its upper back edge at the seat's height, at the thin back (100); the whole seat of the chaise
   assert.deepStrictEqual([r.axis, r.s, r.max, r.t, r.rot, r.inChaise, r.hinge], ['x', -1, 0.698, 0, 0, true, [450, 100]], 'closed, on its hinge in the chaise');
   assert.deepStrictEqual(r.size, [705, 170, 1430], 'the chaise\'s seat, from the thin back to its front');

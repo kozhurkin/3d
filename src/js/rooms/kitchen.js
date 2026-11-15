@@ -156,11 +156,11 @@ function buildTable(g){
 }
 
 /* the pendant lamp over the dining table, its shade's bottom PL.over above the tabletop (higher only if its cord does not reach so far),
-   in the middle of it. A click changes it for the next of three IKEA lamps, round: MISTERHULT → BLÅSVERK → BUNKEFLO → MISTERHULT
+   in the middle of it. A click changes it for the next of three IKEA lamps, round: BLÅSVERK (hung at first) → BUNKEFLO → MISTERHULT → BLÅSVERK
    (engine.js: userData.click); the one hung stays through the kitchen's rebuilds. Each a white cord from its top (hang) up to its canopy
    on the ceiling, as long as it is (cord); lit. Own axes (mm): y up from the shade's bottom, from the shade's axis */
 const PL={over:700};
-let pendantModel=0;
+let pendantModel=1;   // BLÅSVERK at first
 const pendantMats=(()=>{
   // MISTERHULT's weave: strips across both diagonals and along, the holes between them clear (cut by alphaTest)
   const N=256,s=32,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
@@ -226,7 +226,7 @@ function pendantY(L){return Math.max(TB.h+(L.over||PL.over),P.H-L.canopy[L.canop
 function buildPendant(g){
   const q=new THREE.Group();q.position.set((TB.l/2)*MM,0,(TB.z+TB.w/2)*MM);
   Object.assign(q.userData,{pendant:true,walkThrough:true,info:()=>{const L=LAMPS[pendantModel];
-    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`,'Нажатие меняет светильник: MISTERHULT → BLÅSVERK → BUNKEFLO.')};},
+    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`,'Нажатие меняет светильник: BLÅSVERK → BUNKEFLO → MISTERHULT.')};},
     click:()=>{pendantModel=(pendantModel+1)%LAMPS.length;fillPendant(q);}});
   g.add(q);fillPendant(q);
 }

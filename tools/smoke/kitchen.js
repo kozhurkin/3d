@@ -305,27 +305,28 @@ check('кухня: четыре стула BERGMUND у стола — выдви
   assert.ok(go()[0] < -850, 'they would stop it otherwise');
 });
 
-check('кухня: светильник над серединой обеденного стола — низ абажура в 700 над столешницей (BLÅSVERK и BUNKEFLO — в 800), шнур до чашки на потолке; нажатие меняет его по кругу: MISTERHULT → BLÅSVERK → BUNKEFLO', () => {
+check('кухня: светильник над серединой обеденного стола — низ абажура в 800 над столешницей (MISTERHULT — в 700), шнур до чашки на потолке; сначала BLÅSVERK, нажатие меняет его по кругу: BUNKEFLO → MISTERHULT → BLÅSVERK', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const q = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.pendant===true)';
   // the model, where it hangs, the cord's length and its bottom, the canopy's bottom (the ceiling less its height), what the card says
   const st = () => p.run(`(q=>{const r=v=>Math.round(v*1000),cord=q.children.find(o=>o.userData.cord===true),can=q.children.find(o=>o.userData.canopy===true);
     return [q.userData.model,r(q.position.x),r(q.position.y),r(q.position.z),r(cord.geometry.args[2]),r(cord.position.y-cord.geometry.args[2]/2),r(q.position.y+can.position.y),q.userData.walkThrough,infoOf(q.children[0]).title];})(${q})`);
-  // MISTERHULT over the table's middle (650 along it, 1350 + 350 from the kitchen wall); 750 + 700; the cord from the socket's top (400 − 50) up to the canopy (2600 − 46)
-  assert.deepStrictEqual(st(), ['MISTERHULT', 650, 1450, 1700, 754, 350, 2554, true, 'Подвесной светильник MISTERHULT (IKEA)']);
+  // BLÅSVERK at first, over the table's middle (650 along it, 1350 + 350 from the kitchen wall); 750 + 800; its cord from the top of its tube (180 + 280) up to the canopy (2600 − 65)
+  assert.deepStrictEqual(st(), ['BLÅSVERK', 650, 1550, 1700, 525, 460, 2535, true, 'Подвесной светильник BLÅSVERK (IKEA)']);
+  assert.match(p.run(`infoOf(${q}.children[0]).lines.join(' ')`), /Нажатие меняет светильник: BLÅSVERK → BUNKEFLO → MISTERHULT/);
   // a click on any piece of it changes it (engine.js: clickOf); the next one, then the third, then the first again
   assert.strictEqual(p.run(`(q=>{const o=q.children[2];o.userData={};return clickOf({object:o})===q.userData.click;})(${q})`), true);   // its userData plain, as THREE's (the stub's answers anything)
   const click = () => p.run(`${q}.userData.click()`);
-  // BLÅSVERK and BUNKEFLO 100 higher, 800 over the tabletop. BLÅSVERK: its cord from the top of its tube (180 + 280) up to the canopy (2600 − 65)
-  click(); assert.deepStrictEqual(st(), ['BLÅSVERK', 650, 1550, 1700, 525, 460, 2535, true, 'Подвесной светильник BLÅSVERK (IKEA)']);
-  // BUNKEFLO: from the top of its birch (187) up to the canopy (2600 − 48)
+  // BUNKEFLO, 800 over the tabletop too: its cord from the top of its birch (187) up to the canopy (2600 − 48)
   click(); assert.deepStrictEqual(st(), ['BUNKEFLO', 650, 1550, 1700, 815, 187, 2552, true, 'Подвесной светильник BUNKEFLO (IKEA)']);
-  click(); assert.strictEqual(st()[0], 'MISTERHULT');
+  // MISTERHULT, 700 over it: the cord from the socket's top (400 − 50) up to the canopy (2600 − 46)
+  click(); assert.deepStrictEqual(st(), ['MISTERHULT', 650, 1450, 1700, 754, 350, 2554, true, 'Подвесной светильник MISTERHULT (IKEA)']);
+  click(); assert.strictEqual(st()[0], 'BLÅSVERK');
   // the one hung stays when the kitchen is built again
-  click(); slide(p, 'kW', 2300); p.tick(); assert.strictEqual(st()[0], 'BLÅSVERK');
+  click(); slide(p, 'kW', 2300); p.tick(); assert.strictEqual(st()[0], 'BUNKEFLO');
   // the plan's highest ceiling: BLÅSVERK's cord is 1100, so it goes up (3200 − 65 − 1100 − 460); MISTERHULT's 1600 is enough
-  slide(p, 'H', 3200); p.tick();
-  assert.deepStrictEqual(st().slice(2, 7), [1575, 1700, 1100, 460, 3135]);
+  click(); click(); slide(p, 'H', 3200); p.tick();
+  assert.deepStrictEqual(st().slice(0, 7), ['BLÅSVERK', 650, 1575, 1700, 1100, 460, 3135]);
   assert.match(p.run(`infoOf(${q}.children[0]).lines.join(' ')`), /низ абажура в 83 см над столешницей/);
   click(); click(); assert.deepStrictEqual(st().slice(0, 7), ['MISTERHULT', 650, 1450, 1700, 1354, 350, 3154]);
 });

@@ -1,4 +1,4 @@
-/* ---------- «Прихожая» view: the portal cabinet around the entrance door ----------
+/* ---------- «Прихожая» view: the portal cabinet around the entrance door, the tool box in the far corner ----------
    Hall coordinates as in the hall tab, mm: x along the bearing wall from the left wall, y up, z from the bearing wall into the room;
    the hall's (0,0) is its origin on the plan. The walls make the entrance opening, the cabinet follows it: its width is the hall
    (A.hallW), the false panel and the shelf column reach the opening's sides, the mezzanine sits on its top (A.eD0, A.eD1, A.eDH),
@@ -6,7 +6,7 @@
    Own scope: the room modules share names. */
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
-// cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool case stands) too
+// cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
 
@@ -112,7 +112,7 @@ const caseAt=()=>{const x1=P.W-CS.gap,z1=P.L-CS.gap;return [x1-CS.D,x1,z1-CS.W,z
 function buildCase(g){
   const {H,base,lid,top,in:i,chamf:c,grip,gripW,pivot,latch,pad,plate}=CS,[x0,x1,z0,z1]=caseAt(),mm=v=>v*MM,xc=(x0+x1)/2,zc=(z0+z1)/2;
   const q=new THREE.Group();q.userData.toolCase=true;q.userData.info=INFO.toolCase;g.add(q);
-  const bx=boxIn(q),b=(xa,xb,ya,yb,za,zb,mat,k)=>{const m=bx(mm(xa),mm(xb),mm(ya),mm(yb),mm(za),mm(zb),mat||caseBlackMat);if(k)m.userData[k]=true;return m;};
+  const bx=boxIn(q),b=(xa,xb,ya,yb,za,zb,mat,k)=>{const m=bx(mm(xa),mm(xb),mm(ya),mm(yb),mm(za),mm(zb),mat||caseBlackMat);if(k)m.userData[k]=true;};
   b(x0,x1,0,base,z0,z1,null,'base');
   b(x0+i,x1-i,base,lid,z0+i,z1-i,caseMat,'body');
   b(x0,x1,lid,top-c,z0,z1,null,'lid');b(x0+c,x1-c,top-c,top,z0+c,z1-c);
@@ -187,7 +187,7 @@ const k=roomKit('hall',{
   // the tool box: in the hall's own view once the frame shows the right wall past it; its footprint on the plan
   extra:{name:'things',build:g=>{buildCase(g);return [];}},
   frame:(on,{extra,show})=>{if(extra)extra.children.forEach(o=>{if(o.userData.toolCase===true)o.visible=!on||show>=caseAt()[3];});},
-  foot:()=>{const [x0,x1,z0,z1]=caseAt();return [[x0,x1,z0,z1]];},
+  foot:()=>[caseAt()],
   // in the hall's own view «Стена и дверь» off takes away the walls, the entrance door and its swing
   walls:on=>{if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
     else if(on&&wallGroup)wallGroup.visible=true;},

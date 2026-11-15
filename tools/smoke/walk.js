@@ -187,6 +187,37 @@ check('обход: правая кнопка отпускает мышь, как
   assert.deepStrictEqual([p.run('goal.theta'), p.run('window.__exit')], [th, 1]);
 });
 
+check('обход: мышь захвачена — щелчок переключает дверь при отпускании, удержание двигает её постепенно', () => {
+  const p = open();
+  p.run('(document.pointerLockElement=canvas,0)'); p.run('pickDoor=()=>doors.find(d=>d.hole==="hallBath:0")');
+  const c = p.document.getElementById('c'), d = 'doors.find(d=>d.hole==="hallBath:0")';
+  const down = () => c.dispatch('pointerdown', { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+  const up = () => c.dispatch('pointerup', { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+  p.run(`${d}.t=${d}.a=0`);
+  // a short press: nothing while down, the door opens on release
+  down(); p.tick(10);
+  assert.deepStrictEqual(p.run(`[${d}.t, held]`), [0, null], 'nothing yet while the button is down');
+  up(); p.tick();
+  assert.strictEqual(p.run(`${d}.t===${d}.max`), true, 'opened on release');
+  // held: past HOLD_MS the door goes evenly at HOLD_RATE from where it stands, and stays where it is let go
+  p.run(`${d}.t=${d}.a=0`);
+  down(); p.tick(32);
+  assert.strictEqual(p.run(`held&&held.d===${d}&&held.dir`), 1, 'closed: taken to open');
+  p.tick(30); up();
+  const a = p.run(`${d}.a`);
+  assert.ok(a > 0.3 && a < p.run(`${d}.max`) - 0.1, 'part-open: ' + a);
+  p.tick(30);
+  assert.deepStrictEqual(p.run(`[held, ${d}.t, ${d}.a]`), [null, a, a], 'let go: it stays');
+  // held again: a part-open door goes back
+  down(); p.tick(32);
+  assert.strictEqual(p.run('held.dir'), -1, 'part-open: reversed');
+  p.tick(200); up();
+  assert.strictEqual(p.run(`${d}.a`), 0, 'closed again');
+  // Esc gave the mouse back while the button was down: no click on release
+  down(); p.run('document.pointerLockElement=null'); up(); p.tick();
+  assert.strictEqual(p.run(`${d}.t`), 0, 'no click after Esc');
+});
+
 check('обход: шкафы мешают пройти', () => {
   const p = open();
   const r = p.run(`(()=>{

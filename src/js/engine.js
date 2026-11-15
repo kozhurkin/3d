@@ -72,6 +72,7 @@ const ownMouse=()=>!!(VIEWS[view]&&VIEWS[view].mouse);
 // long press on a door moves it gradually: closed → opens, fully open → closes, part-open → reverses the last direction
 // (at 60°/s, or at the door's own holdRate per second if it has one)
 const HOLD_MS=500,HOLD_RATE=60*Math.PI/180;let held=null,holdTimer=null;
+function holdDoor(d){const dir=d.a<=.01?1:d.a>=d.max-.01?-1:-(d.last||-1);d.last=dir;held={d,dir};d.t=d.a;}
 canvas.addEventListener('pointerdown',e=>{
   if(ownMouse())return;
   if(e.pointerType==='mouse'&&e.button!==0&&e.button!==1&&e.button!==2)return;
@@ -80,7 +81,7 @@ canvas.addEventListener('pointerdown',e=>{
   if(downAt){const d0=downAt;holdTimer=setTimeout(()=>{
     if(downAt!==d0||ptrs.size>1)return;
     const d=pickDoor({clientX:d0.x,clientY:d0.y});if(!d)return;
-    const dir=d.a<=.01?1:d.a>=d.max-.01?-1:-(d.last||-1);d.last=dir;held={d,dir};d.t=d.a;canvas.style.cursor='grabbing';
+    holdDoor(d);canvas.style.cursor='grabbing';
   },HOLD_MS);}
   if(e.button===1)e.preventDefault();
   canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1||e.button===2});
@@ -122,6 +123,7 @@ function pickDoor(e,hit){
   return null;
 }
 canvas.addEventListener('pointerup',e=>{
+  if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
   clearTimeout(holdTimer);
   if(held){held=null;canvas.style.cursor='';doorsChanged();downAt=null;lost(e);return;}
   if(downAt&&ptrs.size===1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){

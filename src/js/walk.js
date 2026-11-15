@@ -1,7 +1,8 @@
 /* ---------- «Обход»: the apartment from the eyes, walked through as in a game ----------
    W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
    does not let the page take it, drag to look), Space — jump, Ctrl or C — crouch, Shift — a slow step, E or a click — the door or
-   cabinet front in the middle of the screen (under the cursor while dragging). On a touch screen a finger in the lower left corner of
+   cabinet front in the middle of the screen (under the cursor while dragging); the mouse taken, the button held HOLD_MS moves it
+   gradually, as a long press in the other views, a shorter press opens or closes it on release. On a touch screen a finger in the lower left corner of
    the scene (a square of STICK_ZONE of its width) holds a stick (the circle comes under it): the farther from its centre, the
    faster the walk; elsewhere a finger looks; a tap is the door under the finger. The panel sets the eye height, the walls' look, the doors, and has the common wall colour (with
    the outlines) and light.
@@ -136,7 +137,12 @@ function walkStep(dt){
   setEye(x,pl.feet+eye,z);
 }
 preHooks.push(dt=>{
-  if(!walking()){pl.on=false;if(view!=='walk'){keys.clear();jumpQ=false;stick=null;}if(camDrive===walkCam)camDrive=null;return;}
+  if(!walking()){letGo();pl.on=false;if(view!=='walk'){keys.clear();jumpQ=false;stick=null;}if(camDrive===walkCam)camDrive=null;return;}
+  // the button held long enough takes the door in the aim (none there: nothing, till the button is up)
+  if(press&&!press.long&&(press.s+=dt)>=HOLD_MS/1000){
+    press.long=true;const rc=canvas.getBoundingClientRect();
+    press.d=pickDoor({clientX:rc.left+rc.width/2,clientY:rc.top+rc.height/2});if(press.d)holdDoor(press.d);
+  }
   walkStep(dt);camDrive=walkCam;
 });
 
@@ -147,6 +153,8 @@ function useDoor(cx,cy){
   const d=pickDoor({clientX:cx,clientY:cy});if(d){d.t=d.t!==0?0:d.max;doorsChanged();}
 }
 let drag=null;
+let press=null;   // the left button down while the mouse is taken: {s: seconds down, long: held HOLD_MS, d: the door in the aim then}
+function letGo(){const p=press;press=null;if(p&&p.d){if(held&&held.d===p.d)held=null;doorsChanged();}}
 canvas.addEventListener('pointerdown',e=>{
   if(!walking())return;
   // a finger in the lower left corner holds the stick (one at a time); elsewhere it looks, as the mouse drags
@@ -157,7 +165,7 @@ canvas.addEventListener('pointerdown',e=>{
   // the right button gives the mouse back, as Esc does
   if(e.button===2){drag=null;if(locked()&&document.exitPointerLock)document.exitPointerLock();return;}
   if(e.button!==undefined&&e.button!==0)return;
-  if(locked()){useDoor();return;}
+  if(locked()){letGo();press={s:0,long:false,d:null};return;}
   drag={x:e.clientX,y:e.clientY,x0:e.clientX,y0:e.clientY,id:e.pointerId,k:e.pointerType==='touch'?SENS_TOUCH:1};canvas.setPointerCapture(e.pointerId);
   if(e.pointerType!=='touch'&&canvas.requestPointerLock){try{const r=canvas.requestPointerLock();if(r&&r.catch)r.catch(()=>{});}catch(err){}}
 });
@@ -169,6 +177,8 @@ canvas.addEventListener('pointermove',e=>{
 });
 // each finger ends its own: the stick's going leaves the look going on, and back
 canvas.addEventListener('pointerup',e=>{
+  // the button down while the mouse was taken: a held door is let go, a short press is a click (unless Esc gave the mouse back)
+  if(press&&(e.button===undefined||e.button===0)){const short=!press.long;letGo();if(short&&locked())useDoor();return;}
   // a click or a tap without a move, the mouse not taken: the door under the cursor or the finger
   const tap=d=>d&&walking()&&!locked()&&Math.hypot(e.clientX-d.x0,e.clientY-d.y0)<6&&useDoor(e.clientX,e.clientY);
   if(stick&&stick.id===e.pointerId){const d=stick;stick=null;tap(d);return;}
@@ -176,6 +186,7 @@ canvas.addEventListener('pointerup',e=>{
   const d=drag;drag=null;tap(d);
 });
 canvas.addEventListener('pointercancel',e=>{
+  letGo();
   if(stick&&stick.id===e.pointerId)stick=null;else if(!drag||drag.id===e.pointerId)drag=null;
 });
 const GAME=new Set(['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space','KeyC','ControlLeft','ControlRight','KeyE','ShiftLeft','ShiftRight']);

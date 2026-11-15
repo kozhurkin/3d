@@ -236,6 +236,9 @@ check('кухня: мойка — рамка с отверстием, в нём 
   assert.deepStrictEqual(r.rim, ['THREE.ExtrudeGeometry', 10, 225, r.ct + 6, 300]);
   assert.deepStrictEqual(r.bowl, ['THREE.ExtrudeGeometry', 176, r.ct + 6]);
   assert.strictEqual(r.boxes, 0);
+  // nothing of the sink cabinet's carcass inside the bowl (z 110..490, from 170 under the worktop's top up): its front rail on edge by the front
+  const inBowl = p.run(`VIEWS.kitchen.furniture().current.parts.filter(q=>q.mat==='carcass'&&q.x0<395&&q.x1>55&&q.z0<490&&q.z1>110&&q.y1>${r.ct}-170&&q.y0<${r.ct}).map(q=>q.name)`);
+  assert.deepStrictEqual(inBowl, []);
   // a wider sink cabinet: the sink and the cut-out move with its middle
   const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
   r = sink(); assert.deepStrictEqual([r.hole[0], r.rim[2]], [250 - 170, 250]);

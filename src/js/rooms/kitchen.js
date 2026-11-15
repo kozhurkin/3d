@@ -139,6 +139,7 @@ const INFO={
   wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
   mezzanine:{title:'Антресоль OZON «Уютная логика»',lines:['Белая, распашные двери без ручек (открываются нажатием).','Две секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.','На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.']},
   mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
+  rack:()=>({title:'Металлический стеллаж',lines:[`${rackW()/10} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.']}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
@@ -699,6 +700,61 @@ function buildMezzanine(g,opts){
   g.add(d.model);
   return d.doors;
 }
+/* the metal racks on the right wall's empty stretch: two alike side by side, from the corner by the way into the kitchen (the kitchen
+   wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 200 deep — their fronts in line with the end of
+   the wall right of the way in — and 1750 high. Each: four perforated L-angle posts at its corners (their flanges outward, on plastic
+   feet; round holes RK.hole across, RK.pitch apart, through both flanges), RK.n shelves evenly from near the floor up to the posts'
+   tops: each a sheet with its edges bent down all round, bolted to the posts through their holes — a hex head on each visible flange.
+   Light grey powder-coated steel. Kitchen axes (mm), a group each with its «i» */
+const RK={D:200,H:1750,n:5,post:35,pt:2,foot:10,sheet:1,lip:30,y0:70,gap:10,hole:10,pitch:42,bolt:10,boltH:4};
+const rackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#c9ccc9').convertSRGBToLinear(),roughness:.55,metalness:.35});
+// the posts' holes: a mask, one hole a tile (across the flange × one pitch along it), in the middle of it
+const perfTex=drawnTex(64,c=>{c.fillStyle='#fff';c.fillRect(0,0,64,64);c.fillStyle='#000';c.beginPath();
+  c.ellipse(32,32,32*RK.hole/RK.post,32*RK.hole/RK.pitch,0,0,2*Math.PI);c.fill();},1,(RK.H-RK.foot)/RK.pitch);
+if(perfTex.offset){const b=RK.y0-RK.lip/2-RK.foot;perfTex.offset.y=(.5-b/RK.pitch%1+1)%1;}   // a hole where each shelf's bolt goes
+const perfMat=rackMat.clone();perfMat.alphaMap=perfTex;perfMat.alphaTest=.5;   // the posts: as the rest, with the holes
+const rackFootMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.7});
+const boltMat=new THREE.MeshStandardMaterial({color:0xb9bdc1,roughness:.3,metalness:.85});   // zinc-plated
+// one rack's width; where each starts along the wall
+const rackW=()=>Math.max(0,Math.floor((wardAt()-WR.W-3*RK.gap)/2));
+const rackAt=i=>RK.gap+i*(rackW()+RK.gap);
+// the shelves' tops: evenly from y0 to the posts' tops (the spacing a whole number of pitches, so every bolt finds its hole)
+const rackShelves=()=>[...Array(RK.n)].map((_,i)=>Math.round(RK.y0+i*(RK.H-RK.y0)/(RK.n-1)));
+function buildRack(g){
+  const W=rackW();if(W<300)return [];
+  const {D,H,post:a,pt,foot,sheet,lip,bolt,boltH}=RK,X=P.Rx,x0=X-D,mm=v=>v*MM;
+  [0,1].forEach(r=>{
+    const z0=rackAt(r),z1=z0+W;
+    const q=new THREE.Group();q.userData.rack=true;q.userData.info=INFO.rack;g.add(q);
+    const bx=boxIn(q),b=(xa,xb,ya,yb,za,zb,mat)=>bx(mm(xa),mm(xb),mm(ya),mm(yb),mm(za),mm(zb),mat||rackMat);
+    const so=(u,v)=>u<v?[u,v]:[v,u],plain=rackMat;
+    const shelves=rackShelves();
+    // the posts: an L at each corner, one flange in the rack's end (across x), one in its front or back (along z); a foot under it.
+    // The holes on the flanges' broad faces only (a box's faces: +x −x +y −y +z −z)
+    [[x0,1,true],[X,-1,false]].forEach(([x,sx,front])=>[[z0,1],[z1,-1]].forEach(([z,sz])=>{
+      const xs=so(x,x+sx*a),zs=so(z,z+sz*a),xt=so(x,x+sx*pt),zt=so(z,z+sz*pt);
+      b(xs[0],xs[1],foot,H,zt[0],zt[1],[plain,plain,plain,plain,perfMat,perfMat]).userData.post=true;
+      b(xt[0],xt[1],foot,H,zs[0],zs[1],[perfMat,perfMat,plain,plain,plain,plain]);
+      b(xs[0],xs[1],0,foot,zs[0],zs[1],rackFootMat);
+      // the bolts' hex heads in the middle of each flange at each shelf's edge: on its end and on its front (the back's is at the wall)
+      const xm=x+sx*a/2,zm=z+sz*a/2;
+      shelves.forEach(y=>{const yb=y-lip/2;
+        const he=new THREE.Mesh(new THREE.CylinderGeometry(mm(bolt/2/Math.cos(Math.PI/6)),mm(bolt/2/Math.cos(Math.PI/6)),mm(boltH),6),boltMat);
+        he.rotation.x=Math.PI/2;he.position.set(mm(xm),mm(yb),mm(z-sz*boltH/2));he.userData.bolt=true;q.add(he);
+        if(front){const hf=new THREE.Mesh(new THREE.CylinderGeometry(mm(bolt/2/Math.cos(Math.PI/6)),mm(bolt/2/Math.cos(Math.PI/6)),mm(boltH),6),boltMat);
+          hf.rotation.z=Math.PI/2;hf.position.set(mm(x-boltH/2),mm(yb),mm(zm));hf.userData.bolt=true;q.add(hf);}
+      });
+    }));
+    // the shelves inside the posts' flanges: the sheet on top, its four edges bent down
+    const sx0=x0+pt,sx1=X-pt,sz0=z0+pt,sz1=z1-pt;
+    shelves.forEach(y=>{
+      b(sx0,sx1,y-sheet,y,sz0,sz1).userData.shelf=true;
+      b(sx0,sx0+sheet,y-lip,y-sheet,sz0,sz1);b(sx1-sheet,sx1,y-lip,y-sheet,sz0,sz1);
+      b(sx0+sheet,sx1-sheet,y-lip,y-sheet,sz0,sz0+sheet);b(sx0+sheet,sx1-sheet,y-lip,y-sheet,sz1-sheet,sz1);
+    });
+  });
+  return [];
+}
 const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
 const mirrorMat=new THREE.MeshStandardMaterial({color:0xc9d1d4,roughness:.06,metalness:.35});   // the glass: light, glossy
 const wardBlackMat=new THREE.MeshStandardMaterial({color:0x4a4a4a,roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: graphite, lighter than black
@@ -1036,17 +1092,17 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildPendant(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe and the mezzanine go with the walls in the kitchen's view
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildPendant(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildRack(g));}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table with its chairs and its lamp — the table only once the frame shows the left wall past it; the desk and its chair,
-  // the display cabinet, the sofa, the wardrobe and the mezzanine stand in the apartment (the plan, the walk), not in the kitchen tab
+  // the display cabinet, the sofa, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
     const fits=show>=TB.z+TB.w,has=(u,ks)=>ks.some(k=>u[k]===true);
-    if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,['desk','deskChair','vitrine','sofa','wardrobe','mezzanine']))o.visible=!on;else if(has(u,['table','chair','pendant']))o.visible=!on||fits;});
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,['desk','deskChair','vitrine','sofa','wardrobe','mezzanine','rack']))o.visible=!on;else if(has(u,['table','chair','pendant']))o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
   foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
-    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]],   // its footprint: the fridge besides the base run, the table, the desk, the display cabinet, the sofa, the wardrobe
+    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[]),   // its footprint: the fridge besides the base run, the table, the desk, the display cabinet, the sofa, the wardrobe, the rack
   syncFlags:()=>{kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();},
   // finishes: the worktop and the apron (as the worktop unless it has its own) besides the carcass and the fronts
   groups:['carcass','front','top','apron'],

@@ -245,7 +245,7 @@ infoBtn.addEventListener('click',()=>infoBtn.setAttribute('aria-expanded',infoBt
 document.addEventListener('keydown',e=>{if(e.key==='Escape')infoBtn.setAttribute('aria-expanded','false');});
 
 /* ---------- what a thing is: the cursor resting on something that knows it (userData.info on it or up its parents, or on its
-   part: {title, lines} or a function giving them) brings up an «i» by the cursor; a click on it opens a short card.
+   part: {title, lines, and price (₽), url, shop if it is sold, next and variant if it has variants} or a function giving them) brings up an «i» by the cursor; a click on it opens a short card.
    With the mouse in the views that orbit (the walk keeps the mouse to itself); the camera moving takes the «i» away ---------- */
 const ITEM_REST=700,ITEM_GRACE=600;
 const itemDot=document.getElementById('itemDot'),itemCard=document.getElementById('itemCard');
@@ -279,6 +279,17 @@ function openItemCard(info){
   const x=document.createElement('button');x.className='x';x.setAttribute('aria-label','Закрыть');x.textContent='×';x.addEventListener('click',closeItemCard);
   const h=document.createElement('h3');h.textContent=info.title;itemCard.appendChild(x);itemCard.appendChild(h);
   (info.lines||[]).forEach(t=>{const p=document.createElement('p');p.textContent=t;itemCard.appendChild(p);});
+  // a thing with variants (info.next: hangs the next one, gives its card; info.variant: [which, how many]): a line under the others,
+  // which of how many and a link to the next one; the card turns to it
+  if(typeof info.next==='function'){const p=document.createElement('p');p.className='next';
+    if(info.variant){const c=document.createElement('span');c.textContent=info.variant.join('/');p.appendChild(c);}
+    const b=document.createElement('button');b.className='lnk';b.textContent='Следующий вариант →';b.addEventListener('click',()=>openItemCard(info.next()));
+    p.appendChild(b);itemCard.appendChild(p);}
+  // its price (₽) and where to buy it (url), if it has them: a row under the lines, the link in a new tab
+  if(info.price||info.url){const r=document.createElement('div');r.className='buy';
+    if(info.price){const b=document.createElement('b');b.textContent=info.price.toLocaleString('ru-RU')+' ₽';r.appendChild(b);}
+    if(info.url){const l=document.createElement('a');l.href=info.url;l.target='_blank';l.rel='noopener';l.textContent=info.shop||'Купить';r.appendChild(l);}
+    itemCard.appendChild(r);}
   itemCard.hidden=false;
   const dx=parseFloat(itemDot.style.left)||0,dy=parseFloat(itemDot.style.top)||0,w=itemCard.offsetWidth||280,hh=itemCard.offsetHeight||120;
   itemCard.style.left=Math.max(8,Math.min(viewer.clientWidth-w-8,dx))+'px';

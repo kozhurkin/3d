@@ -58,7 +58,7 @@ check('кухня: шкафы и техника собираются, панел
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 29, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 32, want.parts.length, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
@@ -85,7 +85,7 @@ check('кухня: шкафы и техника собираются, панел
   assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
   up.checked = true; up.dispatch('change');
   assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
-  assert.strictEqual(k().doors, nDoors + 29, 'every front still opens');
+  assert.strictEqual(k().doors, nDoors + 32, 'every front still opens');
   // without the mezzanines there is nothing to lift: greyed out
   const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
   assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
@@ -161,7 +161,7 @@ check('кухня: фасады, деталировка, настройки по
   // only the kitchen's cabinet fronts (the dishwasher's among them); the oven and the fridge, the chairs, the sofa and the apartment's
   // furniture (the desk with its chair and laptop, the display cabinet, the wardrobe, the mezzanine) the switch leaves, and they do not unpress it
   assert.deepStrictEqual(p.run('(f=>f.doors.filter(d=>!d.loose).map(d=>d.g.parent===f.model))(VIEWS.kitchen.furniture())'), Array(10).fill(true));
-  assert.strictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>d.loose).length'), 29, 'the oven, the fridge 3, 4 chairs, the desk chair, the laptop, the sofa 2, the desk 5, the display cabinet 5, the wardrobe 3, the mezzanine 4');
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>d.loose).length'), 32, 'the oven, the fridge 3, the wall shelf 3, 4 chairs, the desk chair, the laptop, the sofa 2, the desk 5, the display cabinet 5, the wardrobe 3, the mezzanine 4');
   assert.ok(p.run('VIEWS.kitchen.furniture().doors.filter(d=>/^(oven|fridge)/.test(d.key)).every(d=>d.t===0)'), 'the oven and the fridge stay closed');
   assert.deepStrictEqual(chairs(), ch0, 'the chairs stay as they were');
   p.run('(d=>{d.t=d.t?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(d=>d.key==="chair0"))');
@@ -482,6 +482,65 @@ check('кухня: витрина HEMNES спинкой к торцу стола
   assert.ok(vit().doors.every((d) => d[2] === 0), 'the kitchen\'s fronts leave them');
 });
 
+check('кухня: над обеденным столом на левой стене — полка с ящиками 600 × 900 × 120, оливковая: вагонка, три полки, три ящика с белыми ручками, фигурные карниз, гребень и подзор', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const sp = () => p.run(`(f=>{const q=f.appl.children.find(o=>o.userData.spice===true),d=q.children.find(o=>o.userData.spiceModel===1),ps=[];const w=o=>{const u=o.userData&&o.userData.part;if(u&&typeof u.x0==='number')ps.push(u);(o.children||[]).forEach(w);};w(d);
+    const n=r=>ps.filter(u=>r.test(u.name)).length,box=[Math.min(...ps.map(u=>u.x0)),Math.max(...ps.map(u=>u.x1)),Math.min(...ps.map(u=>u.y0)),Math.max(...ps.map(u=>u.y1)),Math.min(...ps.map(u=>u.z0)),Math.max(...ps.map(u=>u.z1))];
+    const wavy=d.children.filter(o=>o.userData.wavy===true),knobs=[];const wk=o=>{if(o.userData&&o.userData.knob===true)knobs.push(o);(o.children||[]).forEach(wk);};wk(d);
+    return {at:[q.position.x,q.position.y,q.position.z].map(v=>Math.round(v*1000)),turn:+q.rotation.y,x:Math.round(d.position.x*1000),box,
+      boards:n(/^Вагонка/),shelves:ps.filter(u=>/^Полка/.test(u.name)).map(u=>u.y0),walls:n(/^Перегородка/),
+      wavy:wavy.map(o=>Math.round(o.position.z*1000)),knobs:[knobs.length,new Set(knobs.map(o=>o.material)).size],
+      doors:f.doors.filter(x=>x.g.parent===d).map(x=>[x.axis,Math.round(x.travel*1000),x.t,x.loose]),title:infoOf(d).title,
+      knobInfo:infoOf(knobs[0]).title,frontInfo:infoOf(wavy[0]).title,vis:d.visible};})(VIEWS.kitchen.furniture())`);
+  let r = sp();
+  // kitchen axes: at the left wall, its bottom 1150 (400 over the tabletop), its middle over the table's (1350 + 700 / 2 = 1700): 2000…1400
+  assert.deepStrictEqual([r.at, r.x], [[0, 1150, 1700], -300]);
+  assert.strictEqual(r.turn, Math.PI / 2, 'along the left wall, its drawers into the room');
+  assert.deepStrictEqual(r.box, [0, 600, 0, 900, 0, 120]);
+  assert.deepStrictEqual([r.boards, r.shelves, r.walls], [6, [176, 400, 630], 2], 'six boards of the back; the shelf over the drawers and two more; two dividers between the drawers');
+  assert.deepStrictEqual(r.wavy, [102, 0, 102], 'the front rail and the apron at the front, the crest at the back');
+  assert.deepStrictEqual(r.knobs, [6, 1], 'a stem and a ball on each drawer, of one white ceramic');
+  assert.deepStrictEqual(r.doors, [['z', 80, 0, true], ['z', 80, 0, true], ['z', 80, 0, true]], 'three drawers, closed, not the kitchen\'s fronts');
+  assert.deepStrictEqual([r.title, r.knobInfo, r.frontInfo, r.vis], ['Настенная полка с ящиками', 'Настенная полка с ящиками', 'Настенная полка с ящиками', false], 'hidden at first: the tiered one hangs');
+  assert.ok(p.run('infoOf(VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.spice===true).children[1]).lines.some(l=>/^Низ на 115 см от пола, в 40 см над столешницей/.test(l))'));
+  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
+  assert.ok(sp().doors.every((d) => d[2] === 0), 'the kitchen\'s fronts leave them');
+});
+
+check('кухня: над обеденным столом сначала трёхъярусная полка 640 × 800 × 150 (карниз, фриз, вагонка, полки с бортиками на балясинах); клик меняет её на оливковую и обратно; клик по ящику — ящик; выбор переживает пересборку', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const q = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.spice===true)';
+  const st = () => p.run(`(q=>{const by=i=>q.children.find(o=>o.userData.spiceModel===i);return [by(1).visible,by(0).visible,infoOf(by(0)).title];})(${q})`);
+  assert.deepStrictEqual(st(), [false, true, 'Настенная полка, 3 яруса'], 'the tiered one at first');
+  assert.deepStrictEqual(p.run(`(q=>q.children.map(d=>{const i=infoOf(d);return [i.price,i.url,i.shop];}))(${q})`),
+    [[13000, 'https://ozon.ru/t/EIGVFHm', 'Ozon'], [16000, 'https://ozon.ru/t/EIGVFHm', 'Ozon']], 'the tiered one 13 000 ₽, the olive one 16 000 ₽, on Ozon');
+  // the card's link hangs the other one and gives its card (1/2, 2/2); no «click» line in the cards
+  assert.deepStrictEqual(p.run(`(q=>{const i=infoOf(q.children[0]),n=i.next();return [i.lines.some(l=>/Нажатие/.test(l)),i.variant,n.title,n.variant,typeof n.next,q.children.map(d=>d.visible)];})(${q})`),
+    [false, [1, 2], 'Настенная полка с ящиками', [2, 2], 'function', [false, true]]);
+  assert.deepStrictEqual(p.run(`(q=>{const n=infoOf(q.children[1]).next();return [n.title,q.children.map(d=>d.visible)];})(${q})`), ['Настенная полка, 3 яруса', [true, false]], 'and back');
+  const tq = p.run(`(q=>{const d=q.children.find(o=>o.userData.spiceModel===0),ps=d.children.filter(o=>o.userData.part).map(o=>o.userData.part),k=o=>d.children.filter(c=>c.userData[o]===true);
+    const nm=r=>ps.filter(u=>r.test(u.name));
+    return {x:Math.round(d.position.x*1000),box:[Math.min(...ps.map(u=>u.x0)),Math.max(...ps.map(u=>u.x1)),Math.max(...ps.map(u=>u.y1)),Math.max(...ps.map(u=>u.z1))],
+      boards:nm(/^Вагонка/).length,shelves:nm(/^Полка/).map(u=>u.y0),rails:nm(/^Бортик/).map(u=>[u.y0,u.z0,u.z1]),
+      sides:k('side').map(o=>Math.round(o.position.x*1000)),spindles:k('spindle').length,frieze:k('wavy').length,bottom:k('bottomShelf').map(o=>Math.round(o.position.y*1000))};})(${q})`);
+  // its own axes: 640 along the wall from −320, 800 high, its top 150 deep; the sides 25 in from the top's ends
+  assert.deepStrictEqual([tq.x, tq.box], [-320, [0, 640, 800, 150]]);
+  assert.deepStrictEqual([tq.boards, tq.shelves, tq.rails], [6, [288, 506], [[350, 105, 130], [568, 105, 130]]], 'six boards of the back; two shelves, a rail 44 over each');
+  assert.deepStrictEqual([tq.sides, tq.spindles, tq.frieze, tq.bottom], [[43, 615], 16, 1, [96]], 'the sides, 8 spindles under each rail, the frieze, the bottom shelf');
+  // the backs of both: six boards, in each of the five grooves a tongue back from their faces — on the olive one 3 wide, 4 back; on the brown one 4 wide, 4 back
+  const gr = p.run(`(q=>q.children.map(d=>{const bs=d.children.filter(o=>o.userData.part&&typeof o.userData.part.board==='number').map(o=>o.userData.part).sort((a,b)=>a.x0-b.x0),gs=d.children.filter(o=>o.userData.groove===true);
+    return [bs.length,[...new Set(bs.slice(1).map((b,i)=>Math.round(b.x0-bs[i].x1)))],gs.length,[...new Set(gs.map(o=>Math.round(o.geometry.args[0]*1000)))],[...new Set(gs.map(o=>bs[0].z1-Math.round(o.geometry.args[2]*1000)))]];}))(${q})`);
+  assert.deepStrictEqual(gr, [[6, [4], 5, [4], [4]], [6, [3], 5, [3], [4]]]);
+  p.run(`${q}.userData.click()`);
+  assert.deepStrictEqual(st().slice(0, 2), [true, false], 'a click shows the olive one');
+  p.run('showView("plan")'); p.fly(); p.run('showView("kitchen")'); p.fly();
+  assert.deepStrictEqual(st().slice(0, 2), [true, false], 'kept through a rebuild');
+  p.run(`${q}.userData.click()`);
+  assert.deepStrictEqual(st().slice(0, 2), [false, true], 'and back');
+  // a drawer's front is a door: a click there works the drawer, not the shelf
+  assert.ok(p.run(`(q=>{const d=q.children[1],h=d.children.find(o=>o.userData.front===true);return pickDoor(null,{object:h.children[0],point:new THREE.Vector3()})===VIEWS.kitchen.furniture().doors.find(x=>x.g===h);})(${q})`));
+});
+
 check('кухня: на письменном столе MacBook Pro 16″ — посередине, перед надстройкой; клавиатура и трекпад — картинкой на корпусе, экран — на крышке; крышка открыта на 110°, по клику закрывается и открывается; экран светится, пока открыта', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const mb = () => p.run(`(f=>{const d=f.doors.find(x=>x.key==="macbook"),pl=d.g.parent,desk=pl.parent,body=d.g.children.find(o=>o.geometry&&o.geometry.args&&o.geometry.args.length===6),lid=d.g.children[d.g.children.length-1];
@@ -657,6 +716,19 @@ check('кухня: «i» у столов и витрины — что это з�
   assert.deepStrictEqual([dot.hidden, card.hidden], [true, false]);
   assert.deepStrictEqual(card.children.map((c) => c.textContent), ['×', 'Письменный стол HEMNES (IKEA)', 'a', 'b']);
   p.key('keydown', 'Escape'); assert.strictEqual(card.hidden, true);
+  // a thing on sale: its price and a link to the shop (in a new tab) under its lines
+  p.run('showItemDot({title:"Полка",lines:["a"],price:16000,url:"https://ozon.ru/t/x",shop:"Ozon"},100,200)'); dot.click();
+  const buy = card.children[card.children.length - 1];
+  assert.deepStrictEqual([buy.className, buy.children.map((c) => c.textContent), buy.children[1].href, buy.children[1].target], ['buy', ['16\u00a0000 ₽', 'Ozon'], 'https://ozon.ru/t/x', '_blank']);
+  assert.strictEqual(card.children.some((c) => c.className === 'next'), false, 'no variants: no link to the next one');
+  p.key('keydown', 'Escape');
+  // a thing with variants: a line under the others — which of how many, a link to the next one; it turns the card to it
+  p.run('showItemDot({title:"A",lines:["a"],variant:[1,2],next:()=>({title:"B",lines:["b"],variant:[2,2],next:()=>({title:"A"})})},100,200)'); dot.click();
+  const line = () => card.children.find((c) => c.className === 'next'), h3 = () => card.children.find((c) => c.tagName === 'H3').textContent;
+  assert.deepStrictEqual([h3(), line().children.map((c) => c.textContent)], ['A', ['1/2', 'Следующий вариант →']]);
+  line().children[1].click();
+  assert.deepStrictEqual([card.hidden, h3(), line().children.map((c) => c.textContent)], [false, 'B', ['2/2', 'Следующий вариант →']]);
+  p.key('keydown', 'Escape');
   // another view takes the «i» away
   p.run('showItemDot({title:"x"},10,10)'); p.run('showView("plan")'); p.tick();
   assert.strictEqual(dot.hidden, true);
@@ -756,22 +828,22 @@ check('кухня: диван раскладывается «дельфином�
   assert.ok(held > .45 && held < .55, 'half way in 1.5 s held: ' + held);
 });
 
-check('кухня: во вкладке — только шкафы и обеденный стол со светильником (когда рамка левой стены его вмещает); стол, витрина, диван, шкаф и антресоль над диваном — на плане и в обходе', () => {
+check('кухня: во вкладке — только шкафы и обеденный стол со светильником и полкой над ним (когда рамка левой стены его вмещает); стол, витрина, диван, шкаф и антресоль над диваном — на плане и в обходе', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const seen = () => p.run(`(f=>{const v=k=>f.appl.children.filter(o=>o.userData[k]===true).map(o=>o.visible);
-    return {desk:v('desk'),vitrine:v('vitrine'),sofa:v('sofa'),wardrobe:v('wardrobe'),mezzanine:v('mezzanine'),table:v('table'),pendant:v('pendant'),tableDims:f.dims.children.filter(o=>o.userData.table===true).map(o=>o.visible)};})(VIEWS.kitchen.furniture())`);
+    return {desk:v('desk'),vitrine:v('vitrine'),sofa:v('sofa'),wardrobe:v('wardrobe'),mezzanine:v('mezzanine'),table:v('table'),pendant:v('pendant'),spice:v('spice'),tableDims:f.dims.children.filter(o=>o.userData.table===true).map(o=>o.visible)};})(VIEWS.kitchen.furniture())`);
   const all = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, [...new Set(v)]]));
   // the frame at 1350 at first: the table (1350…2050 from the kitchen wall) does not fit
   let r = seen();
   assert.deepStrictEqual([r.table.length, r.tableDims.length], [5, 8], 'the table: its top and four legs; four dimension lines with their labels');
-  assert.deepStrictEqual(all(r), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [false], pendant: [false], tableDims: [false] });
+  assert.deepStrictEqual(all(r), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [false], pendant: [false], spice: [false], tableDims: [false] });
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2049'; fl.dispatch('input'); p.tick();
   assert.deepStrictEqual(all(seen()).table, [false], 'a millimetre short');
   fl.value = '2050'; fl.dispatch('input'); p.tick();
-  assert.deepStrictEqual(all(seen()), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [true], pendant: [true], tableDims: [true] });
+  assert.deepStrictEqual(all(seen()), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [true], pendant: [true], spice: [true], tableDims: [true] });
   // on the plan everything stands where it is
   p.run('showView("plan")'); p.fly();
   r = all(seen()); delete r.tableDims;
-  assert.deepStrictEqual(r, { desk: [true], vitrine: [true], sofa: [true], wardrobe: [true], mezzanine: [true], table: [true], pendant: [true] });
+  assert.deepStrictEqual(r, { desk: [true], vitrine: [true], sofa: [true], wardrobe: [true], mezzanine: [true], table: [true], pendant: [true], spice: [true] });
 });

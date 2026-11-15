@@ -82,8 +82,8 @@ function furnBoxes(){
     const v=VIEWS[r.id];if(!v||!v.furniture)return;const f=v.furniture();if(!f.model||!f.model.visible)return;
     const [ox,oz]=v.anchor(),y=f.model.position.y;
     f.current.parts.forEach(p=>out.push([(ox+p.x0)*MM,(ox+p.x1)*MM,(oz+p.z0)*MM,(oz+p.z1)*MM,p.y0*MM+y,p.y1*MM+y]));
-    // appliances and sanitary ware: their boxes in the scene (where the browser's THREE can tell them)
-    if(f.extra&&f.extra.visible&&_bx&&_bx.setFromObject)f.extra.children.forEach(o=>{
+    // appliances and sanitary ware: their boxes in the scene (where the browser's THREE can tell them); the dining chairs (walkThrough) do not stop the walker
+    if(f.extra&&f.extra.visible&&_bx&&_bx.setFromObject)f.extra.children.forEach(o=>{if(o.userData.walkThrough===true)return;
       _bx.setFromObject(o);if(!_bx.isEmpty())out.push([_bx.min.x,_bx.max.x,_bx.min.z,_bx.max.z,_bx.min.y,_bx.max.y]);});
   });
   return out;

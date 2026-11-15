@@ -57,7 +57,7 @@ check('кухня: шкафы и техника собираются, панел
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 17, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 21, want.parts.length, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');
@@ -84,7 +84,7 @@ check('кухня: шкафы и техника собираются, панел
   assert.deepStrictEqual(ant(), ['L', 'R', 'L', 'R']); assert.deepStrictEqual(lifts(), []);
   up.checked = true; up.dispatch('change');
   assert.deepStrictEqual(ant(), ['U', 'U', 'U', 'U']); assert.deepStrictEqual(lifts(), [2599, 2599, 2599, 2599]);
-  assert.strictEqual(k().doors, nDoors + 17, 'every front still opens');
+  assert.strictEqual(k().doors, nDoors + 21, 'every front still opens');
   // without the mezzanines there is nothing to lift: greyed out
   const antOn = kq('#k-tAnt'); antOn.checked = false; antOn.dispatch('change');
   assert.strictEqual(up.disabled, true); assert.deepStrictEqual(ant(), []);
@@ -272,6 +272,37 @@ check('кухня: стол у левой стены — 1350 от стены к
   assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 1300), [[-2000, -700, 3350, 4050, 720, 750]], 'the top');
   assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 40).map((b) => [b[0], b[2], b[4], b[5]]),
     [[-1950, 3400, 0, 720], [-790, 3400, 0, 720], [-1950, 3960, 0, 720], [-790, 3960, 0, 720]], 'four legs 40 × 40, 50 in from the edges');
+});
+
+check('кухня: четыре стула BERGMUND у стола — выдвинуты, нажатие задвигает их под стол; обход сквозь них проходит', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const st = () => p.run(`(f=>f.doors.filter(d=>/^chair/.test(d.key)).map(d=>{const c=d.g.parent;
+    return [d.key,d.axis,Math.round(d.travel*1000),Math.round(c.position.x*1000),Math.round(c.position.z*1000),+c.rotation.y.toFixed(2),Math.round(d.g.position.z*1000),c.parent===f.appl];}))(VIEWS.kitchen.furniture())`);
+  // two along each long side (the kitchen wall's, the far one), 20 mm clear of the table's legs, 40 apart; the far ones turned round;
+  // pushed in, the seat's front 10 short of the table's middle (1700 from the kitchen wall); the far ones pulled out by 420 at first (the seat's front 80 past the table's edge), the kitchen wall's ones pushed in
+  assert.deepStrictEqual(st(), [
+    ['chair0', 'z', -420, 110, 1170, 0, 0, true], ['chair1', 'z', -420, 670, 1170, 0, 0, true],
+    ['chair2', 'z', -420, 630, 2230, 3.14, -420, true], ['chair3', 'z', -420, 1190, 2230, 3.14, -420, true]]);
+  const info = p.run(`(f=>{const m=f.appl.children.filter(o=>o.userData.chair===true);return [m.length,infoOf(m[0].children[0].children[3]).title];})(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(info, [4, 'Стул BERGMUND (IKEA)']);
+  // as the drawing: the seat 510 high at its front, sloping to 470 over its 410; the back to it 104°; 950 high
+  const ang = p.run(`(q=>{const [st,b]=q.children.slice(4);   // after its four legs: the seat's holder, the back's
+    return [Math.round(st.position.y*1000),Math.round(st.position.z*1000),+(st.rotation.x*180/Math.PI).toFixed(1),+(90-(st.rotation.x+b.rotation.x)*180/Math.PI).toFixed(1)];})(VIEWS.kitchen.furniture().doors.find(d=>d.key==="chair0").g)`);
+  assert.deepStrictEqual(ang, [510, 520, -5.6, 104]);
+  // the cover: one dark grey matting on the seat and the back, its weave a picture and bumps
+  const cov = p.run(`(q=>{const [st,b]=q.children.slice(4),s=st.children[0],k=b.children[0];
+    return [s.material===k.material,!!s.material.map,!!s.material.bumpMap];})(VIEWS.kitchen.furniture().doors.find(d=>d.key==="chair0").g)`);
+  assert.deepStrictEqual(cov, [true, true, true]);
+  // a click pulls one out, another pushes it in again
+  const click = () => { p.run('(d=>{d.t=d.t!==0?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="chair1"))'); p.tick(120); };
+  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, -420, -420, -420], 'pulled out');
+  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, 0, -420, -420], 'pushed in again');
+  // the walker crosses the row of the far chairs, pulled out (2400 from the kitchen wall, kitchen x 250…1150), without stopping
+  p.run('showView("walk")'); p.fly();
+  const go = () => p.run('walkSlide(-1.75,4.4,.9,0,0,1.7).map(v=>typeof v==="number"?Math.round(v*1000):v)');
+  assert.deepStrictEqual(go().slice(0, 2), [-850, 4400], 'through the chairs');
+  p.run('VIEWS.kitchen.furniture().appl.children.forEach(o=>{if(o.userData.chair===true)o.userData.walkThrough=false;})');
+  assert.ok(go()[0] < -850, 'they would stop it otherwise');
 });
 
 check('кухня: дверь холодильника открывается на петлях справа, два его ящика выдвигаются, дверь духовки откидывается вниз', () => {

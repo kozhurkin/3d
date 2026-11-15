@@ -391,34 +391,36 @@ function addOnParts(add){
   });
 }
 /* the wall shelf over the add-on unit: a board 1500 × 250, 30 thick, in the middle of the desk's length, its bottom 300 over the
-   add-on unit (1370 + 300 = 1670). White on white brackets at first; a click on it or its brackets (engine.js: userData.click) paints
-   it oak Casella, then black-brown as the desk (on dark grey brackets both), then white again; the colour stays through the kitchen's
-   rebuilds. Desk axes, mm */
-const SH={W:1500,D:250,t:30,gap:300};
+   add-on unit (1370 + 300 = 1670). Black-brown as the desk at first; a click on it or its brackets (engine.js: userData.click) paints
+   it oak Casella (on dark grey brackets both), then white (on white ones), then as the desk again; the colour stays through the
+   kitchen's rebuilds. Desk axes, mm */
+const SH={W:1500,D:250,t:30,gap:300,name:'Полка над столом'};
 const shelfFinMats=f=>{const m=makeMats();applyMaterials(m,Object.assign({},deskFIN,{carcass:f}),0);return m;};
 const bracketWhite=new THREE.MeshStandardMaterial({color:0xf2f2ef,roughness:.45,metalness:.2}),bracketGrey=new THREE.MeshStandardMaterial({color:0x222325,roughness:.45,metalness:.3});
-const SHC=[{name:'белый',desc:'Белый премиум W1000 ST9, как корпуса кухни',mats:shelfFinMats({type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'}),br:bracketWhite,brName:'белых'},
+const SHC=[{name:'как стол',desc:'Чёрно-коричневая, как стол',mats:deskMats,br:bracketGrey,brName:'тёмно-серых'},
   {name:'дуб Каселла',desc:'Дуб Каселла натуральный, как столешница кухни',mats:shelfFinMats({type:'wood',decor:'C1385'}),br:bracketGrey,brName:'тёмно-серых'},
-  {name:'как стол',desc:'Чёрно-коричневая, как стол',mats:deskMats,br:bracketGrey,brName:'тёмно-серых'}];
+  {name:'белый',desc:'Белый премиум W1000 ST9, как корпуса кухни',mats:shelfFinMats({type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'}),br:bracketWhite,brName:'белых'}];
 let shelfColor=0;
-// the shelf's board and its brackets in the desk's built group: the colours they have now; a click on them the next ones
+const isShelf=o=>o.userData.shelfBracket===true||!!(o.userData.part&&o.userData.part.name===SH.name);
+// the shelf's board and its brackets in the desk's built group: the colours they have now
 function paintShelf(desk){
-  const cur=SHC[shelfColor].mats,is=(m,k)=>SHC.some(c=>c.mats[k]===m);
-  desk.children.forEach(o=>{if(o.userData.shelfBracket===true)o.material=SHC[shelfColor].br;});
-  desk.children.forEach(o=>{const q=o.userData.part;if(!q||q.name!=='Полка над столом')return;
-    o.material=o.material.map(m=>is(m,'carcass')?cur.carcass:is(m,'carcassEnd')?cur.carcassEnd:m);
-    o.children.forEach(e=>{if(is(e.material,'edge'))e.material=cur.edge;});});
+  const c=SHC[shelfColor],is=(m,k)=>SHC.some(s=>s.mats[k]===m);
+  desk.children.filter(isShelf).forEach(o=>{
+    if(o.userData.shelfBracket===true){o.material=c.br;return;}
+    o.material=o.material.map(m=>is(m,'carcass')?c.mats.carcass:is(m,'carcassEnd')?c.mats.carcassEnd:m);
+    o.children.forEach(e=>{if(is(e.material,'edge'))e.material=c.mats.edge;});
+  });
 }
-const nextShelfColor=desk=>()=>{shelfColor=(shelfColor+1)%SHC.length;paintShelf(desk);};
 const shelfY0=()=>DK.H+AU.H+SH.gap;
 function shelfParts(add){
   const x0=(DK.W-SH.W)/2,y0=shelfY0();
-  add('Полка над столом','carcass',x0,x0+SH.W,y0,y0+SH.t,0,SH.D,{info:INFO.shelf});
+  add(SH.name,'carcass',x0,x0+SH.W,y0,y0+SH.t,0,SH.D,{info:INFO.shelf});
 }
 /* its brackets: two powder-coated steel L-brackets under it (white or dark grey, as the shelf: paintShelf), 25 wide, 4 thick,
-   150 from its ends; an arm 200 under the board, another 150 down the wall, a strut at 45° between them. On the desk's group (m) */
+   150 from its ends; an arm 200 under the board, another 150 down the wall, a strut at 45° between them. Added to the desk's built
+   group (m), the board's colour on it and them; a click on any of them the next colour */
 const SHB={end:150,w:25,t:4,arm:200,leg:150};
-function buildShelfBrackets(desk){
+function buildShelf(desk){
   const box=boxIn(desk),m=v=>v*MM,{w,t,arm,leg}=SHB,x0=(DK.W-SH.W)/2,y0=shelfY0(),br=SHC[shelfColor].br,ms=[];
   [x0+SHB.end,x0+SH.W-SHB.end].forEach(c=>{
     const a=c-w/2,b=c+w/2;
@@ -427,8 +429,10 @@ function buildShelfBrackets(desk){
     const s=box(m(a),m(b),0,m(leg*Math.SQRT2),0,m(t),br);   // the strut: from the wall arm's foot up to the under arm
     s.rotation.x=Math.PI/4;s.position.set(m(c),m(y0-t-leg/2),m(leg/2));ms.push(s);
   });
-  ms.forEach(o=>{Object.assign(o.userData,{info:INFO.shelf,shelfBracket:true,click:nextShelfColor(desk)});});
-  return ms;
+  ms.forEach(o=>Object.assign(o.userData,{info:INFO.shelf,shelfBracket:true}));
+  const next=()=>{shelfColor=(shelfColor+1)%SHC.length;paintShelf(desk);};
+  desk.children.filter(isShelf).forEach(o=>{o.userData.click=next;});
+  paintShelf(desk);
 }
 /* the fronts of the HEMNES pieces, on their doors (they swing and slide with them): knobs [[x,y]…], a frame round a door's
    panel (panel), or a glass door (glass): its front a 4 mm pane in the middle of a frame of the front's thickness. Part mm, m */
@@ -449,8 +453,7 @@ function hemnesFronts(doors,mats){
 // the desk in g: its parts on its own group, turned along the left wall
 function buildDesk(g,opts){
   const d=buildParts({parts:deskParts()},deskMats,opts);
-  hemnesFronts(d.doors,deskMats);paintShelf(d.model);buildShelfBrackets(d.model);
-  d.model.children.forEach(o=>{if(o.userData.part&&o.userData.part.name==='Полка над столом')o.userData.click=nextShelfColor(d.model);});
+  hemnesFronts(d.doors,deskMats);buildShelf(d.model);
   d.model.rotation.y=Math.PI/2;d.model.position.set(0,0,(P.L-DK.gap)*MM);d.model.userData.desk=true;d.model.userData.info=INFO.desk;
   g.add(d.model);
   return d.doors.concat(buildMacbook(d.model,opts));

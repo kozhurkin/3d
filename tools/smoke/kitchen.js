@@ -431,8 +431,8 @@ check('кухня: письменный стол HEMNES у левой стены
   // the wall shelf over it: 1500 × 250, 30 thick, in the middle of the desk, 300 over it
   const sh = p.run(`(f=>{const d=f.appl.children.find(o=>o.userData.desk===true),ms=[];const w=o=>{const q=o.userData&&o.userData.part;if(q&&q.name==='Полка над столом')ms.push(o);(o.children||[]).forEach(w);};w(d);
     const leg=d.children.find(o=>o.userData.part&&/^Ножка/.test(o.userData.part.name)),q=ms[0].userData.part;
-    return [ms.length,q.x0,q.x1,q.y0,q.y1,q.z0,q.z1,infoOf(ms[0]).title,ms[0].material.every(m=>!leg.material.includes(m))];})(VIEWS.kitchen.furniture())`);
-  assert.deepStrictEqual(sh, [1, 25, 1525, 1670, 1700, 0, 250, 'Настенная полка', true], '300 over the add-on unit, at the wall; white, not the desk\'s black-brown');
+    return [ms.length,q.x0,q.x1,q.y0,q.y1,q.z0,q.z1,infoOf(ms[0]).title,ms[0].material.every(m=>leg.material.includes(m))];})(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(sh, [1, 25, 1525, 1670, 1700, 0, 250, 'Настенная полка', true], '300 over the add-on unit, at the wall; black-brown as the desk at first');
   // its three brackets: 150 from its ends and in the middle, under it and down the wall
   const br = p.run(`(f=>{const d=f.appl.children.find(o=>o.userData.desk===true),ms=d.children.filter(o=>o.userData.shelfBracket===true),u=v=>[...new Set(v.map(x=>Math.round(x*1000)))].sort((a,b)=>a-b);
     return [ms.length,u(ms.map(o=>o.position.x)),u(ms.map(o=>o.position.y)),infoOf(ms[0]).title,infoOf(ms[0]).lines.some(l=>/стальной полосы 4 мм/.test(l))];})(VIEWS.kitchen.furniture())`);
@@ -445,18 +445,17 @@ check('кухня: письменный стол HEMNES у левой стены
     const br=d.children.filter(o=>o.userData.shelfBracket===true),l=infoOf(sh).lines,ids=globalThis.__mids||(globalThis.__mids=new Map()),id=m=>ids.get(m)||(ids.set(m,ids.size+1),ids.size);
     return [sh.material.map(m=>[leg.material.includes(m)]).flat().join(''),l[0],new Set(br.map(o=>o.material)).size,id(br[0].material),sh.userData.part.info().lines.slice(-1)[0]];})(VIEWS.kitchen.furniture())`);
   // [the board as the desk's legs (each face), the card's first line, the brackets' materials: one for all, the material]
-  const white = paint(), [, , , brWhite] = white;
-  assert.deepStrictEqual(white.slice(0, 3).concat(white[4]), ['falsefalsefalsefalsefalsefalse', 'Белый премиум W1000 ST9, как корпуса кухни; на двух белых стальных кронштейнах с косынкой.', 1, 'Нажатие меняет цвет: белый → дуб Каселла → как стол.']);
+  const desk1 = paint();
+  assert.deepStrictEqual(desk1.slice(0, 3).concat(desk1[4]), ['truetruetruetruetruetrue', 'Чёрно-коричневая, как стол; на двух тёмно-серых стальных кронштейнах с косынкой.', 1, 'Нажатие меняет цвет: как стол → дуб Каселла → белый.']);
   const oak = paint('shelf');
   assert.deepStrictEqual(oak.slice(0, 3), ['falsefalsefalsefalsefalsefalse', 'Дуб Каселла натуральный, как столешница кухни; на двух тёмно-серых стальных кронштейнах с косынкой.', 1]);
-  assert.notStrictEqual(oak[3], brWhite, 'dark grey brackets under oak');
-  const desk2 = paint('bracket');
-  assert.deepStrictEqual(desk2.slice(0, 3), ['truetruetruetruetruetrue', 'Чёрно-коричневая, как стол; на двух тёмно-серых стальных кронштейнах с косынкой.', 1]);
-  assert.strictEqual(desk2[3], oak[3], 'the same dark grey under the desk\'s colour');
+  assert.strictEqual(oak[3], desk1[3], 'the same dark grey brackets under oak');
+  const white = paint('bracket');
+  assert.deepStrictEqual(white.slice(0, 3), ['falsefalsefalsefalsefalsefalse', 'Белый премиум W1000 ST9, как корпуса кухни; на двух белых стальных кронштейнах с косынкой.', 1]);
+  assert.notStrictEqual(white[3], oak[3], 'white brackets under white');
   p.run('showView("plan")'); p.fly(); p.run('showView("kitchen")'); p.fly();
-  assert.deepStrictEqual(paint().slice(0, 4), desk2.slice(0, 4), 'kept through a rebuild');
-  const back = paint('shelf');
-  assert.deepStrictEqual(back.slice(0, 4), white.slice(0, 4), 'white again, on white brackets');
+  assert.deepStrictEqual(paint().slice(0, 4), white.slice(0, 4), 'kept through a rebuild');
+  assert.deepStrictEqual(paint('shelf').slice(0, 4), desk1.slice(0, 4), 'as the desk again');
   assert.deepStrictEqual(r.doors, [['y', 0, 0], ['z', 450, 0], ['z', 450, 0], ['z', 180, 0], ['z', 180, 0]], 'a door on its hinges and two drawers, closed; the add-on unit\'s two drawers');
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
   assert.ok(desk().doors.every((d) => d[2] === 0), 'the kitchen\'s fronts leave them');

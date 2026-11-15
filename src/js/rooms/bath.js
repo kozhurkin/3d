@@ -91,7 +91,13 @@ const INFO={
   tray:()=>{const [x0,x1,z0,z1]=trayRect(),cm=v=>Math.round(v/10);   // its sizes as the plan has them now
     return {title:'Душевой поддон',lines:[`${cm(x1-x0)} × ${cm(z1-z0)} см, высота ${cm(TRAY.H)} см: во всю душевую, от левой стены до перегородки.`,
       'Литьевой мрамор, белый; верх под сланец, четыре ската к трапу.',
-      `Квадратный хромированный трап ${cm(TRAY.drain)} × ${cm(TRAY.drain)} см, в четверти длины от левой стены.`]};}
+      `Квадратный хромированный трап ${cm(TRAY.drain)} × ${cm(TRAY.drain)} см, в четверти длины от левой стены.`]};},
+  sinkCab:()=>{const n=washNiche(),S=SINK_CAB,y0=WASH.sinkT+S.Gap,y1=Math.min(y0+S.H,A.H),cm=v=>Math.round(v/10);   // its width is the niche's
+    return {title:'Зеркальный шкафчик над раковиной',lines:[`${cm(n.w)} × ${cm(S.D)} см, высота ${cm(y1-y0)} см: во всю ширину ниши.`,
+      `Корпус — ЛДСП ${finName(finOf(FIN,'carcass'))}, фасады — ${finName(finOf(FIN,'front'))}; на дверях зеркало 4 мм.`,
+      `Две распашные двери, ${S.N} полки внутри.`,
+      `Низ в ${cm(y0)} см от пола, на ${cm(S.Gap)} см выше раковины; на крыше светильник 45 см.`,
+      'Нажатие открывает и закрывает двери.']};}
 };
 
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
@@ -247,7 +253,7 @@ function buildWash(g,opts){
     lamp(lampBodyMat,cx-.02,cx+.02,top,y1,zd-.06,z0);              // bracket
     lamp(lampBodyMat,cx-.225,cx+.225,y0,y1,z0,z1);                 // bar
     lamp(lampMat,cx-.222,cx+.222,y0-.002,y0,z0+.002,z1-.002); }    // diffuser
-  g.add(cab.model);
+  cab.model.userData.sinkCab=true;cab.model.userData.info=INFO.sinkCab;g.add(cab.model);
   return [wd,...cab.doors];
 }
 /* the machine's door, as real ones: Ø480 mm with a Ø330 mm glass, on a hinge 12 mm past its edge; a free door opens to 180°,

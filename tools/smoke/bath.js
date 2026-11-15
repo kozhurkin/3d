@@ -202,6 +202,14 @@ check('санузел: шкафчик над раковиной — отдель
   assert.deepStrictEqual(lamp.map((m) => m[5]), [false, false, true]);
   assert.strictEqual(lamp[0][3], 2000, 'the bracket on the top');
   assert.deepStrictEqual(lamp[1], [450, 25, 25, 2030, 245, false]);
+  // its «i»: on the boards and on the mirrors, its sizes from the plan, the bathroom's finishes
+  const info = (o) => p.run(`(i=>i&&[i.title,...i.lines])(infoOf(${o}))`);
+  const ci = info(`${cab}.children[0]`);
+  assert.strictEqual(ci[0], 'Зеркальный шкафчик над раковиной');
+  assert.strictEqual(ci[1], '60 × 20 см, высота 70 см: во всю ширину ниши.');
+  assert.strictEqual(ci[2], 'Корпус — ЛДСП Диамант серый U963 ST9, фасады — Базовый коричневый декор; на дверях зеркало 4 мм.');
+  assert.match(ci[4], /^Низ в 130 см от пола, на 30 см выше раковины/);
+  assert.strictEqual(info(`${doors}[0].g.children.find(c=>c.userData.mirror===true)`)[0], 'Зеркальный шкафчик над раковиной');
 });
 
 check('санузел: отделка — палитра, меню образца «корпус / фасады», свой цвет', () => {

@@ -67,6 +67,10 @@ check('санузел: душевой поддон заполняет душ з�
   // the drain: 120 square, a quarter of the way from the left wall, half way across, on the top
   const dr = box(`${T}.children[1]`);
   assert.deepStrictEqual([dr[1] - dr[0], (dr[0] + dr[1]) / 2, (dr[4] + dr[5]) / 2, dr[2]], [120, -1750, 1550, 150]);
+  // its «i»: on the body and on the drain, its sizes from the plan
+  const info = (o) => p.run(`(i=>i&&[i.title,i.lines[0]])(infoOf(${o}))`);
+  assert.deepStrictEqual(info(body), ['Душевой поддон', '100 × 70 см, высота 15 см: во всю душевую, от левой стены до перегородки.']);
+  assert.strictEqual(info(`${T}.children[1]`)[0], 'Душевой поддон');
   // the frame up to the kitchen wall takes it in whole: it shows
   const fl = p.document.querySelector('[data-panel="bath"]').querySelector('#bFrameL');
   fl.value = '1850'; fl.dispatch('input'); p.tick();
@@ -78,6 +82,7 @@ check('санузел: душевой поддон заполняет душ з�
   assert.strictEqual(p.run(`${T}.visible`), true, 'on the plan');
   p.run('setModel({bGap:600,bL:1000})'); p.tick();
   assert.deepStrictEqual(box(body), [-2000, -900, 0, 150, 1100, 1900]);
+  assert.match(info(body)[1], /^110 × 80 см/);
 });
 
 check('санузел: детали шкафов совпадают со старым санузлом', () => {

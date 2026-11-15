@@ -98,7 +98,7 @@ function buildSanitary(g,opts){
   const seat=new THREE.Mesh(new THREE.CylinderGeometry(.185,.185,.02,32),whiteMat);
   seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
   wash=new THREE.Group();wash.userData.wash=true;const doors=buildWash(wash,opts);g.add(wash);
-  tray=new THREE.Group();tray.userData.tray=true;buildTray(tray);g.add(tray);
+  tray=new THREE.Group();tray.userData.tray=true;tray.userData.info=INFO.tray;buildTray(tray);g.add(tray);
   return doors;
 }
 
@@ -110,6 +110,13 @@ function buildSanitary(g,opts){
 const TRAY={H:150,drain:120,at:.25};   // height; the drain's side; where it is along the tray from the left wall
 let tray=null;
 const trayRect=()=>[0,A.bWs+A.bGap,A.bL+A.wt,kZ0-zB0];   // x0, x1, z0, z1
+/* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js), as in the kitchen */
+const INFO={
+  tray:()=>{const [x0,x1,z0,z1]=trayRect(),cm=v=>Math.round(v/10);   // its sizes as the plan has them now
+    return {title:'Душевой поддон',lines:[`${cm(x1-x0)} × ${cm(z1-z0)} см, высота ${cm(TRAY.H)} см: во всю душевую, от левой стены до перегородки.`,
+      'Литьевой мрамор, белый; верх под сланец, четыре ската к трапу.',
+      `Квадратный хромированный трап ${cm(TRAY.drain)} × ${cm(TRAY.drain)} см, в четверти длины от левой стены.`]};}
+};
 /* the top's relief as a height field (mm), lit through a normal map; its colour an even white, a shade darker down in the relief.
    The slate: value noise bent by noise of its own (domain warp) cut in thin layers, each ending in a short sharp step, as split
    stone flakes; a fine grain over it; the four faces falling 6 mm to the drain. 1 px ≈ 1 mm of a 1000 × 700 tray.

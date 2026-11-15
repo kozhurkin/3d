@@ -31,7 +31,7 @@ check('санузел: стены ниши, обрезанные рамкой, �
 check('санузел: детали шкафов совпадают со старым санузлом', () => {
   const mod = PAGES.app.slice(PAGES.app.indexOf('«Санузел» view'));
   const pLine = mod.match(/^const P=\{W:1200,H:2600,.*\};$/m)[0];
-  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(mod, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
+  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'partList')}\n${fnSource(mod, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
   const want = fixture('bath-parts.json');
   assert.strictEqual(got.parts.length, 34);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);

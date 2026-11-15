@@ -63,6 +63,11 @@ function woodTexture(d){
 }
 const texCache={};
 function getTex(k){return texCache[k]||(texCache[k]=woodTexture(DECORS[k]));}
+// a picture drawn by draw(g) on a canvas n × n, repeated rx × ry times over a unit of the geometry's uv; srgb: a colour picture, not bumps
+function drawnTex(n,draw,rx,ry=rx,srgb=false){
+  const c=document.createElement('canvas');c.width=c.height=n;draw(c.getContext('2d'));
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(t.repeat)t.repeat.set(rx,ry);t.anisotropy=8;if(srgb)t.encoding=THREE.sRGBEncoding;return t;
+}
 
 /* texture offset depends on the part itself, not on its index, so adding or removing parts never reshuffles the grain;
    seed = part name + its order among parts with that name: sizes, heights and feet never change the grain pattern.
@@ -176,6 +181,8 @@ function applyContrast(mats,FIN,ec){
 }
 
 /* ---------- parts → meshes ---------- */
+// a cabinet's parts (mm) and the way to add one to them: add(name, mat, x0, x1, y0, y1, z0, z1, extra) → the part
+function partList(){const parts=[];return [parts,(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;}];}
 // cabinet fronts open to DMAX; a door turns on its holder (pivot, side hinge), tilts (hinge B/F/U: axis x, s: its way) or slides (S: axis z);
 // follow(a), if it has one, moves what goes with it (axis 'none': only that)
 const DMAX=1.45;

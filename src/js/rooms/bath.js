@@ -11,8 +11,7 @@ let current=null;
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
   // axes: x along the back wall (left wall at x=0), y up, z from the back wall into the room
-  const parts=[],W=p.W,H=p.H,RB=100,FL=p.Feet?10:0;   // FL: the tall cabinet sits on 10 mm feet
-  const add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList(),W=p.W,H=p.H,RB=100,FL=p.Feet?10:0;   // FL: the tall cabinet sits on 10 mm feet
   const zf=Math.max(p.Dt,p.Rz+TF), zc=zf-TF;   // front plane of the back run (tall cabinet + riser cladding)
   const xb=W, xa=W-Math.min(p.Wc,W-p.Rx);     // carcass at the right; cladding covers riser + filler on the left
   const pl=p.Pl, sp=p.Hi;   // door split follows the installation height
@@ -120,8 +119,7 @@ const lampMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfff3dc,e
 const mirrorMat=new THREE.MeshStandardMaterial({color:0xdfe7ec,roughness:.06,metalness:.55});
 // the cabinet over the sink: the width of the niche, up to the ceiling at most, back rails at the wall, the doors overlay
 function sinkCabParts(){
-  const n=washNiche(),S=SINK_CAB,x0=n.x0,x1=n.x1,y0=WASH.sinkT+S.Gap,y1=Math.min(y0+S.H,A.H),dc=S.D-TF,xm=(x0+x1)/2,parts=[];
-  const add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>parts.push(Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{}));
+  const n=washNiche(),S=SINK_CAB,x0=n.x0,x1=n.x1,y0=WASH.sinkT+S.Gap,y1=Math.min(y0+S.H,A.H),dc=S.D-TF,xm=(x0+x1)/2,[parts,add]=partList();
   add('Бок шкафчика над раковиной','carcass',x0,x0+T,y0,y1,0,dc);
   add('Бок шкафчика над раковиной','carcass',x1-T,x1,y0,y1,0,dc);
   add('Дно шкафчика над раковиной','carcass',x0+T,x1-T,y0,y0+T,0,dc);

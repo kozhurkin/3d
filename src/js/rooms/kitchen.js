@@ -13,8 +13,7 @@ const TB={z:1350,w:700,l:1300,t:30,h:750,leg:40,in:50};
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
   // axes: x along the kitchen wall from the left wall, y up, z from the wall into the room
-  const parts=[],W=p.W,H=p.H,RB=100,FL=0;
-  const add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList(),W=p.W,H=p.H,RB=100,FL=0;
   const pl=p.Plinth!==false?p.Pl:0, ytop=p.Ct-p.Tt;          // base carcass from the plinth to the underside of the worktop
   const zfB=p.Db-20, zcB=zfB-TF;                              // base fronts sit 20 mm behind the worktop edge
   const base=[{w:p.B1,k:'sink',nm:'под мойку'},{w:p.B2,k:'door',nm:'средний'},{w:p.B3,k:'oven',nm:'под духовку'}];
@@ -144,6 +143,9 @@ const INFO={
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
 
+// 0 below 0, 1 above 1, eased in and out between (what goes with a door: the laptop's screen, the desk chair's turn, the sofa's bed)
+const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+
 /* the dining table: a worktop-decor top on four steel legs, its end against the left wall (kitchen axes, m) */
 function buildTable(g){
   const box=boxIn(g),x1=TB.l*MM,z0=TB.z*MM,z1=(TB.z+TB.w)*MM,y1=TB.h*MM,y0=(TB.h-TB.t)*MM;
@@ -155,21 +157,20 @@ function buildTable(g){
   [top,...legs].forEach(m=>{m.userData.info=INFO.table;m.userData.table=true;});
 }
 
-/* the pendant lamp over the dining table, its shade's bottom PL.over above the tabletop (higher only if its cord does not reach so far),
-   in the middle of it. A click changes it for the next of three IKEA lamps, round: BLÅSVERK (hung at first) → BUNKEFLO → MISTERHULT → BLÅSVERK
+/* the pendant lamp over the dining table, in the middle of it, its shade's bottom its own height over the tabletop (higher only if its cord
+   does not reach so far). A click changes it for the next of three IKEA lamps (LAMPS), round, BLÅSVERK at first
    (engine.js: userData.click); the one hung stays through the kitchen's rebuilds. Each a white cord from its top (hang) up to its canopy
    on the ceiling, as long as it is (cord); lit. Own axes (mm): y up from the shade's bottom, from the shade's axis */
-const PL={over:700};
-let pendantModel=1;   // BLÅSVERK at first
+let pendantModel=0;   // in LAMPS
 const pendantMats=(()=>{
   // MISTERHULT's weave: strips across both diagonals and along, the holes between them clear (cut by alphaTest)
-  const N=256,s=32,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
-  g.clearRect(0,0,N,N);g.lineWidth=6;g.lineCap='butt';
-  const tone=i=>['#d8b47c','#c9a26a','#e0bf8a','#bf965e'][i%4];
-  const line=(x0,y0,x1,y1,i)=>{g.strokeStyle=tone(i);g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();};
-  for(let k=-N,i=0;k<=2*N;k+=s,i++){line(k,0,k+N,N,i);line(k,0,k-N,N,i+1);}
-  for(let y=s/4,i=0;y<N;y+=s/2,i++)line(0,y,N,y,i+2);
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(t.repeat)t.repeat.set(6,2);
+  const N=256,s=32,t=drawnTex(N,g=>{
+    g.lineWidth=6;g.lineCap='butt';
+    const tone=i=>['#d8b47c','#c9a26a','#e0bf8a','#bf965e'][i%4];
+    const line=(x0,y0,x1,y1,i)=>{g.strokeStyle=tone(i);g.beginPath();g.moveTo(x0,y0);g.lineTo(x1,y1);g.stroke();};
+    for(let k=-N,i=0;k<=2*N;k+=s,i++){line(k,0,k+N,N,i);line(k,0,k-N,N,i+1);}
+    for(let y=s/4,i=0;y<N;y+=s/2,i++)line(0,y,N,y,i+2);
+  },6,2);
   const col=h=>new THREE.Color(h).convertSRGBToLinear(),D=THREE.DoubleSide;
   return {
     weave:new THREE.MeshStandardMaterial({map:t,alphaTest:.5,side:D,roughness:.75,emissive:0xffcf8a,emissiveMap:t,emissiveIntensity:.18}),
@@ -183,25 +184,12 @@ const pendantMats=(()=>{
     birch:new THREE.MeshStandardMaterial({color:col('#e2cda4'),roughness:.6})                         // its birch top
   };
 })();
-/* the three lamps: d across, h high, over its own height over the tabletop (PL.over if none), hang where the cord comes out, cord its length, canopy its outline [r, y up from its bottom];
+/* the three lamps, in the click's round: over the height of its shade's bottom over the tabletop, hang where the cord comes out, cord its length, canopy its outline [r, y up from its bottom];
    shade(put, lathe, V, mt) puts the rest */
 const LAMPS=[
-  /* MISTERHULT, handwoven bamboo: its shade 450 across, 400 high, a gourd — a neck 160 across at the top, widest 150 up from its bottom,
-     a solid bamboo band round its open bottom (370 across); its weave open, so the light and the sun go through it. An E27 socket in
-     the neck, a clear globe bulb under it */
-  {name:'MISTERHULT',d:450,h:400,hang:350,cord:1600,canopy:[[0,0],[8,0],[30,4],[44,14],[50,31],[50,46]],
-    lines:['Бамбук, ручное плетение; белый шнур и потолочная чашка.','Абажур Ø45 см, высота 40 см; шнур до 160 см; лампа E27, шар прозрачный.'],
-    shade(put,lathe,V,mt){
-      const R=225,band=40;
-      lathe(new THREE.SplineCurve([V(R-30,band),V(R-12,100),V(R,150),V(R-8,210),V(R-35,265),V(R-80,320),V(R-125,360),V(85,385),V(80,392)]).getPoints(40),mt.weave,64);
-      lathe([V(R-41,0),V(R-37,6),V(R-34,band-6),V(R-30,band+2)],mt.bamboo,64);
-      lathe([V(80,386),V(83,388),V(83,400),V(80,402)],mt.bamboo,40);
-      put(new THREE.CylinderGeometry(...[20,20,70].map(v=>v*MM),20),mt.white,315);
-      put(new THREE.SphereGeometry(47.5*MM,24,16),mt.bulb,237.5);
-    }},
   /* BLÅSVERK, beige: 370 across, 180 high — a glossy beige dome over a white opal bowl, a ring where they meet, 95 up; the bowl's bottom
      dished in round its middle. On a beige aluminium tube 16 across, 280 long; the opal bowl glows */
-  {name:'BLÅSVERK',d:370,h:180,over:800,hang:460,cord:1100,canopy:[[0,0],[8,1],[22,8],[32,22],[37,42],[37,65]],
+  {name:'BLÅSVERK',over:800,hang:460,cord:1100,canopy:[[0,0],[8,1],[22,8],[32,22],[37,42],[37,65]],
     lines:['Глянцевый бежевый верх, снизу белый матовый рассеиватель; бежевая алюминиевая трубка, белый шнур.','Ø37 см, высота 18 см; трубка 28 см, шнур 110 см; лампа E27, шар опаловый.'],
     shade(put,lathe,V,mt){
       lathe(new THREE.SplineCurve([V(185,95),V(186,105),V(183,128),V(175,150),V(158,167),V(125,177),V(70,180),V(10,180)]).getPoints(30),mt.beige,64);
@@ -211,7 +199,7 @@ const LAMPS=[
     }},
   /* BUNKEFLO, white and birch: 360 across, its steel shade 115 high — a skirt flaring a little to its open bottom, a rounded shoulder up to
      a white collar 85 across, 30 high, a solid birch cylinder 75 across, 42 high, on it. An E27 socket inside, an opal globe bulb under it */
-  {name:'BUNKEFLO',d:360,h:187,over:800,hang:187,cord:1400,canopy:[[0,0],[20,0],[22,2],[33,46],[33,48]],
+  {name:'BUNKEFLO',over:800,hang:187,cord:1400,canopy:[[0,0],[20,0],[22,2],[33,46],[33,48]],
     lines:['Белый, сталь с порошковым покрытием; сверху вставка из массива берёзы; белая потолочная чашка-конус.','Ø36 см; шнур 140 см; лампа E27, шар опаловый.'],
     shade(put,lathe,V,mt){
       lathe(new THREE.SplineCurve([V(180,0),V(177,15),V(172,45),V(167,72),V(158,92),V(130,105),V(90,111),V(48,114)]).getPoints(30),mt.steel,64);
@@ -219,14 +207,28 @@ const LAMPS=[
       put(new THREE.CylinderGeometry(37.5*MM,37.5*MM,42*MM,32),mt.birch,166);
       put(new THREE.CylinderGeometry(20*MM,20*MM,40*MM,20),mt.white,100);
       put(new THREE.SphereGeometry(40*MM,24,16),mt.bulb,42);
+    }},
+  /* MISTERHULT, handwoven bamboo: its shade 450 across, 400 high, a gourd — a neck 160 across at the top, widest 150 up from its bottom,
+     a solid bamboo band round its open bottom (370 across); its weave open, so the light and the sun go through it. An E27 socket in
+     the neck, a clear globe bulb under it */
+  {name:'MISTERHULT',over:700,hang:350,cord:1600,canopy:[[0,0],[8,0],[30,4],[44,14],[50,31],[50,46]],
+    lines:['Бамбук, ручное плетение; белый шнур и потолочная чашка.','Абажур Ø45 см, высота 40 см; шнур до 160 см; лампа E27, шар прозрачный.'],
+    shade(put,lathe,V,mt){
+      const R=225,band=40;
+      lathe(new THREE.SplineCurve([V(R-30,band),V(R-12,100),V(R,150),V(R-8,210),V(R-35,265),V(R-80,320),V(R-125,360),V(85,385),V(80,392)]).getPoints(40),mt.weave,64);
+      lathe([V(R-41,0),V(R-37,6),V(R-34,band-6),V(R-30,band+2)],mt.bamboo,64);
+      lathe([V(80,386),V(83,388),V(83,400),V(80,402)],mt.bamboo,40);
+      put(new THREE.CylinderGeometry(...[20,20,70].map(v=>v*MM),20),mt.white,315);
+      put(new THREE.SphereGeometry(47.5*MM,24,16),mt.bulb,237.5);
     }}
 ];
-// where the lamp hung now has its shade's bottom (mm from the floor)
-function pendantY(L){return Math.max(TB.h+(L.over||PL.over),P.H-L.canopy[L.canopy.length-1][1]-L.cord-L.hang);}
+// a lamp's canopy's height; where its shade's bottom is hung (mm from the floor)
+const canopyH=L=>L.canopy[L.canopy.length-1][1];
+function pendantY(L){return Math.max(TB.h+L.over,P.H-canopyH(L)-L.cord-L.hang);}
 function buildPendant(g){
   const q=new THREE.Group();q.position.set((TB.l/2)*MM,0,(TB.z+TB.w/2)*MM);
   Object.assign(q.userData,{pendant:true,walkThrough:true,info:()=>{const L=LAMPS[pendantModel];
-    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`,'Нажатие меняет светильник: BLÅSVERK → BUNKEFLO → MISTERHULT.')};},
+    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`,`Нажатие меняет светильник: ${LAMPS.map(l=>l.name).join(' → ')}.`)};},
     click:()=>{pendantModel=(pendantModel+1)%LAMPS.length;fillPendant(q);}});
   g.add(q);fillPendant(q);
 }
@@ -240,10 +242,9 @@ function fillPendant(q){
   const lathe=(pts,mat,n=48)=>put(new THREE.LatheGeometry(pts,n),mat);
   L.shade(put,lathe,V,mt);
   // the cord from its top up to the canopy on the ceiling
-  const ch=L.canopy[L.canopy.length-1][1],top=P.H-y-ch;
+  const top=P.H-y-canopyH(L);
   put(new THREE.CylinderGeometry(m(3.5),m(3.5),m(top-L.hang),8),mt.white,(top+L.hang)/2).userData.cord=true;
-  lathe(L.canopy.map(([r,h])=>V(r,h)),mt.white,32).userData.canopy=true;
-  q.children[q.children.length-1].position.y=m(top);
+  const cp=lathe(L.canopy.map(([r,h])=>V(r,h)),mt.white,32);cp.userData.canopy=true;cp.position.y=m(top);
   if(planes)clipToFloor(q,planes);
 }
 
@@ -256,25 +257,23 @@ function fillPendant(q){
    is 10 short of the table's middle (the chair across comes as far), and back out. The walker passes through them (walk.js: userData.walkThrough).
    Own axes (mm): x across, y up, z from its back to the seat's front; its front toward the table */
 const CH={W:520,D:520,H:950,seat:510,seatBack:470,depth:410,cush:90,angle:104,legT:42,legB:30,backB:500,backTop:370,backT:40,out:80,clear:20,gap:40};
-/* the cover: dark grey matting (рогожка), a basket weave of pairs of threads in squares 4 mm across, as a picture and its bumps.
-   A tile of 4 × 4 squares (16 mm); per: how many tiles to a unit of the geometry's uv (m: 62.5) */
-const chairFabrics={};
 // a rounded box's uv in m, as the back's (each face's 0…1 times its sizes), so the weave is as big on its narrow faces (k: as roundBoxGeo's)
 function metricUV(geo,s,k=4){const uv=geo.attributes.uv,per=(2*k+2)**2;
   for(let i=0;i<uv.count;i++){const [au,,av]=BOX_UV[Math.floor(i/per)];uv.setXY(i,uv.getX(i)*s[au],uv.getY(i)*s[av]);}
   uv.needsUpdate=true;return geo;}
-function chairFabric(per){
-  if(chairFabrics[per])return chairFabrics[per];
-  const tex=bump=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');
+/* the cover: dark grey matting (рогожка), a basket weave of pairs of threads in squares 4 mm across, as a picture and its bumps.
+   A tile of 4 × 4 squares (16 mm), 62.5 of them to a unit of the geometry's uv (m: metricUV) */
+const chairFabric=(()=>{
+  const tex=bump=>drawnTex(64,g=>{
     g.fillStyle=bump?'#000':'#3c3d3f';g.fillRect(0,0,64,64);
     for(let i=0;i<4;i++)for(let j=0;j<4;j++){const across=(i+j)%2===0,x=i*16,y=j*16;
       for(let k=0;k<2;k++){   // two threads to a square, each lit along its middle
         const [tx,ty,tw,th]=across?[x,y+k*8,16,8]:[x+k*8,y,8,16],gr=across?g.createLinearGradient(0,ty,0,ty+th):g.createLinearGradient(tx,0,tx+tw,0);
         gr.addColorStop(0,bump?'#202020':'#2f3032');gr.addColorStop(.5,bump?'#ffffff':(k?'#55575a':'#4d4f52'));gr.addColorStop(1,bump?'#202020':'#2f3032');
         g.fillStyle=gr;g.fillRect(tx+.5,ty+.5,tw-1,th-1);}}
-    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(t.repeat)t.repeat.set(per,per);t.anisotropy=8;if(!bump)t.encoding=THREE.sRGBEncoding;return t;};
-  return chairFabrics[per]=new THREE.MeshStandardMaterial({map:tex(false),bumpMap:tex(true),bumpScale:.0006,roughness:.97});
-}
+  },1000/16,1000/16,!bump);
+  return new THREE.MeshStandardMaterial({map:tex(false),bumpMap:tex(true),bumpScale:.0006,roughness:.97});
+})();
 const chairWood=new THREE.MeshStandardMaterial({color:0x1e1c1b,roughness:.5});   // black-stained solid wood
 // where they stand (kitchen mm): x of each one's middle, its side (−1 the kitchen wall's, 1 the far one); how far in and out it goes
 function chairsAt(){
@@ -307,10 +306,10 @@ function buildChairs(g,opts){
     [[f,u],[W-f,W-u]].forEach(([x0,x1])=>{leg(q,x0,D-f,x1,D-u);leg(q,x0,f,x1,zr);});
     // the seat on its front top edge, sloping back, from under the back to its front
     const st=new THREE.Group();st.position.set(0,seat*MM,D*MM);st.rotation.x=-ts;q.add(st);
-    const sm=new THREE.Mesh(metricUV(roundBoxGeo(W*MM,cush*MM,(depth+backT)*MM,25*MM),[W*MM,cush*MM,(depth+backT)*MM]),chairFabric(1000/16));sm.position.set(W/2*MM,-cush/2*MM,-(depth+backT)/2*MM);sm.castShadow=sm.receiveShadow=true;st.add(sm);
+    const sm=new THREE.Mesh(metricUV(roundBoxGeo(W*MM,cush*MM,(depth+backT)*MM,25*MM),[W*MM,cush*MM,(depth+backT)*MM]),chairFabric);sm.position.set(W/2*MM,-cush/2*MM,-(depth+backT)/2*MM);sm.castShadow=sm.receiveShadow=true;st.add(sm);
     // the back: its front on the seat's back edge, leaning back
     const b=new THREE.Group();b.position.set(W/2*MM,yb*MM,zp*MM);b.rotation.x=-tb;q.add(b);
-    const bk=new THREE.Mesh(backGeo,chairFabric(1000/16));bk.position.z=-(backT-bv)*MM;bk.castShadow=bk.receiveShadow=true;b.add(bk);
+    const bk=new THREE.Mesh(backGeo,chairFabric);bk.position.z=-(backT-bv)*MM;bk.castShadow=bk.receiveShadow=true;b.add(bk);
     // pulled out: away from the table (its own −z); the kitchen wall's ones start pushed in, the far ones pulled out
     return applDoor(q,{key:'chair'+i,axis:'z',travel:-travel*MM,startOpen:side>0},opts);
   });
@@ -324,7 +323,7 @@ const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:150};   //
 const deskFIN={carcass:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},front:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},top:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},apron:null};
 const deskMats=makeMats();applyMaterials(deskMats,deskFIN,0);   // solid wood: the end faces as dark as the rest (no edge-band contrast)
 function deskParts(){
-  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList();
   const {W,D,H,top,leg:l,ov,ped,free}=DK,yt=H-top,zF=D-ov,zb=zF-l,t=16,ft=18,fz1=zF-5,fz0=fz1-ft,y0=130,y1=640;
   add('Столешница письменного стола','top',0,W,yt,H,0,D);
   [[ov,ov+ped,'left'],[W-ov-ped,W-ov,'right']].forEach(([a,b,side])=>{
@@ -424,10 +423,10 @@ const MC={W:650,H:1180,seat:460,sw:520,sd:490,cush:100,sz:255,back:{w:490,t:70,s
   arm:{x:295,top:655,pad:30,bar:25,t:30,z0:-200,z1:130,y0:315},base:{r:300,hub:110,tip:75,wheel:25},out:150,clear:20,turn:20,turnFrom:.7};
 const leatherMat=(()=>{
   // fine grain: a speckle of pits as bumps, so the light breaks on it as on leather
-  const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
-  g.fillStyle='#808080';g.fillRect(0,0,128,128);
-  for(let i=0;i<900;i++){const v=90+((i*97)%80);g.fillStyle=`rgb(${v},${v},${v})`;g.beginPath();g.arc((i*53.7)%128,(i*31.3+i*i*.013)%128,.6+(i%3)*.5,0,Math.PI*2);g.fill();}
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(t.repeat)t.repeat.set(3,3);
+  const t=drawnTex(128,g=>{
+    g.fillStyle='#808080';g.fillRect(0,0,128,128);
+    for(let i=0;i<900;i++){const v=90+((i*97)%80);g.fillStyle=`rgb(${v},${v},${v})`;g.beginPath();g.arc((i*53.7)%128,(i*31.3+i*i*.013)%128,.6+(i%3)*.5,0,Math.PI*2);g.fill();}
+  },3);
   return new THREE.MeshStandardMaterial({color:new THREE.Color('#7d553a').convertSRGBToLinear(),roughness:.45,bumpMap:t,bumpScale:.0004});   // a deep tan, not orange; a soft sheen
 })();
 const plasticMat=new THREE.MeshStandardMaterial({color:0x1a1a1b,roughness:.45});
@@ -443,13 +442,13 @@ function buildDeskChair(g,opts){
   Object.assign(c.userData,{deskChair:true,info:INFO.deskChair,walkThrough:true});g.add(c);
   const sl=new THREE.Group(),q=new THREE.Group();c.add(sl);sl.add(q);   // what slides: all of it; in it what swivels on the column (its origin)
   const put=(geo,mat,px,py,pz,par=q)=>{const o=new THREE.Mesh(geo,mat);o.position.set(m(px),m(py),m(pz));o.castShadow=o.receiveShadow=true;par.add(o);return o;};
-  const rbox=(sx,sy,sz,r,mat,px,py,pz,par)=>put(roundBoxGeo(m(sx),m(sy),m(sz),m(r)),mat,px,py,pz,par);
+  const rbox=(w,h,d,r,mat,px,py,pz,par)=>put(roundBoxGeo(m(w),m(h),m(d),m(r)),mat,px,py,pz,par);
   // the base: a hub, five legs sloping down to the casters (one toward the front), each caster a fork and two wheels
   put(new THREE.CylinderGeometry(m(42),m(48),m(50),24),plasticMat,0,bs.hub,0);
   for(let i=0;i<5;i++){
     const l=new THREE.Group();l.rotation.y=i*Math.PI*2/5;q.add(l);
-    const len=bs.r-30,sl=Math.atan2(bs.hub-bs.tip,len);
-    const leg=put(new THREE.BoxGeometry(m(36),m(28),m(len)),plasticMat,0,(bs.hub+bs.tip)/2,30+len/2,l);leg.rotation.x=sl;
+    const len=bs.r-30,slope=Math.atan2(bs.hub-bs.tip,len);
+    const leg=put(new THREE.BoxGeometry(m(36),m(28),m(len)),plasticMat,0,(bs.hub+bs.tip)/2,30+len/2,l);leg.rotation.x=slope;
     put(new THREE.BoxGeometry(m(30),m(40),m(40)),plasticMat,0,bs.tip-15,bs.r,l);   // the fork's top
     [-11,11].forEach(dx=>{const w=put(new THREE.CylinderGeometry(m(bs.wheel),m(bs.wheel),m(18),20),plasticMat,dx,bs.wheel,bs.r+12,l);w.rotation.z=Math.PI/2;});
   }
@@ -480,8 +479,7 @@ function buildDeskChair(g,opts){
   });
   // pulled out: away from the desk (its own −z), at first
   // its back toward the window (the kitchen's +z: its own +x), eased in over the end of the way out
-  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
-  const follow=a=>{q.rotation.y=-MC.turn*Math.PI/180*sm((a/DMAX-MC.turnFrom)/(1-MC.turnFrom));};
+  const follow=a=>{q.rotation.y=-MC.turn*Math.PI/180*smooth((a/DMAX-MC.turnFrom)/(1-MC.turnFrom));};
   const ease=1-Math.pow(1-.09,1/1.2);   // a front's .09 a frame, its time 1.2 times as long
   return [applDoor(sl,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true,ease,follow},opts)];
 }
@@ -569,8 +567,7 @@ function buildMacbook(desk,opts){
   const L=new THREE.Group();L.position.set(0,(yb+keys+lid/2)*MM,2*MM);q.add(L);
   rb(L,0,W,-lid/2,lid/2,0,D-2,2.5,3,mbLidMat);
   // the display lights up as the lid opens past 30°, full by 63°
-  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
-  const follow=a=>{L.rotation.x=-a;mbLidMat.emissiveIntensity=sm((a-.5)/.6);};
+  const follow=a=>{L.rotation.x=-a;mbLidMat.emissiveIntensity=smooth((a-.5)/.6);};
   // it starts open
   return [applDoor(q,{key:'macbook',axis:'none',max:open,startOpen:true,follow},opts)];
 }
@@ -583,7 +580,7 @@ function buildMacbook(desk,opts){
 const VT={W:900,D:370,H:1970,post:45,top:22};
 const vitAt=()=>P.L-DK.gap-DK.W;   // kitchen z of its back: the desk's end
 function vitrineParts(){
-  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList();
   const {W,D,H,post:l,top}=VT,yt=H-top,zF=D-15,t=16,fz1=zF-3,fz0=fz1-20,rz0=zF-25,rz1=zF-5,nm=' витрины';
   const xa=10,xb=W-10,ia=xa+l,ib=xb-l,sa=xa+(l+t)/2,sb=xb-(l+t)/2,zb=27;   // posts' outer x; between the posts; inner faces of the sides; back panel's front
   add('Столешница'+nm,'top',0,W,yt,H,0,D);
@@ -637,7 +634,7 @@ const wardFIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый'},front:{typ
 const wardMats=makeMats();applyMaterials(wardMats,wardFIN,30);
 const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
 function wardrobeParts(){
-  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList();
   const {W,D,C,d,H,pl,t,ft,gap}=WR,X=P.Rx,s=wardAt(),yt=H-t,cd=d-ft;   // X: the wall; cd: the carcass's depth behind the doors
   const xF=X-d,zF=s-d,xE=X-D,zE=s-C,zA=s-W;   // the doors' faces: along the wall, the leg's; the leg's end; the corner unit's far side; the add-on's
   const fy0=pl+gap,fy1=H-gap,cu=' углового шкафа',ad=' доп. секции';
@@ -683,7 +680,7 @@ function wardrobeParts(){
    along the wall from the wardrobe's side toward the window. Kitchen axes (mm), as the wardrobe */
 const MZ={n:2,L:1000,d:500,y0:1700,y1:2200,t:16,ft:16,gap:2};
 function mezzanineParts(){
-  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const [parts,add]=partList();
   const {n,L,d,y0,y1,t,ft,gap}=MZ,X=P.Rx,cd=d-ft,xF=X-d;
   for(let i=0;i<n;i++){
     const z0=wardAt()+i*L,z1=z0+L,zm=(z0+z1)/2,nm=' антресоли — секция '+(i+1);
@@ -828,8 +825,8 @@ function buildSofa(g,opts){
   strap.visible=false;
   // where it is at a share k of its way: the drawer out by its first 40 %; then the block tips (to 55 %), slides forward till its back
   // upper edge is past the seat's front (to 70 %), and rises, levelling, that edge kept at the seat's front
-  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);},zs=zf-t+(Dc-D)-680,z2=D+bt*Math.sin(BED_TILT);
-  const lay=a=>{const k=a/DMAX,dz=(Dc-D)*sm(k/.4),u1=sm((k-.4)/.15),u2=sm((k-.55)/.15),u3=sm((k-.7)/.3);
+  const zs=zf-t+(Dc-D)-680,z2=D+bt*Math.sin(BED_TILT);
+  const lay=a=>{const k=a/DMAX,dz=(Dc-D)*smooth(k/.4),u1=smooth((k-.4)/.15),u2=smooth((k-.55)/.15),u3=smooth((k-.7)/.3);
     let th=BED_TILT*u1,zb=zb0+dz+(z2-zs)*u2,yb=yb0;
     if(u3>0){th=BED_TILT*(1-u3);yb=yb0+(ys-yb0)*u3;zb=D+bt*Math.sin(th);}
     drawer.position.z=dz*MM;block.position.set(0,yb*MM,(zb-dz)*MM);block.rotation.x=-th;strap.rotation.x=th;strap.visible=u3>.6;};
@@ -1043,8 +1040,8 @@ const k=roomKit('kitchen',{
   // its own view shows the cabinets and the dining table with its chairs and its lamp — the table only once the frame shows the left wall past it; the desk and its chair,
   // the display cabinet, the sofa, the wardrobe and the mezzanine stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
-    const fits=show>=TB.z+TB.w;
-    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.deskChair===true||u.vitrine===true||u.sofa===true||u.wardrobe===true||u.mezzanine===true)o.visible=!on;else if(u.table===true||u.chair===true||u.pendant===true)o.visible=!on||fits;});
+    const fits=show>=TB.z+TB.w,has=(u,ks)=>ks.some(k=>u[k]===true);
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,['desk','deskChair','vitrine','sofa','wardrobe','mezzanine']))o.visible=!on;else if(has(u,['table','chair','pendant']))o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
   foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],

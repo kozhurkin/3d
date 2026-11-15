@@ -44,7 +44,7 @@ check('кухня: рамка левой стены, переходы и раз�
 
 check('кухня: детали шкафов совпадают со старой кухней', () => {
   const pLine = PAGES.app.match(/^const P=\{W:2200,H:2600,.*\};$/m)[0];
-  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
+  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'partList')}\n${fnSource(PAGES.app, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
   const want = fixture('kitchen-parts.json');
   assert.strictEqual(got.parts.length, want.parts.length);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);

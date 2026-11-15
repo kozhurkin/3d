@@ -22,6 +22,7 @@ const edgeOp=V=>V.Wm==='skeleton'?.9:S.edge?.5:0;
 const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
+const lowFootMat=new THREE.MeshBasicMaterial({color:0x5a5d60,polygonOffset:true,polygonOffsetFactor:-2});   // a low wall's footprint (the shower step): a shade lighter, not quite a wall
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorMat);
 floor.rotation.x=-Math.PI/2;floor.position.set(CX,-.002,CZ);floor.receiveShadow=true;scene.add(floor);   // outer walls and the entrance door cast their shadows outside the apartment
 
@@ -134,7 +135,7 @@ function buildWallSet(list,ruleOf,lines){
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     wallGroup.add(m);wallParts.push({m,f,id,box:[x0,x1,z0,z1],b:y0*MM,t:y1*MM,h:(y1-y0)*MM});
   };
-  const foot=(id,x0,x1,z0,z1)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),footMat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.002,(z0+z1)/2*MM);m.renderOrder=1;wallGroup.add(m);wallFeet.push({m,id,box:[x0,x1,z0,z1]});};
+  const foot=(id,x0,x1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),mat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.002,(z0+z1)/2*MM);m.renderOrder=1;wallGroup.add(m);wallFeet.push({m,id,box:[x0,x1,z0,z1]});};
   list.forEach(w=>{
     w.kept.forEach(i=>holesShown.add(w.id+':'+i));
     const [x0,x1,z0,z1]=w.r,alongX=w.along,f=ruleOf(w),id=w.id;
@@ -143,7 +144,7 @@ function buildWallSet(list,ruleOf,lines){
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
     const piece=(a,b,y0,y1=w.h||H)=>{if(b-a<1)return;
       if(alongX)solid(id,a,b,y0,y1,z0,z1,f);else solid(id,x0,x1,y0,y1,a,b,f);
-      if(y0===0){if(alongX)foot(id,a,b,z0,z1);else foot(id,x0,x1,a,b);}};
+      const fm=w.h?lowFootMat:footMat;if(y0===0){if(alongX)foot(id,a,b,z0,z1,fm);else foot(id,x0,x1,a,b,fm);}};
     (w.holes||[]).forEach(([a,b,h,sill=0])=>{piece(cur,a,0);piece(a,b,h);if(sill>0)piece(a,b,0,sill);cur=b;});
     piece(cur,end,0);
   });
@@ -182,7 +183,7 @@ function wallsAtRest(id,pos){
   const vw=VIEWS[id],V=VS[id],m=new Map();
   const h=V.Wm==='outline'?0:V.Wm==='row'?H*.1:H*V.Wh/100;
   viewWalls(vw).forEach((c,k)=>{
-    const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),c.r.map(v=>v*MM),pos),cut=seen?h:0;
+    const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),fadeWall(c,vw).r.map(v=>v*MM),pos),cut=seen?h:0;
     m.set(k,{r:c.r,cut,h:c.kept.length?h:cut,kept:c.kept});});
   return m;
 }
@@ -226,7 +227,7 @@ function startWallMorph(from,toId,pos){
   // every wall of the flight gets its own materials: near the floor it fades away instead of leaving a dark slab,
   // its footprint fades out or in, its outline fades with its height
   const mats=new Map();
-  list.forEach(c=>mats.set(c.id,{body:wallMat.clone(),line:edgeMat.clone(),foot:footMat.clone()}));
+  list.forEach(c=>mats.set(c.id,{body:wallMat.clone(),line:edgeMat.clone(),foot:(c.h?lowFootMat:footMat).clone()}));
   wallParts.forEach(p=>{const m=mats.get(p.id);if(m&&p.m.material===wallMat)p.m.material=m.body;});
   wallLines.forEach(l=>{l.e.material=mats.get(l.w.id).line;});
   wallFeet.forEach(p=>{p.m.material=mats.get(p.id).foot;});
@@ -245,14 +246,16 @@ function fitBox(m,box,r,flat){
 }
 /* "cut" mode: a wall hides while the camera is on its side named by the view's fade ('-x': past its -x face, …).
    A room view hides, besides, every wall while the camera is on its side away from the room's floor;
-   the plan hides only the walls it names */
+   the plan hides only the walls it names. A wall named with another wall's id has no rule of its own: it hides with that one */
+const fadeWall=(w,vw)=>{const n=(vw.fade||{})[w.id];return n&&!/^[+-][xz]$/.test(n)?WALLS.find(v=>v.id===n):w;};
 function fadeSide(w,vw){
+  const o=fadeWall(w,vw);if(o!==w)return fadeSide(o,vw);
   const named=(vw.fade||{})[w.id];
   if(named||!Array.isArray(vw.rooms))return named;
   const rm=ROOMS.find(r=>r.id===vw.rooms[0]).r,r=w.r;
   return r[3]<=rm[2]?'-z':r[2]>=rm[3]?'+z':r[1]<=rm[0]?'-x':r[0]>=rm[1]?'+x':null;
 }
-function fadeRule(w,vw){const r=w.r.map(v=>v*MM),side=fadeSide(w,vw);return side?()=>sideVisible(side,r,camera.position):()=>true;}
+function fadeRule(w,vw){const r=fadeWall(w,vw).r.map(v=>v*MM),side=fadeSide(w,vw);return side?()=>sideVisible(side,r,camera.position):()=>true;}
 
 
 /* doors. Entrance: as in the hall tab — dark metal frame set 100 mm into the bearing wall from the hall side,

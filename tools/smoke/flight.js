@@ -49,7 +49,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   inset().forEach((v, i) => near(v, bT[i], 'the mini view on the kitchen'));
   assert.deepStrictEqual([piece(p, 'leftOuter').visible, piece(p, 'kitchen').visible], [false, true]);
   // the flight's own materials are gone: the walls are back on the shared ones (the wall colour setting reaches them)
-  assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.glass||w.m.material===wallMat), wallFeet.every(f=>f.m.material===footMat)]'), [null, true, true]);
+  assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.glass||w.m.material===wallMat), wallFeet.every(f=>f.m.material===(f.id==="showerStep"?lowFootMat:footMat))]'), [null, true, true]);
 });
 
 check('перелёт: разный вид стен у вкладок — высота и «Скелет» меняются плавно', () => {

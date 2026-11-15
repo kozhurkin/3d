@@ -41,6 +41,9 @@ check('санузел: ступенька в проёме к душу — 200 м
   assert.deepStrictEqual([r.n, r.b, r.mat, r.foot], [1, 0, true, true], 'one piece from the floor, the walls\' material, its footprint');
   near(r.t, 0.2, 'up to 200 mm');
   near(r.top, 0.2, 'its outline ends at its height, not at the ceiling');
+  // its footprint («Контуры», and on the floor while the cut mode hides it with the walls round the shower) a shade lighter; its outline as the walls'
+  assert.strictEqual(p.run(`wallLines.find(l=>l.w.id==='showerStep').e.material===edgeMat`), true);
+  assert.deepStrictEqual(p.run(`wallFeet.map(f=>f.m.material===lowFootMat?f.id:f.m.material===footMat?'':'?').filter(Boolean)`), ['showerStep']);
   assert.ok(r.walk.length === 1 && r.walk[0] < p.run('STEP'), 'lower than what the walker steps over');
   // it follows the opening on the plan
   p.run('setModel({bGap:600,bWs:400})'); p.tick();
@@ -301,6 +304,10 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(w.find((x) => x.id === 'shower').r, [-1000, -900, 1100, 1900]);
   assert.deepStrictEqual(w.find((x) => x.id === 'shaft').r, [-900, -700, 1400, 1500]);
   assert.strictEqual(w.find((x) => x.id === 'shaft').fade, '+z', 'the vent shaft wall hides as the walls round the tray do');
+  // … by their rule, not by its own face: with the camera between the niche end (1100) and the shaft wall (1400) it is hidden as they are
+  const seen = (z) => p.run(`(()=>{camera.position.set(-1.5,1.5,${z});const f=id=>wallParts.find(x=>x.id===id).f();return ['nicheEnd','shower','showerStep','shaft'].map(f);})()`);
+  assert.deepStrictEqual(seen(1.0), [true, true, true, true]);
+  assert.deepStrictEqual(seen(1.25), [false, false, false, false]);
   // the slider: from the niche end's far face (bL + wt = 1200) up to the kitchen wall; a value below it shows 1200
   assert.deepStrictEqual([fl.min, fl.max], [1200, 1900]);
   p.run('VS.bath.L=900'); assert.deepStrictEqual(p.run('VIEWS.bath.frame()').slice(2), [-200, 1200]);

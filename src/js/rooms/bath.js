@@ -369,9 +369,9 @@ const k=roomKit('bath',{
     // the niche: the back wall up to the outer face of the partition next to the tall cabinet, the left wall up to L from the back wall
     frame:L=>{const [ox,oz]=O();return [ox-A.bear,ox+A.bNiche+A.wt,oz-A.bear,oz+L];},
     // the walls at the open side of the niche hide as in the bath tab: the partition while the camera is right of its inner face,
-    // the wall at the niche end, the shower partition, the step between them and the vent shaft wall (it comes in past 1400)
-    // while the camera is past the niche end
-    fade:{bathStub:'+x',nicheEnd:'+z',shower:'+z',showerStep:'+z',shaft:'+z'},
+    // the wall at the niche end, the shower partition and the step between them while the camera is past the niche end;
+    // the vent shaft wall (it comes in past 1400) has no rule of its own: it hides with the wall at the niche end
+    fade:{bathStub:'+x',nicheEnd:'+z',shower:'+z',showerStep:'+z',shaft:'nicheEnd'},
     // as in the bath tab: the sun aims at the middle of the back wall, shadows cover 6 × 6 m
     sun:()=>{const [ox,oz]=O();return {x:(ox+A.bNiche/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
     defaults:{Wm:'auto',Wh:100,L:1400,sizes:true,fronts:'closed',dims:true,walls:true}

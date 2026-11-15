@@ -138,6 +138,8 @@ const INFO={
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Выдвинут от стола; нажатие задвигает его под стол и обратно.']},
   wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
   mezzanine:{title:'Антресоль OZON «Уютная логика»',lines:['Белая, распашные двери без ручек (открываются нажатием).','Две секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.','На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.']},
+  mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
+  hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
 
@@ -457,11 +459,13 @@ function buildVitrine(g,opts){
    left (along the wall) a narrow part with four shelves, a partition at the inner corner; on the right the leg with the corner behind
    it, for hangers — a shelf at the top, two rods one over the other through the leg up to the wall; shelves in the add-on section.
    At the inner corner a fixed L-shaped stile of two strips, one in each front's plane: the corner unit's doors go up to them, so they
-   open clear of each other. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
+   open clear of each other. On the leg's end, into the room: a mirror in a black frame, a coat rail under it. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
    Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
    the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
-const WR={W:1350,D:950,C:950,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
-   // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø
+const WR={W:1350,D:950,C:950,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
+  mirror:{w:400,h:400,y0:1300,frame:15,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
+   // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
+   // (its frame, its bottom); the coat rail under it: HK
 const wardFIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый'},front:{type:'uni',color:'#F1F0EA',name:'Белый'},top:{type:'uni',color:'#F1F0EA',name:'Белый'},apron:null};
 const wardMats=makeMats();applyMaterials(wardMats,wardFIN,30);
 const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
@@ -532,6 +536,32 @@ function buildMezzanine(g,opts){
   return d.doors;
 }
 const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
+const mirrorMat=new THREE.MeshStandardMaterial({color:0xc9d1d4,roughness:.06,metalness:.35});   // the glass: light, glossy
+const wardBlackMat=new THREE.MeshStandardMaterial({color:0x4a4a4a,roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: graphite, lighter than black
+const knobWoodMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#9c7552').convertSRGBToLinear(),roughness:.7});   // its hooks' balls
+/* the coat rail under the mirror: a black bar along the face, hooks off it — each a black peg, a wooden ball on its end.
+   L along the face, h its height, t out from the face, y its bottom; the pegs' length and Ø, the balls' Ø */
+const HK={L:380,h:30,t:12,y:1170,n:4,peg:40,pegD:8,ball:26};
+/* the mirror and the coat rail on the leg's end (its face at x Rx − D, the room on its −x side), in the middle of its width, in g;
+   each its own group with its own «i» */
+function wardrobeEnd(g){
+  const {mirror:M}=WR,x=P.Rx-WR.D,zc=wardAt()-WR.d/2,f=M.frame,y1=M.y0+M.h,mm=v=>v*MM;
+  const group=(info,key)=>{const q=new THREE.Group();q.userData.info=info;q.userData[key]=true;g.add(q);return q;};
+  const at=(q,m,x,y,z)=>{m.position.set(mm(x),mm(y),mm(z));m.castShadow=true;q.add(m);return m;};
+  // the mirror: the frame round the glass, the glass set into it
+  const mg=group(INFO.mirror,'mirror'),mb=boxIn(mg),b=(x0,x1,y0,y1,z0,z1,mat)=>mb(mm(x0),mm(x1),mm(y0),mm(y1),mm(z0),mm(z1),mat);
+  b(x-M.d,x,y1-f,y1,zc-M.w/2,zc+M.w/2,wardBlackMat);b(x-M.d,x,M.y0,M.y0+f,zc-M.w/2,zc+M.w/2,wardBlackMat);
+  [zc-M.w/2,zc+M.w/2-f].forEach(z=>b(x-M.d,x,M.y0+f,y1-f,z,z+f,wardBlackMat));
+  b(x-M.d+4,x,M.y0+f,y1-f,zc-M.w/2+f,zc+M.w/2-f,mirrorMat).userData.glass=true;
+  // the coat rail: the bar, the hooks evenly along it
+  const hg=group(INFO.hanger,'hanger'),{L,h,t,y,n,peg,pegD,ball}=HK,yc=y+h/2;
+  boxIn(hg)(mm(x-t),mm(x),mm(y),mm(y+h),mm(zc-L/2),mm(zc+L/2),wardBlackMat).userData.bar=true;
+  for(let i=0;i<n;i++){
+    const z=zc-L/2+L*(i+.5)/n;
+    at(hg,new THREE.Mesh(new THREE.CylinderGeometry(mm(pegD/2),mm(pegD/2),mm(peg),12),wardBlackMat),x-t-peg/2,yc,z).rotation.z=Math.PI/2;
+    at(hg,new THREE.Mesh(new THREE.SphereGeometry(mm(ball/2),18,12),knobWoodMat),x-t-peg-ball/2+4,yc,z).userData.ball=true;
+  }
+}
 function buildWardrobe(g,opts){
   const ps=wardrobeParts(),s=wardAt(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the partition goes with the run
   return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
@@ -540,7 +570,8 @@ function buildWardrobe(g,opts){
     // the rods in the leg: across its opening, in the middle of its depth, from its end to the wall
     if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-4,z=(zF+WR.ft+s-WR.t)/2;
       WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);
-        r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});}
+        r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});
+      wardrobeEnd(d.model);}
     g.add(d.model);
     return d.doors;
   });

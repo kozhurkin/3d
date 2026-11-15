@@ -440,6 +440,24 @@ check('кухня: угловой шкаф OZON 1350 × 950 у дивана — 
   assert.deepStrictEqual(inside.right, [[1650, 2266, 3196, 2056, 2524]], 'on the leg\'s end (2250 + 16), the panel at the sofa and the partition: nothing in the air');
   assert.deepStrictEqual([inside.leftInLeg, inside.rodsElse], [0, 0]);
   assert.deepStrictEqual(inside.rods, [[2731, 1590, 2290, 930], [2731, 860, 2290, 930]], 'two rods: from the leg\'s end to the wall, in the middle of its depth');
+  // on the leg's end (2250), into the room, in the middle of its width (2290): the mirror 400 × 400 from 1300 to 1700 in a black frame,
+  // 20 out; under it the coat rail from 1170 — each with its own «i»
+  const end = p.run(`(f=>{const g=f.appl.children.filter(o=>o.userData.wardrobe===true)[0],by=k=>g.children.find(o=>o.userData[k]===true),mg=by('mirror'),hg=by('hanger');
+    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>Math.round(v*1000));};
+    const ext=bs=>[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i])));
+    const at=o=>[o.position.x,o.position.y,o.position.z].map(v=>Math.round(v*1000));
+    const balls=hg.children.filter(o=>o.userData.ball===true);
+    return {frame:ext(mg.children.map(box)),glass:box(mg.children.find(o=>o.userData.glass===true)),bar:box(hg.children.find(o=>o.userData.bar===true)),
+      balls:balls.map(o=>[...at(o),Math.round(o.geometry.args[0]*2000)]),wood:balls[0].material!==hg.children[0].material,
+      titles:[infoOf(mg.children[0]).title,infoOf(hg.children[0]).title,infoOf(balls[0]).title]};})(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(end.frame, [2230, 2250, 1300, 1700, 2090, 2490], 'on the end, 20 out');
+  assert.deepStrictEqual(end.glass, [2234, 2250, 1315, 1685, 2105, 2475], 'the glass inside a 15 frame, 4 back from its face');
+  // the rail: a black bar 380 × 30, 12 out, four hooks evenly along it — 40 pegs, wooden balls Ø26 on their ends
+  assert.deepStrictEqual(end.bar, [2238, 2250, 1170, 1200, 2100, 2480]);
+  assert.deepStrictEqual(end.balls.map((q) => [q[0], q[1], q[3]]), [[2189, 1185, 26], [2189, 1185, 26], [2189, 1185, 26], [2189, 1185, 26]]);
+  assert.deepStrictEqual(end.balls.map((q) => q[2] - end.balls[0][2]), [0, 95, 190, 285], 'evenly, 95 apart');
+  assert.ok(end.wood, 'the balls not black: wooden');
+  assert.deepStrictEqual(end.titles, ['Зеркало', 'Настенная вешалка', 'Настенная вешалка']);
   // the plinth shows under the doors: they start 2 over its 70
   assert.deepStrictEqual(p.run(`VIEWS.kitchen.furniture().doors.filter(x=>x.g.parent.userData.wardrobe===true).map(x=>x.g.children[0].userData.part).map(q=>[q.y0,q.y1])`), [[72, 2198], [72, 2198], [72, 2198]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();

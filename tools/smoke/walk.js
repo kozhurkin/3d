@@ -31,7 +31,7 @@ check('обход: вид от первого лица у входа, в пан�
   assert.deepStrictEqual([info('orbit'), info('walk')], [true, false], 'the hint of the walk under «i»');
 });
 
-check('обход: W A S D идут, мышь поворачивает взгляд, колесо и орбита не действуют', () => {
+check('обход: W A S D идут, мышь поворачивает взгляд, колесо не приближает', () => {
   const p = open();
   hold(p, 'KeyW', 60);   // about a second forward: toward the kitchen
   let [x, y, z] = eye(p);
@@ -53,6 +53,29 @@ check('обход: W A S D идут, мышь поворачивает взгл�
   p.document.getElementById('c').dispatch('wheel', { deltaY: 300, clientX: 10, clientY: 10 });
   p.tick();
   assert.deepStrictEqual([r0, p.run('goal.r'), p.run('camDrive===walkCam')], [1, 1, true], 'no zoom in the walk');
+});
+
+check('обход: два пальца на трекпаде идут в сторону взгляда, в любую сторону; щипок ничего не делает', () => {
+  const p = open();
+  const c = p.document.getElementById('c');
+  const wheel = (ev) => { c.dispatch('wheel', { clientX: 10, clientY: 10, ...ev }); p.tick(30); return eye(p); };
+  let [x0, , z0] = eye(p);
+  // facing +z (toward the kitchen): fingers up — forward, PAD m per pixel
+  let [x, y, z] = wheel({ deltaY: 50 });
+  near(z, z0 + 0.2, 'forward 0.2 m'); near(x, x0, 'straight'); near(y, 1.65, 'on the floor');
+  [x, , z] = wheel({ deltaX: -25 }); near(x, x0 - 0.1, 'fingers to the right: to the right, that is −x'); near(z, z0 + 0.2, 'sideways only');
+  [x, , z] = wheel({ deltaY: -25, deltaX: 25 }); near(x, x0, 'back and left at once'); near(z, z0 + 0.1, 'back and left at once');
+  [x, , z] = wheel({ deltaY: 3, deltaMode: 1 }); near(z, z0 + 0.1 + 0.192, 'lines: 16 px each');
+  [x0, , z0] = eye(p);
+  [x, , z] = wheel({ deltaY: 300, ctrlKey: true }); assert.deepStrictEqual([x, z], [x0, z0], 'a pinch does not walk');
+  // a fast swipe: at the gait's speed, and no more than PAD_LAG s of the way behind
+  c.dispatch('wheel', { deltaY: 5000 }); p.tick();
+  assert.ok(eye(p)[2] - z0 <= 2.4 * 0.1 + 1e-9, 'a frame: no faster than walking');
+  p.tick(30); near(eye(p)[2], z0 + 2.4 * 0.15, 'the rest of the swipe dropped');
+  // into the wall: the rest of the swipe does not push on
+  for (let i = 0; i < 6; i++) c.dispatch('wheel', { deltaX: -100 }), p.tick(10);
+  x = eye(p)[0]; assert.ok(Math.abs(x - 0.15) < 0.01, 'stopped by the hall\'s wall: ' + x);
+  assert.deepStrictEqual(p.run('[pad.f, pad.s]'), [0, 0], 'nothing left to go');
   // typing into a field: the keys are not the game's
   p.tick(30); const z2 = eye(p)[2]; p.key('keydown', 'KeyS', { target: { tagName: 'INPUT' } }); p.tick(20); p.key('keyup', 'KeyS');
   near(eye(p)[2], z2, 'no walk while typing');

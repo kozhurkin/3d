@@ -1,5 +1,6 @@
 /* ---------- «Обход»: the apartment from the eyes, walked through as in a game ----------
-   W A S D or the arrows — walk, the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
+   W A S D or the arrows — walk (two fingers on a trackpad too: up — forward, down — back, to the sides — sideways, any angle
+   between; the mouse's wheel — forward and back), the mouse — look (a click on the scene takes the mouse, Esc or the right button gives it back; where the browser
    does not let the page take it, drag to look), Space — jump, Ctrl or C — crouch, Shift — a slow step, E or a click — the door or
    cabinet front in the middle of the screen (under the cursor while dragging); the mouse taken, the button held HOLD_MS moves it
    gradually, as a long press in the other views, a shorter press opens or closes it on release. On a touch screen a finger in the lower left corner of
@@ -20,6 +21,10 @@ const OPEN_A=1;                     // rad: a door open this far lets the walker
 const SENS=.0025;                   // rad per pixel of the mouse
 const SENS_TOUCH=2;                 // a finger turns the eyes this many times more: a phone's screen is small
 const FOV0=camera.fov,FOV_WALK=62;  // the walk sees wider, like a game
+/* the trackpad: what two fingers moved (the wheel's delta) is a way to go in the eyes' frame, PAD m per pixel, gone at the gait's
+   speed and no more than PAD_LAG s of it behind (the rest of a fast swipe and of the system's glide is dropped) */
+const PAD=.004,PAD_LAG=.15;
+const pad={f:0,s:0};                // m still to go: forward, to the right
 
 const keys=new Set();let jumpQ=false;
 /* the stick of a touch screen: the finger's offset from where it came down, a share of STICK_R; a little of it (STICK_DEAD) is
@@ -117,9 +122,10 @@ function walkSlide(x,z,dx,dz,lo,hi,boxes=walkObstacles()){
 /* ---------- every frame in the walk: the keys move the walker, the camera follows exactly ---------- */
 const walkCam=()=>{cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);};
 const keyOn=c=>keys.has(c)?1:0;
+const gait=()=>pl.c>.5?LOW:keys.has('ShiftLeft')||keys.has('ShiftRight')?SLOW:RUN;   // m/s
 function walkStep(dt){
   const [ex,,ez]=eyeNow();goal.r=LOOK;
-  if(!pl.on)Object.assign(pl,{on:true,feet:0,vy:0,c:0,vx:0,vz:0});
+  if(!pl.on){Object.assign(pl,{on:true,feet:0,vy:0,c:0,vx:0,vz:0});pad.f=pad.s=0;}
   pl.c+=(Math.max(keyOn('KeyC'),keyOn('ControlLeft'),keyOn('ControlRight'))-pl.c)*Math.min(1,dt*10);
   const eye=eyeH()*(1-CROUCH_K*pl.c),ground=pl.feet<=0;
   // where the keys and the stick lead, at the speed of the gait (the stick: its share of it); on the ground the speed follows at
@@ -127,17 +133,24 @@ function walkStep(dt){
   const [sx,sy]=stickVec();
   const f=Math.max(keyOn('KeyW'),keyOn('ArrowUp'))-Math.max(keyOn('KeyS'),keyOn('ArrowDown'))-sy,s=Math.max(keyOn('KeyD'),keyOn('ArrowRight'))-Math.max(keyOn('KeyA'),keyOn('ArrowLeft'))+sx;
   const th=goal.theta;let wx=-Math.sin(th)*f+Math.cos(th)*s,wz=-Math.cos(th)*f-Math.sin(th)*s;
-  const n=Math.hypot(wx,wz),top=(pl.c>.5?LOW:keys.has('ShiftLeft')||keys.has('ShiftRight')?SLOW:RUN)*Math.min(1,n);
+  const n=Math.hypot(wx,wz),top=gait()*Math.min(1,n);
   if(n){wx*=top/n;wz*=top/n;}
   const a=Math.min(1,dt*(ground?20:2));pl.vx+=(wx-pl.vx)*a;pl.vz+=(wz-pl.vz)*a;
   if(ground&&jumpQ){pl.vy=JUMP;jumpQ=false;}
   pl.vy-=GRAV*dt;pl.feet=Math.max(0,pl.feet+pl.vy*dt);if(pl.feet===0&&pl.vy<0)pl.vy=0;
-  const [x,z,fx,fz]=walkSlide(ex,ez,pl.vx*dt,pl.vz*dt,pl.feet+STEP,pl.feet+eye+.1);
-  if(!fx)pl.vx=0;if(!fz)pl.vz=0;
+  // the trackpad's way: a step of it at the gait's speed, on top of the keys'
+  let px=0,pz=0;const pm=Math.hypot(pad.f,pad.s);
+  if(pm>1e-9){
+    const g=gait(),lag=Math.min(pm,g*PAD_LAG),k=Math.min(lag,g*dt)/pm,f=pad.f*k,s=pad.s*k;
+    pad.f=pad.f*lag/pm-f;pad.s=pad.s*lag/pm-s;
+    px=-Math.sin(th)*f+Math.cos(th)*s;pz=-Math.cos(th)*f-Math.sin(th)*s;
+  }
+  const [x,z,fx,fz]=walkSlide(ex,ez,pl.vx*dt+px,pl.vz*dt+pz,pl.feet+STEP,pl.feet+eye+.1);
+  if(!fx)pl.vx=0;if(!fz)pl.vz=0;if(!fx||!fz)pad.f=pad.s=0;   // into something: what is left of the swipe does not push on
   setEye(x,pl.feet+eye,z);
 }
 preHooks.push(dt=>{
-  if(!walking()){letGo();pl.on=false;if(view!=='walk'){keys.clear();jumpQ=false;stick=null;}if(camDrive===walkCam)camDrive=null;return;}
+  if(!walking()){letGo();pl.on=false;pad.f=pad.s=0;if(view!=='walk'){keys.clear();jumpQ=false;stick=null;}if(camDrive===walkCam)camDrive=null;return;}
   // the button held long enough takes the door in the aim (none there: nothing, till the button is up)
   if(press&&!press.long&&(press.s+=dt)>=HOLD_MS/1000){
     press.long=true;const rc=canvas.getBoundingClientRect();
@@ -198,6 +211,14 @@ document.addEventListener('keydown',e=>{
   if(!e.repeat){if(e.code==='Space')jumpQ=true;if(e.code==='KeyE'&&walking())useDoor();}
   keys.add(e.code);
 });
+/* two fingers on a trackpad (the wheel): with natural scrolling fingers up give deltaY > 0 — forward, fingers to the right give
+   deltaX < 0 — to the right. A pinch comes as the wheel with Ctrl: nothing. The page's scroll and the swipe back in the history
+   are held off (engine.js) */
+canvas.addEventListener('wheel',e=>{
+  if(!walking()||e.ctrlKey)return;
+  const k=PAD*(e.deltaMode===1?16:e.deltaMode===2?400:1);
+  pad.f+=(e.deltaY||0)*k;pad.s-=(e.deltaX||0)*k;
+},{passive:false});
 document.addEventListener('keyup',e=>{keys.delete(e.code);if(e.code==='Space')jumpQ=false;});
 addEventListener('blur',()=>{keys.clear();jumpQ=false;});
 

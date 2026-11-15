@@ -325,6 +325,9 @@ check('кухня: кресло MILLBERGET у письменного стола 
   const click = () => { p.run('(d=>{d.t=d.t!==0?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="desk-chair"))'); p.tick(120); };
   click(); assert.deepStrictEqual([st()[5], st()[8]], [0, 0], 'pushed in, straight');
   click(); assert.deepStrictEqual([st()[5], st()[8]], [-672, 20], 'pulled out again, swivelled');
+  // a click moves it 20% slower than a cabinet front (.09 of the way left a frame): 1.2 times as long to get as far
+  const k = p.run('VIEWS.kitchen.furniture().doors.find(x=>x.key==="desk-chair").ease');
+  assert.strictEqual(+(Math.log(1 - .09) / Math.log(1 - k)).toFixed(3), 1.2);
   // the swivel over the last 30% of the way only, eased: straight halfway, half turned at 85%
   const at = (k) => p.run(`(d=>{d.a=d.max*${k};turnDoor(d);return Math.round(-d.g.children[0].rotation.y*180/Math.PI);})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="desk-chair"))`);
   assert.deepStrictEqual([at(.5), at(.7), at(.85), at(1)], [0, 0, 10, 20]);

@@ -326,7 +326,7 @@ function buildDesk(g,opts){
    10 wider, the back's cushion 50 up into it, so the two read as one; two black loop arms with brown pads, their tops 655 high: under the desk's knee rail (670). In the
    desk's knee space, facing it: pulled out at first (the seat's front 150 past the desk's edge), a click pushes it in under the desk till
    its back is 20 short of the desk's edge, and back out. Over the last 30% of the way out it swivels on its column, its back 20°
-   toward the window, and straightens again before it goes in. The walker passes through it (walk.js: userData.walkThrough).
+   toward the window, and straightens again before it goes in. A click moves it 20% slower than a cabinet front (common.js: ease). The walker passes through it (walk.js: userData.walkThrough).
    Own axes (mm): x across from its middle, y up, z from the column toward the seat's front */
 const MC={W:650,H:1180,seat:460,sw:520,sd:490,cush:100,sz:255,back:{w:490,t:70,shell:25,y:400,z:-215,lean:12,head:190,headT:105,lap:50},
   arm:{x:295,top:655,pad:30,bar:25,t:30,z0:-200,z1:130,y0:315},base:{r:300,hub:110,tip:75,wheel:25},out:150,clear:20,turn:20,turnFrom:.7};
@@ -390,7 +390,8 @@ function buildDeskChair(g,opts){
   // its back toward the window (the kitchen's +z: its own +x), eased in over the end of the way out
   const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
   const follow=a=>{q.rotation.y=-MC.turn*Math.PI/180*sm((a/DMAX-MC.turnFrom)/(1-MC.turnFrom));};
-  return [applDoor(sl,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true,follow},opts)];
+  const ease=1-Math.pow(1-.09,1/1.2);   // a front's .09 a frame, its time 1.2 times as long
+  return [applDoor(sl,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true,ease,follow},opts)];
 }
 
 /* the laptop on the desk: MacBook Pro 16″, silver — 355.7 × 248.1, 16.8 thick (Apple's sizes): 1.5 feet, a 9.4 body, 0.6 over it for

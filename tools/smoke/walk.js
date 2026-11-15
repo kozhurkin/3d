@@ -147,6 +147,14 @@ check('обход: цвет стен и свет из общего блока', 
   assert.deepStrictEqual([saved.wc, saved.light.az], [sw.dataset.wc, 40], 'saved with the common settings');
 });
 
+check('обход: потолок белый при любом цвете стен', () => {
+  const p = open();
+  // what the walls and the ceiling are painted with (the stub's colours keep nothing: write it down)
+  p.run('(()=>{globalThis.__paint={};wallMat.color.set=v=>{__paint.wall=v;};ceilColor.set=v=>{__paint.ceil=v;};ceilMat.color.copy=c=>{__paint.copied=c===ceilColor;};return 0;})()');
+  p.document.querySelector('[data-wc="greige"]').click(); p.tick();
+  assert.deepStrictEqual(p.run('[__paint.wall,__paint.ceil===wallCol(WALLC.white),__paint.copied]'), ['#C7BEB1', true, true]);
+});
+
 check('«Контур стен» — общая галочка: 50% или никаких, в скелете тёмные всегда, одна для всех вкладок', () => {
   const storage = new Map();
   let p = open(storage);

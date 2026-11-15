@@ -14,6 +14,8 @@ const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
    only because half of it is past the wall's edge */
 const BEHIND={polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
 const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide,...BEHIND});
+// the ceiling's colour (the walk's ceiling): white whatever the walls' paint is — the palette's «Белый», as the theme has it
+const ceilColor=new THREE.Color();
 const edgeMat=new THREE.LineBasicMaterial({color:0x4a4d50,transparent:true,opacity:.35});
 // how dark the walls' and doors' outlines are in a view: the skeleton's are dark, else as «Контур стен» (one setting for every view)
 const edgeOp=V=>V.Wm==='skeleton'?.9:S.edge?.5:0;
@@ -310,6 +312,7 @@ function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
   floorMat.color.set(css('--scene-floor'));
   const wc=WALLC[S.wc]||WALLC.white;wallMat.color.set(wallCol(wc));
+  ceilColor.set(wallCol(WALLC.white));
   wallMat.roughness=wc.r;
   const fl=(vs()||{}).floors!==false;
   roomMats.forEach((m,i)=>m.color.set(fl?css(ROOMS[i].col):css('--scene-floor')));

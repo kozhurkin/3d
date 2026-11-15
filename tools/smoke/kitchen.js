@@ -305,6 +305,31 @@ check('кухня: четыре стула BERGMUND у стола — выдви
   assert.ok(go()[0] < -850, 'they would stop it otherwise');
 });
 
+check('кухня: светильник над серединой обеденного стола — низ абажура в 700 над столешницей (BLÅSVERK и BUNKEFLO — в 800), шнур до чашки на потолке; нажатие меняет его по кругу: MISTERHULT → BLÅSVERK → BUNKEFLO', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const q = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.pendant===true)';
+  // the model, where it hangs, the cord's length and its bottom, the canopy's bottom (the ceiling less its height), what the card says
+  const st = () => p.run(`(q=>{const r=v=>Math.round(v*1000),cord=q.children.find(o=>o.userData.cord===true),can=q.children.find(o=>o.userData.canopy===true);
+    return [q.userData.model,r(q.position.x),r(q.position.y),r(q.position.z),r(cord.geometry.args[2]),r(cord.position.y-cord.geometry.args[2]/2),r(q.position.y+can.position.y),q.userData.walkThrough,infoOf(q.children[0]).title];})(${q})`);
+  // MISTERHULT over the table's middle (650 along it, 1350 + 350 from the kitchen wall); 750 + 700; the cord from the socket's top (400 − 50) up to the canopy (2600 − 46)
+  assert.deepStrictEqual(st(), ['MISTERHULT', 650, 1450, 1700, 754, 350, 2554, true, 'Подвесной светильник MISTERHULT (IKEA)']);
+  // a click on any piece of it changes it (engine.js: clickOf); the next one, then the third, then the first again
+  assert.strictEqual(p.run(`(q=>{const o=q.children[2];o.userData={};return clickOf({object:o})===q.userData.click;})(${q})`), true);   // its userData plain, as THREE's (the stub's answers anything)
+  const click = () => p.run(`${q}.userData.click()`);
+  // BLÅSVERK and BUNKEFLO 100 higher, 800 over the tabletop. BLÅSVERK: its cord from the top of its tube (180 + 280) up to the canopy (2600 − 65)
+  click(); assert.deepStrictEqual(st(), ['BLÅSVERK', 650, 1550, 1700, 525, 460, 2535, true, 'Подвесной светильник BLÅSVERK (IKEA)']);
+  // BUNKEFLO: from the top of its birch (187) up to the canopy (2600 − 48)
+  click(); assert.deepStrictEqual(st(), ['BUNKEFLO', 650, 1550, 1700, 815, 187, 2552, true, 'Подвесной светильник BUNKEFLO (IKEA)']);
+  click(); assert.strictEqual(st()[0], 'MISTERHULT');
+  // the one hung stays when the kitchen is built again
+  click(); slide(p, 'kW', 2300); p.tick(); assert.strictEqual(st()[0], 'BLÅSVERK');
+  // the plan's highest ceiling: BLÅSVERK's cord is 1100, so it goes up (3200 − 65 − 1100 − 460); MISTERHULT's 1600 is enough
+  slide(p, 'H', 3200); p.tick();
+  assert.deepStrictEqual(st().slice(2, 7), [1575, 1700, 1100, 460, 3135]);
+  assert.match(p.run(`infoOf(${q}.children[0]).lines.join(' ')`), /низ абажура в 83 см над столешницей/);
+  click(); click(); assert.deepStrictEqual(st().slice(0, 7), ['MISTERHULT', 650, 1450, 1700, 1354, 350, 3154]);
+});
+
 check('кухня: кресло MILLBERGET у письменного стола — выдвинуто и повёрнуто спинкой к окну, нажатие задвигает его под стол; обход сквозь него проходит', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const st = () => p.run(`(f=>{const d=f.doors.find(x=>x.key==="desk-chair"),c=d.g.parent;
@@ -637,22 +662,22 @@ check('кухня: диван раскладывается «дельфином�
   assert.ok(held > .45 && held < .55, 'half way in 1.5 s held: ' + held);
 });
 
-check('кухня: во вкладке — только шкафы и обеденный стол (когда рамка левой стены его вмещает); стол, витрина, диван, шкаф и антресоль над диваном — на плане и в обходе', () => {
+check('кухня: во вкладке — только шкафы и обеденный стол со светильником (когда рамка левой стены его вмещает); стол, витрина, диван, шкаф и антресоль над диваном — на плане и в обходе', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const seen = () => p.run(`(f=>{const v=k=>f.appl.children.filter(o=>o.userData[k]===true).map(o=>o.visible);
-    return {desk:v('desk'),vitrine:v('vitrine'),sofa:v('sofa'),wardrobe:v('wardrobe'),mezzanine:v('mezzanine'),table:v('table'),tableDims:f.dims.children.filter(o=>o.userData.table===true).map(o=>o.visible)};})(VIEWS.kitchen.furniture())`);
+    return {desk:v('desk'),vitrine:v('vitrine'),sofa:v('sofa'),wardrobe:v('wardrobe'),mezzanine:v('mezzanine'),table:v('table'),pendant:v('pendant'),tableDims:f.dims.children.filter(o=>o.userData.table===true).map(o=>o.visible)};})(VIEWS.kitchen.furniture())`);
   const all = (r) => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, [...new Set(v)]]));
   // the frame at 1350 at first: the table (1350…2050 from the kitchen wall) does not fit
   let r = seen();
   assert.deepStrictEqual([r.table.length, r.tableDims.length], [5, 8], 'the table: its top and four legs; four dimension lines with their labels');
-  assert.deepStrictEqual(all(r), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [false], tableDims: [false] });
+  assert.deepStrictEqual(all(r), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [false], pendant: [false], tableDims: [false] });
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2049'; fl.dispatch('input'); p.tick();
   assert.deepStrictEqual(all(seen()).table, [false], 'a millimetre short');
   fl.value = '2050'; fl.dispatch('input'); p.tick();
-  assert.deepStrictEqual(all(seen()), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [true], tableDims: [true] });
+  assert.deepStrictEqual(all(seen()), { desk: [false], vitrine: [false], sofa: [false], wardrobe: [false], mezzanine: [false], table: [true], pendant: [true], tableDims: [true] });
   // on the plan everything stands where it is
   p.run('showView("plan")'); p.fly();
   r = all(seen()); delete r.tableDims;
-  assert.deepStrictEqual(r, { desk: [true], vitrine: [true], sofa: [true], wardrobe: [true], mezzanine: [true], table: [true] });
+  assert.deepStrictEqual(r, { desk: [true], vitrine: [true], sofa: [true], wardrobe: [true], mezzanine: [true], table: [true], pendant: [true] });
 });

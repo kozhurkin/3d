@@ -147,10 +147,10 @@ preHooks.push(dt=>{
 });
 
 /* ---------- the mouse and the keys ---------- */
-// the door or cabinet front at a point of the canvas (the middle of the screen while the mouse is taken)
+// the door or cabinet front at a point of the canvas (the middle of the screen while the mouse is taken), or an item with a click of its own
 function useDoor(cx,cy){
   if(cx===undefined){const rc=canvas.getBoundingClientRect();cx=rc.left+rc.width/2;cy=rc.top+rc.height/2;}
-  const d=pickDoor({clientX:cx,clientY:cy});if(d){d.t=d.t!==0?0:d.max;doorsChanged();}
+  clickAt({clientX:cx,clientY:cy});
 }
 let drag=null;
 let press=null;   // the left button down while the mouse is taken: {s: seconds down, long: held HOLD_MS, d: the door in the aim then}
@@ -229,7 +229,7 @@ function showStick(on){
 frameHooks.push(()=>{
   const on=walking(),lk=locked();
   ceiling.visible=on&&ceilingOver();
-  if(on){ceilMat.color.copy(wallMat.color);ceilMat.emissive.copy(wallMat.color).multiplyScalar(.3);}
+  if(on){ceilMat.color.copy(ceilColor);ceilMat.emissive.copy(ceilColor).multiplyScalar(.3);}   // white, whatever the walls' paint
   // the hint: how to take the mouse, or on a touch screen how to walk, till the stick has once walked
   const hf=touchUI?'touch':'mouse';if(hf!==hintFor){hintFor=hf;hintEl.textContent=HINT[hf];}
   aimEl.hidden=!on;hintEl.hidden=!on||lk||touchUI&&stickUsed;showStick(on);

@@ -134,6 +134,7 @@ const INFO={
   desk:{title:'Письменный стол HEMNES (IKEA)',lines:['Чёрно-коричневый, массив сосны.','155 × 65 см, высота 74 см, под столом 67 см.','Слева тумба с дверцей и полкой, справа два ящика.']},
   addon:{title:'Надстройка HEMNES для стола (IKEA)',lines:['Чёрно-коричневая, массив сосны.','152 × 25 см, высота 63 см; стол с ней — 137 см.','По краям две секции с ящиком и полками, посередине открытая полка.']},
   macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
+  deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Выдвинут от стола; нажатие задвигает его под стол и обратно.']},
   wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
@@ -317,6 +318,75 @@ function buildDesk(g,opts){
   d.model.rotation.y=Math.PI/2;d.model.position.set(0,0,(P.L-DK.gap)*MM);d.model.userData.desk=true;d.model.userData.info=INFO.desk;
   g.add(d.model);
   return d.doors.concat(buildMacbook(d.model,opts));
+}
+
+/* the desk chair as IKEA MILLBERGET, brown leather (Бумстад), black frame: 650 × 650 over its base, 1180 high, the seat 520 × 490
+   at its lowest, 460. A five-star base on casters, the gas column, the mechanism under the seat; a tall back leaning back 12°, brown in
+   front, a black shell behind, its top 190 a headrest: a thicker cushion, 35 proud of the back,
+   10 wider, the back's cushion 50 up into it, so the two read as one; two black loop arms with brown pads, their tops 655 high: under the desk's knee rail (670). In the
+   desk's knee space, facing it: pulled out at first (the seat's front 150 past the desk's edge), a click pushes it in under the desk till
+   its back is 20 short of the desk's edge, and back out. The walker passes through it (walk.js: userData.walkThrough).
+   Own axes (mm): x across from its middle, y up, z from the column toward the seat's front */
+const MC={W:650,H:1180,seat:460,sw:520,sd:490,cush:100,sz:255,back:{w:490,t:70,shell:25,y:400,z:-215,lean:12,head:190,headT:105,lap:50},
+  arm:{x:295,top:655,pad:30,bar:25,t:30,z0:-200,z1:130,y0:315},base:{r:300,hub:110,tip:75,wheel:25},out:150,clear:20};
+const leatherMat=(()=>{
+  // fine grain: a speckle of pits as bumps, so the light breaks on it as on leather
+  const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+  g.fillStyle='#808080';g.fillRect(0,0,128,128);
+  for(let i=0;i<900;i++){const v=90+((i*97)%80);g.fillStyle=`rgb(${v},${v},${v})`;g.beginPath();g.arc((i*53.7)%128,(i*31.3+i*i*.013)%128,.6+(i%3)*.5,0,Math.PI*2);g.fill();}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;if(t.repeat)t.repeat.set(3,3);
+  return new THREE.MeshStandardMaterial({color:new THREE.Color('#7d553a').convertSRGBToLinear(),roughness:.45,bumpMap:t,bumpScale:.0004});   // a deep tan, not orange; a soft sheen
+})();
+const plasticMat=new THREE.MeshStandardMaterial({color:0x1a1a1b,roughness:.45});
+// where it stands (kitchen mm): the column's z (the middle of the desk's knee space), its x pushed in; how far it goes out
+function deskChairAt(){
+  const {back:b}=MC,tl=Math.tan(b.lean*Math.PI/180),bz=b.z-(DK.H-b.y)*tl;   // the back's front at the height of the desk's top
+  const x=DK.D+MC.clear+bz;   // its front toward −x: its own z backward is the kitchen's x forward
+  return {x,z:P.L-DK.gap-DK.W/2,travel:DK.D+MC.out+MC.sz-x};
+}
+function buildDeskChair(g,opts){
+  const {sw,sd,cush,seat,sz,back:b,arm:a,base:bs}=MC,{x,z,travel}=deskChairAt(),m=v=>v*MM;
+  const c=new THREE.Group();c.position.set(m(x),0,m(z));c.rotation.y=-Math.PI/2;   // its front (+z) toward the wall (−x)
+  Object.assign(c.userData,{deskChair:true,info:INFO.deskChair,walkThrough:true});g.add(c);
+  const q=new THREE.Group();c.add(q);   // what slides: all of it
+  const put=(geo,mat,px,py,pz,par=q)=>{const o=new THREE.Mesh(geo,mat);o.position.set(m(px),m(py),m(pz));o.castShadow=o.receiveShadow=true;par.add(o);return o;};
+  const rbox=(sx,sy,sz,r,mat,px,py,pz,par)=>put(roundBoxGeo(m(sx),m(sy),m(sz),m(r)),mat,px,py,pz,par);
+  // the base: a hub, five legs sloping down to the casters (one toward the front), each caster a fork and two wheels
+  put(new THREE.CylinderGeometry(m(42),m(48),m(50),24),plasticMat,0,bs.hub,0);
+  for(let i=0;i<5;i++){
+    const l=new THREE.Group();l.rotation.y=i*Math.PI*2/5;q.add(l);
+    const len=bs.r-30,sl=Math.atan2(bs.hub-bs.tip,len);
+    const leg=put(new THREE.BoxGeometry(m(36),m(28),m(len)),plasticMat,0,(bs.hub+bs.tip)/2,30+len/2,l);leg.rotation.x=sl;
+    put(new THREE.BoxGeometry(m(30),m(40),m(40)),plasticMat,0,bs.tip-15,bs.r,l);   // the fork's top
+    [-11,11].forEach(dx=>{const w=put(new THREE.CylinderGeometry(m(bs.wheel),m(bs.wheel),m(18),20),plasticMat,dx,bs.wheel,bs.r+12,l);w.rotation.z=Math.PI/2;});
+  }
+  // the gas column: its shroud on the hub, the piston up into the mechanism; the mechanism and its knob
+  const yp=seat-cush-35;   // the mechanism's bottom
+  put(new THREE.CylinderGeometry(m(24),m(30),m(130),20),plasticMat,0,bs.hub+25+65,0);
+  put(new THREE.CylinderGeometry(m(15),m(15),m(yp-bs.hub-150),16),handleMat,0,(bs.hub+150+yp)/2,0);
+  put(new THREE.BoxGeometry(m(260),m(35),m(280)),plasticMat,0,yp+17.5,10);
+  put(new THREE.CylinderGeometry(m(18),m(18),m(40),12),plasticMat,150,yp+5,110).rotation.z=Math.PI/2;
+  // the seat: a rounded cushion on the mechanism, its front at sz
+  rbox(sw,cush,sd,35,leatherMat,0,seat-cush/2,sz-sd/2);
+  // the back on its bracket behind the seat: a brown front, the headrest over it, a black shell, leaning back
+  const tl=b.lean*Math.PI/180,L=(MC.H-b.y)/Math.cos(tl),bk=new THREE.Group();bk.position.set(0,m(b.y),m(b.z));bk.rotation.x=-tl;q.add(bk);
+  rbox(b.w,L-b.head+b.lap,b.t,30,leatherMat,0,(L-b.head+b.lap)/2,-b.t/2,bk);   // its top inside the headrest
+  rbox(b.w+10,b.head,b.headT,40,leatherMat,0,L-b.head/2,b.headT/2-b.t,bk);   // its back on the shell, as the back's: proud in front
+  rbox(b.w+12,L-12,b.shell,12,plasticMat,0,L/2-2,-b.t-b.shell/2+4,bk);
+  put(new THREE.BoxGeometry(m(70),m(240),m(14)),plasticMat,0,30,-b.t-b.shell-3,bk);   // the bracket up the shell
+  const bz=b.z-b.t-b.shell-10;
+  put(new THREE.BoxGeometry(m(70),m(20),m(-bz-130)),plasticMat,0,yp+10,(bz-130)/2-10);   // from the mechanism to the bracket
+  // the arms: a black loop each side, from under the seat up to a brown pad
+  [-1,1].forEach(s=>{
+    const ax=s*a.x,yb=a.top-a.pad-a.bar,len=a.z1-a.z0;
+    put(new THREE.BoxGeometry(m(a.t),m(a.bar),m(len)),plasticMat,ax,yb+a.bar/2,(a.z0+a.z1)/2);   // under the pad
+    put(new THREE.BoxGeometry(m(a.t),m(a.bar),m(len)),plasticMat,ax,a.y0+a.bar/2,(a.z0+a.z1)/2);   // under the seat's side
+    [a.z0+a.t/2,a.z1-a.t/2].forEach(pz=>put(new THREE.BoxGeometry(m(a.t),m(yb-a.y0),m(a.t)),plasticMat,ax,(a.y0+yb)/2,pz));   // the posts
+    rbox(60,a.pad,len+20,12,leatherMat,ax,a.top-a.pad/2,(a.z0+a.z1)/2);
+    put(new THREE.BoxGeometry(m(Math.abs(ax)-130),m(20),m(40)),plasticMat,s*(Math.abs(ax)+130)/2,yp+10,-20);   // to the mechanism
+  });
+  // pulled out: away from the desk (its own −z), at first
+  return [applDoor(q,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true},opts)];
 }
 
 /* the laptop on the desk: MacBook Pro 16″, silver — 355.7 × 248.1, 16.8 thick (Apple's sizes): 1.5 feet, a 9.4 body, 0.6 over it for
@@ -872,12 +942,12 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the dining chairs, the display cabinet, the sofa, the wardrobe and the mezzanine go with the walls in the kitchen's view
-  // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk,
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe and the mezzanine go with the walls in the kitchen's view
+  // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk and its chair,
   // the display cabinet, the sofa, the wardrobe and the mezzanine stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
     const fits=show>=TB.z+TB.w;
-    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.vitrine===true||u.sofa===true||u.wardrobe===true||u.mezzanine===true)o.visible=!on;else if(u.table===true||u.chair===true)o.visible=!on||fits;});
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.deskChair===true||u.vitrine===true||u.sofa===true||u.wardrobe===true||u.mezzanine===true)o.visible=!on;else if(u.table===true||u.chair===true)o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
   foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],

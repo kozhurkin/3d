@@ -432,12 +432,12 @@ check('кухня: письменный стол HEMNES у левой стены
   const sh = p.run(`(f=>{const d=f.appl.children.find(o=>o.userData.desk===true),ms=[];const w=o=>{const q=o.userData&&o.userData.part;if(q&&q.name==='Полка над столом')ms.push(o);(o.children||[]).forEach(w);};w(d);
     const leg=d.children.find(o=>o.userData.part&&/^Ножка/.test(o.userData.part.name)),q=ms[0].userData.part;
     return [ms.length,q.x0,q.x1,q.y0,q.y1,q.z0,q.z1,infoOf(ms[0]).title,ms[0].material.every(m=>!leg.material.includes(m))];})(VIEWS.kitchen.furniture())`);
-  assert.deepStrictEqual(sh, [1, 25, 1525, 1670, 1700, 4, 254, 'Настенная полка', true], '300 over the add-on unit, off the wall by the brackets; white, not the desk\'s black-brown');
+  assert.deepStrictEqual(sh, [1, 25, 1525, 1670, 1700, 0, 250, 'Настенная полка', true], '300 over the add-on unit, at the wall; white, not the desk\'s black-brown');
   // its three brackets: 150 from its ends and in the middle, under it and down the wall
   const br = p.run(`(f=>{const d=f.appl.children.find(o=>o.userData.desk===true),ms=d.children.filter(o=>o.userData.shelfBracket===true),u=v=>[...new Set(v.map(x=>Math.round(x*1000)))].sort((a,b)=>a-b);
     return [ms.length,u(ms.map(o=>o.position.x)),u(ms.map(o=>o.position.y)),infoOf(ms[0]).title,infoOf(ms[0]).lines.some(l=>/стальной полосы 4 мм/.test(l))];})(VIEWS.kitchen.furniture())`);
-  // Г-brackets, two pieces each: the centres of the arm under the board (1670 − 2) and of the upright over it (1666…1846)
-  assert.deepStrictEqual(br, [6, [175, 775, 1375], [1668, 1756], 'Настенная полка', true], 'its card tells the metal\'s thickness');
+  // two brackets under it, 150 from its ends, three pieces each: the centres of the arm under the board (1670 − 2), the one down the wall (1520…1666), the strut (1666 − 75)
+  assert.deepStrictEqual(br, [6, [175, 1375], [1591, 1593, 1668], 'Настенная полка', true], 'its card tells the metal\'s thickness');
   // a click on it (or on a bracket) paints it: white → oak Casella → the desk's black-brown → white; the colour stays through a rebuild
   const paint = (k) => p.run(`(f=>{const d=f.appl.children.find(o=>o.userData.desk===true),sh=d.children.find(o=>o.userData.part&&o.userData.part.name==='Полка над столом');
     const leg=d.children.find(o=>o.userData.part&&/^Ножка/.test(o.userData.part.name));
@@ -446,12 +446,12 @@ check('кухня: письменный стол HEMNES у левой стены
     return [sh.material.map(m=>[leg.material.includes(m)]).flat().join(''),l[0],new Set(br.map(o=>o.material)).size,id(br[0].material),sh.userData.part.info().lines.slice(-1)[0]];})(VIEWS.kitchen.furniture())`);
   // [the board as the desk's legs (each face), the card's first line, the brackets' materials: one for all, the material]
   const white = paint(), [, , , brWhite] = white;
-  assert.deepStrictEqual(white.slice(0, 3).concat(white[4]), ['falsefalsefalsefalsefalsefalse', 'Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных Г-образных кронштейнах.', 1, 'Нажатие меняет цвет: белый → дуб Каселла → как стол.']);
+  assert.deepStrictEqual(white.slice(0, 3).concat(white[4]), ['falsefalsefalsefalsefalsefalse', 'Белый премиум W1000 ST9, как корпуса кухни; на двух белых стальных кронштейнах с косынкой.', 1, 'Нажатие меняет цвет: белый → дуб Каселла → как стол.']);
   const oak = paint('shelf');
-  assert.deepStrictEqual(oak.slice(0, 3), ['falsefalsefalsefalsefalsefalse', 'Дуб Каселла натуральный, как столешница кухни; на трёх тёмно-серых стальных Г-образных кронштейнах.', 1]);
+  assert.deepStrictEqual(oak.slice(0, 3), ['falsefalsefalsefalsefalsefalse', 'Дуб Каселла натуральный, как столешница кухни; на двух тёмно-серых стальных кронштейнах с косынкой.', 1]);
   assert.notStrictEqual(oak[3], brWhite, 'dark grey brackets under oak');
   const desk2 = paint('bracket');
-  assert.deepStrictEqual(desk2.slice(0, 3), ['truetruetruetruetruetrue', 'Чёрно-коричневая, как стол; на трёх тёмно-серых стальных Г-образных кронштейнах.', 1]);
+  assert.deepStrictEqual(desk2.slice(0, 3), ['truetruetruetruetruetrue', 'Чёрно-коричневая, как стол; на двух тёмно-серых стальных кронштейнах с косынкой.', 1]);
   assert.strictEqual(desk2[3], oak[3], 'the same dark grey under the desk\'s colour');
   p.run('showView("plan")'); p.fly(); p.run('showView("kitchen")'); p.fly();
   assert.deepStrictEqual(paint().slice(0, 4), desk2.slice(0, 4), 'kept through a rebuild');

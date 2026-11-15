@@ -77,7 +77,7 @@ function walkWalls(){
       if(sill>0)wallBoxes.push(box(a,b,0,H));
       else{wallBoxes.push(box(a,b,h,H));doorways.push({hole:w.id+':'+i,b:box(a,b,0,h)});}
       cur=b;});
-    if(end>cur)wallBoxes.push(box(cur,end,0,H));
+    if(end>cur)wallBoxes.push(box(cur,end,0,w.h||H));   // a low wall (the shower step) is lower than STEP: stepped over
   });
 }
 walkWalls();modelHooks.push(walkWalls);

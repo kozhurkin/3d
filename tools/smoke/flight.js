@@ -13,7 +13,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   inset().forEach((v, i) => near(v, b0[i], 'the mini view does not jump at the start'));
   const g = p.run('({theta:goal.theta, r:goal.r})');
   // in the flight: the walls of both views with their outlines, nothing to click, the camera driven by the flight
-  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 12, 26, true, null]);
+  assert.deepStrictEqual(p.run('[inTransition(), wallLines.length, wallParts.length, camDrive!==null, pickDoor({clientX:0,clientY:0})]'), [true, 13, 27, true, null]);
   p.tick(25, 17);   // 425 ms of 850: halfway, the eased progress is 0.5 too
   near(p.run('tr.e'), 0.5, 'progress');
   // a wall hidden on the plan and not in the kitchen stays hidden all the way (it does not pop up to sink again)
@@ -77,7 +77,7 @@ check('перелёт: прерывание, мышь забирает каме�
   near(p.run('morph.w.get("leftOuter").cF'), 1300, 'the left wall starts from halfway down');
   near(p.run('tr.pres0.bath'), 0.5, 'the bathroom starts from halfway');
   p.fly();
-  assert.deepStrictEqual(p.run('[view, wallLines.length, presence("bath"), VIEWS.bath.furniture().model.position.y]'), ['plan', 12, 1, 0]);
+  assert.deepStrictEqual(p.run('[view, wallLines.length, presence("bath"), VIEWS.bath.furniture().model.position.y]'), ['plan', 13, 1, 0]);
   // a drag takes the camera back; the walls finish their flight
   p.run('showView("kitchen")'); p.tick(5);
   const c = p.document.getElementById('c');

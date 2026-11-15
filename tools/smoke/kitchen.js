@@ -32,7 +32,7 @@ check('кухня: рамка левой стены, переходы и раз�
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
   p.document.querySelector('[data-cam="sink"]').click();
   p.run('showView("plan")'); p.fly();
-  assert.deepStrictEqual(p.run('[view, wallLines.length, doors.map(d=>d.g.visible)]'), ['plan', 12, [true, true]]);
+  assert.deepStrictEqual(p.run('[view, wallLines.length, doors.map(d=>d.g.visible)]'), ['plan', 13, [true, true]]);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="plan"] #shared'));
   // a size changed on the plan reaches the kitchen
   slide(p, 'kW', 2300);

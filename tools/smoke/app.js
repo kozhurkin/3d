@@ -24,8 +24,8 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(r.view, 'plan');
   assert.deepStrictEqual(r.n, ['plan', 'kitchen', 'bath', 'hall', 'walk']);
   assert.deepStrictEqual(r.doors, [true, true], 'both doors on the plan');
-  assert.strictEqual(r.lines, 12, 'all 12 walls on the plan');
-  assert.strictEqual(r.parts, 26, 'wall pieces (19) + window parts (7)');
+  assert.strictEqual(r.lines, 13, 'all 13 walls on the plan (with the shower step)');
+  assert.strictEqual(r.parts, 27, 'wall pieces (20) + window parts (7)');
   assert.deepStrictEqual(r.fade, { entry: '-z', rightOuter: '+x', leftOuter: '-x', window: '+z' });
   assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, fcut: true, dims: false, names: true, floors: true });
   const panel = p.document.querySelector('[data-panel="plan"]'), shared = p.document.getElementById('shared');
@@ -83,7 +83,7 @@ check('размеры стен: ползунок меняет модель и в
   p.tick();
   assert.strictEqual(p.run('dimsDirty'), false, 'dimensions rebuilt on the next frame');
   const r = p.run('({kW:A.kW, xL, lines:wallLines.length, parts:wallParts.length, doors:doors.length, open:doors.every(d=>d.t===d.max), labels:labels.length, rooms:roomMats.length})');
-  assert.deepStrictEqual(r, { kW: 2300, xL: -2100, lines: 12, parts: 26, doors: 2, open: true, labels: nLabels, rooms: 3 });
+  assert.deepStrictEqual(r, { kW: 2300, xL: -2100, lines: 13, parts: 27, doors: 2, open: true, labels: nLabels, rooms: 3 });
   assert.ok(panel.querySelector('#pFacts').children.length > 0);
   assert.match(panel.querySelector('#pSub').textContent, /^3700 × /, 'sub follows the size');
   assert.strictEqual(panel.querySelector('[data-size-out="kW"]').textContent, 2300);

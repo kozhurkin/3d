@@ -10,7 +10,7 @@
      wish      — keys of P that the walls may cut (want keeps them as chosen in the panel, the saved settings take them from it),
      fromPlan  — keys of P that belong to the plan (left out of the saved settings),
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
-     slider    {sel, key, max()} — how far the side wall shows (the view's frame),
+     slider    {sel, key, max(), min()?} — how far the side wall shows (the view's frame),
      setCam(v), dims(dim,gaps,group) — dimension lines through dim(a,b,txt,tick) into group, the free heights of a shelf stack through
                gaps(boards), extra {name, build(g, {prev, open})} — appliances or sanitary ware; a cabinet of its own among
                them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk;
@@ -95,7 +95,7 @@ function roomKit(id,cfg){
   /* ---------- panel ---------- */
   q('[data-cams]').querySelectorAll('[data-cam]').forEach(b=>b.addEventListener('click',()=>cfg.setCam(b.dataset.cam)));
   // how far the side wall shows: the view's frame
-  const sl=cfg.slider,frameEl=q(sl.sel),show=()=>Math.min(VS[id][sl.key],sl.max());
+  const sl=cfg.slider,frameEl=q(sl.sel),show=()=>Math.max(Math.min(VS[id][sl.key],sl.max()),sl.min?sl.min():0);
   frameEl.addEventListener('input',e=>{VS[id][sl.key]=+e.target.value;saveView(id);sync();
     if(view===id){buildWalls(VIEWS[id]);aimView();}});
   // panel thickness and what the room has
@@ -216,7 +216,7 @@ function roomKit(id,cfg){
   const sizesBox=pq('sizesBox');
   sizesBox.addEventListener('toggle',()=>{if(VS[id].sizes!==sizesBox.open){VS[id].sizes=sizesBox.open;saveView(id);}});
   function sync(){
-    frameEl.max=sl.max();frameEl.value=show();q(sl.sel+'Out').textContent=show();
+    frameEl.max=sl.max();if(sl.min)frameEl.min=sl.min();frameEl.value=show();q(sl.sel+'Out').textContent=show();
     sizesBox.open=VS[id].sizes!==false;
     Object.entries(toggles).forEach(([k,el])=>{el.checked=VS[id][k]!==false;});
     syncIds();syncThick();syncDoorMode();syncFinish();syncEc();updatePanel();applyVisibility();

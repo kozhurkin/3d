@@ -80,7 +80,7 @@ let arcs=null;
    The wall is built from boxes (pieces between openings, lintels, sills), but the joints between them are not drawn,
    so a wall with a door or a window reads as one piece */
 function wallOutline(w,top){
-  const [x0,x1,z0,z1]=w.r,alongX=w.along;
+  const [x0,x1,z0,z1]=w.r,alongX=w.along;top=Math.min(top,w.h||H);   // a low wall ends at its own height
   const [u0,u1,v0,v1]=alongX?[x0,x1,z0,z1]:[z0,z1,x0,x1];   // u along the wall, v across it
   const s=[],P=(u,y,v)=>alongX?s.push(u*MM,y*MM,v*MM):s.push(v*MM,y*MM,u*MM);
   const seg=(ua,ya,va,ub,yb,vb)=>{P(ua,ya,va);P(ub,yb,vb);};
@@ -141,7 +141,7 @@ function buildWallSet(list,ruleOf,lines){
     if(lines){const e=new THREE.LineSegments(new THREE.BufferGeometry(),edgeMat);e.raycast=()=>{};wallGroup.add(e);wallLines.push({e,w,f});}
     // split the wall along its long side: full-height pieces between openings, a lintel over each opening
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
-    const piece=(a,b,y0,y1=H)=>{if(b-a<1)return;
+    const piece=(a,b,y0,y1=w.h||H)=>{if(b-a<1)return;
       if(alongX)solid(id,a,b,y0,y1,z0,z1,f);else solid(id,x0,x1,y0,y1,a,b,f);
       if(y0===0){if(alongX)foot(id,a,b,z0,z1);else foot(id,x0,x1,a,b);}};
     (w.holes||[]).forEach(([a,b,h,sill=0])=>{piece(cur,a,0);piece(a,b,h);if(sill>0)piece(a,b,0,sill);cur=b;});

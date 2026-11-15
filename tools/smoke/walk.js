@@ -21,7 +21,7 @@ check('обход: вид от первого лица у входа, в пан�
   near(x, 0.6, 'middle of the hall'); near(y, 1.65, 'eye height'); near(z, 0.45, 'by the entrance');
   const r = p.run(`({view, fov:camera.fov, ceil:ceiling.visible, aim:document.getElementById('walkAim').hidden, hint:document.getElementById('walkHint').hidden,
     rooms:["hall","bath","kitchen"].map(presence), lines:wallLines.length, arcs:arcs.visible, doors:doorGroup.visible, shared:document.getElementById('shared').hidden, slot:document.getElementById('shared').parentElement===document.querySelector('[data-panel="walk"] [data-shared-slot]')})`);
-  assert.deepStrictEqual(r, { view: 'walk', fov: 62, ceil: true, aim: false, hint: false, rooms: [1, 1, 1], lines: 12, arcs: false, doors: true, shared: false, slot: true });
+  assert.deepStrictEqual(r, { view: 'walk', fov: 62, ceil: true, aim: false, hint: false, rooms: [1, 1, 1], lines: 13, arcs: false, doors: true, shared: false, slot: true });
   const panel = p.document.querySelector('[data-panel="walk"]');
   assert.deepStrictEqual([panel.hidden, panel.querySelectorAll('input').map((i) => i.id), panel.querySelector('#walkEyeOut').textContent], [false, ['walkEye', 'walkWh', 'wEdge', 'Laz', 'Lel', 'Li', 'La', 'wFly'], '1650 мм']);
   const pressed = (k) => panel.querySelectorAll(`[data-${k}]`).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset[k]);

@@ -12,6 +12,7 @@ const APT_A={
   bNiche:1200,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet
   bL:1100, bWs:500, bStub:600,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
   bGap:500,                         // opening between the wall at the niche end and the shower partition
+  shStep:200,                       // the step across that opening: a low wall, its height (the shower tray behind it is 150 high)
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
   vOff:150,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
@@ -20,7 +21,7 @@ const APT_A={
 };
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.
-   Walls: rect r=[x0,x1,z0,z1]; ext: outer side of an outside wall; holes along the long side: [from, to, top, sill];
+   Walls: rect r=[x0,x1,z0,z1]; h: height of a low wall (else up to the ceiling); ext: outer side of an outside wall; holes along the long side: [from, to, top, sill];
    rooms: the tabs that show the wall. Rooms: floor rect r and origin — where the room tab's own (0,0) lies on the plan */
 function apartment(a){
   const A=Object.assign({},APT_A,a);
@@ -46,6 +47,7 @@ function apartment(a){
     {id:'bathStub',name:'Перегородка у пенала',r:[bx(A.bNiche),bx(A.bNiche+A.wt),zB0,bz(A.bStub)],rooms:['bath']},
     {id:'nicheEnd',name:'Стенка в конце ниши',r:[xL,bx(A.bWs),bz(A.bL),bz(A.bL+A.wt)],rooms:['bath']},
     {id:'shower',name:'Стенка между душем и раковиной',r:[xSh,xSh+A.wt,bz(A.bL),kZ0],rooms:['bath']},   // from the niche end down to the kitchen wall
+    {id:'showerStep',name:'Ступенька в душ',r:[bx(A.bWs),xSh,bz(A.bL),bz(A.bL+A.wt)],h:A.shStep,rooms:['bath']},   // across the opening to the shower, as thick as the walls
     {id:'shaft',name:'Стенка вентшахты',r:[xSh+A.wt,xB1,zV0,zV0+A.wt],rooms:['bath']},   // closes the shaft between the partition, the hall wall and the kitchen wall
     {id:'riser',name:'Канализационный короб',r:[xL,bx(A.rX),zB0,bz(A.rZ)],rooms:['bath']}
   ];

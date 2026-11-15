@@ -107,15 +107,17 @@ function roomKit(id,cfg){
   cfg.ids.forEach(j=>q(`[data-p="${j}"]`).addEventListener('input',e=>{
     const w=wish.includes(j);P[j]=+e.target.value;if(w)want[j]=P[j];build();if(w)want[j]=P[j];syncIds();}));
   // fronts: all open, all closed (or nothing pressed when they differ), or taken off
+  // (not what moves but is no front of the room: loose — the kitchen's chairs, sofa and the apartment's furniture)
+  const fronts=()=>doors.filter(d=>!d.loose);
   function syncDoorMode(){
-    const V=VS[id];let st=V.fronts;
-    if(st!=='hidden'&&doors.length){const n=doors.filter(d=>d.t>=d.max-.01).length,z=doors.filter(d=>d.t<=.01).length;
-      st=n===doors.length?'open':z===doors.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
+    const V=VS[id],fr=fronts();let st=V.fronts;
+    if(st!=='hidden'&&fr.length){const n=fr.filter(d=>d.t>=d.max-.01).length,z=fr.filter(d=>d.t<=.01).length;
+      st=n===fr.length?'open':z===fr.length?'closed':'mixed';if(st!=='mixed')V.fronts=st;}
     panel.querySelectorAll('[data-door]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.door===st));
     if(cfg.onDoorMode)cfg.onDoorMode();
   }
   panel.querySelectorAll('[data-door]').forEach(b=>b.addEventListener('click',()=>{
-    const V=VS[id];V.fronts=b.dataset.door;if(V.fronts!=='hidden')doors.forEach(d=>d.t=V.fronts==='open'?d.max:0);
+    const V=VS[id];V.fronts=b.dataset.door;if(V.fronts!=='hidden')fronts().forEach(d=>d.t=V.fronts==='open'?d.max:0);
     syncDoorMode();applyVisibility();saveView(id);}));
   // dimensions, walls (with the room's extras)
   const toggles={dims:pq('tDims'),walls:pq('tWall')};

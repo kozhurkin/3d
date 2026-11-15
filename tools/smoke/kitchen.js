@@ -27,8 +27,9 @@ check('кухня: рамка левой стены, переходы и раз�
   fl.value = '2000'; fl.dispatch('input');
   assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true, fronts: 'closed', dims: true, walls: true });
-  fl.value = '9000'; fl.dispatch('input');   // no further than the window wall, which stays out of the kitchen view
-  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [6750, 2000]);
+  fl.value = '9000'; fl.dispatch('input');   // no further than 2650 from the kitchen wall
+  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [4650, 2000]);
+  assert.deepStrictEqual([fl.max, fl.value], [2650, 2650]);
   // to the plan and back: all walls and doors there, the kitchen camera where it was left
   p.document.querySelector('[data-cam="sink"]').click();
   p.run('showView("plan")'); p.fly();
@@ -38,7 +39,7 @@ check('кухня: рамка левой стены, переходы и раз�
   slide(p, 'kW', 2300);
   p.run('showView("kitchen")'); p.fly();
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.875, 0.9, 2.3], 'sink target, kitchen moved 100 left');
-  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2300, -2100, 1900, 6750], [-2100, 200, 1900, 2000]]);
+  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2300, -2100, 1900, 4650], [-2100, 200, 1900, 2000]]);
   assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
 });
 
@@ -153,8 +154,20 @@ check('кухня: фасады, деталировка, настройки по
   let kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
   const pressed = () => kp.querySelectorAll('[data-door]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.door);
   assert.deepStrictEqual(pressed(), ['closed']);
+  const chairs = () => p.run('VIEWS.kitchen.furniture().doors.filter(d=>/^chair/.test(d.key)).map(d=>d.t===d.max)');
+  const ch0 = chairs();
   kq('[data-door="open"]').click();
-  assert.deepStrictEqual(p.run('VIEWS.kitchen.furniture().doors.every(d=>d.t===d.max)'), true);
+  assert.deepStrictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>!d.loose).every(d=>d.t===d.max)'), true);
+  // only the kitchen's cabinets and appliances are its fronts; the chairs, the sofa and the apartment's furniture (the desk with its chair
+  // and laptop, the display cabinet, the wardrobe, the mezzanine) the switch leaves, and they do not unpress it
+  assert.deepStrictEqual(p.run('(f=>f.doors.filter(d=>!d.loose).map(d=>d.g.parent===f.appl?d.key:"cabinet"))(VIEWS.kitchen.furniture())'),
+    [...Array(10).fill('cabinet'), 'oven', 'fridge', 'fridge-d1', 'fridge-d2']);
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>d.loose).length'), 25, '4 chairs, the desk chair, the laptop, the sofa 2, the desk 5, the display cabinet 5, the wardrobe 3, the mezzanine 4');
+  assert.deepStrictEqual(chairs(), ch0, 'the chairs stay as they were');
+  p.run('(d=>{d.t=d.t?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(d=>d.key==="chair0"))');
+  assert.deepStrictEqual(pressed(), ['open'], 'a chair moved by hand');
+  kq('[data-door="closed"]').click(); assert.deepStrictEqual(chairs(), ch0.map((v, i) => i ? v : !v));
+  kq('[data-door="open"]').click();
   // one front closed by hand: nothing pressed, the remembered mode stays
   p.run('(VIEWS.kitchen.furniture().doors[0].t=0, doorsChanged())');
   assert.deepStrictEqual(pressed(), []); assert.strictEqual(p.run('VS.kitchen.fronts'), 'open');
@@ -277,15 +290,15 @@ check('кухня: стол у левой стены — 1350 от стены к
     [[-1950, 3400, 0, 720], [-790, 3400, 0, 720], [-1950, 3960, 0, 720], [-790, 3960, 0, 720]], 'four legs 40 × 40, 50 in from the edges');
 });
 
-check('кухня: четыре стула BERGMUND у стола — выдвинуты, нажатие задвигает их под стол; обход сквозь них проходит', () => {
+check('кухня: четыре стула BERGMUND у стола — задвинуты, нажатие выдвигает их из-под стола; обход сквозь них проходит', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const st = () => p.run(`(f=>f.doors.filter(d=>/^chair/.test(d.key)).map(d=>{const c=d.g.parent;
     return [d.key,d.axis,Math.round(d.travel*1000),Math.round(c.position.x*1000),Math.round(c.position.z*1000),+c.rotation.y.toFixed(2),Math.round(d.g.position.z*1000),c.parent===f.appl];}))(VIEWS.kitchen.furniture())`);
   // two along each long side (the kitchen wall's, the far one), 20 mm clear of the table's legs, 40 apart; the far ones turned round;
-  // pushed in, the seat's front 10 short of the table's middle (1700 from the kitchen wall); the far ones pulled out by 420 at first (the seat's front 80 past the table's edge), the kitchen wall's ones pushed in
+  // pushed in, the seat's front 10 short of the table's middle (1700 from the kitchen wall); all pushed in at first; pulled out by 420 (the seat's front 80 past the table's edge)
   assert.deepStrictEqual(st(), [
     ['chair0', 'z', -420, 110, 1170, 0, 0, true], ['chair1', 'z', -420, 670, 1170, 0, 0, true],
-    ['chair2', 'z', -420, 630, 2230, 3.14, -420, true], ['chair3', 'z', -420, 1190, 2230, 3.14, -420, true]]);
+    ['chair2', 'z', -420, 630, 2230, 3.14, 0, true], ['chair3', 'z', -420, 1190, 2230, 3.14, 0, true]]);
   const info = p.run(`(f=>{const m=f.appl.children.filter(o=>o.userData.chair===true);return [m.length,infoOf(m[0].children[0].children[3]).title];})(VIEWS.kitchen.furniture())`);
   assert.deepStrictEqual(info, [4, 'Стул BERGMUND (IKEA)']);
   // as the drawing: the seat 510 high at its front, sloping to 470 over its 410; the back to it 104°; 950 high
@@ -298,8 +311,9 @@ check('кухня: четыре стула BERGMUND у стола — выдви
   assert.deepStrictEqual(cov, [true, true, true]);
   // a click pulls one out, another pushes it in again
   const click = () => { p.run('(d=>{d.t=d.t!==0?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="chair1"))'); p.tick(120); };
-  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, -420, -420, -420], 'pulled out');
-  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, 0, -420, -420], 'pushed in again');
+  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, -420, 0, 0], 'pulled out');
+  click(); assert.deepStrictEqual(st().map((c) => c[6]), [0, 0, 0, 0], 'pushed in again');
+  p.run('(VIEWS.kitchen.furniture().doors.filter(d=>d.key==="chair2"||d.key==="chair3").forEach(d=>d.t=d.max),doorsChanged())'); p.tick(120);
   // the walker crosses the row of the far chairs, pulled out (2400 from the kitchen wall, kitchen x 250…1150), without stopping
   p.run('showView("walk")'); p.fly();
   const go = () => p.run('walkSlide(-1.75,4.4,.9,0,0,1.7).map(v=>typeof v==="number"?Math.round(v*1000):v)');
@@ -407,7 +421,9 @@ check('кухня: письменный стол HEMNES у левой стены
   assert.deepStrictEqual(au, [15, 1535, 740, 1370, 0, 250]);
   assert.deepStrictEqual(r.doors, [['y', 0, 0], ['z', 450, 0], ['z', 450, 0], ['z', 180, 0], ['z', 180, 0]], 'a door on its hinges and two drawers, closed; the add-on unit\'s two drawers');
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
-  assert.ok(desk().doors.every((d) => d[2] > 0), 'they open with the kitchen\'s fronts');
+  assert.ok(desk().doors.every((d) => d[2] === 0), 'the kitchen\'s fronts leave them');
+  p.run('VIEWS.kitchen.furniture().doors.filter(x=>x.g.parent.userData.desk===true).forEach(x=>x.t=x.max)');
+  assert.ok(desk().doors.every((d) => d[2] > 0), 'they open alone');
   // a longer kitchen on the plan: the desk keeps to the window wall
   p.run('showView("plan")'); p.fly(); slide(p, 'kL', 5000); p.run('showView("kitchen")'); p.fly();
   assert.deepStrictEqual(desk().at, [0, 5000 - 150]);
@@ -426,7 +442,7 @@ check('кухня: витрина HEMNES спинкой к торцу стола
   assert.strictEqual(r.glass, 2, 'two glass doors');
   assert.deepStrictEqual(r.doors, [['y', 0, 0], ['y', 0, 0], ['z', 270, 0], ['z', 270, 0], ['z', 270, 0]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
-  assert.ok(vit().doors.every((d) => d[2] > 0), 'they open with the kitchen\'s fronts');
+  assert.ok(vit().doors.every((d) => d[2] === 0), 'the kitchen\'s fronts leave them');
 });
 
 check('кухня: на письменном столе MacBook Pro 16″ — посередине, перед надстройкой; клавиатура и трекпад — картинкой на корпусе, экран — на крышке; крышка открыта на 110°, по клику закрывается и открывается; экран светится, пока открыта', () => {
@@ -460,9 +476,9 @@ check('кухня: на письменном столе MacBook Pro 16″ — п
   const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
   assert.strictEqual(mb().t, 0);
   click(); assert.strictEqual(mb().rot, -1.92, 'open again');
-  // with the kitchen's fronts
-  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click();
-  assert.strictEqual(mb().t, 0);
+  // no front: the kitchen's «Закрыты» leaves it open
+  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click(); p.tick(120);
+  assert.strictEqual(mb().rot, -1.92);
 });
 
 check('кухня: угловой шкаф OZON 1350 × 950 у дивана — ножка вдоль подлокотника, дверь к стене кухни; вдоль правой стены дверь углового и доп. секции; высота 2200; три двери открываются', () => {
@@ -527,7 +543,7 @@ check('кухня: угловой шкаф OZON 1350 × 950 у дивана — 
   // the plinth shows under the doors: they start 2 over its 70
   assert.deepStrictEqual(p.run(`VIEWS.kitchen.furniture().doors.filter(x=>x.g.parent.userData.wardrobe===true).map(x=>x.g.children[0].userData.part).map(q=>[q.y0,q.y1])`), [[72, 2198], [72, 2198], [72, 2198]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
-  assert.ok(wr().doors.every((d) => d[4] > 0), 'they open with the kitchen\'s fronts');
+  assert.ok(wr().doors.every((d) => d[4] === 0), 'the kitchen\'s fronts leave them');
 });
 
 check('кухня: антресоль OZON над диваном — две секции по 1000, глубина 500, от 1700 до 2200 (вровень со шкафом), от шкафа к окну; четыре двери открываются', () => {
@@ -543,7 +559,7 @@ check('кухня: антресоль OZON над диваном — две се
   // two doors a section, hinged at its ends, into the room
   assert.deepStrictEqual(r.doors, [[2541, 3039, 2541, -1, 0], [3041, 3539, 3539, 1, 0], [3541, 4039, 3541, -1, 0], [4041, 4539, 4539, 1, 0]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();
-  assert.ok(mz().doors.every((d) => d[4] > 0), 'they open with the kitchen\'s fronts');
+  assert.ok(mz().doors.every((d) => d[4] === 0), 'the kitchen\'s fronts leave them');
 });
 
 check('кухня: два одинаковых металлических стеллажа на правой стене от прохода до углового шкафа — глубина 200, высота 1750, пять полок на болтах, стойки перфорированы', () => {
@@ -642,9 +658,11 @@ check('кухня: сиденье оттоманки дивана целиком
   assert.strictEqual(r.title, 'Угловой диван Hoff «Слим»');
   assert.deepStrictEqual(r.stitches, [5, 4, 4], 'stitched up its front and both its sides, 130 apart');
   assert.strictEqual(r.white, 5, 'the box white inside (flat boards besides the stitches): its bottom and four walls');
-  // with the kitchen's fronts: up (its front edge rises over the seat), half as fast as a front: about 69 % of the way at 0.21 s
-  // (a front: 90 %), and down again
+  // a click: up (its front edge rises over the seat), half as fast as a front: about 69 % of the way at 0.21 s
+  // (a front: 90 %), and down again; no front, the kitchen's «Открыты» leaves it
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(13);
+  assert.strictEqual(lid().t, 0, 'not with the fronts');
+  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'); p.tick(13);
   const early = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
   assert.ok(early > .62 && early < .76, 'on its way: ' + early);
   p.tick(107);
@@ -655,7 +673,7 @@ check('кухня: сиденье оттоманки дивана целиком
   // straight up till their lower front edges are on the lid's top: the cushion's at 450 + (320 − 100)·tan 40° = 635; the pillow's
   // (496, 486) at 783, its middle 640 + 296
   assert.deepStrictEqual(r.ride, [[865, 210], [936, 385]], 'the pillows up out of its way');
-  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click(); p.tick(120);
+  p.run('(d=>{d.t=0;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'); p.tick(120);
   r = lid(); assert.ok(Math.abs(r.rot) < .02, 'closed again');
   assert.ok(r.ride.every(([y, z], i) => Math.abs(y - [680, 640][i]) < 3 && Math.abs(z - [210, 385][i]) < 2), 'the pillows back down');
   // a click opens it alone, and it stays open through a rebuild
@@ -684,13 +702,13 @@ check('кухня: диван раскладывается «дельфином�
   // out: level with the seat (280 + 170 = 450), its back against the seat's front (850 − 680), the strap hanging
   r = bed(1); assert.deepStrictEqual([r.drawer, r.block, r.strap, r.depth], [680, [280, 170, 0], true, 1535], 'one bed with the chaise, out to 1530 (its strap 5 in front)');
   bed(0);
-  // with the kitchen's fronts, evenly in 1.4 s: half way at 0.7 s (the drawer out, the block on its way), and back
-  p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(44);
+  // a click, evenly in 1.4 s: half way at 0.7 s (the drawer out, the block on its way), and back
+  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))'); p.tick(44);
   const half = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))');
   assert.ok(half > .45 && half < .55, 'half way: ' + half); assert.strictEqual(bed().drawer, 680);
   p.tick(156);
   r = bed(); assert.deepStrictEqual([r.t, r.drawer, r.block, r.strap], [1.45, 680, [280, 170, 0], true]);
-  p.document.querySelector('[data-panel="kitchen"] [data-door="closed"]').click(); p.tick(200);
+  p.run('(d=>{d.t=0;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))'); p.tick(200);
   r = bed(); assert.deepStrictEqual([r.drawer, r.block, r.strap], [0, [75, 130, 0], false]);
   // held, the whole way in 3 s: slower than a click, as the other doors (they ease in about 0.3 s, held at 60°/s)
   p.run('held={d:VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"),dir:1}'); p.tick(94);

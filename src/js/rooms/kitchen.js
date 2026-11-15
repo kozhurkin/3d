@@ -136,7 +136,7 @@ const INFO={
   macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
-  chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Выдвинут от стола; нажатие задвигает его под стол и обратно.']},
+  chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Задвинут под стол; нажатие выдвигает его и обратно.']},
   wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
   mezzanine:{title:'Антресоль OZON «Уютная логика»',lines:['Белая, распашные двери без ручек (открываются нажатием).','Две секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.','На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.']},
   mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
@@ -254,9 +254,9 @@ function fillPendant(q){
    510 high at its front, 410 deep in front of the back, upholstered all round (90 thick, the frame under the cover), sloping back
    to 470 at the back; the back 480 high from there to the top, narrowing to 370 at its top, 40 thick, its top corners rounded,
    down behind the seat to its bottom; the back to the seat 104°. Four square legs tapering to the floor, splayed out to its corners.
-   Two along each long side of the table, 20 mm clear of its legs, 40 apart; the far ones pulled out at first (the seat's front 80 out
-   past the table's edge: they end just short of the display cabinet), the kitchen wall's ones pushed in; a click pushes one in under the table till its seat's front
-   is 10 short of the table's middle (the chair across comes as far), and back out. The walker passes through them (walk.js: userData.walkThrough).
+   Two along each long side of the table, 20 mm clear of its legs, 40 apart; all pushed in at first, under the table till the seat's front
+   is 10 short of the table's middle (the chair across comes as far); a click pulls one out (the seat's front 80 out past the table's edge:
+   the far ones end just short of the display cabinet), and back in. The walker passes through them (walk.js: userData.walkThrough).
    Own axes (mm): x across, y up, z from its back to the seat's front; its front toward the table */
 const CH={W:520,D:520,H:950,seat:510,seatBack:470,depth:410,cush:90,angle:104,legT:42,legB:30,backB:500,backTop:370,backT:40,out:80,clear:20,gap:40};
 // a rounded box's uv in m, as the back's (each face's 0…1 times its sizes), so the weave is as big on its narrow faces (k: as roundBoxGeo's)
@@ -312,8 +312,8 @@ function buildChairs(g,opts){
     // the back: its front on the seat's back edge, leaning back
     const b=new THREE.Group();b.position.set(W/2*MM,yb*MM,zp*MM);b.rotation.x=-tb;q.add(b);
     const bk=new THREE.Mesh(backGeo,chairFabric);bk.position.z=-(backT-bv)*MM;bk.castShadow=bk.receiveShadow=true;b.add(bk);
-    // pulled out: away from the table (its own −z); the kitchen wall's ones start pushed in, the far ones pulled out
-    return applDoor(q,{key:'chair'+i,axis:'z',travel:-travel*MM,startOpen:side>0},opts);
+    // pulled out: away from the table (its own −z); all start pushed in
+    return applDoor(q,{key:'chair'+i,axis:'z',travel:-travel*MM},opts);
   });
 }
 
@@ -1091,9 +1091,12 @@ const k=roomKit('kitchen',{
   fromPlan:['W','H','L','Rx'],
   ids:['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'],
   wish:['Hx'],
-  slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
+  slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildPendant(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildRack(g));}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
+    // the rest is no kitchen front (the chairs, the sofa, the furniture of the apartment): «Фасады» leaves it (loose), nor opens it when built
+    const own=Object.assign({},o,{open:false}),rest=[].concat(buildChairs(g,own),buildDesk(g,own),buildDeskChair(g,own),buildVitrine(g,own),buildSofa(g,own),buildWardrobe(g,own),buildMezzanine(g,own),buildRack(g)||[]);
+    rest.forEach(d=>{d.loose=true;});return ap.concat(rest);}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table with its chairs and its lamp — the table only once the frame shows the left wall past it; the desk and its chair,
   // the display cabinet, the sofa, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

@@ -1,6 +1,8 @@
 // «Обход»: вид от первого лица, ходьба, стены, двери, шкафы, прыжок, присед, высота камеры, вид стен и дверей.
 const { runPage, PAGES, check, near, assert } = require('./harness');
 
+// the first visit: the back to the entrance door, the left shoulder to the shelf column (m)
+const HX = 0.796, HZ = 0.16;
 const eye = (p) => p.run('[camera.position.x, camera.position.y, camera.position.z]');
 // a key held for n frames of 16 ms
 const hold = (p, code, n) => { p.key('keydown', code); p.tick(n); p.key('keyup', code); };
@@ -18,7 +20,7 @@ const open = (storage) => { const p = runPage(PAGES.app, { parentWin: { appView:
 check('обход: вид от первого лица у входа, в панели высота камеры (первой), вид стен, двери', () => {
   const p = open();
   const [x, y, z] = eye(p);
-  near(x, 0.6, 'middle of the hall'); near(y, 1.65, 'eye height'); near(z, 0.45, 'by the entrance');
+  near(x, HX, 'by the shelf column'); near(y, 1.65, 'eye height'); near(z, HZ, 'with the back to the entrance door');
   const r = p.run(`({view, fov:camera.fov, ceil:ceiling.visible, aim:document.getElementById('walkAim').hidden, hint:document.getElementById('walkHint').hidden,
     rooms:["hall","bath","kitchen"].map(presence), lines:wallLines.length, arcs:arcs.visible, doors:doorGroup.visible, shared:document.getElementById('shared').hidden, slot:document.getElementById('shared').parentElement===document.querySelector('[data-panel="walk"] [data-shared-slot]')})`);
   assert.deepStrictEqual(r, { view: 'walk', fov: 62, ceil: true, aim: false, hint: false, rooms: [1, 1, 1], lines: 13, arcs: false, doors: true, shared: false, slot: true });
@@ -35,14 +37,14 @@ check('обход: W A S D идут, мышь поворачивает взгл�
   const p = open();
   hold(p, 'KeyW', 60);   // about a second forward: toward the kitchen
   let [x, y, z] = eye(p);
-  near(x, 0.6, 'straight'); near(y, 1.65, 'on the floor');
+  near(x, HX, 'straight'); near(y, 1.65, 'on the floor');
   assert.ok(z > 1.9 && z < 2.9, 'a second at 2.4 m/s: ' + z);
   p.tick(30);
   const z1 = eye(p)[2]; assert.ok(z1 - z < 0.15, 'stops when the key is let go');
   // a quarter turn to the left, the eyes stay where they are
   drag(p, -Math.PI / 2 / 0.0025);
   p.tick();
-  near(yaw(p), Math.PI * 1.5, 'turned left'); near(eye(p)[0], 0.6, 'the eyes did not move'); near(eye(p)[2], z1, 'the eyes did not move');
+  near(yaw(p), Math.PI * 1.5, 'turned left'); near(eye(p)[0], HX, 'the eyes did not move'); near(eye(p)[2], z1, 'the eyes did not move');
   // a look up: the pitch stops short of the vertical
   drag(p, 0, -5000); p.tick();
   assert.ok(Math.abs(p.run('goal.phi') - (Math.PI - 0.08)) < 1e-9, 'pitch clamped');
@@ -85,6 +87,10 @@ check('обход: стены и закрытая дверь не пускают
   const p = open();
   drag(p, Math.PI / 2 / 0.0025); p.tick();   // a quarter turn to the right: facing the hall's left wall (−x)
   near(yaw(p), Math.PI / 2, 'facing −x');
+  // from the start, along the entrance door: the left false panel's side stops the body, its whole face
+  hold(p, 'KeyW', 90);
+  near(eye(p)[0], 0.1 + 0.15, 'stops at the false panel');
+  p.run('setEye(0.6,1.65,0.45)'); p.tick();
   hold(p, 'KeyW', 90);
   // by the entrance: the hall cabinet's cladding of the reveal ends 50 mm before the eyes (z 0.4, x up to 99 mm): its corner stops the body
   near(eye(p)[0], 0.099 + Math.sqrt(0.15 ** 2 - 0.05 ** 2), 'stops at the corner of the cladding');
@@ -298,7 +304,7 @@ check('обход: перелёт с плана и обратно, камера 
   near(p.run('camera.fov'), 48.5, 'halfway to the wide angle');
   assert.strictEqual(p.run('camDrive===driveCam'), true, 'the flight drives the camera');
   p.fly();
-  const [x, y, z] = eye(p); near(x, 0.6, 'at the entrance'); near(y, 1.65, 'at eye height'); near(z, 0.45, 'at the entrance');
+  const [x, y, z] = eye(p); near(x, HX, 'at the entrance'); near(y, 1.65, 'at eye height'); near(z, HZ, 'at the entrance');
   assert.deepStrictEqual(p.run('[camera.fov, ceiling.visible, camDrive===walkCam]'), [62, true, true]);
   hold(p, 'KeyW', 30); const zw = eye(p)[2];
   p.run('showView("plan")'); p.fly();
@@ -339,7 +345,7 @@ check('обход: на сенсорном экране палец в левом
   // the corner is a square of 264 px (a third of the canvas's 800 × 600): above it or right of it a finger looks, not walks
   touch('pointerdown', 5, 120, 300); touch('pointermove', 5, 120, 200); touch('pointerup', 5, 120, 200);
   touch('pointerdown', 6, 300, 400); touch('pointermove', 6, 300, 300); touch('pointerup', 6, 300, 300); p.tick(30);
-  assert.strictEqual(st.className, 'stick', 'no stick outside the corner'); near(eye(p)[2], 0.45, 'no step');
+  assert.strictEqual(st.className, 'stick', 'no stick outside the corner'); near(eye(p)[2], HZ, 'no step');
   near(p.run('goal.phi'), Math.PI / 2 + 2 * 200 * 0.0025, 'the two drags looked up, a finger twice as fast as the mouse'); p.run('look(0,400)'); near(p.run('goal.phi'), Math.PI / 2, 'level again');
   // in the corner: the stick comes under the finger
   touch('pointerdown', 7, 120, 400); p.tick();
@@ -347,16 +353,16 @@ check('обход: на сенсорном экране палец в левом
   assert.deepStrictEqual([info.hidden, cam.hidden, p.run('showDebug'), p.run('inset.hidden')], [true, true, false, true], 'no «i» and no mini view in the walk on a touch screen');
   // a finger moved a little: no step yet
   touch('pointermove', 7, 120, 396); p.tick(30);
-  near(eye(p)[2], 0.45, 'within the dead zone');
+  near(eye(p)[2], HZ, 'within the dead zone');
   // half way to the edge: slower than walking; all the way: as W
   touch('pointermove', 7, 120, 376); p.tick(30);
-  const half = eye(p)[2] - 0.45;
+  const half = eye(p)[2] - HZ;
   assert.ok(half > 0.3 && half < 0.6, 'half the stick, half a second: ' + half);
   touch('pointermove', 7, 120, 300); p.tick(30);
-  const full = eye(p)[2] - 0.45 - half;
+  const full = eye(p)[2] - HZ - half;
   assert.ok(full > 1.0 && full < 1.25, 'the whole stick, half a second at 2.4 m/s: ' + full);
   assert.strictEqual(p.run('knobEl.style.transform'), 'translate(0px,-48px)', 'the knob stops at the circle');
-  near(eye(p)[0], 0.6, 'straight on');
+  near(eye(p)[0], HX, 'straight on');
   // a second finger on the right half looks; the stick finger let go, the look goes on
   touch('pointerdown', 8, 600, 300); touch('pointerup', 7, 120, 300); touch('pointermove', 8, 600 - Math.PI / 4 / 0.0025, 300); p.tick(30);
   near(yaw(p), Math.PI * 1.5, 'turned left'); const z1 = eye(p)[2]; p.tick(30); near(eye(p)[2], z1, 'stops when let go');

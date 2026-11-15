@@ -59,8 +59,9 @@ function look(dx,dy,k=1){
   goal.theta-=dx*SENS*k;goal.phi=Math.min(Math.PI-.08,Math.max(.08,goal.phi-dy*SENS*k));
   setEye(...e);
 }
-// the first visit: in the hall by the entrance, looking toward the kitchen
-function walkHome(){goal.theta=Math.PI;goal.phi=Math.PI/2;goal.r=LOOK;setEye(A.hallW/2*MM,eyeH(),.45);shortWay();}
+/* the first visit: in the hall with the back to the entrance door and the left shoulder to the shelf column (it starts a board
+   inside the opening's right edge), a centimetre or two off both, looking toward the kitchen */
+function walkHome(){goal.theta=Math.PI;goal.phi=Math.PI/2;goal.r=LOOK;setEye(A.eD1*MM-.18,eyeH(),BODY+.01);shortWay();}
 
 /* ---------- what is in the way, m: [x0,x1,z0,z1,y0,y1] ----------
    The walls without their openings (rebuilt with the sizes); a window is not a way through; a door opening is while its door

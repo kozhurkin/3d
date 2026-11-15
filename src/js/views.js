@@ -47,7 +47,7 @@ function syncWallCtl(id){
   const p=VIEWS[id].panel,V=VS[id],wh=p.querySelector('[data-wh]');
   if(!wh)return;
   wh.value=V.Wh;p.querySelector('[data-wh-out]').textContent=(V.Wm==='row'?10:V.Wh)+'%';
-  wh.disabled=V.Wm==='row'||V.Wm==='outline';wh.parentElement.style.opacity=wh.disabled?.45:1;
+  wh.disabled=V.Wm==='row'||V.Wm==='feet';wh.parentElement.style.opacity=wh.disabled?.45:1;
   p.querySelectorAll('[data-wm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.wm===V.Wm));
 }
 /* doors segment ([data-dm]) of a view: the apartment's doors all closed, all open (nothing pressed when they differ),
@@ -65,6 +65,7 @@ function addView(id,def){
   VIEWS[id]=def;
   VS[id]=Object.assign(JSON.parse(JSON.stringify(def.defaults)),readJSON(viewKey(id))||{});
   const p=def.panel;
+  if(!p.querySelector(`[data-wm="${VS[id].Wm}"]`))VS[id].Wm=def.defaults.Wm;   // a walls' mode this view has no button for (a saved one renamed since) — its default
   p.querySelectorAll('[data-wm]').forEach(b=>b.addEventListener('click',()=>{VS[id].Wm=b.dataset.wm;syncWallCtl(id);saveView(id);}));
   const wh=p.querySelector('[data-wh]');if(wh)wh.addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
   p.querySelectorAll('[data-dm]').forEach(b=>b.addEventListener('click',()=>{
@@ -100,14 +101,14 @@ const furnOn=id=>view===id||(ROOMS.some(r=>r.id===id)&&(view==='walk'||(view==='
 // how much of a view's furniture is in the scene: 1 or 0 as above, in between while flying
 function presence(id){const t=furnOn(id)?1:0;return tr?tr.pres0[id]+(t-tr.pres0[id])*tr.e:t;}
 /* how a room's furniture shows: up to the height c (m, its own floor up), and its footprint on the floor f (0…1).
-   Only the plan cuts it — with «Резать шкафы по стенам», at the height of its walls; in «Контуры» nothing of it stands,
+   Only the plan cuts it — with «Резать шкафы по стенам», at the height of its walls; in «Следы» nothing of it stands,
    its footprint is there instead. A room's own view always shows it whole */
 const furnWhole=()=>H*MM+.05;
 function furnRest(){
   const V=VS.plan;
   if(view!=='plan'||V.fcut===false)return {c:furnWhole(),f:0};
   // 1 mm above the walls: a top at exactly the cut (cabinets up to the ceiling at 100%) would flicker, half clipped
-  const o=V.Wm==='outline';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM+.001,f:o?1:0};
+  const o=V.Wm==='feet';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM+.001,f:o?1:0};
 }
 // … now: in a flight from how it was at the start to how the new view shows it; a room that is there at one end only
 // keeps that end's (it sinks or rises as it is cut there)

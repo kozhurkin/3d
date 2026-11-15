@@ -34,6 +34,16 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(panel.querySelector('[data-wh-out]').textContent, '100%');
 });
 
+check('приложение: вид стен «Следы» (feet) во всех панелях; сохранённый режим без своей кнопки — по умолчанию', () => {
+  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ Wm: 'outline', Wh: 60 })]]);
+  const p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
+  ['plan', 'kitchen', 'bath', 'hall', 'walk'].forEach((id) => assert.ok(p.document.querySelector(`[data-panel="${id}"] [data-wm="feet"]`), `${id}: «Следы»`));
+  assert.strictEqual(PAGES.app.split('<button data-wm="feet" aria-pressed="false">Следы</button>').length - 1, 5, 'signed «Следы» in all five');
+  assert.ok(!/Контуры</.test(PAGES.app), 'no «Контуры» left');
+  // 'outline' was «Контуры» before the rename: no button for it now, the plan takes its default; the rest of the saved view stays
+  assert.deepStrictEqual(p.run('[VS.plan.Wm, VS.plan.Wh]'), ['auto', 60]);
+});
+
 check('приложение: настройки вида и общие настройки сохраняются отдельно', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
@@ -174,7 +184,7 @@ check('«Планировка»: шкафы всех комнат по гало�
   at().forEach((r) => assert.deepStrictEqual(r.slice(0, 3), [true, 0, false]));
 });
 
-check('«Планировка»: «Резать шкафы по стенам» — срез на высоте стен, в «Контурах» след на полу', () => {
+check('«Планировка»: «Резать шкафы по стенам» — срез на высоте стен, в «Следах» след на полу', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
   const plan = p.document.querySelector('[data-panel="plan"]'), rooms = ['kitchen', 'bath', 'hall'];
@@ -191,8 +201,8 @@ check('«Планировка»: «Резать шкафы по стенам» �
   plan.querySelector('[data-wm="show"]').click();
   const wh = plan.querySelector('[data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
   near(cut('hall')[0], 1.301, 'half the ceiling');
-  // «Контуры»: nothing of the cabinets stands, their footprints are on the floor
-  plan.querySelector('[data-wm="outline"]').click(); p.tick();
+  // «Следы»: nothing of the cabinets stands, their footprints are on the floor
+  plan.querySelector('[data-wm="feet"]').click(); p.tick();
   rooms.forEach((k) => assert.deepStrictEqual(cut(k), [0, true, 1]));
   // to the kitchen: it grows whole and its footprint fades; the bathroom sinks cut as it was, its footprint stays on the floor and fades
   p.run('showView("kitchen")'); p.tick(25, 17);

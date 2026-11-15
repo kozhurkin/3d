@@ -277,7 +277,7 @@ function furnClip(){
   f.constant=.001;t.constant=100;return [f,t];   // kept: y ≥ −1 mm and y ≤ the top
 }
 function clipToFloor(g,planes){g.traverse(o=>{if(o.isSprite)return;[].concat(o.material||[]).forEach(m=>{if(m!==roomDimMat&&m!==roomDimDepthMat&&m.clippingPlanes!==planes){m.clippingPlanes=planes;m.clipShadows=true;}});});}
-/* what of a room stands on the floor, seen from above: for «Контуры» on the plan, where the walls leave only their footprints.
+/* what of a room stands on the floor, seen from above: for «Следы» on the plan, where the walls leave only their footprints.
    The parts that start low (below 300 mm: carcasses, fronts, plinths — not the wall cabinets) and the room's own shapes
    (extra: [x0,x1,z0,z1,round] — the fridge, the installation, the toilet), room mm. Drawn light with a dark outline of the
    whole, on one flat mesh in the room's axes; it fades in and out by its opacity. null when nothing stands on the floor */

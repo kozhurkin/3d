@@ -59,7 +59,7 @@ function roomKit(id,cfg){
     if(cfg.extra){extra=new THREE.Group();const more=cfg.extra.build(extra,{prev,open:VS[id].fronts==='open'});if(more)doors=doors.concat(more);model.add(extra);}
     dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps,dimsGroup);model.add(dimsGroup);
     clipToFloor(model,clip);
-    // its footprint for «Контуры» on the plan
+    // its footprint for «Следы» on the plan
     foot=furnFoot(cur,cfg.foot&&cfg.foot());if(foot){foot.material.clippingPlanes=[clip[0]];model.add(foot);}
     place();scene.add(model);dirty=false;applyVisibility();updatePanel();
   }
@@ -77,7 +77,7 @@ function roomKit(id,cfg){
     if(dirty&&(on||s>.001))build();
     if(!model)return;
     model.visible=s>.001;model.position.y=-(1-s)*(P.H*MM+.1);
-    // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Контуры» its footprint shows
+    // on the plan it is cut at the walls' height (its top plane goes down with it in a flight), in «Следы» its footprint shows
     const fc=furnCut(id);clip[1].constant=fc.c+model.position.y;
     if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
     // its dimension lines only in its own view, once it is reached; the extras go with the walls there, elsewhere the walls are there

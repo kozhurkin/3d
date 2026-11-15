@@ -41,7 +41,7 @@ check('санузел: ступенька в проёме к душу — 200 м
   assert.deepStrictEqual([r.n, r.b, r.mat, r.foot], [1, 0, true, true], 'one piece from the floor, the walls\' material, its footprint');
   near(r.t, 0.2, 'up to 200 mm');
   near(r.top, 0.2, 'its outline ends at its height, not at the ceiling');
-  // its footprint («Контуры», and on the floor while the cut mode hides it with the walls round the shower) a shade lighter; its outline as the walls'
+  // its footprint («Следы», and on the floor while the cut mode hides it with the walls round the shower) a shade lighter; its outline as the walls'
   assert.strictEqual(p.run(`wallLines.find(l=>l.w.id==='showerStep').e.material===edgeMat`), true);
   assert.deepStrictEqual(p.run(`wallFeet.map(f=>f.m.material===lowFootMat?f.id:f.m.material===footMat?'':'?').filter(Boolean)`), ['showerStep']);
   assert.ok(r.walk.length === 1 && r.walk[0] < p.run('STEP'), 'lower than what the walker steps over');

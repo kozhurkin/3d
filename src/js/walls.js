@@ -181,7 +181,7 @@ const sideVisible=(side,r,c)=>!side||({'-x':c.x>r[1],'+x':c.x<r[0],'-z':c.z>r[3]
 // there goes with its wall (up from the floor or down into it)
 function wallsAtRest(id,pos){
   const vw=VIEWS[id],V=VS[id],m=new Map();
-  const h=V.Wm==='outline'?0:V.Wm==='row'?H*.1:H*V.Wh/100;
+  const h=V.Wm==='feet'?0:V.Wm==='row'?H*.1:H*V.Wh/100;
   viewWalls(vw).forEach((c,k)=>{
     const seen=V.Wm!=='auto'||sideVisible(fadeSide(c,vw),fadeWall(c,vw).r.map(v=>v*MM),pos),cut=seen?h:0;
     m.set(k,{r:c.r,cut,h:c.kept.length?h:cut,kept:c.kept});});
@@ -234,7 +234,7 @@ function startWallMorph(from,toId,pos){
   // the walls' see-through and their outlines go from how they look now to the new view's mode (the skeleton is see-through)
   const skel=V.Wm==='skeleton';
   morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:edgeOp(V),
-    doors:doorsF&&V.dm!=='none'&&V.Wm!=='outline',mats};   // doors show only if both ends show them
+    doors:doorsF&&V.dm!=='none'&&V.Wm!=='feet',mats};   // doors show only if both ends show them
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
 // Works while walls are plain colour: a textured wall (tiles) would stretch, its pieces would have to be rebuilt instead.
@@ -324,12 +324,12 @@ function applyTheme(){
 
 /* every frame: walls are cut at the view's share of the ceiling height (bottom stays on the floor), doors swing;
    in a flight between views every wall follows the flight instead (see morph) */
-let wallCut=H*MM, wallOutlineMode=false;   // where the walls end now (m) and whether only their outlines show — for the dimension lines
+let wallCut=H*MM, wallFeetMode=false;   // where the walls end now (m) and whether only their footprints show («Следы») — for the dimension lines
 const lineGeo=pts=>new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(pts,3));
 function wallsSeeThrough(op){const see=op<.999;const m=wallMat;m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}}
 frameHooks.push((dt,ease)=>{
   const V=vs();
-  const row=V.Wm==='row',skel=V.Wm==='skeleton',outline=V.Wm==='outline';
+  const row=V.Wm==='row',skel=V.Wm==='skeleton',feet=V.Wm==='feet';
   const cutMm=H*(row?10:V.Wh)/100,cut=cutMm*MM;
   let doorCut=()=>cut;   // the height a door is cut at: its wall's
   if(morph){
@@ -359,14 +359,14 @@ frameHooks.push((dt,ease)=>{
     wallsSeeThrough(skel?0:1);edgeMat.opacity=edgeOp(V);
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
-      w.m.visible=fits&&!outline&&(V.Wm==='auto'?w.f():true);
+      w.m.visible=fits&&!feet&&(V.Wm==='auto'?w.f():true);
       w.m.castShadow=!skel&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });
     // wall edges are redrawn only when the cut height changes
     if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(l.w,Math.min(H,cutMm)));});}
-    wallLines.forEach(l=>l.e.visible=!outline&&(V.Wm==='auto'?l.f():true));
-    doorGroup.visible=V.dm!=='none'&&!outline;arcs.visible=V.dm!=='none'&&V.arcs!==false;   // the walk has doors without swings
+    wallLines.forEach(l=>l.e.visible=!feet&&(V.Wm==='auto'?l.f():true));
+    doorGroup.visible=V.dm!=='none'&&!feet;arcs.visible=V.dm!=='none'&&V.arcs!==false;   // the walk has doors without swings
   }
   doors.forEach(d=>{
     if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
@@ -374,5 +374,5 @@ frameHooks.push((dt,ease)=>{
     d.g.rotation.y=d.a;});
   doorParts.forEach(p=>{const top=Math.min(p.t,doorCut(p.wall)),fits=top>p.b+.001;p.m.visible=fits;
     if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
-  wallCut=Math.min(cut,H*MM);wallOutlineMode=outline;
+  wallCut=Math.min(cut,H*MM);wallFeetMode=feet;
 });

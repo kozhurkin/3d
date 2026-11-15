@@ -185,7 +185,7 @@ frameHooks.push(()=>{
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
   dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=half;
   if(dimsGroup.visible&&dimsDirty)buildDims();
-  dimsGroup.position.y=(wallOutlineMode?0:wallCut)+.02;
+  dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
   // dimension labels keep the same size on screen at any zoom
   { const k=2*Math.tan(camera.fov*Math.PI/360)/(viewer.clientHeight||1);
     labels.forEach(s=>{s.getWorldPosition(_v);const u=_v.distanceTo(camera.position)*k;s.scale.set(19*u*s.userData.ar,19*u,1);}); }

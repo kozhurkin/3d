@@ -25,7 +25,7 @@ check('обход: вид от первого лица у входа, в пан�
   const panel = p.document.querySelector('[data-panel="walk"]');
   assert.deepStrictEqual([panel.hidden, panel.querySelectorAll('input').map((i) => i.id), panel.querySelector('#walkEyeOut').textContent], [false, ['walkEye', 'walkWh', 'wEdge', 'Laz', 'Lel', 'Li', 'La', 'wFly'], '1650 мм']);
   const pressed = (k) => panel.querySelectorAll(`[data-${k}]`).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset[k]);
-  assert.deepStrictEqual(panel.querySelectorAll('[data-wm]').map((b) => b.dataset.wm), ['show', 'row', 'auto', 'skeleton', 'outline']);
+  assert.deepStrictEqual(panel.querySelectorAll('[data-wm]').map((b) => b.dataset.wm), ['show', 'row', 'auto', 'skeleton', 'feet']);
   assert.deepStrictEqual([pressed('wm'), pressed('dm'), panel.querySelector('[data-wh-out]').textContent], [['auto'], ['closed'], '100%']);
   const info = (k) => p.document.querySelector(`#infoBtn [data-info="${k}"]`).hidden;
   assert.deepStrictEqual([info('orbit'), info('walk')], [true, false], 'the hint of the walk under «i»');
@@ -120,8 +120,8 @@ check('обход: вид стен и двери из панели, сохран
   assert.deepStrictEqual([pressed('wm'), panel().querySelector('[data-wh-out]').textContent, p.run('[wallMat.opacity, ceiling.visible]')], [['skeleton'], '50%', [0, false]]);
   wh.value = '100'; wh.dispatch('input'); panel().querySelector('[data-wm="show"]').click(); p.tick();
   assert.strictEqual(p.run('ceiling.visible'), true, 'solid walls up to the ceiling: the ceiling is back');
-  panel().querySelector('[data-wm="outline"]').click(); p.tick();
-  assert.deepStrictEqual(p.run('[wallParts.some(w=>w.m.visible), doorGroup.visible, ceiling.visible]'), [false, false, false], 'outlines: no walls, no doors');
+  panel().querySelector('[data-wm="feet"]').click(); p.tick();
+  assert.deepStrictEqual(p.run('[wallParts.some(w=>w.m.visible), doorGroup.visible, ceiling.visible]'), [false, false, false], 'footprints: no walls, no doors');
   // the doors: open, the plan's segment follows; a door shut by a click: nothing pressed
   panel().querySelector('[data-dm="open"]').click(); p.tick(60);
   assert.deepStrictEqual([pressed('dm'), p.run('doors.every(d=>d.t===d.max)'), p.run('VS.plan.dm')], [['open'], true, 'open']);

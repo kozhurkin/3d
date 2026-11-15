@@ -241,6 +241,30 @@ check('кухня: мойка — рамка с отверстием, в нём 
   r = sink(); assert.deepStrictEqual([r.hole[0], r.rim[2]], [250 - 170, 250]);
 });
 
+check('кухня: варочная панель — стекло с круглыми отверстиями, в них конфорки заподлицо; у настольной стекло вставлено в верх корпуса; поперёк и вдоль', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  const kq = (q) => p.document.querySelector('[data-panel="kitchen"] ' + q);
+  const hob = () => p.run(`(f=>{const a=f.appl.children,mm=v=>Math.round(v*1000),ext=o=>[mm(o.position.x),mm(o.position.y),mm(o.position.z),mm(o.geometry.args[1].depth)];
+    const gl=a.filter(o=>o.userData.hobGlass===true),bu=a.filter(o=>o.userData.burner===true),body=a.find(o=>o.userData.hobBody===true);
+    return {glass:gl.map(ext),burners:bu.map(ext),shapes:bu.map(o=>o.geometry.kind),ct:f.P.Ct,body:body&&[body.geometry.args.slice(0,3).map(mm),body.geometry.args.slice(3)],
+      discs:a.filter(o=>o.geometry&&o.geometry.kind==='THREE.CylinderGeometry'&&mm(o.geometry.args[0])>=75).length};})(VIEWS.kitchen.furniture())`);
+  // built in: 6 mm of glass on the worktop, its middle 150 left of the oven cabinet's (450 + 450 + 300 − 150 = 1050), z 60…580;
+  // two burners in its holes, as deep, their tops flush with it; no disc over anything
+  let r = hob(), t = r.ct + 6;
+  assert.deepStrictEqual(r.glass, [[1050, t, 320, 6]]);
+  assert.deepStrictEqual(r.burners, [[1050, t, 320, 6], [1050, t, 320, 6]], 'drawn round the glass\'s middle, as its holes are');
+  assert.deepStrictEqual([r.shapes, r.discs, r.body], [['THREE.ExtrudeGeometry', 'THREE.ExtrudeGeometry'], 0, undefined]);
+  // along the worktop: turned, 20 off the wall, in the middle of the cabinet
+  const along = kq('#k-tHobAlong'); along.checked = true; along.dispatch('change'); p.tick();
+  r = hob(); assert.deepStrictEqual(r.glass, [[1200, t, 170, 6]]);
+  // the tabletop one: its body 290 × 57 × 490 on its feet, its top open under the glass (boxGeo's hole: a 3 × 3 grid); the glass 4 mm
+  // proud of it and 6 down into it
+  along.checked = false; along.dispatch('change'); kq('[data-hob="free"]').click(); p.tick();
+  r = hob(); t = r.ct + 65 + 4;
+  assert.deepStrictEqual([r.glass, r.burners.length, r.discs], [[[1050, t, 315, 10]], 2, 0]);
+  assert.deepStrictEqual(r.body, [[290, 57, 490], [3, 1, 3]]);
+});
+
 check('кухня: стол у левой стены — 1350 от стены кухни, 700 вдоль стены, 1300 в комнату, столешница 30 мм на высоте 750', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   // the kitchen's origin on the plan: −2000, 2000; the table's top and legs among the appliances, in the walker's way

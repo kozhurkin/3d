@@ -510,19 +510,29 @@ function buildAppliances(g,opts){
     const hz=free?.315:.32,cx=b1+b2+b3/2+(along?0:P.Hx*MM),zc=along?.02+hd:hz;   // hz: centre of the hob in its own description, zc: where that centre goes
     // the hob is described with burners one behind the other (dx across, z into the room); "along" turns it 90° and moves its centre from z=hz to z=zc
     const at=(dx,z)=>along?[cx+z-hz,zc+dx]:[cx+dx,z];
-    const hb=(dx0,dx1,y0,y1,z0,z1,mat)=>along?box(cx+z0-hz,cx+z1-hz,y0,y1,zc+dx0,zc+dx1,mat):box(cx+dx0,cx+dx1,y0,y1,z0,z1,mat);
     const disc=(r,h,dx,y,z,mat,seg)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),mat);const [x,zz]=at(dx,z);m.position.set(x,y,zz);g.add(m);};
-    if(free){   // tabletop two-burner hob standing on the worktop
-      const hh=.065;
-      hb(-.145,.145,ct+.008,ct+hh,.07,.56,blackMat);
-      hb(-.14,.14,ct+hh,ct+hh+.004,.075,.555,glassMat);
-      [.2,.43].forEach(z=>disc(.075,.002,0,ct+hh+.005,z,burnerMat,32));
+    // where the corners (dx0, z0)–(dx1, z1) of the description are in the kitchen: x0, x1, z0, z1 and the middle (m)
+    const rect=(dx0,dx1,z0,z1)=>{const [ax,az]=at(dx0,z0),[bx,bz]=at(dx1,z1),x0=Math.min(ax,bx),x1=Math.max(ax,bx),w0=Math.min(az,bz),w1=Math.max(az,bz);
+      return {x0,x1,z0:w0,z1:w1,mx:(x0+x1)/2,mz:(w0+w1)/2};};
+    // the glass (of mat): a slab from y down by depth with a round hole for each zone [[z, r]] on its middle line, each filled by its burner —
+    // the same circle, as deep, its top flush with the glass: nothing lies over anything (it would flicker from far)
+    const glass=(dx0,dx1,z0,z1,y,depth,zones,mat)=>{const q=rect(dx0,dx1,z0,z1);
+      const ext=(sh,mat)=>{const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:false,curveSegments:24}),mat);
+        m.rotation.x=Math.PI/2;m.position.set(q.mx,y,q.mz);m.castShadow=m.receiveShadow=true;g.add(m);return m;};   // the shape's y along the kitchen's z, down from y
+      const circle=(p,[z,r])=>{const [x,zz]=at(0,z);return p.absarc(x-q.mx,zz-q.mz,r,0,Math.PI*2,false);};
+      const sh=new THREE.Shape();sh.moveTo(q.x0-q.mx,q.z0-q.mz);sh.lineTo(q.x1-q.mx,q.z0-q.mz);sh.lineTo(q.x1-q.mx,q.z1-q.mz);sh.lineTo(q.x0-q.mx,q.z1-q.mz);sh.lineTo(q.x0-q.mx,q.z0-q.mz);
+      zones.forEach(zr=>{sh.holes.push(circle(new THREE.Path(),zr));ext(circle(new THREE.Shape(),zr),burnerMat).userData.burner=true;});
+      ext(sh,mat).userData.hobGlass=true;};
+    if(free){   // tabletop two-burner hob standing on the worktop: its body with the glass set into the top, 4 mm proud of it
+      const hh=.065,q=rect(-.145,.145,.07,.56),sx=q.x1-q.x0,sz=q.z1-q.z0,i=.005;
+      const body=new THREE.Mesh(boxGeo(sx,hh-.008,sz,1,undefined,[-sx/2+i,sx/2-i,-sz/2+i,sz/2-i]),blackMat);   // its top open under the glass
+      body.position.set(q.mx,ct+(.008+hh)/2,q.mz);body.castShadow=body.receiveShadow=true;body.userData.hobBody=true;g.add(body);
+      glass(-.14,.14,.075,.555,ct+hh+.004,.01,[[.2,.075],[.43,.075]],glassMat);   // down into the body, so it closes its top
       [[-.11,.07],[.11,.07],[-.11,.56],[.11,.56]].forEach(([dx,z])=>disc(.008,.008,dx,ct+.004,z,blackMat,10));
       const kz=along?zc+.152:.567;   // knobs always on the front face
       [-.06,.06].forEach(dx=>{const k=new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,.015,16),chromeMat);k.rotation.x=Math.PI/2;k.position.set(cx+dx,ct+.035,kz);g.add(k);});
-    }else{   // built-in glass hob flush in a worktop cut-out
-      hb(-.15,.15,ct,ct+.006,.06,.58,blackMat);
-      [.18,.44].forEach(z=>disc(.085,.002,0,ct+.007,z,burnerMat,32));
+    }else{   // built-in glass hob: 6 mm of glass on the worktop
+      glass(-.15,.15,.06,.58,ct+.006,.006,[[.18,.085],[.44,.085]],glassMat);   // as the tabletop one's glass
     } }
   // built-in dishwasher behind the middle front
   if(P.Dish!==false){ const x0=b1+.003,x1=b1+b2-.003,yt=c.ytop*MM-.004,zc=c.zfB*MM-(P.TF||16)*MM,zd=zc-.045,pl=(P.Plinth!==false?P.Pl:0)*MM;

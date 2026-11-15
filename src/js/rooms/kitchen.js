@@ -27,9 +27,8 @@ function computeParts(p){
     add('Бок нижнего шкафа'+nm,'carcass',x0,x0+T,pl,ytop,0,zcB);
     add('Бок нижнего шкафа'+nm,'carcass',x1-T,x1,pl,ytop,0,zcB);
     add('Дно нижнего шкафа'+nm,'carcass',x0+T,x1-T,pl,pl+T,0,zcB);
-    // under the sink the front rail stands on edge by the front: lying flat it would go through the bowl
-    if(b.k==='sink')add('Царга передняя'+nm,'carcass',x0+T,x1-T,ytop-RB,ytop,zcB-T,zcB);
-    else add('Царга передняя'+nm,'carcass',x0+T,x1-T,ytop-T,ytop,zcB-RB,zcB);
+    // the front rail lies flat under the worktop; under the sink it stands on edge by the front: lying flat it would go through the bowl
+    { const edge=b.k==='sink';add('Царга передняя'+nm,'carcass',x0+T,x1-T,ytop-(edge?RB:T),ytop,zcB-(edge?T:RB),zcB); }
     add('Царга задняя'+nm,'carcass',x0+T,x1-T,ytop-RB,ytop,0,T);
     if(b.k==='door')add('Полка нижнего шкафа'+nm,'carcass',x0+T,x1-T,(pl+ytop)/2,(pl+ytop)/2+T,T,zcB-20);
     if(b.k==='oven'){

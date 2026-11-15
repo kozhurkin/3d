@@ -86,6 +86,14 @@ const tileMat=new THREE.MeshStandardMaterial({color:0x6b6e70,roughness:.6});
 const whiteMat=new THREE.MeshStandardMaterial({color:0xf4f4f2,roughness:.25,metalness:.05});
 const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
 
+/* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js), as in the kitchen */
+const INFO={
+  tray:()=>{const [x0,x1,z0,z1]=trayRect(),cm=v=>Math.round(v/10);   // its sizes as the plan has them now
+    return {title:'Душевой поддон',lines:[`${cm(x1-x0)} × ${cm(z1-z0)} см, высота ${cm(TRAY.H)} см: во всю душевую, от левой стены до перегородки.`,
+      'Литьевой мрамор, белый; верх под сланец, четыре ската к трапу.',
+      `Квадратный хромированный трап ${cm(TRAY.drain)} × ${cm(TRAY.drain)} см, в четверти длины от левой стены.`]};}
+};
+
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
    under the upper cabinet, its flush plate, the wall-hung bowl facing +x with its seat */
 function buildSanitary(g,opts){
@@ -110,13 +118,6 @@ function buildSanitary(g,opts){
 const TRAY={H:150,drain:120,at:.25};   // height; the drain's side; where it is along the tray from the left wall
 let tray=null;
 const trayRect=()=>[0,A.bWs+A.bGap,A.bL+A.wt,kZ0-zB0];   // x0, x1, z0, z1
-/* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js), as in the kitchen */
-const INFO={
-  tray:()=>{const [x0,x1,z0,z1]=trayRect(),cm=v=>Math.round(v/10);   // its sizes as the plan has them now
-    return {title:'Душевой поддон',lines:[`${cm(x1-x0)} × ${cm(z1-z0)} см, высота ${cm(TRAY.H)} см: во всю душевую, от левой стены до перегородки.`,
-      'Литьевой мрамор, белый; верх под сланец, четыре ската к трапу.',
-      `Квадратный хромированный трап ${cm(TRAY.drain)} × ${cm(TRAY.drain)} см, в четверти длины от левой стены.`]};}
-};
 /* the top's relief as a height field (mm), lit through a normal map; its colour an even white, a shade darker down in the relief.
    The slate: value noise bent by noise of its own (domain warp) cut in thin layers, each ending in a short sharp step, as split
    stone flakes; a fine grain over it; the four faces falling 6 mm to the drain. 1 px ≈ 1 mm of a 1000 × 700 tray.

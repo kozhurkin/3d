@@ -301,7 +301,7 @@ check('кухня: четыре стула BERGMUND у стола — задви
   const st = () => p.run(`(f=>f.doors.filter(d=>/^chair/.test(d.key)).map(d=>{const c=d.g.parent;
     return [d.key,d.axis,Math.round(d.travel*1000),Math.round(c.position.x*1000),Math.round(c.position.z*1000),+c.rotation.y.toFixed(2),Math.round(d.g.position.z*1000),c.parent===f.appl];}))(VIEWS.kitchen.furniture())`);
   // two along each long side (the kitchen wall's, the far one), 20 mm clear of the table's legs, 40 apart; the far ones turned round;
-  // pushed in, the seat's front 10 short of the table's middle (1700 from the kitchen wall); all pushed in at first; pulled out by 420 (the seat's front 80 past the table's edge)
+  // all pushed in at first, the seat's front 10 short of the table's middle (1700 from the kitchen wall); pulled out by 420 (the seat's front 80 past the table's edge)
   assert.deepStrictEqual(st(), [
     ['chair0', 'z', -420, 110, 1170, 0, 0, true], ['chair1', 'z', -420, 670, 1170, 0, 0, true],
     ['chair2', 'z', -420, 630, 2230, 3.14, 0, true], ['chair3', 'z', -420, 1190, 2230, 3.14, 0, true]]);

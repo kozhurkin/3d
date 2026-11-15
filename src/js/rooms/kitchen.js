@@ -891,11 +891,11 @@ function buildSofa(g,opts){
 }
 
 /* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps
-   how open it was through a rebuild; it opens and closes with the kitchen's fronts (clicks, «Открыты/Закрыты», the walk).
-   A new one starts closed (opening, if the fronts are open), or open already if it has startOpen */
-function applDoor(g,extra,{prev=[],open=false}={}){
+   how open it was through a rebuild; it opens and closes on a click or in the walk, not with the kitchen's fronts (loose).
+   A new one starts closed, or open already if it has startOpen */
+function applDoor(g,extra,{prev=[]}={}){
   const pd=prev.find(d=>d.key===extra.key),max=extra.max||DMAX,a0=extra.startOpen?max:0;
-  const d=Object.assign({g,a:pd?pd.a:a0,t:pd?pd.t:(open?max:a0),last:pd&&pd.last},extra,{max});turnDoor(d);return d;
+  const d=Object.assign({g,a:pd?pd.a:a0,t:pd?pd.t:a0,last:pd&&pd.last},extra,{max});turnDoor(d);return d;
 }
 
 /* a flat piece in g: the shape sh (its x along the kitchen's x, its y along z; from (x, z)) from y down by depth. The sink and the hob are
@@ -1093,10 +1093,12 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)
   dims:buildDims,
-  // none of it a cabinet front (the oven and the fridge, the chairs, the sofa, the furniture of the apartment): «Фасады» leaves it (loose), nor opens it when built
-  extra:{name:'appl',build:(g,o)=>{const own=Object.assign({},o,{open:false}),ap=buildAppliances(g,own);buildTable(g);buildPendant(g);
-    const all=[].concat(ap,buildChairs(g,own),buildDesk(g,own),buildDeskChair(g,own),buildVitrine(g,own),buildSofa(g,own),buildWardrobe(g,own),buildMezzanine(g,own),buildRack(g)||[]);
-    all.forEach(d=>{d.loose=true;});return all;}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
+  // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet,
+  // the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
+  // leaves them (loose), and they are built as they were (prev), never opened with the fronts
+  extra:{name:'appl',build:(g,{prev})=>{const o={prev},ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
+    const all=ap.concat(buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildRack(g));
+    all.forEach(d=>{d.loose=true;});return all;}},
   // its own view shows the cabinets and the dining table with its chairs and its lamp — the table only once the frame shows the left wall past it; the desk and its chair,
   // the display cabinet, the sofa, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

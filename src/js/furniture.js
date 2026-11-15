@@ -233,7 +233,7 @@ function buildParts(c,mats,{prev=[],open=false}={}){
         const ad=new THREE.Mesh(new THREE.BoxGeometry(dw-.006,dh-.01,.04),mats.dishDoor);
         ad.position.set(cx,dh/2-.05,.02);ad.castShadow=true;holder.add(ad);
         const pn=new THREE.Mesh(new THREE.BoxGeometry(dw-.06,dh-.08,.004),mats.dishPanel);
-        pn.position.set(cx,dh/2-.05,-.002);holder.add(pn); }
+        pn.position.set(cx,dh/2-.05,-.002);holder.add(pn);ad.userData.door=pn.userData.door=holder.userData.ownDoor=true; }   // «Без фасадов» takes off the front, not the door
       holder.add(mesh);holder.userData.front=true;model.add(holder);
     }else{mesh.position.set(cx,cy,cz);(p.inSlide&&slideHolders[p.inSlide]||model).add(mesh);}
   });

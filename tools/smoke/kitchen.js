@@ -158,11 +158,11 @@ check('кухня: фасады, деталировка, настройки по
   const ch0 = chairs();
   kq('[data-door="open"]').click();
   assert.deepStrictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>!d.loose).every(d=>d.t===d.max)'), true);
-  // only the kitchen's cabinets and appliances are its fronts; the chairs, the sofa and the apartment's furniture (the desk with its chair
-  // and laptop, the display cabinet, the wardrobe, the mezzanine) the switch leaves, and they do not unpress it
-  assert.deepStrictEqual(p.run('(f=>f.doors.filter(d=>!d.loose).map(d=>d.g.parent===f.appl?d.key:"cabinet"))(VIEWS.kitchen.furniture())'),
-    [...Array(10).fill('cabinet'), 'oven', 'fridge', 'fridge-d1', 'fridge-d2']);
-  assert.strictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>d.loose).length'), 25, '4 chairs, the desk chair, the laptop, the sofa 2, the desk 5, the display cabinet 5, the wardrobe 3, the mezzanine 4');
+  // only the kitchen's cabinet fronts (the dishwasher's among them); the oven and the fridge, the chairs, the sofa and the apartment's
+  // furniture (the desk with its chair and laptop, the display cabinet, the wardrobe, the mezzanine) the switch leaves, and they do not unpress it
+  assert.deepStrictEqual(p.run('(f=>f.doors.filter(d=>!d.loose).map(d=>d.g.parent===f.model))(VIEWS.kitchen.furniture())'), Array(10).fill(true));
+  assert.strictEqual(p.run('VIEWS.kitchen.furniture().doors.filter(d=>d.loose).length'), 29, 'the oven, the fridge 3, 4 chairs, the desk chair, the laptop, the sofa 2, the desk 5, the display cabinet 5, the wardrobe 3, the mezzanine 4');
+  assert.ok(p.run('VIEWS.kitchen.furniture().doors.filter(d=>/^(oven|fridge)/.test(d.key)).every(d=>d.t===0)'), 'the oven and the fridge stay closed');
   assert.deepStrictEqual(chairs(), ch0, 'the chairs stay as they were');
   p.run('(d=>{d.t=d.t?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(d=>d.key==="chair0"))');
   assert.deepStrictEqual(pressed(), ['open'], 'a chair moved by hand');
@@ -172,6 +172,12 @@ check('кухня: фасады, деталировка, настройки по
   p.run('(VIEWS.kitchen.furniture().doors[0].t=0, doorsChanged())');
   assert.deepStrictEqual(pressed(), []); assert.strictEqual(p.run('VS.kitchen.fronts'), 'open');
   kq('[data-door="hidden"]').click(); assert.deepStrictEqual(pressed(), ['hidden']);
+  // fronts taken off; the dishwasher keeps its own door (steel, its panel), only its decor front goes
+  const off = () => p.run(`(f=>{const hs=f.model.children.filter(o=>o.userData.front===true),dw=hs.filter(o=>o.userData.ownDoor===true);
+    return [dw.length,hs.filter(o=>o!==dw[0]).every(o=>o.visible===false),dw[0].visible!==false,dw[0].children.map(m=>m.userData.door===true?'door':'front').join(),dw[0].children.map(m=>m.visible!==false).join()];})(VIEWS.kitchen.furniture())`);
+  assert.deepStrictEqual(off(), [1, true, true, 'door,door,front', 'true,true,false']);
+  kq('[data-door="closed"]').click(); assert.deepStrictEqual(off().slice(2), [true, 'door,door,front', 'true,true,true'], 'the front back on');
+  kq('[data-door="hidden"]').click();
   const dims = kq('#k-tDims'); dims.checked = false; dims.dispatch('change');
   assert.deepStrictEqual(p.run('[VS.kitchen.fronts, VS.kitchen.dims]'), ['hidden', false]);
   // cut list: every part, grouped by material; the same as CSV
@@ -394,7 +400,10 @@ check('кухня: дверь холодильника открывается н
   // the hinges: the fridge door turns on its front right edge (the fridge niche's right end, 10 mm in), the oven door on its lower front edge
   const piv = p.run(`(f=>{const d=k=>f.doors.find(x=>x.key===k).g.position,c=f.current;return [Math.round(d("fridge").x*1000),c.xF-10,Math.round(d("oven").y*1000),c.ovY];})(VIEWS.kitchen.furniture())`);
   assert.deepStrictEqual(piv.slice(0, 2), [piv[1], piv[1]]); assert.strictEqual(piv[2], piv[3]);
+  // no cabinet fronts: the kitchen's «Открыты» leaves them; a click opens each
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(120);
+  assert.ok(ap().every((d) => d[4] === 0), 'not with the fronts');
+  p.run('VIEWS.kitchen.furniture().doors.filter(d=>/^(oven|fridge)/.test(d.key)).forEach(d=>d.t=d.max)'); p.tick(120);
   const r = ap();
   assert.ok(r[0][6] > 1.4, 'the fridge door swings out'); assert.ok(r[1][7] > 370 && r[2][7] > 370, 'the drawers slide out');
   assert.ok(r[3][5] > 1.5, 'the oven door lies down');

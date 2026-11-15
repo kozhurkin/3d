@@ -68,7 +68,9 @@ function roomKit(id,cfg){
   // what it shows wherever it is seen: fronts (the extras and the dimensions: every frame, below)
   function applyVisibility(){
     if(!model)return;const V=VS[id];
-    model.children.forEach(o=>{if(o.userData.front)o.visible=V.fronts!=='hidden';});
+    // (a front on an appliance's own door, the dishwasher's: only the front; the door stays)
+    const on=V.fronts!=='hidden';
+    model.children.forEach(o=>{if(!o.userData.front)return;if(o.userData.ownDoor===true)o.children.forEach(m=>{m.visible=on||m.userData.door===true;});else o.visible=on;});
   }
   // every frame: built when in the scene (its view, or the plan with «Шкафы») and changed; in a flight it sinks into the floor
   // or rises out of it; the doors swing wherever they are seen
@@ -107,7 +109,7 @@ function roomKit(id,cfg){
   cfg.ids.forEach(j=>q(`[data-p="${j}"]`).addEventListener('input',e=>{
     const w=wish.includes(j);P[j]=+e.target.value;if(w)want[j]=P[j];build();if(w)want[j]=P[j];syncIds();}));
   // fronts: all open, all closed (or nothing pressed when they differ), or taken off
-  // (not what moves but is no front of the room: loose — the kitchen's chairs, sofa and the apartment's furniture)
+  // (not what moves but is no cabinet front of the room: loose — the kitchen's appliances, chairs, sofa and the apartment's furniture)
   const fronts=()=>doors.filter(d=>!d.loose);
   function syncDoorMode(){
     const V=VS[id],fr=fronts();let st=V.fronts;

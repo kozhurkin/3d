@@ -1093,10 +1093,10 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
-    // the rest is no kitchen front (the chairs, the sofa, the furniture of the apartment): «Фасады» leaves it (loose), nor opens it when built
-    const own=Object.assign({},o,{open:false}),rest=[].concat(buildChairs(g,own),buildDesk(g,own),buildDeskChair(g,own),buildVitrine(g,own),buildSofa(g,own),buildWardrobe(g,own),buildMezzanine(g,own),buildRack(g)||[]);
-    rest.forEach(d=>{d.loose=true;});return ap.concat(rest);}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
+  // none of it a cabinet front (the oven and the fridge, the chairs, the sofa, the furniture of the apartment): «Фасады» leaves it (loose), nor opens it when built
+  extra:{name:'appl',build:(g,o)=>{const own=Object.assign({},o,{open:false}),ap=buildAppliances(g,own);buildTable(g);buildPendant(g);
+    const all=[].concat(ap,buildChairs(g,own),buildDesk(g,own),buildDeskChair(g,own),buildVitrine(g,own),buildSofa(g,own),buildWardrobe(g,own),buildMezzanine(g,own),buildRack(g)||[]);
+    all.forEach(d=>{d.loose=true;});return all;}},   // the appliances (the oven's and the fridge's doors open), the tables, the lamp over the dining one, the dining chairs, the desk chair, the display cabinet, the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table with its chairs and its lamp — the table only once the frame shows the left wall past it; the desk and its chair,
   // the display cabinet, the sofa, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

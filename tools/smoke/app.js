@@ -168,7 +168,9 @@ check('«Планировка»: шкафы всех комнат по гало�
   p.run(`${rooms}.forEach(k=>{VIEWS[k].furniture().model.userData.tag=k;})`);
   p.run('setModel({hL1:APT_A.hL1+100})'); p.tick();
   at().forEach((r) => { near(r[3], 0, 'x'); near(r[4], 0, 'z'); });
-  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), ['kitchen', 'bath', 'hall'], 'moved, not rebuilt');
+  // (the hall's length is the hall's own: its tool case stands at the kitchen wall)
+  assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), ['kitchen', 'bath', null], 'moved, not rebuilt; the hall rebuilt');
+  p.run('VIEWS.hall.furniture().model.userData.tag="hall"');
   p.run('setModel({hL1:APT_A.hL1+100, kW:2300})'); p.tick();
   assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), [null, 'bath', 'hall'], 'the kitchen rebuilt');
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);

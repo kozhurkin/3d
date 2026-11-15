@@ -229,3 +229,33 @@ check('прихожая: размер между полками — в прав�
   const n = hq('[data-p="N"]'); n.value = '2'; n.dispatch('input');
   assert.deepStrictEqual(gaps(), ['619', '276', '276']);
 });
+
+check('прихожая: ящик для инструмента STANLEY FatMax на полу в углу у прохода на кухню — 662 × 293 × 295, в своей вкладке, когда рамка дошла до него, едет за стеной', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  const cs = () => p.run(`(f=>{const g=f.things.children.find(o=>o.userData.toolCase===true);
+    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>Math.round(v*1000));};
+    const by=k=>g.children.filter(o=>o.userData[k]===true).map(box),bs=g.children.map(box);
+    return {box:[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i]))),base:by('base'),body:by('body'),lid:by('lid'),grip:by('grip'),latch:by('latch'),badge:by('badge'),info:infoOf(g.children[0]),visible:g.visible};})(VIEWS.hall.furniture())`);
+  let r = cs();
+  // hall axes: 10 from the right wall (1200) and from the kitchen wall (1900), the latches 14 out of its front toward the hall
+  assert.deepStrictEqual(r.box, [883, 1190, 0, 295, 1228, 1890]);
+  assert.deepStrictEqual(r.base, [[897, 1190, 0, 40, 1228, 1890]]);
+  assert.deepStrictEqual(r.body, [[901, 1186, 40, 200, 1232, 1886]], 'the grey body 4 in from the base and the lid');
+  assert.deepStrictEqual(r.lid, [[897, 1190, 200, 272, 1228, 1890]]);
+  assert.strictEqual(r.grip.length, 1);
+  assert.deepStrictEqual(r.grip[0].slice(2), [280, 295, 1498, 1620], 'the handle folded on the lid, in its middle');
+  assert.deepStrictEqual(r.latch, [[883, 887, 170, 245, 1285, 1331], [883, 887, 170, 245, 1787, 1833]], 'two latches on the front, 80 in from the ends');
+  assert.deepStrictEqual(r.badge, [[894, 897, 230, 258, 1514, 1604]]);
+  assert.strictEqual(r.info.title, 'Ящик для инструмента STANLEY FatMax');
+  assert.strictEqual(r.info.lines[0], '662 × 293 мм, высота 295 мм; 57 л.');
+  // the hall tab's frame (650) does not reach it; stretched to the kitchen wall it shows
+  assert.strictEqual(r.visible, false);
+  const sd = hq('#hFrameSd'); sd.value = String(sd.max); sd.dispatch('input'); p.tick();
+  assert.strictEqual(cs().visible, true);
+  // its footprint is on the plan with the cabinet's
+  assert.ok(p.run('VIEWS.hall.furniture().foot') !== null);
+  // the hall grows: the box goes with the kitchen wall
+  slide(p, 'hL2', 750); p.tick();
+  assert.deepStrictEqual(cs().body[0].slice(4), [1332, 1986]);
+});

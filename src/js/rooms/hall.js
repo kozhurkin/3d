@@ -6,8 +6,8 @@
    Own scope: the room modules share names. */
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
-// cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening
-const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false};
+// cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool case stands) too
+const P={W:1200,H:2600,D:400,Ht:600,Lw:100,Rw:240,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -82,7 +82,7 @@ const hBottom=()=>A.eDH-(P.reveal?(P.T||16):0);   // where the mezzanine starts:
 const hRange=()=>{const hi=A.H;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(w){
   T=P.T||16;TF=P.TF||16;const rv=P.reveal?T:0,[h0,h1]=hRange();
-  P.W=A.hallW;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
+  P.W=A.hallW;P.L=hLen;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
   P.Lw=A.eD0+rv;P.Rw=A.hallW-A.eD1+rv;P.Ht=P.H-hBottom();
   return current=computeParts(P);
 }
@@ -92,6 +92,37 @@ function fromModel(w){
 const FIN={carcass:{type:'wood',decor:'H1386'},front:{type:'wood',decor:'H1386'}};
 const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
+
+/* ---------- the tool box on the floor in the far right corner, by the way into the kitchen (next to the kitchen's racks
+   behind the wall): STANLEY FatMax, 662 × 293 × 295 ----------
+   Its long side along the right wall, its end toward the wall right of the way in, CS.gap from both; the latches face the hall.
+   A black base, the grey body over it (CS.in in from its faces), the black lid (its top CS.chamf in), the handle folded on the
+   lid along it (its top the box's height); on the front two metal latches on black pads, CS.latch in from the ends, and
+   the yellow badge in the middle of the lid. Hall axes (mm), a group with its «i» */
+const CS={W:662,D:293,H:295,base:40,lid:200,top:280,in:4,chamf:8,gap:10,grip:170,gripW:36,pivot:24,latch:80,pad:70,plate:46};
+const caseMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#a9a79e').convertSRGBToLinear(),roughness:.45,metalness:.45});   // the grey body
+const caseBlackMat=new THREE.MeshStandardMaterial({color:0x18191a,roughness:.6});   // the base, the lid, the handle, the latches' pads
+const latchMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#bfcbd2').convertSRGBToLinear(),roughness:.3,metalness:.85});   // zinc-plated
+const badgeMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#f2c218').convertSRGBToLinear(),roughness:.5});
+const INFO={
+  toolCase:{title:'Ящик для инструмента STANLEY FatMax',lines:[`${CS.W} × ${CS.D} мм, высота ${CS.H} мм; 57 л.`,'Пластик, замки металлические.','На полу в углу у прохода на кухню.']}
+};
+// where it stands: [x0, x1, z0, z1]
+const caseAt=()=>{const x1=P.W-CS.gap,z1=P.L-CS.gap;return [x1-CS.D,x1,z1-CS.W,z1];};
+function buildCase(g){
+  const {H,base,lid,top,in:i,chamf:c,grip,gripW,pivot,latch,pad,plate}=CS,[x0,x1,z0,z1]=caseAt(),mm=v=>v*MM,xc=(x0+x1)/2,zc=(z0+z1)/2;
+  const q=new THREE.Group();q.userData.toolCase=true;q.userData.info=INFO.toolCase;g.add(q);
+  const bx=boxIn(q),b=(xa,xb,ya,yb,za,zb,mat,k)=>{const m=bx(mm(xa),mm(xb),mm(ya),mm(yb),mm(za),mm(zb),mat||caseBlackMat);if(k)m.userData[k]=true;return m;};
+  b(x0,x1,0,base,z0,z1,null,'base');
+  b(x0+i,x1-i,base,lid,z0+i,z1-i,caseMat,'body');
+  b(x0,x1,lid,top-c,z0,z1,null,'lid');b(x0+c,x1-c,top-c,top,z0+c,z1-c);
+  // the handle folded on the lid: a pivot at each end, the grip between them
+  [zc-grip/2,zc+grip/2-pivot].forEach(z=>b(xc-gripW/2,xc+gripW/2,top,H,z,z+pivot));
+  b(xc-gripW/2,xc+gripW/2,top,H,zc-grip/2+pivot,zc+grip/2-pivot,null,'grip');
+  // the latches across the joint: a black pad, the metal plate on it
+  [z0+latch,z1-latch].forEach(z=>{b(x0-10,x0,lid-40,lid+55,z-pad/2,z+pad/2);b(x0-14,x0-10,lid-30,lid+45,z-plate/2,z+plate/2,latchMat,'latch');});
+  b(x0-3,x0,lid+30,lid+58,zc-45,zc+45,badgeMat,'badge');
+}
 
 /* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ---------- */
 function buildDims(dim,gaps){
@@ -147,12 +178,16 @@ function panelText(){
 
 const k=roomKit('hall',{
   P,FIN,mats,px:'h',panel,origin:O,fromModel,setCam,panelText,
-  fromPlan:['W','Lw','Rw','Ht','Rv'],
+  fromPlan:['W','L','Lw','Rw','Ht','Rv'],
   ids:['H','D','N','Pl'],
   wish:['H'],
   onSyncIds:()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;},   // the height stays between the mezzanine's least and the ceiling
   slider:{sel:'#hFrameSd',key:'Sd',max:()=>hLen},   // how far from the bearing wall the side walls show, up to the kitchen wall
   dims:buildDims,
+  // the tool box: in the hall's own view once the frame shows the right wall past it; its footprint on the plan
+  extra:{name:'things',build:g=>{buildCase(g);return [];}},
+  frame:(on,{extra,show})=>{if(extra)extra.children.forEach(o=>{if(o.userData.toolCase===true)o.visible=!on||show>=caseAt()[3];});},
+  foot:()=>{const [x0,x1,z0,z1]=caseAt();return [[x0,x1,z0,z1]];},
   // in the hall's own view «Стена и дверь» off takes away the walls, the entrance door and its swing
   walls:on=>{if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
     else if(on&&wallGroup)wallGroup.visible=true;},

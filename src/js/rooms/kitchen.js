@@ -325,10 +325,11 @@ function buildDesk(g,opts){
    front, a black shell behind, its top 190 a headrest: a thicker cushion, 35 proud of the back,
    10 wider, the back's cushion 50 up into it, so the two read as one; two black loop arms with brown pads, their tops 655 high: under the desk's knee rail (670). In the
    desk's knee space, facing it: pulled out at first (the seat's front 150 past the desk's edge), a click pushes it in under the desk till
-   its back is 20 short of the desk's edge, and back out. The walker passes through it (walk.js: userData.walkThrough).
+   its back is 20 short of the desk's edge, and back out. Over the last 30% of the way out it swivels on its column, its back 20°
+   toward the window, and straightens again before it goes in. The walker passes through it (walk.js: userData.walkThrough).
    Own axes (mm): x across from its middle, y up, z from the column toward the seat's front */
 const MC={W:650,H:1180,seat:460,sw:520,sd:490,cush:100,sz:255,back:{w:490,t:70,shell:25,y:400,z:-215,lean:12,head:190,headT:105,lap:50},
-  arm:{x:295,top:655,pad:30,bar:25,t:30,z0:-200,z1:130,y0:315},base:{r:300,hub:110,tip:75,wheel:25},out:150,clear:20};
+  arm:{x:295,top:655,pad:30,bar:25,t:30,z0:-200,z1:130,y0:315},base:{r:300,hub:110,tip:75,wheel:25},out:150,clear:20,turn:20,turnFrom:.7};
 const leatherMat=(()=>{
   // fine grain: a speckle of pits as bumps, so the light breaks on it as on leather
   const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
@@ -348,7 +349,7 @@ function buildDeskChair(g,opts){
   const {sw,sd,cush,seat,sz,back:b,arm:a,base:bs}=MC,{x,z,travel}=deskChairAt(),m=v=>v*MM;
   const c=new THREE.Group();c.position.set(m(x),0,m(z));c.rotation.y=-Math.PI/2;   // its front (+z) toward the wall (−x)
   Object.assign(c.userData,{deskChair:true,info:INFO.deskChair,walkThrough:true});g.add(c);
-  const q=new THREE.Group();c.add(q);   // what slides: all of it
+  const sl=new THREE.Group(),q=new THREE.Group();c.add(sl);sl.add(q);   // what slides: all of it; in it what swivels on the column (its origin)
   const put=(geo,mat,px,py,pz,par=q)=>{const o=new THREE.Mesh(geo,mat);o.position.set(m(px),m(py),m(pz));o.castShadow=o.receiveShadow=true;par.add(o);return o;};
   const rbox=(sx,sy,sz,r,mat,px,py,pz,par)=>put(roundBoxGeo(m(sx),m(sy),m(sz),m(r)),mat,px,py,pz,par);
   // the base: a hub, five legs sloping down to the casters (one toward the front), each caster a fork and two wheels
@@ -386,7 +387,10 @@ function buildDeskChair(g,opts){
     put(new THREE.BoxGeometry(m(Math.abs(ax)-130),m(20),m(40)),plasticMat,s*(Math.abs(ax)+130)/2,yp+10,-20);   // to the mechanism
   });
   // pulled out: away from the desk (its own −z), at first
-  return [applDoor(q,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true},opts)];
+  // its back toward the window (the kitchen's +z: its own +x), eased in over the end of the way out
+  const sm=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+  const follow=a=>{q.rotation.y=-MC.turn*Math.PI/180*sm((a/DMAX-MC.turnFrom)/(1-MC.turnFrom));};
+  return [applDoor(sl,{key:'desk-chair',axis:'z',travel:-m(travel),startOpen:true,follow},opts)];
 }
 
 /* the laptop on the desk: MacBook Pro 16″, silver — 355.7 × 248.1, 16.8 thick (Apple's sizes): 1.5 feet, a 9.4 body, 0.6 over it for

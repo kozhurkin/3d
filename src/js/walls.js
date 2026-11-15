@@ -138,13 +138,13 @@ function buildWallSet(list,ruleOf,lines){
   const foot=(id,x0,x1,z0,z1,mat)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry((x1-x0)*MM,(z1-z0)*MM),mat);m.rotation.x=-Math.PI/2;m.position.set((x0+x1)/2*MM,.002,(z0+z1)/2*MM);m.renderOrder=1;wallGroup.add(m);wallFeet.push({m,id,box:[x0,x1,z0,z1]});};
   list.forEach(w=>{
     w.kept.forEach(i=>holesShown.add(w.id+':'+i));
-    const [x0,x1,z0,z1]=w.r,alongX=w.along,f=ruleOf(w),id=w.id;
+    const [x0,x1,z0,z1]=w.r,alongX=w.along,f=ruleOf(w),id=w.id,fm=w.h?lowFootMat:footMat;   // a low wall's footprint lighter
     if(lines){const e=new THREE.LineSegments(new THREE.BufferGeometry(),edgeMat);e.raycast=()=>{};wallGroup.add(e);wallLines.push({e,w,f});}
     // split the wall along its long side: full-height pieces between openings, a lintel over each opening
     let cur=alongX?x0:z0;const end=alongX?x1:z1;
     const piece=(a,b,y0,y1=w.h||H)=>{if(b-a<1)return;
       if(alongX)solid(id,a,b,y0,y1,z0,z1,f);else solid(id,x0,x1,y0,y1,a,b,f);
-      const fm=w.h?lowFootMat:footMat;if(y0===0){if(alongX)foot(id,a,b,z0,z1,fm);else foot(id,x0,x1,a,b,fm);}};
+      if(y0===0){if(alongX)foot(id,a,b,z0,z1,fm);else foot(id,x0,x1,a,b,fm);}};
     (w.holes||[]).forEach(([a,b,h,sill=0])=>{piece(cur,a,0);piece(a,b,h);if(sill>0)piece(a,b,0,sill);cur=b;});
     piece(cur,end,0);
   });

@@ -120,7 +120,7 @@ const INFO={
 /* the top's relief as a height field (mm), lit through a normal map; its colour an even white, a shade darker down in the relief.
    The slate: value noise bent by noise of its own (domain warp) cut in thin layers, each ending in a short sharp step, as split
    stone flakes; a fine grain over it; the four faces falling 6 mm to the drain. 1 px ≈ 1 mm of a 1000 × 700 tray.
-   Made once, on the first tray (≈ 0.3 s); where a canvas has no pixels (the checks in Node) the top stays plain */
+   Made once, on the first tray (≈ 0.15 s); where a canvas has no pixels (the checks in Node) the top stays plain */
 let trayTex=null;
 function makeTrayTex(){
   const W=1024,Hp=716,mmPx=1000/W;
@@ -151,7 +151,7 @@ function makeTrayTex(){
   for(let y=0;y<Hp;y++)for(let x=0;x<W;x++){
     const i=y*W+x,o=i*4;
     // canvas x runs along +u, its rows down = −v: the normal's green leans to +v
-    let nx=-(at(x+1,y)-at(x-1,y))/(2*mmPx)*K,ny=(at(x,y+1)-at(x,y-1))/(2*mmPx)*K;const l=Math.hypot(nx,ny,1);
+    const nx=-(at(x+1,y)-at(x-1,y))/(2*mmPx)*K,ny=(at(x,y+1)-at(x,y-1))/(2*mmPx)*K;const l=Math.hypot(nx,ny,1);
     N[o]=(nx/l*.5+.5)*255;N[o+1]=(ny/l*.5+.5)*255;N[o+2]=(1/l*.5+.5)*255;N[o+3]=255;
     const k=.95+.05*cav[i];C[o]=243*k;C[o+1]=243*k;C[o+2]=240*k;C[o+3]=255;
   }

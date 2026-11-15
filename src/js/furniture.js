@@ -74,8 +74,7 @@ function partSeeder(){
 /* a box sx × sy × sz (m) with its edges and corners rounded by r (m): a box grid of 2k+1 segments a side, k of them in each
    rounding, every vertex pushed out from the inner box (r in from the faces) to r from it — its normal the way it was pushed.
    A picture on a face lies over it evenly, as on a plain box (its roundings at the picture's edges), not squeezed into its one
-   flat segment: u, v by where the vertex is on the face, each face's axes and ways as BoxGeometry's (px, nx, py, ny, pz, nz) */
-const RB_UV=[[2,-1,1,-1],[2,1,1,-1],[0,1,2,1],[0,1,2,-1],[0,1,1,-1],[0,-1,1,-1]];   // per face: u's axis and way, v's axis and way
+   flat segment (boxUV) */
 function roundBoxGeo(sx,sy,sz,r,k=4){
   const n=2*k+1,g=new THREE.BoxGeometry(sx,sy,sz,n,n,n),pos=g.attributes.position,nor=g.attributes.normal,uv=g.attributes.uv,h=[sx/2,sy/2,sz/2];
   r=Math.min(r,...h)*.999;
@@ -83,7 +82,7 @@ function roundBoxGeo(sx,sy,sz,r,k=4){
   const p=new THREE.Vector3(),q=new THREE.Vector3(),d=new THREE.Vector3();
   for(let i=0;i<pos.count;i++){
     p.set(map(pos.getX(i),h[0]),map(pos.getY(i),h[1]),map(pos.getZ(i),h[2]));
-    const [ua,us,va,vs]=RB_UV[Math.floor(i/((n+1)*(n+1)))],c=[p.x,p.y,p.z];uv.setXY(i,.5+us*c[ua]/(2*h[ua]),.5-vs*c[va]/(2*h[va]));
+    const [u,v]=boxUV(Math.floor(i/((n+1)*(n+1))),[p.x,p.y,p.z],[sx,sy,sz]);uv.setXY(i,u,v);   // n × n segments a face, in BoxGeometry's order
     q.set(Math.max(-h[0]+r,Math.min(h[0]-r,p.x)),Math.max(-h[1]+r,Math.min(h[1]-r,p.y)),Math.max(-h[2]+r,Math.min(h[2]-r,p.z)));
     d.subVectors(p,q);if(d.lengthSq()<1e-12)d.set(nor.getX(i),nor.getY(i),nor.getZ(i));d.normalize();
     p.copy(q).addScaledVector(d,r);pos.setXYZ(i,p.x,p.y,p.z);nor.setXYZ(i,d.x,d.y,d.z);
@@ -92,7 +91,12 @@ function roundBoxGeo(sx,sy,sz,r,k=4){
   return g;
 }
 /* hole: [x0, x1, z0, z1] (m, from the box's middle) cut through its top face (a worktop's cut-out for a sink): the box on a 3 × 3
-   grid across, its middle lines on the hole's edges, the top's middle cell left out. What fills the hole closes it */
+   grid across, its middle lines on the hole's edges, the top's middle cell left out. What fills the hole closes it (the sink's bowl
+   in the worktop, the tabletop hob's glass in its body) */
+/* u, v (0…1) of the point c on face f (px, nx, py, ny, pz, nz) of a box of sizes s, by where it is on the face, as BoxGeometry has them
+   on a plain box; and the axes u and v run along */
+const BOX_UV=[[2,-1,1,-1],[2,1,1,-1],[0,1,2,1],[0,1,2,-1],[0,1,1,-1],[0,-1,1,-1]];   // per face: u's axis and way, v's axis and way
+function boxUV(f,c,s){const [au,us,av,vs]=BOX_UV[f];return [.5+us*c[au]/s[au],.5-vs*c[av]/s[av],au,av];}
 function boxGeo(sx,sy,sz,seed,axis,hole){
   // grain follows the longest side of each panel, like a real cut from a board
   const g=hole?new THREE.BoxGeometry(sx,sy,sz,3,1,3):new THREE.BoxGeometry(sx,sy,sz),pos=g.attributes.position,uv=g.attributes.uv,r=rng(seed),ox=r(),oy=r();
@@ -109,11 +113,10 @@ function boxGeo(sx,sy,sz,seed,axis,hole){
       g.addGroup(s,keep.length-s,q.materialIndex);});
     g.setIndex(keep);
   }
-  // u, v by where the vertex is on its face (as BoxGeometry has them: roundBoxGeo's RB_UV), in decor repeats
-  const faces=[[2,1],[2,1],[0,2],[0,2],[0,1],[0,1]]; // which axes a face's u,v run along
+  // u, v by where the vertex is on its face (boxUV), in decor repeats
   for(let j=0;j<pos.count;j++){
-    const f=face[j],[au,us,av,vs]=RB_UV[f],du=dims[au],dv=dims[av],c=[pos.getX(j),pos.getY(j),pos.getZ(j)];
-    const swap=(au===ax)||(av!==ax&&du>dv),u=.5+us*c[au]/du,v=.5-vs*c[av]/dv;
+    const [u,v,au,av]=boxUV(face[j],[pos.getX(j),pos.getY(j),pos.getZ(j)],dims),du=dims[au],dv=dims[av];
+    const swap=(au===ax)||(av!==ax&&du>dv);
     if(swap)uv.setXY(j,v*dv/RU+ox,u*du/RV+oy);else uv.setXY(j,u*du/RU+ox,v*dv/RV+oy);
   }
   return g;

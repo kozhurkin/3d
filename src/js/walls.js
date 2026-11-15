@@ -17,8 +17,8 @@ const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSid
 // the ceiling's colour (the walk's ceiling): white whatever the walls' paint is — the palette's «Белый», as the theme has it
 const ceilColor=new THREE.Color();
 const edgeMat=new THREE.LineBasicMaterial({color:0x4a4d50,transparent:true,opacity:.35});
-// how dark the walls' and doors' outlines are in a view: the skeleton's are dark, else as «Контур стен» (one setting for every view)
-const edgeOp=V=>V.Wm==='skeleton'?.9:S.edge?.5:0;
+// how dark the walls' and doors' outlines are in a view: in «Контуры» (only the outlines of the walls) dark, else as «Контур стен» (one setting for every view)
+const edgeOp=V=>V.Wm==='edges'?.9:S.edge?.5:0;
 const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
@@ -231,9 +231,9 @@ function startWallMorph(from,toId,pos){
   wallParts.forEach(p=>{const m=mats.get(p.id);if(m&&p.m.material===wallMat)p.m.material=m.body;});
   wallLines.forEach(l=>{l.e.material=mats.get(l.w.id).line;});
   wallFeet.forEach(p=>{p.m.material=mats.get(p.id).foot;});
-  // the walls' see-through and their outlines go from how they look now to the new view's mode (the skeleton is see-through)
-  const skel=V.Wm==='skeleton';
-  morph={w,e:0,opF:wallMat.opacity,opT:skel?0:1,lnF:edgeMat.opacity,lnT:edgeOp(V),
+  // the walls' see-through and their outlines go from how they look now to the new view's mode (in «Контуры» they are see-through)
+  const edgesOnly=V.Wm==='edges';
+  morph={w,e:0,opF:wallMat.opacity,opT:edgesOnly?0:1,lnF:edgeMat.opacity,lnT:edgeOp(V),
     doors:doorsF&&V.dm!=='none'&&V.Wm!=='feet',mats};   // doors show only if both ends show them
 }
 // a piece cut to the rect r (mm) along x and z by scale; false when nothing of it is left. flat: a footprint (its z is its local y)
@@ -329,7 +329,7 @@ const lineGeo=pts=>new THREE.BufferGeometry().setAttribute('position',new THREE.
 function wallsSeeThrough(op){const see=op<.999;const m=wallMat;m.opacity=op;if(m.transparent!==see){m.transparent=see;m.depthWrite=!see;m.needsUpdate=true;}}
 frameHooks.push((dt,ease)=>{
   const V=vs();
-  const row=V.Wm==='row',skel=V.Wm==='skeleton',feet=V.Wm==='feet';
+  const row=V.Wm==='row',edgesOnly=V.Wm==='edges',feet=V.Wm==='feet';
   const cutMm=H*(row?10:V.Wh)/100,cut=cutMm*MM;
   let doorCut=()=>cut;   // the height a door is cut at: its wall's
   if(morph){
@@ -356,11 +356,11 @@ frameHooks.push((dt,ease)=>{
     arcs.children.forEach(l=>{const d=doors.find(x=>x.hole===l.userData.hole);l.visible=!!d&&d.g.visible;});
     doorGroup.visible=arcs.visible=morph.doors;
   }else{
-    wallsSeeThrough(skel?0:1);edgeMat.opacity=edgeOp(V);
+    wallsSeeThrough(edgesOnly?0:1);edgeMat.opacity=edgeOp(V);
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
       w.m.visible=fits&&!feet&&(V.Wm==='auto'?w.f():true);
-      w.m.castShadow=!skel&&!w.glass;
+      w.m.castShadow=!edgesOnly&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });
     // wall edges are redrawn only when the cut height changes

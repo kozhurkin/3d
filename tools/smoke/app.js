@@ -34,14 +34,16 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(panel.querySelector('[data-wh-out]').textContent, '100%');
 });
 
-check('приложение: вид стен «Следы» (feet) во всех панелях; сохранённый режим без своей кнопки — по умолчанию', () => {
-  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ Wm: 'outline', Wh: 60 })]]);
+check('приложение: виды стен «Контуры» (edges) и «Следы» (feet) во всех панелях; сохранённый режим без своей кнопки — по умолчанию', () => {
+  const storage = new Map([['apt-view-plan-v1', JSON.stringify({ Wm: 'outline', Wh: 60 })], ['apt-view-bath-v1', JSON.stringify({ Wm: 'skeleton' })]]);
   const p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
   ['plan', 'kitchen', 'bath', 'hall', 'walk'].forEach((id) => assert.ok(p.document.querySelector(`[data-panel="${id}"] [data-wm="feet"]`), `${id}: «Следы»`));
   assert.strictEqual(PAGES.app.split('<button data-wm="feet" aria-pressed="false">Следы</button>').length - 1, 5, 'signed «Следы» in all five');
-  assert.ok(!/Контуры</.test(PAGES.app), 'no «Контуры» left');
-  // 'outline' was «Контуры» before the rename: no button for it now, the plan takes its default; the rest of the saved view stays
-  assert.deepStrictEqual(p.run('[VS.plan.Wm, VS.plan.Wh]'), ['auto', 60]);
+  assert.strictEqual(PAGES.app.split('<button data-wm="edges" aria-pressed="false">Контуры</button>').length - 1, 5, 'signed «Контуры» in all five');
+  assert.ok(!/Скелет/.test(PAGES.app), 'no «Скелет» left');
+  // 'outline' («Следы» now 'feet') and 'skeleton' («Контуры» now 'edges'): no buttons for them now, the views take their defaults;
+  // the rest of a saved view stays
+  assert.deepStrictEqual(p.run('[VS.plan.Wm, VS.plan.Wh, VS.bath.Wm]'), ['auto', 60, 'auto']);
 });
 
 check('приложение: настройки вида и общие настройки сохраняются отдельно', () => {

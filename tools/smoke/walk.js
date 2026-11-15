@@ -25,7 +25,7 @@ check('обход: вид от первого лица у входа, в пан�
   const panel = p.document.querySelector('[data-panel="walk"]');
   assert.deepStrictEqual([panel.hidden, panel.querySelectorAll('input').map((i) => i.id), panel.querySelector('#walkEyeOut').textContent], [false, ['walkEye', 'walkWh', 'wEdge', 'Laz', 'Lel', 'Li', 'La', 'wFly'], '1650 мм']);
   const pressed = (k) => panel.querySelectorAll(`[data-${k}]`).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset[k]);
-  assert.deepStrictEqual(panel.querySelectorAll('[data-wm]').map((b) => b.dataset.wm), ['show', 'row', 'auto', 'skeleton', 'feet']);
+  assert.deepStrictEqual(panel.querySelectorAll('[data-wm]').map((b) => b.dataset.wm), ['show', 'row', 'auto', 'edges', 'feet']);
   assert.deepStrictEqual([pressed('wm'), pressed('dm'), panel.querySelector('[data-wh-out]').textContent], [['auto'], ['closed'], '100%']);
   const info = (k) => p.document.querySelector(`#infoBtn [data-info="${k}"]`).hidden;
   assert.deepStrictEqual([info('orbit'), info('walk')], [true, false], 'the hint of the walk under «i»');
@@ -116,8 +116,8 @@ check('обход: вид стен и двери из панели, сохран
   // the walls cut to half: no ceiling over them, the walls still stop the walker
   const wh = panel().querySelector('[data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
   assert.deepStrictEqual(p.run('[ceiling.visible, wallParts.filter(w=>w.m.visible).every(w=>w.m.position.y+w.h*w.m.scale.y/2<=H*MM/2+1e-6), wallBoxes.length>0]'), [false, true, true]);
-  panel().querySelector('[data-wm="skeleton"]').click(); p.tick();
-  assert.deepStrictEqual([pressed('wm'), panel().querySelector('[data-wh-out]').textContent, p.run('[wallMat.opacity, ceiling.visible]')], [['skeleton'], '50%', [0, false]]);
+  panel().querySelector('[data-wm="edges"]').click(); p.tick();
+  assert.deepStrictEqual([pressed('wm'), panel().querySelector('[data-wh-out]').textContent, p.run('[wallMat.opacity, ceiling.visible]')], [['edges'], '50%', [0, false]]);
   wh.value = '100'; wh.dispatch('input'); panel().querySelector('[data-wm="show"]').click(); p.tick();
   assert.strictEqual(p.run('ceiling.visible'), true, 'solid walls up to the ceiling: the ceiling is back');
   panel().querySelector('[data-wm="feet"]').click(); p.tick();
@@ -178,15 +178,15 @@ check('обход: потолок белый при любом цвете сте
   assert.deepStrictEqual(p.run('[__paint.wall,__paint.ceil===wallCol(WALLC.white),__paint.copied]'), ['#C7BEB1', true, true]);
 });
 
-check('«Контур стен» — общая галочка: 50% или никаких, в скелете тёмные всегда, одна для всех вкладок', () => {
+check('«Контур стен» — общая галочка: 50% или никаких, в «Контурах» тёмные всегда, одна для всех вкладок', () => {
   const storage = new Map();
   let p = open(storage);
   const eg = () => p.document.getElementById('wEdge');
   assert.deepStrictEqual([p.run('edgeMat.opacity'), eg().checked], [0.5, true]);
   eg().checked = false; eg().dispatch('change'); p.tick();
   assert.deepStrictEqual([p.run('edgeMat.opacity'), JSON.parse(storage.get('apt-shared-v1')).edge], [0, false], 'off: no outlines');
-  p.document.querySelector('[data-panel="walk"] [data-wm="skeleton"]').click(); p.tick();
-  near(p.run('edgeMat.opacity'), 0.9, 'the skeleton keeps its dark outlines');
+  p.document.querySelector('[data-panel="walk"] [data-wm="edges"]').click(); p.tick();
+  near(p.run('edgeMat.opacity'), 0.9, '«Контуры» keep their dark outlines');
   p.document.querySelector('[data-panel="walk"] [data-wm="auto"]').click(); p.tick();
   // the plan: the same setting, no outlines there either; on again — on the plan too
   p.run('showView("plan")'); p.fly(); near(p.run('edgeMat.opacity'), 0, 'off on the plan as well');

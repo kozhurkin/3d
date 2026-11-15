@@ -143,7 +143,7 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
 const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
-// what the cursor can hit: a visible surface (not a line, a label, or a wall turned see-through in the skeleton mode)
+// what the cursor can hit: a visible surface (not a line, a label, or a wall turned see-through in «Контуры»)
 const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{

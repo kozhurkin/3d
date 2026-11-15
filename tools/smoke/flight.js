@@ -52,7 +52,7 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   assert.deepStrictEqual(p.run('[morph, wallParts.every(w=>w.glass||w.m.material===wallMat), wallFeet.every(f=>f.m.material===(f.id==="showerStep"?lowFootMat:footMat))]'), [null, true, true]);
 });
 
-check('перелёт: разный вид стен у вкладок — высота и «Скелет» меняются плавно', () => {
+check('перелёт: разный вид стен у вкладок — высота и «Контуры» меняются плавно', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
   const plan = p.document.querySelector('[data-panel="plan"]');
   plan.querySelector('[data-wm="row"]').click(); p.tick();   // the plan in «Ряд»: walls 10 % high
@@ -60,10 +60,10 @@ check('перелёт: разный вид стен у вкладок — выс
   near(piece(p, 'kitchen').sy, (260 + (2600 - 260) / 2) / 2600, 'kitchen wall grows from 10 % to full');
   p.fly();
   p.run('showView("plan")'); p.fly();
-  plan.querySelector('[data-wm="skeleton"]').click(); p.tick();
+  plan.querySelector('[data-wm="edges"]').click(); p.tick();
   assert.strictEqual(p.run('wallMat.opacity'), 0);
   p.run('showView("kitchen")'); p.tick(25, 17);
-  near(p.run('wallMat.opacity'), 0.5, 'see-through skeleton turns solid gradually');
+  near(p.run('wallMat.opacity'), 0.5, 'see-through «Контуры» turn solid gradually');
   p.fly();
   assert.strictEqual(p.run('wallMat.opacity'), 1);
 });

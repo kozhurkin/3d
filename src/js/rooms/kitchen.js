@@ -136,6 +136,8 @@ const INFO={
   macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Выдвинут от стола; нажатие задвигает его под стол и обратно.']},
+  wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
+  mezzanine:{title:'Антресоль OZON «Уютная логика»',lines:['Белая, распашные двери без ручек (открываются нажатием).','Две секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.','На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.']},
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
 
@@ -448,6 +450,102 @@ function buildVitrine(g,opts){
   return d.doors;
 }
 
+/* the wardrobe as OZON «Уютная логика» 135×95, white, handleless (push-to-open) hinged doors: a corner unit 950 × 950, 500 deep, and an
+   add-on section 400 wide — 1350 along the right wall, 950 out from it, 2200 high. Against the right wall by the sofa's end toward the
+   kitchen wall: its leg (500 wide) out from the wall along the sofa's arm, its door toward the kitchen wall; along the wall from the
+   leg the corner unit's other door, then the add-on section, their doors into the room. The corner unit as the shop's picture: on the
+   left (along the wall) a narrow part with four shelves, a partition at the inner corner; on the right the leg with the corner behind
+   it, for hangers — a shelf at the top, two rods one over the other through the leg up to the wall; shelves in the add-on section.
+   At the inner corner a fixed L-shaped stile of two strips, one in each front's plane: the corner unit's doors go up to them, so they
+   open clear of each other. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
+   Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
+   the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
+const WR={W:1350,D:950,C:950,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
+   // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø
+const wardFIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый'},front:{type:'uni',color:'#F1F0EA',name:'Белый'},top:{type:'uni',color:'#F1F0EA',name:'Белый'},apron:null};
+const wardMats=makeMats();applyMaterials(wardMats,wardFIN,30);
+const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
+function wardrobeParts(){
+  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const {W,D,C,d,H,pl,t,ft,gap}=WR,X=P.Rx,s=wardAt(),yt=H-t,cd=d-ft;   // X: the wall; cd: the carcass's depth behind the doors
+  const xF=X-d,zF=s-d,xE=X-D,zE=s-C,zA=s-W;   // the doors' faces: along the wall, the leg's; the leg's end; the corner unit's far side; the add-on's
+  const fy0=pl+gap,fy1=H-gap,cu=' углового шкафа',ad=' доп. секции';
+  // the corner unit: its leg's end, its back at the sofa, its far side along the wall; an HDF back against the wall
+  add('Торцевая стенка'+cu,'carcass',xE,xE+t,0,H,zF+ft,s);
+  add('Стенка у дивана'+cu,'carcass',xE+t,X,0,H,s-t,s);
+  add('Боковина'+cu,'carcass',X-cd,X,0,H,zE,zE+t);
+  add('Задняя стенка'+cu+' — у дивана','back',X-4,X,pl,yt,zF+ft,s-t);
+  add('Задняя стенка'+cu+' — вдоль стены','back',X-4,X,pl,yt,zE+t,zF+ft);
+  // the top and the bottom in two pieces each, the plinth under both doors
+  [['Крыша',yt,H],['Дно',pl,pl+t]].forEach(([n,y0,y1])=>{
+    add(n+cu+' — у дивана','carcass',xE+t,X-4,y0,y1,zF+ft,s-t);
+    add(n+cu+' — вдоль стены','carcass',xF+ft,X-4,y0,y1,zE+t,zF+ft);
+  });
+  // the left part: the partition at the inner corner, in line with the leg's door, and its shelves evenly between the bottom and the top
+  add('Перегородка'+cu,'carcass',xF+ft,X-4,pl+t,yt,zF,zF+t);
+  const n=WR.shelves,st=(yt-pl-t-n*t)/(n+1),shelfY=[...Array(n)].map((_,i)=>Math.round(pl+t+(i+1)*st+i*t));   // the add-on section's too
+  shelfY.forEach(y=>add('Полка'+cu+' — слева','carcass',xF+ft+20,X-4,y,y+t,zE+t,zF));
+  // the right part: its top shelf through the leg and the corner, on the leg's end, the panel at the sofa and the partition; the rods
+  // under it (buildWardrobe)
+  add('Полка'+cu+' — справа','carcass',xE+t,X-4,WR.top,WR.top+t,zF+ft,s-t);
+  add('Цоколь'+cu+' — у дивана','carcass',xE+t,xF+ft,0,pl,zF+ft,zF+ft+t);
+  add('Цоколь'+cu+' — вдоль стены','carcass',xF+ft,xF+ft+t,0,pl,zE+t,zF+ft+t);
+  // the stile at the inner corner: a strip in each front's plane, the one along the wall over the corner where they meet
+  const w=WR.strip;
+  add('Планка'+cu+' — у дивана','carcass',xF-w,xF,fy0,fy1,zF,zF+ft);
+  add('Планка'+cu+' — вдоль стены','carcass',xF,xF+ft,fy0,fy1,zF-w,zF+ft);
+  // its two doors, hinged at their outer ends, up to the strips: the leg's toward the kitchen wall, the other into the room
+  add('Дверь'+cu+' — у дивана','front',xE+gap/2,xF-w-gap,fy0,fy1,zF,zF+ft,{pivot:{x:xE+gap/2,z:zF,s:1}});
+  add('Дверь'+cu+' — вдоль стены','front',xF,xF+ft,fy0,fy1,zE+gap/2,zF-w-gap,{pivot:{x:xF,z:zE+gap/2,s:-1}});
+  // the add-on section: its own sides, top, bottom, plinth, back, four shelves as the corner unit's left part, its door hinged at the far end
+  [zA,zE-t].forEach(z=>add('Боковина'+ad,'carcass',X-cd,X,0,H,z,z+t));
+  add('Крыша'+ad,'carcass',X-cd,X-4,yt,H,zA+t,zE-t);
+  add('Дно'+ad,'carcass',X-cd,X-4,pl,pl+t,zA+t,zE-t);
+  add('Цоколь'+ad,'carcass',X-cd,X-cd+t,0,pl,zA+t,zE-t);
+  add('Задняя стенка'+ad,'back',X-4,X,pl,yt,zA+t,zE-t);
+  shelfY.forEach(y=>add('Полка'+ad,'carcass',X-cd+20,X-4,y,y+t,zA+t,zE-t));
+  add('Дверь'+ad,'front',xF,xF+ft,fy0,fy1,zA+gap/2,zE-gap/2,{pivot:{x:xF,z:zA+gap/2,s:-1}});
+  return parts;
+}
+/* the mezzanine as OZON «Уютная логика» 50×50, white, as the wardrobe: two sections 1000 long, 500 deep and 500 high, two handleless doors
+   in each, hinged at the section's ends, into the room. On the right wall over the sofa, from 1700 up to the wardrobe's top at 2200,
+   along the wall from the wardrobe's side toward the window. Kitchen axes (mm), as the wardrobe */
+const MZ={n:2,L:1000,d:500,y0:1700,y1:2200,t:16,ft:16,gap:2};
+function mezzanineParts(){
+  const parts=[],add=(name,mat,x0,x1,y0,y1,z0,z1,extra)=>{const o=Object.assign({name,mat,x0,x1,y0,y1,z0,z1},extra||{});parts.push(o);return o;};
+  const {n,L,d,y0,y1,t,ft,gap}=MZ,X=P.Rx,cd=d-ft,xF=X-d;
+  for(let i=0;i<n;i++){
+    const z0=wardAt()+i*L,z1=z0+L,zm=(z0+z1)/2,nm=' антресоли — секция '+(i+1);
+    [z0,z1-t].forEach(z=>add('Боковина'+nm,'carcass',X-cd,X,y0,y1,z,z+t));
+    add('Крыша'+nm,'carcass',X-cd,X-4,y1-t,y1,z0+t,z1-t);
+    add('Дно'+nm,'carcass',X-cd,X-4,y0,y0+t,z0+t,z1-t);
+    add('Задняя стенка'+nm,'back',X-4,X,y0+t,y1-t,z0+t,z1-t);
+    add('Дверь'+nm+', левая','front',xF,xF+ft,y0+gap,y1-gap,z0+gap/2,zm-gap/2,{pivot:{x:xF,z:z0+gap/2,s:-1}});
+    add('Дверь'+nm+', правая','front',xF,xF+ft,y0+gap,y1-gap,zm+gap/2,z1-gap/2,{pivot:{x:xF,z:z1-gap/2,s:1}});
+  }
+  return parts;
+}
+function buildMezzanine(g,opts){
+  const d=buildParts({parts:mezzanineParts()},wardMats,opts);
+  d.model.userData.mezzanine=true;d.model.userData.info=INFO.mezzanine;
+  g.add(d.model);
+  return d.doors;
+}
+const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
+function buildWardrobe(g,opts){
+  const ps=wardrobeParts(),s=wardAt(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the partition goes with the run
+  return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
+    const d=buildParts({parts},wardMats,opts);
+    d.model.userData.wardrobe=true;d.model.userData.info=INFO.wardrobe;
+    // the rods in the leg: across its opening, in the middle of its depth, from its end to the wall
+    if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-4,z=(zF+WR.ft+s-WR.t)/2;
+      WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);
+        r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});}
+    g.add(d.model);
+    return d.doors;
+  });
+}
+
 /* the corner sofa as Hoff «Слим», beige-grey velour: 2060 × 1530, 910 high with its back cushions, the seat 450 high on 55 mm black
    plastic legs. The seat 1300 wide and 750 deep in front of a thin back (100 mm, 680 high: the height laid out without the cushions),
    530 in front of the cushions; the chaise 650 wide out to 1530. Two arms alike, 55 wide, from the legs up to 635, as deep as the seat;
@@ -743,16 +841,17 @@ const k=roomKit('kitchen',{
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>A.kL},   // how far from the kitchen wall the left wall shows, up to the window wall
   dims:buildDims,
-  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildVitrine(g,o),buildSofa(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the dining chairs, the display cabinet and the sofa go with the walls in the kitchen's view
+  extra:{name:'appl',build:(g,o)=>{const ap=buildAppliances(g,o);buildTable(g);return ap.concat(buildChairs(g,o),buildDesk(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o));}},   // the appliances (the oven's and the fridge's doors open), the tables, the dining chairs, the display cabinet, the sofa, the wardrobe and the mezzanine go with the walls in the kitchen's view
   // its own view shows the cabinets and the dining table — the table only once the frame shows the left wall past it; the desk,
-  // the display cabinet and the sofa stand in the apartment (the plan, the walk), not in the kitchen tab
+  // the display cabinet, the sofa, the wardrobe and the mezzanine stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
     const fits=show>=TB.z+TB.w;
-    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.vitrine===true||u.sofa===true)o.visible=!on;else if(u.table===true||u.chair===true)o.visible=!on||fits;});
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(u.desk===true||u.vitrine===true||u.sofa===true||u.wardrobe===true||u.mezzanine===true)o.visible=!on;else if(u.table===true||u.chair===true)o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
   foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
-    [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W]],   // its footprint: the fridge besides the base run, the table, the desk, the display cabinet, the sofa
+    [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
+    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]],   // its footprint: the fridge besides the base run, the table, the desk, the display cabinet, the sofa, the wardrobe
   syncFlags:()=>{kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();},
   // finishes: the worktop and the apron (as the worktop unless it has its own) besides the carcass and the fronts
   groups:['carcass','front','top','apron'],

@@ -140,8 +140,9 @@ const INFO={
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Задвинут под стол; нажатие выдвигает его и обратно.']},
-  wardrobe:{title:'Угловой шкаф OZON «Уютная логика»',lines:['Белый, распашные двери без ручек (открываются нажатием).','135 × 95 см, высота 220 см, глубина 50 см: угловой 95 × 95 см и доп. секция 40 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.']},
-  mezzanine:{title:'Антресоль OZON «Уютная логика»',lines:['Белая, распашные двери без ручек (открываются нажатием).','Две секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.','На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.']},
+  wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).','Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.'],buy:WARD_PRODUCTS})),
+  mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
+    buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
   mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
   rack:()=>({title:'Металлический стеллаж',lines:[`${rackW()/10} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.']}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
@@ -163,7 +164,7 @@ function buildTable(g){
 }
 
 /* the pendant lamp over the dining table, in the middle of it, its shade's bottom its own height over the tabletop (higher only if its cord
-   does not reach so far). A click changes it for the next of three IKEA lamps (LAMPS), round, BLÅSVERK at first
+   does not reach so far). A click (or the card's «Следующий вариант →») changes it for the next of three IKEA lamps (LAMPS), round, BLÅSVERK at first
    (engine.js: userData.click); the one hung stays through the kitchen's rebuilds. Each a white cord from its top (hang) up to its canopy
    on the ceiling, as long as it is (cord); lit. Own axes (mm): y up from the shade's bottom, from the shade's axis */
 let pendantModel=0;   // in LAMPS
@@ -194,7 +195,7 @@ const pendantMats=(()=>{
 const LAMPS=[
   /* BLÅSVERK, beige: 370 across, 180 high — a glossy beige dome over a white opal bowl, a ring where they meet, 95 up; the bowl's bottom
      dished in round its middle. On a beige aluminium tube 16 across, 280 long; the opal bowl glows */
-  {name:'BLÅSVERK',over:800,hang:460,cord:1100,canopy:[[0,0],[8,1],[22,8],[32,22],[37,42],[37,65]],
+  {name:'BLÅSVERK',price:3500,url:'https://ozon.ru/t/GAWH6H0',over:800,hang:460,cord:1100,canopy:[[0,0],[8,1],[22,8],[32,22],[37,42],[37,65]],
     lines:['Глянцевый бежевый верх, снизу белый матовый рассеиватель; бежевая алюминиевая трубка, белый шнур.','Ø37 см, высота 18 см; трубка 28 см, шнур 110 см; лампа E27, шар опаловый.'],
     shade(put,lathe,V,mt){
       lathe(new THREE.SplineCurve([V(185,95),V(186,105),V(183,128),V(175,150),V(158,167),V(125,177),V(70,180),V(10,180)]).getPoints(30),mt.beige,64);
@@ -204,7 +205,7 @@ const LAMPS=[
     }},
   /* BUNKEFLO, white and birch: 360 across, its steel shade 115 high — a skirt flaring a little to its open bottom, a rounded shoulder up to
      a white collar 85 across, 30 high, a solid birch cylinder 75 across, 42 high, on it. An E27 socket inside, an opal globe bulb under it */
-  {name:'BUNKEFLO',over:800,hang:187,cord:1400,canopy:[[0,0],[20,0],[22,2],[33,46],[33,48]],
+  {name:'BUNKEFLO',price:5000,url:'https://ozon.ru/t/dwjZCNy',over:800,hang:187,cord:1400,canopy:[[0,0],[20,0],[22,2],[33,46],[33,48]],
     lines:['Белый, сталь с порошковым покрытием; сверху вставка из массива берёзы; белая потолочная чашка-конус.','Ø36 см; шнур 140 см; лампа E27, шар опаловый.'],
     shade(put,lathe,V,mt){
       lathe(new THREE.SplineCurve([V(180,0),V(177,15),V(172,45),V(167,72),V(158,92),V(130,105),V(90,111),V(48,114)]).getPoints(30),mt.steel,64);
@@ -216,7 +217,7 @@ const LAMPS=[
   /* MISTERHULT, handwoven bamboo: its shade 450 across, 400 high, a gourd — a neck 160 across at the top, widest 150 up from its bottom,
      a solid bamboo band round its open bottom (370 across); its weave open, so the light and the sun go through it. An E27 socket in
      the neck, a clear globe bulb under it */
-  {name:'MISTERHULT',over:700,hang:350,cord:1600,canopy:[[0,0],[8,0],[30,4],[44,14],[50,31],[50,46]],
+  {name:'MISTERHULT',price:9000,url:'https://ozon.ru/t/EIG8Q2j',over:700,hang:350,cord:1600,canopy:[[0,0],[8,0],[30,4],[44,14],[50,31],[50,46]],
     lines:['Бамбук, ручное плетение; белый шнур и потолочная чашка.','Абажур Ø45 см, высота 40 см; шнур до 160 см; лампа E27, шар прозрачный.'],
     shade(put,lathe,V,mt){
       const R=225,band=40;
@@ -232,9 +233,12 @@ const canopyH=L=>L.canopy[L.canopy.length-1][1];
 function pendantY(L){return Math.max(TB.h+L.over,P.H-canopyH(L)-L.cord-L.hang);}
 function buildPendant(g){
   const q=new THREE.Group();q.position.set((TB.l/2)*MM,0,(TB.z+TB.w/2)*MM);
-  Object.assign(q.userData,{pendant:true,walkThrough:true,info:()=>{const L=LAMPS[pendantModel];
-    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`,`Нажатие меняет светильник: ${LAMPS.map(l=>l.name).join(' → ')}.`)};},
-    click:()=>{pendantModel=(pendantModel+1)%LAMPS.length;fillPendant(q);}});
+  // the card: which of the three it is and a link to the next one (engine.js: info.variant, info.next — it hangs the next and gives its card), its price and the shop
+  const card=()=>{const L=LAMPS[pendantModel];
+    return {title:`Подвесной светильник ${L.name} (IKEA)`,lines:L.lines.concat(`Над серединой обеденного стола, низ абажура в ${Math.round((pendantY(L)-TB.h)/10)} см над столешницей.`),
+      price:L.price,url:L.url,shop:'Ozon',variant:[pendantModel+1,LAMPS.length],next:()=>{click();return card();}};};
+  const click=()=>{pendantModel=(pendantModel+1)%LAMPS.length;fillPendant(q);};
+  Object.assign(q.userData,{pendant:true,walkThrough:true,info:card,click});
   g.add(q);fillPendant(q);
 }
 // the lamp hung now, in q: what was there goes (the clipping planes its materials had go to the new ones)
@@ -818,7 +822,7 @@ function buildSpiceShelf(g,opts){
   return ms.flatMap(d=>d.doors);
 }
 
-/* the wardrobe as OZON «Уютная логика» 135×95, white, handleless (push-to-open) hinged doors: a corner unit 950 × 950, 500 deep, and an
+/* the wardrobe as OZON «Уютная логика» 135×95, white or grey (wardColor), handleless (push-to-open) hinged doors: a corner unit 950 × 950, 500 deep, and an
    add-on section 400 wide — 1350 along the right wall, 950 out from it, 2200 high. Against the right wall by the sofa's end toward the
    kitchen wall: its leg (500 wide) out from the wall along the sofa's arm, its door toward the kitchen wall; along the wall from the
    leg the corner unit's other door, then the add-on section, their doors into the room. The corner unit as the shop's picture: on the
@@ -832,8 +836,24 @@ const WR={W:1350,D:950,C:950,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelve
   mirror:{w:400,h:400,y0:1300,frame:15,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
    // (its frame, its bottom); the coat rail under it: HK
-const wardFIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый'},front:{type:'uni',color:'#F1F0EA',name:'Белый'},top:{type:'uni',color:'#F1F0EA',name:'Белый'},apron:null};
-const wardMats=makeMats();applyMaterials(wardMats,wardFIN,30);
+// the wardrobe and the mezzanine, each in one finish all over, each its own: white or Диамант серый U963 ST9 (furniture.js: UNI, as the
+// bathroom's carcass) — the next one by a click on its panels (a door's click opens it) or by its card's «Следующий вариант →»; it stays through the kitchen's rebuilds
+const WARD_COLORS=[{type:'uni',color:'#F1F0EA',name:'Белый'},UNI.U963];
+function colorSwitch(){
+  const o={i:0,mats:makeMats(),
+    paint(){const f=WARD_COLORS[o.i];applyMaterials(o.mats,{carcass:f,front:f,top:f,apron:null},30);},
+    click(){o.i=(o.i+1)%WARD_COLORS.length;o.paint();},
+    // its card c (card() gives it again): its colour first, which colour of how many and a link to the next one (engine.js: info.variant, info.next)
+    card:(card,c)=>Object.assign(c,{lines:[`Цвет: ${finName(WARD_COLORS[o.i])}.`].concat(c.lines),variant:[o.i+1,WARD_COLORS.length],next:()=>{o.click();return card();}})};
+  o.paint();return o;
+}
+const wardColor=colorSwitch(),mzColor=colorSwitch();
+// a card of what is bought on Ozon as products (c.buy: [{name, n, price, url}], a row each in the card): the shop, the sum under its lines
+const ozon=c=>Object.assign(c,{shop:'Ozon',lines:c.lines.concat(`Вместе ${c.buy.reduce((t,b)=>t+(b.n||1)*b.price,0).toLocaleString('ru-RU')} ₽.`)});
+// the two OZON products it is made of (its card has a row for each)
+const WARD_PRODUCTS=[
+  {name:'Угловой 96,4 × 96,4 × 220',price:12000,url:'https://ozon.ru/t/sXBC1uj'},
+  {name:'Доп. секция 40 × 50 × 220',price:5500,url:'https://ozon.ru/t/BSIni7B'}];
 const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
 function wardrobeParts(){
   const [parts,add]=partList();
@@ -877,10 +897,10 @@ function wardrobeParts(){
   add('Дверь'+ad,'front',xF,xF+ft,fy0,fy1,zA+gap/2,zE-gap/2,{pivot:{x:xF,z:zA+gap/2,s:-1}});
   return parts;
 }
-/* the mezzanine as OZON «Уютная логика» 50×50, white, as the wardrobe: two sections 1000 long, 500 deep and 500 high, two handleless doors
+/* the mezzanine as OZON «Уютная логика» 100×50×50 (two of them), white or grey (mzColor), apart from the wardrobe: two sections 1000 long, 500 deep and 500 high, two handleless doors
    in each, hinged at the section's ends, into the room. On the right wall over the sofa, from 1700 up to the wardrobe's top at 2200,
    along the wall from the wardrobe's side toward the window. Kitchen axes (mm), as the wardrobe */
-const MZ={n:2,L:1000,d:500,y0:1700,y1:2200,t:16,ft:16,gap:2};
+const MZ={n:2,L:1000,d:500,y0:1700,y1:2200,t:16,ft:16,gap:2,price:3500,url:'https://ozon.ru/t/ivoD7B6'};   // each section an OZON product: its price, its link
 function mezzanineParts(){
   const [parts,add]=partList();
   const {n,L,d,y0,y1,t,ft,gap}=MZ,X=P.Rx,cd=d-ft,xF=X-d;
@@ -896,8 +916,9 @@ function mezzanineParts(){
   return parts;
 }
 function buildMezzanine(g,opts){
-  const d=buildParts({parts:mezzanineParts()},wardMats,opts);
+  const d=buildParts({parts:mezzanineParts()},mzColor.mats,opts);
   d.model.userData.mezzanine=true;d.model.userData.info=INFO.mezzanine;
+  d.model.children.forEach(o=>{o.userData.click=mzColor.click;});   // the next colour
   g.add(d.model);
   return d.doors;
 }
@@ -986,8 +1007,9 @@ function wardrobeEnd(g){
 function buildWardrobe(g,opts){
   const ps=wardrobeParts(),s=wardAt(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the partition goes with the run
   return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
-    const d=buildParts({parts},wardMats,opts);
+    const d=buildParts({parts},wardColor.mats,opts);
     d.model.userData.wardrobe=true;d.model.userData.info=INFO.wardrobe;
+    d.model.children.forEach(o=>{o.userData.click=wardColor.click;});   // its panels, before the rods, the mirror and the coat rail join them
     // the rods in the leg: across its opening, in the middle of its depth, from its end to the wall
     if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-4,z=(zF+WR.ft+s-WR.t)/2;
       WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);

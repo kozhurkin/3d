@@ -79,7 +79,7 @@ function fromModel(w){P.W=A.bNiche;P.L=A.bL;P.H=A.H;P.Rx=A.rX;P.Rz=A.rZ;clamp(w)
 
 /* ---------- finishes and materials ---------- */
 // finish per part group, as in the bath tab: wood decor or plain colour (no worktop here)
-const FIN={carcass:{type:'uni',color:'#6E7173',name:'Диамант серый U963 ST9'},front:{type:'wood',decor:'H1386'}};
+const FIN={carcass:Object.assign({},UNI.U963),front:{type:'wood',decor:'H1386'}};
 const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
 const tileMat=new THREE.MeshStandardMaterial({color:0x6b6e70,roughness:.6});

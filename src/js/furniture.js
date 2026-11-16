@@ -149,6 +149,8 @@ function makeMats(){
   mats.pin=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
   return mats;
 }
+// plain-colour finishes more than one room has: the bathroom's carcass, the kitchen's wardrobe in grey
+const UNI={U963:{type:'uni',color:'#6E7173',name:'Диамант серый U963 ST9'}};
 // finish of a part group: wood decor or plain colour; the apron follows the worktop unless set separately
 const finOf=(FIN,k)=>k==='apron'&&!FIN.apron?FIN.top:FIN[k];
 const finName=f=>f.type==='wood'?DECORS[f.decor].name+(DECORS[f.decor].code?' '+DECORS[f.decor].code:''):f.name;

@@ -336,7 +336,15 @@ check('кухня: светильник над серединой обеденн
     return [q.userData.model,r(q.position.x),r(q.position.y),r(q.position.z),r(cord.geometry.args[2]),r(cord.position.y-cord.geometry.args[2]/2),r(q.position.y+can.position.y),q.userData.walkThrough,infoOf(q.children[0]).title];})(${q})`);
   // BLÅSVERK at first, over the table's middle (650 along it, 1350 + 350 from the kitchen wall); 750 + 800; its cord from the top of its tube (180 + 280) up to the canopy (2600 − 65)
   assert.deepStrictEqual(st(), ['BLÅSVERK', 650, 1550, 1700, 525, 460, 2535, true, 'Подвесной светильник BLÅSVERK (IKEA)']);
-  assert.match(p.run(`infoOf(${q}.children[0]).lines.join(' ')`), /Нажатие меняет светильник: BLÅSVERK → BUNKEFLO → MISTERHULT/);
+  // the card: price and Ozon link of each, which of three, and «next» hangs the next one and gives its card
+  const cd = () => p.run(`(i=>[i.price,i.url,i.shop,i.variant.join('/'),typeof i.next])(infoOf(${q}.children[0]))`);
+  assert.deepStrictEqual(cd(), [3500, 'https://ozon.ru/t/GAWH6H0', 'Ozon', '1/3', 'function']);
+  assert.strictEqual(p.run(`(i=>{const n=i.next();return n.title+n.price+n.variant.join('/');})(infoOf(${q}.children[0]))`), 'Подвесной светильник BUNKEFLO (IKEA)50002/3');
+  assert.deepStrictEqual(cd(), [5000, 'https://ozon.ru/t/dwjZCNy', 'Ozon', '2/3', 'function']);
+  p.run(`infoOf(${q}.children[0]).next()`);
+  assert.deepStrictEqual(cd(), [9000, 'https://ozon.ru/t/EIG8Q2j', 'Ozon', '3/3', 'function']);
+  p.run(`infoOf(${q}.children[0]).next()`);
+  assert.strictEqual(st()[0], 'BLÅSVERK');
   // a click on any piece of it changes it (engine.js: clickOf); the next one, then the third, then the first again
   assert.strictEqual(p.run(`(q=>{const o=q.children[2];o.userData={};return clickOf({object:o})===q.userData.click;})(${q})`), true);   // its userData plain, as THREE's (the stub's answers anything)
   const click = () => p.run(`${q}.userData.click()`);
@@ -590,7 +598,28 @@ check('кухня: угловой шкаф OZON 1350 × 950 у дивана — 
   // along it, the run along the wall 500 deep up to 2540 − 1350 = 1190 (its plinth reaches 32 into the leg's corner)
   assert.strictEqual(r.groups, 2, 'the leg and the run along the wall: the walk is stopped by its L');
   assert.deepStrictEqual(r.boxes, [[2250, 3200, 2040, 2540, 0, 2200], [2700, 3200, 1190, 2072, 0, 2200]]);
-  assert.strictEqual(r.title, 'Угловой шкаф OZON «Уютная логика»');
+  assert.strictEqual(r.title, 'Угловой шкаф «Уютная логика» (OZON)');
+  // one card for the whole wardrobe (any of its parts): a row for the corner unit (12000) and one for the add-on (5500) with their Ozon links, the sum;
+  // «next» paints it grey and back
+  const wc = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
+    const find=(g,fn)=>{let r=null;const w=o=>{if(!r&&fn(o))r=o;(o.children||[]).forEach(w);};w(g);return r;};
+    const ad=find(gs[1],o=>o.userData&&o.userData.part&&o.userData.part.name==='Дверь доп. секции');
+    const ic=infoOf(gs[0].children[0]),ia=infoOf(ad);
+    const cl=o=>clickOf({object:o});
+    return [ic.buy.map(b=>[b.name,b.price,b.url,b.shop||ic.shop]),ia.title===ic.title,ic.variant.join('/'),
+      cl(gs[0].children[0])===cl(gs[1].children[0])&&cl(find(gs[0],o=>o.userData&&o.userData.mirror===true))!==cl(gs[0].children[0]),ic.lines[0],ic.lines[4]];})(VIEWS.kitchen.furniture())`);
+  const w0 = wc();
+  assert.deepStrictEqual(w0, [[['Угловой 96,4 × 96,4 × 220', 12000, 'https://ozon.ru/t/sXBC1uj', 'Ozon'], ['Доп. секция 40 × 50 × 220', 5500, 'https://ozon.ru/t/BSIni7B', 'Ozon']], true, '1/2', true, 'Цвет: Белый.', 'Вместе 17\u00a0500 ₽.']);
+  // its panels click alike (not the mirror on it: a thing of its own; the stub's userData answers anything, so only «not the same»); «next» paints it grey, a click white again, a rebuild keeps the colour
+  const g0 = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true)';
+  const col = () => { const w = wc(); return [w[2], w[4]]; };
+  p.run(`infoOf(${g0}.children[0]).next()`);
+  assert.deepStrictEqual(col(), ['2/2', 'Цвет: Диамант серый U963 ST9.']);
+  const kW = p.run('A.kW'); slide(p, 'kW', kW + 200); p.tick();
+  assert.deepStrictEqual(col(), ['2/2', 'Цвет: Диамант серый U963 ST9.'], 'through a rebuild');
+  slide(p, 'kW', kW); p.tick();
+  p.run(`clickOf({object:${g0}.children[0]})()`);
+  assert.deepStrictEqual(col(), ['1/2', 'Цвет: Белый.'], 'a click: white again');
   // hinged at their outer ends, away from the inner corner: the leg's toward the kitchen wall, the other two into the room
   assert.deepStrictEqual(r.doors, [
     ['Дверь углового шкафа — у дивана', 2251, 2040, 1, 0],
@@ -647,11 +676,24 @@ check('кухня: антресоль OZON над диваном — две се
   const mz = () => p.run(`(f=>{const g=f.appl.children.find(o=>o.userData.mezzanine===true),ps=[];
     const w=o=>{if(o.userData&&o.userData.part&&o.userData.part.x1>o.userData.part.x0)ps.push(o.userData.part);(o.children||[]).forEach(w);};w(g);
     return {box:[Math.min(...ps.map(q=>q.x0)),Math.max(...ps.map(q=>q.x1)),Math.min(...ps.map(q=>q.z0)),Math.max(...ps.map(q=>q.z1)),Math.min(...ps.map(q=>q.y0)),Math.max(...ps.map(q=>q.y1))],
-      title:infoOf(g.children[0]).title,doors:f.doors.filter(x=>x.g.parent===g).map(x=>{const q=x.g.children[0].userData.part;return [q.z0,q.z1,q.pivot.z,q.pivot.s,x.t];})};})(VIEWS.kitchen.furniture())`);
+      title:infoOf(g.children[0]).title,card:(i=>[i.buy.map(b=>[b.name,b.n,b.price,b.url,b.shop||i.shop]),i.lines[2],i.lines[4]])(infoOf(g.children[0])),
+      color:(i=>[i.variant.join('/'),i.lines[0]])(infoOf(g.children[0])),click:clickOf({object:g.children[0]})!==clickOf({object:f.appl.children.find(o=>o.userData.wardrobe===true).children[0]}),
+      ward:infoOf(f.appl.children.find(o=>o.userData.wardrobe===true).children[0]).lines[0],doors:f.doors.filter(x=>x.g.parent===g).map(x=>{const q=x.g.children[0].userData.part;return [q.z0,q.z1,q.pivot.z,q.pivot.s,x.t];})};})(VIEWS.kitchen.furniture())`);
   let r = mz();
   // kitchen axes: on the right wall (3200), 500 deep; from the wardrobe's side at the sofa (2540) 2000 toward the window, 210 short of it
   assert.deepStrictEqual(r.box, [2700, 3200, 2540, 4540, 1700, 2200]);
-  assert.strictEqual(r.title, 'Антресоль OZON «Уютная логика»');
+  assert.strictEqual(r.title, 'Антресоль «Уютная логика» (OZON)');
+  // its card: two sections alike, each OZON's 100 × 50 × 50 at 3500, one row for them with its link; the sum
+  assert.deepStrictEqual(r.card, [[['Антресоль 100 × 50 × 50', 2, 3500, 'https://ozon.ru/t/ivoD7B6', 'Ozon']], '2 секции по 100 см, глубина 50 см, высота 50 см; по две двери в каждой.', 'Вместе 7\u00a0000 ₽.']);
+  // its colour, white at first, apart from the wardrobe's: its «next» paints it grey, not the wardrobe; the wardrobe's click paints only that;
+  // a click on it white again
+  assert.deepStrictEqual([r.color, r.click], [['1/2', 'Цвет: Белый.'], true]);
+  p.run(`infoOf(VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.mezzanine===true).children[0]).next()`);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Белый.']);
+  p.run(`clickOf({object:VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true).children[0]})()`);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Диамант серый U963 ST9.']);
+  p.run(`clickOf({object:VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.mezzanine===true).children[0]})()`);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['1/2', 'Цвет: Белый.'], 'Цвет: Диамант серый U963 ST9.']);
   // two doors a section, hinged at its ends, into the room
   assert.deepStrictEqual(r.doors, [[2541, 3039, 2541, -1, 0], [3041, 3539, 3539, 1, 0], [3541, 4039, 3541, -1, 0], [4041, 4539, 4539, 1, 0]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();

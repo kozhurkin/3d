@@ -466,3 +466,25 @@ check('санузел: размер между полками — один на 
   set('Nh', 0);
   assert.deepStrictEqual(gaps(), []);
 });
+
+check('санузел: смеситель раковины — высокий хромированный корпус, плоский носик над чашей, рычаг-пластина сверху, под шкафчиком', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const r = p.run(`(w=>{const mm=v=>Math.round(v*1000),all=(o,a=[])=>{a.push(o);(o.children||[]).forEach(c=>all(c,a));return a;};
+    const q=w.children.filter(o=>o.userData.mixer===true),rack=all(VIEWS.bath.furniture().sani).filter(o=>o.userData.rackPart==='riser');
+    const boxes=q.filter(o=>o.geometry.kind==='THREE.BoxGeometry');
+    return {n:q.length,chrome:q.every(o=>o.material===rack[0].material),lit:q.every(o=>o.castShadow===true&&o.receiveShadow!==true),
+      ext:boxes.map(o=>[mm(o.position.y-o.geometry.args[1]/2),mm(o.position.y+o.geometry.args[1]/2),mm(o.position.z+o.geometry.args[2]/2)]),
+      lever:q.filter(o=>o.geometry.kind==='THREE.ExtrudeGeometry').map(o=>[mm(o.position.y-o.geometry.args[1].depth),mm(o.position.y)]),
+      foot:mm(q[0].position.y-q[0].geometry.args[2]/2)};})(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))`);
+  // the foot ring, the body, the spout, the aerator, the lever's hub, the lever (one piece: no faces shared, no flicker) — chrome as the
+  // shower rack's riser
+  assert.strictEqual(r.n, 6);
+  assert.ok(r.chrome, 'the mixer is the shower rack\'s chrome');
+  assert.ok(r.lit, 'every piece casts a shadow and takes none: one look all over');
+  // on the sink's top (1000): the spout 1110…1126 out to 65 + 160 from the wall, the lever's plate 1182…1190, 110 out — under the
+  // cabinet's bottom 300 over the sink
+  assert.strictEqual(r.foot, 1000);
+  assert.deepStrictEqual(r.ext, [[1110, 1126, 225]]);
+  assert.deepStrictEqual(r.lever, [[1182, 1190]]);
+  assert.ok(r.lever[0][1] < 1300);
+});

@@ -245,7 +245,11 @@ check('кухня: мойка — рамка с отверстием, в нём 
     return {hole:w.userData.part.hole,grid:w.geometry.args.slice(3),ct:f.P.Ct,
       rim:[rim.geometry.kind,mm(rim.geometry.args[1].depth),mm(rim.position.x),mm(rim.position.y),mm(rim.position.z)],
       bowl:[bowl.geometry.kind,mm(bowl.geometry.args[1].depth),mm(bowl.position.y)],
-      boxes:a.filter(o=>o.geometry&&o.geometry.kind==='THREE.BoxGeometry'&&mm(o.geometry.args[0])===340).length};})(VIEWS.kitchen.furniture())`);
+      boxes:a.filter(o=>o.geometry&&o.geometry.kind==='THREE.BoxGeometry'&&mm(o.geometry.args[0])===340).length,
+      steel:rim.material===bowl.material&&rim.material.metalness>=.7,
+      mixer:(q=>({chrome:q.every(o=>o.material===q[0].material)&&q[0].material!==rim.material&&q[0].material.metalness>=.9,bend:q.filter(o=>o.geometry.kind==='THREE.TorusGeometry').length,
+        spout:(o=>[mm(o.position.x),mm(o.position.z+o.geometry.args[2]/2*Math.sin(-o.rotation.x)),mm(o.position.y-o.geometry.args[2]/2*Math.cos(o.rotation.x))])(q[q.length-1]),
+        lean:Math.round(-q[q.length-1].rotation.x*180/Math.PI),foot:mm(q[0].position.z+q[0].geometry.args[0])}))(a.filter(o=>o.userData.mixer===true))};})(VIEWS.kitchen.furniture())`);
   let r = sink();
   // the sink in the middle of the first base cabinet (450): its bowl 340 × 380 round z 300, the worktop cut out under it (its top face
   // on a 3 × 3 grid, the middle cell left out)
@@ -254,6 +258,16 @@ check('кухня: мойка — рамка с отверстием, в нём 
   // the rim 10 thick from 6 over the worktop, the bowl's walls from there to 170 under its top; no solid box for a bowl any more
   assert.deepStrictEqual(r.rim, ['THREE.ExtrudeGeometry', 10, 225, r.ct + 6, 300]);
   assert.deepStrictEqual(r.bowl, ['THREE.ExtrudeGeometry', 176, r.ct + 6]);
+  assert.ok(r.steel, 'the rim and the bowl are one stainless steel');
+  // the mixer chrome as the shower rack, not the sink's steel: on the worktop behind the rim (its foot clear of it, the rim from
+  // 300 − 220), bent up into the arm and down into the spout; the spout over the bowl (z 110…490), in line with the sink's middle
+  assert.ok(r.mixer.chrome, 'the mixer is chrome');
+  assert.strictEqual(r.mixer.bend, 2, 'up into the arm, down into the spout');
+  assert.ok(r.mixer.foot < 80, 'the mixer\'s foot stays off the rim');
+  // its drawing: the water out 210 from the tube's axis (z 50), at 259 over the worktop
+  assert.deepStrictEqual(r.mixer.spout, [225, 260, r.ct + 259]);
+  assert.strictEqual(r.mixer.lean, 8, 'the spout leans out by 8°, as on the drawing');
+  assert.ok(r.mixer.spout[1] > 110 && r.mixer.spout[1] < 490, 'the spout over the bowl');
   assert.strictEqual(r.boxes, 0);
   // nothing of the sink cabinet's carcass inside the bowl (z 110..490, from 170 under the worktop's top up): its front rail on edge by the front
   const inBowl = p.run(`VIEWS.kitchen.furniture().current.parts.filter(q=>q.mat==='carcass'&&q.x0<395&&q.x1>55&&q.z0<490&&q.z1>110&&q.y1>${r.ct}-170&&q.y0<${r.ct}).map(q=>q.name)`);

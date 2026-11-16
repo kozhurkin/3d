@@ -366,8 +366,7 @@ function buildWash(g,opts){
   box(sx0,sx0+r,y0,y1,deck,sd-r,whiteMat);
   box(sx1-r,sx1,y0,y1,deck,sd-r,whiteMat);
   const drain=new THREE.Mesh(new THREE.CylinderGeometry(.022,.022,.004,24),chromeMat);drain.position.set(cx,y0+.022,(deck+sd)/2);g.add(drain);
-  const tap=new THREE.Mesh(new THREE.CylinderGeometry(.016,.02,.2,16),chromeMat);tap.position.set(cx,y1+.1,deck/2);g.add(tap);
-  box(cx-.012,cx+.012,y1+.17,y1+.2,deck/2,deck/2+.15,chromeMat);
+  mixer(g,cx,y1,deck/2);
   // the cabinet over the sink; a 4 mm mirror glued on each door edge to edge, swings with it
   const cab=buildParts({parts:sinkCabParts()},mats,opts);
   cab.doors.forEach(d=>{const p=d.g.children[0].userData.part,hp=d.g.position;
@@ -392,6 +391,25 @@ const WD={R:240,glass:165,hinge:12,y:440};
    Ø470 × 340 with its front ring and back. Lit as if the body were open (no shadows inside) so it reads */
 const drumMat=new THREE.MeshStandardMaterial({color:0xb9bdc1,roughness:.35,metalness:.6,side:THREE.DoubleSide});
 const rubberMat=new THREE.MeshStandardMaterial({color:0x2b2c2e,roughness:.85,side:THREE.DoubleSide});
+/* the basin mixer on the sink's back deck (x, z its axis, y the deck's top; m), chrome as the shower rack (mm): a tall round body Ø40
+   up to 170 on a foot ring, a flat spout 36 × 16 straight out toward the room from 110 up, 160 from the axis, the aerator under its
+   tip; on top a flat lever plate as wide, round over the body, out over the spout: one piece (a disc and a plate would share faces
+   and flicker). Every piece one chrome, as the rack's: they cast shadows, none takes one, so none looks darker than the rest */
+function mixer(g,x,y,z){
+  const cyl=(r,h,py,pz)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,32),chromeMat);c.position.set(x,py,pz);c.castShadow=true;
+    c.userData.mixer=true;g.add(c);return c;};
+  const top=y+.17,sw=.018;
+  cyl(.022,.004,y+.002,z);                                           // the foot ring
+  cyl(.02,top-y-.004,(y+.004+top)/2,z);                              // the body
+  const sp=new THREE.Mesh(new THREE.BoxGeometry(2*sw,.016,.16),chromeMat);sp.position.set(x,y+.118,z+.08);sp.castShadow=true;sp.userData.mixer=true;g.add(sp);   // the spout
+  cyl(.011,.006,y+.107,z+.145);                                      // its aerator
+  cyl(.014,.012,top+.006,z);                                         // the lever's hub
+  // the lever: in plan round at the back over the body, straight out to 110; flat from the hub's top up 8
+  const sh=new THREE.Shape();sh.moveTo(sw,0);sh.lineTo(sw,.11);sh.lineTo(-sw,.11);sh.lineTo(-sw,0);sh.absarc(0,0,sw,Math.PI,2*Math.PI,false);
+  const lv=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:.008,bevelEnabled:false,curveSegments:24}),chromeMat);
+  lv.rotation.x=Math.PI/2;lv.position.set(x,top+.02,z);lv.castShadow=true;lv.userData.mixer=true;g.add(lv);   // its shape's y along z, down from top+20
+}
+
 function buildDrum(g,cx,y,fz,hr){
   const R=.235,cuff=.04,z1=fz-cuff,z0=z1-.34;
   const put=(m,z)=>{m.position.set(cx,y,z);m.userData.drum=true;g.add(m);return m;};

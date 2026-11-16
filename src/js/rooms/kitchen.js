@@ -113,7 +113,6 @@ applyMaterials(mats,FIN,P.Ec);
 // appliances
 const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
 const blackMat=new THREE.MeshStandardMaterial({color:0x1d1e20,roughness:.35});
-const sinkMat=new THREE.MeshStandardMaterial({color:0x2a2b2d,roughness:.6});
 const burnerMat=new THREE.MeshStandardMaterial({color:0x7a2a24,roughness:.4,emissive:0x2a0705});
 const ovenMat=new THREE.MeshStandardMaterial({color:0xb9bcbf,roughness:.3,metalness:.6});
 const steelMat=new THREE.MeshStandardMaterial({color:0xa9a7a2,roughness:.38,metalness:.75});
@@ -1156,19 +1155,49 @@ function buildAppliances(g,opts){
   const c=current,doors=[];
   const box=boxIn(g);
   const ct=P.Ct*MM,xr=c.xr*MM,b1=P.B1*MM,b2=P.B2*MM,b3=P.B3*MM;
-  // the sink with its mixer in the first base cabinet: the rim round the bowl, the bowl open on top down through the worktop's cut-out,
-  // its bottom round the drain (slab: each fills the other's hole)
+  // the sink in the first base cabinet, stainless (the fridge's steelMat), its mixer chrome: the rim round the bowl, the bowl open on
+  // top down through the worktop's cut-out, its bottom round the drain (slab: each fills the other's hole)
   { const cx=b1/2,cz=SK.z*MM,yt=ct+.006,yb=ct-SK.deep*MM,m=v=>v*MM,{w,d,r,wall:t}=SK;
     // a rounded rectangle (mm, from the sink's middle; x across, y toward the room) on a shape or a hole
     const rect=(sh,w,d,r)=>{const x=m(w/2),y=m(d/2);r=m(r);sh.moveTo(-x+r,-y);sh.lineTo(x-r,-y);sh.quadraticCurveTo(x,-y,x,-y+r);sh.lineTo(x,y-r);
       sh.quadraticCurveTo(x,y,x-r,y);sh.lineTo(-x+r,y);sh.quadraticCurveTo(-x,y,-x,y-r);sh.lineTo(-x,-y+r);sh.quadraticCurveTo(-x,-y,-x+r,-y);return sh;};
     const drain=p=>p.absarc(0,0,m(SK.drain),0,Math.PI*2,false);
-    slab(g,holed(rect(new THREE.Shape(),SK.rw,SK.rd,10),rect(new THREE.Path(),w,d,r)),.01,cx,yt,cz,blackMat).userData.sinkRim=true;   // its hole the bowl's outside
-    slab(g,holed(rect(new THREE.Shape(),w,d,r),rect(new THREE.Path(),w-2*t,d-2*t,r-t)),yt-yb,cx,yt,cz,sinkMat).userData.sinkBowl=true;   // the bowl's walls
-    slab(g,holed(rect(new THREE.Shape(),w-2*t,d-2*t,r-t),drain(new THREE.Path())),.001,cx,yb+.001,cz,sinkMat);   // its bottom
+    slab(g,holed(rect(new THREE.Shape(),SK.rw,SK.rd,10),rect(new THREE.Path(),w,d,r)),.01,cx,yt,cz,steelMat).userData.sinkRim=true;   // its hole the bowl's outside
+    slab(g,holed(rect(new THREE.Shape(),w,d,r),rect(new THREE.Path(),w-2*t,d-2*t,r-t)),yt-yb,cx,yt,cz,steelMat).userData.sinkBowl=true;   // the bowl's walls
+    slab(g,holed(rect(new THREE.Shape(),w-2*t,d-2*t,r-t),drain(new THREE.Path())),.001,cx,yb+.001,cz,steelMat);   // its bottom
     slab(g,drain(new THREE.Shape()),.001,cx,yb+.001,cz,chromeMat);
-    const tap=new THREE.Mesh(new THREE.CylinderGeometry(.014,.016,.32,16),blackMat);tap.position.set(cx,ct+.16,.06);g.add(tap);
-    box(cx-.012,cx+.012,ct+.28,ct+.31,.06,.26,blackMat); }
+    mixer(cx,ct,.05); }
+  /* the mixer behind the sink, chrome as the bath's shower rack, after its drawing (mm, over the worktop): a foot ring Ø50 × 6, the body
+     Ø43 up to 100, on its side a round hub, the lever's block on it (its axis at 57) and the stick Ø9 up to 141; from the body the tube
+     Ø24 straight up, bent over by R 40 at the top (360 over the worktop) into an arm straight out toward the room, bent down again by
+     R 40 short of a quarter by 8° into the spout, its bottom leaning out: the water out at 259, 210 from the tube's axis, over the
+     bowl. Every piece casts a shadow, none takes one */
+  function mixer(x,y0,z){
+    const add=m=>{m.castShadow=true;m.userData.mixer=true;g.add(m);return m;};
+    const cyl=(r,h,px,py,pz,ax)=>{const c=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,24),chromeMat);c.position.set(px,py,pz);
+      if(ax==='x')c.rotation.z=Math.PI/2;else if(ax==='z')c.rotation.x=Math.PI/2;return add(c);};
+    const m=v=>v*MM,tr=m(12),R=m(40),yc=y0+m(360-12-40),reach=m(210),tilt=8*Math.PI/180;   // yc: the bends' centres, the arm's axis R over them
+    // the spout: from the far bend's end along (sin tilt, −cos tilt) in z–y down to the water's way out (z+reach, 259) — its length
+    // and so the far bend's centre zf follow from the bend's height
+    const oy=y0+m(259),oz=z+reach,ey=yc+R*Math.sin(tilt),L=(ey-oy)/Math.cos(tilt),zf=oz-L*Math.sin(tilt)-R*Math.cos(tilt);
+    // a circle's arc in the y–z plane round (x, yc, zc) from its top: the near one a quarter down toward −z into the tube; the far one
+    // toward +z, a quarter less the tilt (turned about its own axis first, so it ends the tilt short of straight down)
+    const bend=(zc,s,more)=>{const t=new THREE.Mesh(new THREE.TorusGeometry(R,tr,16,16,Math.PI/2+more),chromeMat);t.rotation.set(0,s*Math.PI/2,-more);
+      t.position.set(x,yc,zc);return add(t);};
+    // a piece along the spout from a down its axis by len, r across
+    const lean=(r,a,len)=>{const c=cyl(r,len,x,ey-(a+len/2)*Math.cos(tilt),zf+R*Math.cos(tilt)+(a+len/2)*Math.sin(tilt));c.rotation.x=-tilt;return c;};
+    cyl(m(25),m(6),x,y0+m(3),z);                                          // the foot ring
+    cyl(m(21.5),m(94),x,y0+m(53),z);                                      // the body
+    cyl(m(18),m(41),x+m(30.5),y0+m(57),z,'x');                            // the lever's hub, out of the body's side
+    cyl(m(20),m(22),x+m(61),y0+m(57),z,'x');                              // the lever's block
+    cyl(m(4.5),m(71),x+m(63),y0+m(105.5),z);                              // its stick, up to 141
+    cyl(tr,yc-y0-m(100),x,(y0+m(100)+yc)/2,z);                            // the tube
+    bend(z+R,1,0);                                                        // over into the arm
+    cyl(tr,zf-z-R,x,yc+R,(z+R+zf)/2,'z');                                 // the arm
+    bend(zf,-1,-tilt);                                                    // down into the spout
+    lean(tr,0,L-m(20));                                                   // the spout, leaning out
+    lean(m(12.5),L-m(20),m(20));                                          // the aerator at its end, the water out at 259
+  }
   // two-zone hob over the oven cabinet
   { const free=P.Hob==='free',along=!!P.HobAlong,hd=free?.145:.15;   // hd: half the hob's short side
     // along the worktop: centred in the cabinet, back edge 20 mm off the wall; across: shifted by the slider

@@ -144,7 +144,7 @@ const INFO={
   wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).','Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.'],buy:WARD_PRODUCTS})),
   mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
     buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
-  mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
+  mirror:()=>({title:'Зеркало',lines:[`40 × 40 см, в чёрной рамке ${WR.mirror.frame} мм.`,'На торце углового шкафа, от 130 до 170 см от пола.']}),
   rack:()=>({title:'Металлический стеллаж',lines:[`${cm(rackW())} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(wardAt()-WR.W)} см вдоль стены, от угла до шкафа; зазоры по ${cm(RK.gap)} см с краёв и между ними.`]}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
@@ -838,7 +838,7 @@ function buildSpiceShelf(g,opts){
    Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
    the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
 const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
-  mirror:{w:400,h:400,y0:1300,frame:15,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
+  mirror:{w:400,h:400,y0:1300,frame:10,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
    // (its frame, its bottom); the coat rail under it: HK
 // the wardrobe and the mezzanine, each in one finish all over, each its own: white or Диамант серый U963 ST9 (furniture.js: UNI, as the
@@ -999,7 +999,7 @@ function buildRack(g){
 }
 const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
 const mirrorMat=new THREE.MeshStandardMaterial({color:0xc9d1d4,roughness:.06,metalness:.35});   // the glass: light, glossy
-const wardBlackMat=new THREE.MeshStandardMaterial({color:0x4a4a4a,roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: graphite, lighter than black
+const wardBlackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3a3b3d').convertSRGBToLinear(),roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: dark grey (their cards say black)
 const knobWoodMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#9c7552').convertSRGBToLinear(),roughness:.7});   // its hooks' balls
 /* the coat rail under the mirror: a black bar along the face, hooks off it — each a black peg, a wooden ball on its end.
    L along the face, h its height, t out from the face, y its bottom; the pegs' length and Ø, the balls' Ø */

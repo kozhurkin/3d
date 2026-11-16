@@ -656,9 +656,12 @@ check('кухня: угловой шкаф OZON 1364 × 964 у дивана — 
     const balls=hg.children.filter(o=>o.userData.ball===true);
     return {frame:ext(mg.children.map(box)),glass:box(mg.children.find(o=>o.userData.glass===true)),bar:box(hg.children.find(o=>o.userData.bar===true)),
       balls:balls.map(o=>[...at(o),Math.round(o.geometry.args[0]*2000)]),wood:balls[0].material!==hg.children[0].material,
+      dark:new Set(mg.children.filter(o=>o.userData.glass!==true).concat(hg.children.filter(o=>o.userData.ball!==true)).map(o=>o.material)).size,card:infoOf(mg.children[0]).lines[0],
       titles:[infoOf(mg.children[0]).title,infoOf(hg.children[0]).title,infoOf(balls[0]).title]};})(VIEWS.kitchen.furniture())`);
   assert.deepStrictEqual(end.frame, [2216, 2236, 1300, 1700, 2090, 2490], 'on the end, 20 out');
-  assert.deepStrictEqual(end.glass, [2220, 2236, 1315, 1685, 2105, 2475], 'the glass inside a 15 frame, 4 back from its face');
+  assert.deepStrictEqual(end.glass, [2220, 2236, 1310, 1690, 2100, 2480], 'the glass inside a 10 frame, 4 back from its face');
+  // the frame and the rail (its bar and pegs) one dark grey; the mirror's card: black, 10 mm
+  assert.deepStrictEqual([end.dark, end.card], [1, '40 × 40 см, в чёрной рамке 10 мм.']);
   // the rail: a black bar 380 × 30, 12 out, four hooks evenly along it — 40 pegs, wooden balls Ø26 on their ends
   assert.deepStrictEqual(end.bar, [2224, 2236, 1170, 1200, 2100, 2480]);
   assert.deepStrictEqual(end.balls.map((q) => [q[0], q[1], q[3]]), [[2175, 1185, 26], [2175, 1185, 26], [2175, 1185, 26], [2175, 1185, 26]]);

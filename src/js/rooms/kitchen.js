@@ -144,7 +144,7 @@ const INFO={
   mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
     buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
   mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
-  rack:()=>({title:'Металлический стеллаж',lines:[`${rackW()/10} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.']}),
+  rack:()=>({title:'Металлический стеллаж',lines:[`${String(rackW()/10).replace('.',',')} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.']}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofa:{title:'Угловой диван Hoff «Слим»',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
@@ -822,8 +822,8 @@ function buildSpiceShelf(g,opts){
   return ms.flatMap(d=>d.doors);
 }
 
-/* the wardrobe as OZON «Уютная логика» 135×95, white or grey (wardColor), handleless (push-to-open) hinged doors: a corner unit 950 × 950, 500 deep, and an
-   add-on section 400 wide — 1350 along the right wall, 950 out from it, 2200 high. Against the right wall by the sofa's end toward the
+/* the wardrobe as OZON «Уютная логика», white or grey (wardColor), handleless (push-to-open) hinged doors: a corner unit 964 × 964, 500 deep, and an
+   add-on section 400 wide — 1364 along the right wall, 964 out from it, 2200 high. Against the right wall by the sofa's end toward the
    kitchen wall: its leg (500 wide) out from the wall along the sofa's arm, its door toward the kitchen wall; along the wall from the
    leg the corner unit's other door, then the add-on section, their doors into the room. The corner unit as the shop's picture: on the
    left (along the wall) a narrow part with four shelves, a partition at the inner corner; on the right the leg with the corner behind
@@ -832,7 +832,7 @@ function buildSpiceShelf(g,opts){
    open clear of each other. On the leg's end, into the room: a mirror in a black frame, a coat rail under it. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
    Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
    the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
-const WR={W:1350,D:950,C:950,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
+const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
   mirror:{w:400,h:400,y0:1300,frame:15,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
    // (its frame, its bottom); the coat rail under it: HK

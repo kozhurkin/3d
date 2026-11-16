@@ -85,6 +85,90 @@ check('санузел: душевой поддон заполняет душ з�
   assert.match(info(body)[1], /^110 × 80 см/);
 });
 
+check('санузел: душевая стойка с термостатом и лейкой — на левой стене посередине поддона, видна вместе с ним', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  // two groups: on the wall (it stops the walker) and the arm with the overhead shower (over the head, walked under)
+  const R = (k) => `VIEWS.bath.furniture().sani.children.find(m=>m.userData.rack==='${k}')`;
+  assert.deepStrictEqual([p.run(`${R('wall')}.userData.walkThrough`), p.run(`${R('over')}.userData.walkThrough`)], [undefined, true]);
+  const at = (k) => p.run(`(m=>[m.position.x,m.position.y,m.position.z].map(v=>Math.round(v*1000)))([...${R('wall')}.children,...${R('over')}.children].find(m=>m.userData.rackPart==='${k}'))`);
+  // the bathroom's axes: the left wall at 0, the tray from 1200 to 1900: half way is 1550
+  assert.deepStrictEqual(at('thermostat'), [70, 1150, 1550], '70 out from the left wall, 1150 from the floor');
+  assert.deepStrictEqual(at('head'), [442, 2065, 1550], 'the overhead shower 442 from the wall, as AM.PM Chic 2.0, under the arm at 2100');
+  assert.deepStrictEqual(at('hand'), [120, 1550, 1550], 'the hand shower in its holder on the riser');
+  assert.ok(p.run(`${R('wall')}.children.some(m=>m.userData.rackPart==='hose')`), 'its hose');
+  // the riser into the arm and the arm down to the head: rounded, quarter rings 60 and 30 mm in radius
+  assert.deepStrictEqual(p.run(`${R('over')}.children.filter(m=>m.userData.rackPart==='bend').map(m=>[m.geometry.kind,Math.round(m.geometry.args[0]*1000),+(m.geometry.args[4]/Math.PI).toFixed(2)])`),
+    [['THREE.TorusGeometry', 60, 0.5], ['THREE.TorusGeometry', 30, 0.5]]);
+  // everything over the tray: inside it from the left wall to the partition, under the ceiling
+  const head = at('head');
+  assert.ok(head[0] - 110 > 0 && head[0] + 110 < 1000 && head[2] - 110 > 1200 && head[2] + 110 < 1900, 'the head over the tray');
+  // hidden with the tray while the frame cuts the shower, shown with it
+  assert.deepStrictEqual([p.run(`${R('wall')}.visible`), p.run(`${R('over')}.visible`)], [false, false]);
+  const fl = p.document.querySelector('[data-panel="bath"]').querySelector('#bFrameL');
+  fl.value = '1900'; fl.dispatch('input'); p.tick();
+  assert.deepStrictEqual([p.run(`${R('wall')}.visible`), p.run(`${R('over')}.visible`)], [true, true]);
+  // its «i»: sizes, materials, where it is
+  const info = p.run(`(i=>[i.title,...i.lines])(infoOf(${R('over')}.children[0]))`);
+  assert.deepStrictEqual(p.run(`(i=>[i.price,i.url,i.shop])(infoOf(${R('wall')}.children[0]))`), [21000, 'https://ozon.ru/t/RhrtHZA', 'Ozon']);
+  assert.deepStrictEqual(info, ['Душевая система AM.PM Chic 2.0 с термостатом',
+    'Высота 99 см (штанга выдвигается, 88–127 см), верхний душ Ø 22 см в 44 см от стены; ручная лейка Ø 11 см, шланг 1,75 м.',
+    'Латунь, хром; межосевое расстояние 150 мм.',
+    'Термостат в 115 см от пола (100 см над поддоном), верхний душ в 206 см; на левой стене посередине душевой.']);
+  // it follows the shower on the plan
+  p.run('setModel({bL:1000})'); p.tick();
+  assert.strictEqual(at('thermostat')[2], 1500);
+});
+
+check('санузел: полупрозрачная шторка 220 см до поддона на Г-образной штанге за стенкой в конце ниши — отодвинута за стенку, по нажатию закрывает проход', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const C = 'VIEWS.bath.furniture().sani.children.find(m=>m.userData.curtain===true)';
+  const D = "VIEWS.bath.furniture().doors.find(d=>d.key==='curtain')";
+  const pos = (o) => p.run(`(m=>[m.position.x,m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${o})`);
+  // the rod's run: from the bend 300 + 20 (200 past the end of the wall at the niche end, 500) to the shower partition (1000),
+  // 2405 from the floor (the cloth 2200 from 160 up — 10 over the tray —, the rings over it), 40 from the back of that wall (1200);
+  // its bend 20 (a little over the rod's Ø20), its leg into the wall
+  assert.deepStrictEqual(pos(`${C}.children[0]`), [660, 2405, 1240]);
+  assert.deepStrictEqual(p.run(`(g=>[g.kind,Math.round(g.args[0]*1000),Math.round(g.args[1]*1000)])(${C}.children[1].geometry)`), ['THREE.TorusGeometry', 20, 10]);
+  assert.deepStrictEqual(pos(`${C}.children[2]`), [300, 2405, 1210], 'the leg: from the wall (1200) to the bend (1220)');
+  // the flanges on the partition and on the wall: Ø30, a little over the rod
+  assert.deepStrictEqual(p.run(`[3,4].map(i=>Math.round(${C}.children[i].geometry.args[0]*2000))`), [30, 30]);
+  assert.strictEqual(p.run(`${C}.userData.walkThrough`), true, 'the walker goes through it');
+  // frosted vinyl, grey, 60 % clear; its shadow 40 % of a full one: drawn through a sieve (its own depth material)
+  assert.match(PAGES.app, /const CURT_OP=\.4,curtainMat=new THREE\.MeshStandardMaterial\(\{color:new THREE\.Color\('#cccccc'\)[^}]*transparent:true,opacity:CURT_OP/);
+  assert.strictEqual(p.run(`${D}.g.children[0].castShadow`), true);
+  assert.match(PAGES.app, /cloth\.customDepthMaterial=curtainShadowMat/);
+  assert.match(PAGES.app, /curtainShadowMat=new THREE\.MeshDepthMaterial\(\{depthPacking:THREE\.RGBADepthPacking,alphaTest:1-CURT_OP,/);
+  // drawn back: gathered in 150 behind the wall at the niche end (up to 480 of its 500); a door of the room, closed
+  assert.deepStrictEqual(p.run(`[${D}.a,${D}.t,${D}.g.userData.edge]`), [0, 0, 480]);
+  // its rings: closed ovals, 54 high, the cloth from their bottoms: 2200 from 160
+  assert.deepStrictEqual(p.run(`${D}.g.children.filter(m=>m.userData.ring===true).map(m=>m.geometry.kind+':'+m.geometry.args[4])`), Array(8).fill('THREE.TubeGeometry:true'));
+  assert.strictEqual(p.run(`${D}.g.userData.top`), 2360);
+  // a click: across the opening, up to 10 short of the partition
+  p.run(`${D}.t=${D}.a=${D}.max`); p.tick();
+  assert.strictEqual(p.run(`${D}.g.userData.edge`), 990);
+  // hidden with the tray while the frame cuts the shower, shown with it
+  assert.strictEqual(p.run(`${C}.visible`), false);
+  const fl = p.document.querySelector('[data-panel="bath"]').querySelector('#bFrameL');
+  fl.value = '1900'; fl.dispatch('input'); p.tick();
+  assert.strictEqual(p.run(`${C}.visible`), p.run(`wallParts.find(x=>x.id==='nicheEnd').f()`), 'shown with the wall at the niche end');
+  // the cut mode: it hides with the wall at the niche end (1100–1200 on the plan) once the camera is past it, in the shower
+  const at = (z) => p.run(`(()=>{camera.position.set(-1.5,1.5,${z});frameHooks.forEach(h=>h(0,()=>0));return [${C}.visible,wallParts.find(x=>x.id==='nicheEnd').f()];})()`);
+  assert.deepStrictEqual(at(0.9), [true, true]);
+  assert.deepStrictEqual(at(1.5), [false, false]);
+  p.run(`VS.bath.Wm='edges'`); assert.deepStrictEqual(at(1.5)[0], true, 'not in the other wall modes');
+  p.run(`VS.bath.Wm='auto'`); at(0.9);
+  // its «i»
+  assert.deepStrictEqual(p.run(`(i=>[i.title,...i.lines])(infoOf(${C}.children[0]))`), ['Шторка для душа',
+    '83 × 220 см, клеёнка (PEVA), полупрозрачная, матовая; кольца овальные.',
+    'Штанга Г-образная, 70 см: слева в перегородку, справа заходит за стенку у ниши и крепится к ней сзади; нержавеющая сталь, хром, Ø 2 см; в 241 см от пола.',
+    'Низ шторки в 1 см над поддоном.',
+    'Нажатие задёргивает шторку или отодвигает её за стенку.']);
+  // a wider opening and a shorter niche on the plan (as the tray's check has them): the rod longer and nearer, the curtain stays drawn across
+  p.run('setModel({bGap:600,bL:1000})'); p.tick();
+  assert.deepStrictEqual(pos(`${C}.children[0]`), [710, 2405, 1140]);
+  assert.strictEqual(p.run(`${D}.g.userData.edge`), 1090);
+});
+
 check('санузел: детали шкафов совпадают со старым санузлом', () => {
   const mod = PAGES.app.slice(PAGES.app.indexOf('«Санузел» view'));
   const pLine = mod.match(/^const P=\{W:1200,H:2600,.*\};$/m)[0];
@@ -99,10 +183,10 @@ check('санузел: шкафы, инсталляция и унитаз соб
   const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
   const want = fixture('bath-parts.json');
   const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
-  // the installation box, its flush plate, the bowl and the seat (the machine and the tray have checks of their own): the last group of the bathroom
-  const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.sani.children.filter(m=>m.userData.wash!==true&&m.userData.tray!==true).map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
+  // the installation box, its flush plate, the bowl and the seat (the machine, the tray, the shower rack and its curtain have checks of their own): the last group of the bathroom
+  const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.sani.children.filter(m=>m.userData.wash!==true&&m.userData.tray!==true&&m.userData.rack!=="wall"&&m.userData.rack!=="over"&&m.userData.curtain!==true).map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
   let r = b();
-  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors + 3, 34, true], 'built on screen, every door on a hinge, and the washing machine\'s and the two of the cabinet over the sink');
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors + 4, 34, true], 'built on screen, every door on a hinge, and the washing machine\'s, the two of the cabinet over the sink and the shower curtain');
   assert.strictEqual(nDoors, 6, 'four tall cabinet doors, two upper cabinet doors');
   assert.deepStrictEqual(r.sani.map((y) => round(y, 4)), [0.6, 1.0025, 0.22, 0.41]);
   // the panel: sizes, the niche and the ceiling from the plan, what is between the shelves

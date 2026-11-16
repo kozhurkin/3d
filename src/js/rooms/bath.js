@@ -97,7 +97,16 @@ const INFO={
       `Корпус — ЛДСП ${finName(finOf(FIN,'carcass'))}, фасады — ${finName(finOf(FIN,'front'))}; на дверях зеркало 4 мм.`,
       `Две распашные двери, ${S.N} полки внутри.`,
       `Низ в ${cm(y0)} см от пола, на ${cm(S.Gap)} см выше раковины; на крыше светильник 45 см.`,
-      'Нажатие открывает и закрывает двери.']};}
+      'Нажатие открывает и закрывает двери.']};},
+  curtain:()=>{const cm=v=>Math.round(v/10),C=CURT,r=curtRod();
+    return {title:'Шторка для душа',lines:[`${cm(r.x1-r.xs+C.more)} × ${cm(C.h)} см, клеёнка (PEVA), полупрозрачная, матовая; кольца овальные.`,
+      `Штанга Г-образная, ${cm(r.x1-r.xb)} см: слева в перегородку, справа заходит за стенку у ниши и крепится к ней сзади; нержавеющая сталь, хром, Ø 2 см; в ${cm(curtRodY())} см от пола.`,
+      `Низ шторки в ${cm(C.gap)} см над поддоном.`,
+      'Нажатие задёргивает шторку или отодвигает её за стенку.']};},
+  rack:()=>{const cm=v=>Math.round(v/10),R=RACK;
+    return {title:'Душевая система AM.PM Chic 2.0 с термостатом',lines:[`Высота ${cm(R.top+10-(R.y-R.r))} см (штанга выдвигается, 88–127 см), верхний душ Ø ${cm(R.head)} см в ${cm(R.reach)} см от стены; ручная лейка Ø ${cm(R.hand)} см, шланг 1,75 м.`,
+      'Латунь, хром; межосевое расстояние 150 мм.',
+      `Термостат в ${cm(R.y)} см от пола (${cm(R.y-TRAY.H)} см над поддоном), верхний душ в ${cm(R.top-45)} см; на левой стене посередине душевой.`],price:21000,url:'https://ozon.ru/t/RhrtHZA',shop:'Ozon'};}
 };
 
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
@@ -113,7 +122,8 @@ function buildSanitary(g,opts){
   seat.scale.set(.5/.37,1,1);seat.position.set(di+.25,.41,cz);g.add(seat);
   wash=new THREE.Group();wash.userData.wash=true;const doors=buildWash(wash,opts);g.add(wash);
   tray=new THREE.Group();tray.userData.tray=true;tray.userData.info=INFO.tray;buildTray(tray);g.add(tray);
-  return doors;
+  rack=buildRack(g);
+  return doors.concat(buildCurtain(g,opts));
 }
 
 /* ---------- the shower tray: white cast marble under slate, behind the step at the niche end ----------
@@ -182,6 +192,117 @@ function buildTray(g){
   const d=TRAY.drain*MM,cx=x0+(x1-x0)*TRAY.at,cz=(z0+z1)/2;
   const m=new THREE.Mesh(new THREE.BoxGeometry(d,.003,d),[chromeMat,chromeMat,grate,chromeMat,chromeMat,chromeMat]);
   m.position.set(cx,h+.0015,cz);m.receiveShadow=true;g.add(m);
+}
+
+/* ---------- the shower rack: a thermostat, its riser with the overhead shower on an arm, the hand shower in a holder ----------
+   On the left wall half way along the tray, its water sprays toward the partition, not out of the opening. The thermostat bar
+   1150 from the floor on two elbows 150 apart, its knobs at the ends; the riser up to 2100, held to the wall under its top,
+   turning in a round bend into the arm out to the Ø220 head 442 from the wall, the arm turning down to it the same way
+   (as AM.PM Chic 2.0, F0782A500: its rack 880–1270 high, the hose 1750); the hand shower Ø110 in a holder on the riser,
+   its hose hanging from the thermostat's outlet. A product of its own, not in the cut list; shown with the tray. Two groups: what is on the wall stops
+   the walker, the arm with the head is over the head (walkThrough), else the walk takes the whole rack for one box. Bath axes, mm */
+const RACK={y:1150,len:300,r:30,out:70,top:2100,reach:442,head:220,hand:110,holder:1550};
+let rack=null;
+function buildRack(sani){
+  const wall=new THREE.Group(),over=new THREE.Group();
+  [wall,over].forEach((o,i)=>{o.userData.rack=i?'over':'wall';o.userData.info=INFO.rack;sani.add(o);});over.userData.walkThrough=true;
+  let g=wall;
+  const R=RACK,[,,z0,z1]=trayRect(),c=(z0+z1)/2*MM,x=R.out*MM,y=R.y*MM,r=R.r*MM,top=R.top*MM,ax=R.reach*MM;
+  // a cylinder along y, or along z / x (turn 'z' / 'x'), into g or another group (to)
+  const cyl=(r0,r1,h,mat,px,py,pz,turn,to=g)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r0,r1,h,32),mat);m.position.set(px,py,pz);
+    if(turn==='z')m.rotation.x=Math.PI/2;else if(turn==='x')m.rotation.z=Math.PI/2;m.castShadow=true;to.add(m);return m;};
+  // the thermostat: the bar along the wall, the knobs at its ends, the elbows into the wall
+  cyl(r,r,R.len*MM,chromeMat,x,y,c,'z').userData.rackPart='thermostat';
+  [-1,1].forEach(s=>{cyl(.028,.028,.05,chromeMat,x,y,c+s*(R.len/2+25)*MM,'z');                       // knob
+    cyl(.026,.026,.004,darkMat,x,y,c+s*(R.len/2+51)*MM,'z');                                           // its cap
+    cyl(.012,.012,x-r/2,chromeMat,(x-r/2)/2,y,c+s*.075,'x');                                           // elbow
+    cyl(.032,.032,.008,chromeMat,.004,y,c+s*.075,'x');});                                              // its wall rose
+  // the riser, its wall bracket; over the head: the arm and the overhead shower
+  const bend=.06,drop=.03;   // the bends' radii: the riser into the arm, the arm down to the head
+  cyl(.011,.011,top-bend-y-r,chromeMat,x,(y+r+top-bend)/2,c).userData.rackPart='riser';
+  cyl(.008,.008,x,chromeMat,x/2,top-.25,c,'x');cyl(.025,.025,.008,chromeMat,.004,top-.25,c,'x');cyl(.016,.016,.04,chromeMat,x,top-.25,c);
+  g=over;
+  // a quarter of a pipe ring about (cx, cy) in the wall's normal plane, from the angle a (rad) on
+  const arc=(rad,cx,cy,a)=>{const m=new THREE.Mesh(new THREE.TorusGeometry(rad,.011,16,24,Math.PI/2),chromeMat);m.position.set(cx,cy,c);m.rotation.z=a;
+    m.castShadow=true;m.userData.rackPart='bend';g.add(m);};
+  arc(bend,x+bend,top-bend,Math.PI/2);                                                                 // the riser turns out into the arm
+  cyl(.011,.011,ax-drop-x-bend,chromeMat,(x+bend+ax-drop)/2,top,c,'x');
+  arc(drop,ax-drop,top-drop,0);                                                                        // the arm turns down to the head
+  cyl(.014,.014,.008,chromeMat,ax,top-.026,c);                                                         // the head's ball joint nut
+  cyl(R.head/2*MM,R.head/2*MM,.01,chromeMat,ax,top-.035,c).userData.rackPart='head';
+  cyl(R.head/2*MM-.012,R.head/2*MM-.012,.002,darkMat,ax,top-.041,c);                                   // its nozzle plate
+  // the hand shower in its holder: the handle a little out of plumb, the head facing into the shower
+  g=wall;
+  cyl(.016,.016,.04,chromeMat,x,R.holder*MM,c);
+  const boxH=boxIn(g);boxH(x+.01,x+.04,R.holder*MM-.015,R.holder*MM+.015,c-.012,c+.012,chromeMat);
+  const hand=new THREE.Group(),tilt=-.15;hand.position.set(x+.05,R.holder*MM,c);hand.rotation.z=tilt;hand.userData.rackPart='hand';g.add(hand);
+  cyl(.014,.012,.22,chromeMat,0,-.06,0,null,hand);                                                    // handle
+  const hd=cyl(R.hand/2*MM,R.hand/2*MM,.024,chromeMat,.012,.09,0,null,hand);hd.rotation.z=-Math.PI/2+.35;   // head
+  const hf=cyl(R.hand/2*MM-.008,R.hand/2*MM-.008,.002,darkMat,.025,.086,0,null,hand);hf.rotation.z=-Math.PI/2+.35;   // its face
+  // the hose: from the outlet under the thermostat down in a loop and up to the handle's end
+  const hb=[x+.05+.17*Math.sin(tilt),R.holder*MM-.17*Math.cos(tilt)];
+  const pts=[[x,y-r,c],[x+.02,y-.25,c+.03],[x+.07,.42,c+.06],[x+.12,.5,c+.06],[x+.08,.9,c+.03],[hb[0]-.005,hb[1]-.2,c],[hb[0],hb[1],c]].map(v=>new THREE.Vector3(...v));
+  const hose=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),64,.008,8,false),chromeMat);hose.castShadow=true;hose.userData.rackPart='hose';g.add(hose);
+  return [wall,over];
+}
+
+/* ---------- the shower curtain: on a rod across the shower just past the wall at the niche end ----------
+   The rod an «Г»: on the left (as one goes in) into the partition, on the right past the end of the wall at the niche end, then
+   turning to that wall's back (the shower's side). Drawn back the curtain gathers in folds behind that wall; a click draws it
+   across the opening. Frosted half-clear vinyl, 2200 high down to 10 over the tray, on closed oval rings hung on the rod.
+   One of the room's doors (key 'curtain', axis 'none': follow(a) shapes it): 0 drawn back, 1 across; a click, «Открыты/Закрыты»
+   (open: across), a long press, the walk (it does not stop the walker). The cloth a strip of waves along the rod: its length kept,
+   the narrower it is the deeper they are. Bath axes, mm */
+const CURT={h:2200,off:40,back:200,bend:20,gap:10,more:150,stack:150,folds:6,rings:8,pad:10,ring:[18,27]};   // the cloth's height; the rod's axis from the wall; how far past the wall's end it turns; its bend (a little over the rod's Ø20); the cloth's bottom over the tray; the cloth longer than the rod; its width drawn back; waves; rings; gaps at the ends; a ring's half width and half height
+// the rod's height: the cloth from 10 over the tray, its top 4 under the rings, the rings' inside resting on the rod (Ø20, the ring's tube Ø5)
+const curtRodY=()=>{const C=CURT;return TRAY.H+C.gap+C.h+4+2*C.ring[1]-10-3;};
+// the rod (mm): where its leg meets the wall (xb, zw), its straight run from xs to x1 at z
+const curtRod=()=>{const C=CURT,xb=Math.max(60,A.bWs-C.back),zw=A.bL+A.wt;return {xb,zw,xs:xb+C.bend,x1:A.bWs+A.bGap,z:zw+C.off};};
+// frosted vinyl: plain grey, 60 % clear
+const CURT_OP=.4,curtainMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#cccccc').convertSRGBToLinear(),roughness:.35,transparent:true,opacity:CURT_OP,depthWrite:false,side:THREE.DoubleSide});
+/* its half shadow: a shadow map knows no half clear, so for the shadow the cloth is a fine random sieve of 4 mm cells, as
+   many of them stopping the light as the cloth is opaque (cells of random greys, those under 1 − opacity through), the soft
+   shadow filter (PCF) blurs it into an even shadow 40 % of a full one. Cells in the cloth's own uv (its length and height),
+   so they go with it as it gathers. One more mesh of a hundred triangles in the shadow pass, its shape made again only while it moves */
+const CELL=4,curtainShadowMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,alphaTest:1-CURT_OP,
+  alphaMap:(t=>{t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;return t;})(drawnTex(64,g=>{
+    for(let i=0;i<64;i++)for(let j=0;j<64;j++){let h=Math.imul(i,374761393)+Math.imul(j,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);
+      const v=((h^(h>>>16))>>>0)%255+1;g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(i,j,1,1);}},1,1))});
+let curtain=null;
+function buildCurtain(sani,opts){
+  const C=CURT,{xb,zw,xs,x1,z}=curtRod(),zr=z*MM,yr=curtRodY()*MM,R=C.bend*MM,len=x1-xs+C.more,N=C.folds*8,X0=xs+C.pad,y0=TRAY.H+C.gap;
+  const [ra,rb]=C.ring.map(v=>v*MM),yc=yr+.01+.003-rb,y1=(yc-rb)/MM-4;   // a ring's centre: its inside resting on the rod; the cloth hangs from its bottom
+  curtain=new THREE.Group();curtain.userData.curtain=true;curtain.userData.walkThrough=true;curtain.userData.info=INFO.curtain;sani.add(curtain);
+  // the rod (stays): its run, the bend, the leg to the wall, flanges on the partition and on the wall (Ø30, a little over the rod)
+  const put=(geo,x,y,zz,rx,rz)=>{const m=new THREE.Mesh(geo,chromeMat);m.position.set(x,y,zz);m.rotation.set(rx||0,0,rz||0);m.castShadow=true;curtain.add(m);return m;};
+  put(new THREE.CylinderGeometry(.01,.01,(x1-xs)*MM,24),(xs+x1)/2*MM,yr,zr,0,Math.PI/2);
+  put(new THREE.TorusGeometry(R,.01,12,16,Math.PI/2),xs*MM,yr,zr-R,Math.PI/2,Math.PI/2);   // the quarter from the run (+x) to the leg (−z)
+  put(new THREE.CylinderGeometry(.01,.01,zr-R-zw*MM,24),xb*MM,yr,(zw*MM+zr-R)/2,Math.PI/2);
+  put(new THREE.CylinderGeometry(.015,.015,.008,24),x1*MM-.004,yr,zr,0,Math.PI/2);
+  put(new THREE.CylinderGeometry(.015,.015,.008,24),xb*MM,yr,zw*MM+.004,Math.PI/2);
+  const g=new THREE.Group();curtain.add(g);
+  const pos=new Float32Array((N+1)*2*3),idx=[];
+  for(let i=0;i<N;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+  const uv=new Float32Array((N+1)*2*2),tile=64*CELL;   // the sieve's uv: one tile of its texture every 64 cells
+  for(let i=0;i<=N;i++)uv.set([i/N*len/tile,C.h/tile,i/N*len/tile,0],i*4);
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
+  const cloth=new THREE.Mesh(geo,curtainMat);cloth.castShadow=cloth.receiveShadow=true;cloth.customDepthMaterial=curtainShadowMat;cloth.userData.part='Шторка для душа';g.add(cloth);
+  // a ring: a closed oval across the rod
+  const ringGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3([...Array(24)].map((_,k)=>{const f=k/24*2*Math.PI;return new THREE.Vector3(0,rb*Math.sin(f),ra*Math.cos(f));}),true),48,.0025,8,true);
+  const rings=[...Array(C.rings)].map(()=>{const r=new THREE.Mesh(ringGeo,chromeMat);r.castShadow=true;r.userData.ring=true;g.add(r);return r;});
+  // the cloth from behind the wall out to its edge, its waves as deep as keep its length: sin waves of width w, length ≈ √(L² − w²) / 4n each
+  let last=-1;
+  const shape=a=>{const k=Math.min(1,Math.max(0,a));if(k===last)return;last=k;
+    const w=C.stack+k*(x1-C.pad-X0-C.stack),amp=Math.sqrt(Math.max(0,len*len-w*w))/(4*C.folds),ph=t=>Math.sin(2*Math.PI*C.folds*t);
+    for(let i=0;i<=N;i++){const t=i/N,x=(X0+t*w)*MM,dz=amp*ph(t)*MM;
+      pos.set([x,y1*MM,zr+dz,x+amp*.15*Math.cos(2*Math.PI*C.folds*t)*MM,y0*MM,zr+dz*.8],i*6);}   // the hem a little looser than the top
+    geo.attributes.position.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();
+    rings.forEach((r,j)=>{const t=j/(C.rings-1);r.position.set((X0+t*w)*MM,yc,zr);});
+    g.userData.edge=Math.round(X0+w);g.userData.top=Math.round(y1);};
+  const prev=opts.prev.find(d=>d.key==='curtain');
+  const d=Object.assign({g,a:0,t:0,max:1,key:'curtain',axis:'none',follow:shape},prev&&{a:prev.a,t:prev.t,last:prev.last});
+  if(!prev&&opts.open)d.t=d.max;turnDoor(d);
+  return [d];
 }
 
 /* ---------- the washing machine and the sink over it: in the niche right of the bathroom door ----------
@@ -295,10 +416,14 @@ function washerDoor(cx,zf,prev,open){
   d.turn(d.side||-1);if(!prev&&open)d.t=d.max;turnDoor(d);
   return d;
 }
-// every frame (before the room turns its doors): the bath view hides the niche and the shower tray unless its frame shows it whole; the door takes the clicked side as it starts to open
+// every frame (before the room turns its doors): the bath view hides the niche, the shower tray, its rack and curtain unless its frame shows it whole; the door takes the clicked side as it starts to open
 frameHooks.push(()=>{
   if(wash)wash.visible=view!=='bath';
   if(tray)tray.visible=view!=='bath'||VS.bath.L>=trayRect()[3];   // the bath view: only when its frame takes the whole tray in
+  if(rack)rack.forEach(o=>o.visible=!tray||tray.visible);           // the rack with it
+  // and the curtain; in the bath view's cut mode it hides with the wall at the niche end, along which it runs
+  if(curtain){const w=WALLS.find(v=>v.id==='nicheEnd'),vw=VIEWS.bath;
+    curtain.visible=(!tray||tray.visible)&&(view!=='bath'||VS.bath.Wm!=='auto'||sideVisible(fadeSide(w,vw),fadeWall(w,vw).r.map(v=>v*MM),camera.position));}
   const d=VIEWS.bath&&VIEWS.bath.furniture().doors.find(x=>x.key==='washer');if(!d)return;
   if(d.t>0&&d.closed&&d.a<.002){const full=d.t>=d.max-.01,mid=(O()[0]+washNiche().cx)*MM;d.turn(d.hit?(d.hit.x>mid?1:-1):d.side);d.hit=null;d.t=full?d.max:Math.min(d.t,d.max);d.closed=false;}
   else if(d.t===0&&d.a<.002)d.closed=true;

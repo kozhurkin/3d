@@ -147,6 +147,7 @@ const INFO={
   mirror:{title:'Зеркало',lines:['40 × 40 см, в чёрной рамке 15 мм.','На торце углового шкафа, от 130 до 170 см от пола.']},
   rack:()=>({title:'Металлический стеллаж',lines:[`${cm(rackW())} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(wardAt()-WR.W)} см вдоль стены, от угла до шкафа; зазоры по ${cm(RK.gap)} см с краёв и между ними.`]}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
+  sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
   sofa:{title:'Угловой диван-кровать «Слим» (Hoff)',price:29999,url:'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875',shop:'Hoff',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
 
@@ -427,15 +428,18 @@ function shelfParts(add){
    150 from its ends; an arm 200 under the board, another 150 down the wall, a strut at 45° between them. Added to the desk's built
    group (m), the board's colour on it and them; a click on any of them the next colour */
 const SHB={end:150,w:25,t:4,arm:200,leg:150};
+/* one such L-bracket in g, its axes as the desk's (mm → m): the wall at z 0, the room +z; its middle at x c, the board's bottom at
+   y0. An arm under the board, another down the wall, the strut at 45° from the wall arm's foot up to the under arm; or (up) a plain
+   L: the wall arm up from the under arm, behind the board, screwed to the wall over it. Its meshes */
+function lBracket(box,c,y0,{w,t,arm,leg},mat,up=false){
+  const m=v=>v*MM,bar=(ya,yb,z1)=>box(m(c-w/2),m(c+w/2),m(ya),m(yb),0,m(z1),mat);
+  const ms=[bar(y0-t,y0,arm),up?bar(y0,y0-t+leg,t):bar(y0-leg,y0-t,t)];   // under the board; on the wall, up behind it or down
+  if(!up){const s=bar(0,leg*Math.SQRT2,t);s.rotation.x=Math.PI/4;s.position.set(m(c),m(y0-t-leg/2),m(leg/2));ms.push(s);}   // the strut
+  return ms;
+}
 function buildShelf(desk){
-  const box=boxIn(desk),m=v=>v*MM,{w,t,arm,leg}=SHB,x0=(DK.W-SH.W)/2,y0=shelfY0(),br=SHC[shelfColor].br,ms=[];
-  [x0+SHB.end,x0+SH.W-SHB.end].forEach(c=>{
-    const a=c-w/2,b=c+w/2;
-    ms.push(box(m(a),m(b),m(y0-t),m(y0),0,m(arm),br));   // under the board
-    ms.push(box(m(a),m(b),m(y0-leg),m(y0-t),0,m(t),br));   // down the wall
-    const s=box(m(a),m(b),0,m(leg*Math.SQRT2),0,m(t),br);   // the strut: from the wall arm's foot up to the under arm
-    s.rotation.x=Math.PI/4;s.position.set(m(c),m(y0-t-leg/2),m(leg/2));ms.push(s);
-  });
+  const box=boxIn(desk),x0=(DK.W-SH.W)/2,y0=shelfY0(),br=SHC[shelfColor].br;
+  const ms=[x0+SHB.end,x0+SH.W-SHB.end].flatMap(c=>lBracket(box,c,y0,SHB,br));
   ms.forEach(o=>Object.assign(o.userData,{info:INFO.shelf,shelfBracket:true}));
   const next=()=>{shelfColor=(shelfColor+1)%SHC.length;paintShelf(desk);};
   desk.children.filter(isShelf).forEach(o=>{o.userData.click=next;});
@@ -923,6 +927,21 @@ function buildMezzanine(g,opts){
   g.add(d.model);
   return d.doors;
 }
+/* the white shelf over the sofa: a board 2000 × 250, 25 thick, white as the kitchen's carcasses, on the right wall under the mezzanine,
+   in line with it (from the wardrobe's side toward the window); its bottom at 1375, 465 over the sofa's back, 300 under the mezzanine.
+   Three white steel L-brackets, the desk shelf's (SHB, lBracket) as plain Ls, 150 from its ends and in its middle: the board on their
+   arms, their wall arms up behind it (the board as far off the wall as they are thick).
+   Its own axes as the desk shelf's: x along the wall from the wardrobe's side, z out from the wall; turned onto the kitchen's as the sofa */
+const SS={L:2000,D:250,t:25,y0:1375,name:'Полка над диваном'};
+function buildSofaShelf(g){
+  const white=SHC.find(c=>c.name==='белый'),[parts,add]=partList();
+  add(SS.name,'carcass',0,SS.L,SS.y0,SS.y0+SS.t,SHB.t,SHB.t+SS.D);
+  const q=buildParts({parts},white.mats).model,box=boxIn(q);
+  [SHB.end,SS.L/2,SS.L-SHB.end].forEach(c=>lBracket(box,c,SS.y0,SHB,white.br,true).forEach(o=>{o.userData.bracket=true;}));
+  q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,wardAt()*MM);q.userData.sofaShelf=true;q.userData.info=INFO.sofaShelf;
+  g.add(q);
+  return [];
+}
 /* the metal racks on the right wall's empty stretch: two alike side by side, from the corner by the way into the kitchen (the kitchen
    wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 200 deep — their fronts in line with the end of
    the wall right of the way in — and 1750 high. Each: four perforated L-angle posts at its corners (their flanges outward, on plastic
@@ -1318,16 +1337,16 @@ const k=roomKit('kitchen',{
   slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)
   dims:buildDims,
   // the appliances (the oven's and the fridge's doors open), the tables, the lamp and the wall shelf over the dining one, the dining chairs, the desk chair, the display cabinet,
-  // the sofa, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
+  // the sofa and the shelf over it, the wardrobe, the mezzanine and the rack go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
   // leaves them (loose), and they are built as they were (prev), never opened with the fronts
   extra:{name:'appl',build:(g,{prev})=>{const o={prev},ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
-    const all=ap.concat(buildSpiceShelf(g,o),buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildRack(g));
+    const all=ap.concat(buildSpiceShelf(g,o),buildChairs(g,o),buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g));
     all.forEach(d=>{d.loose=true;});return all;}},
   // its own view shows the cabinets and the dining table with its chairs, its lamp and the shelf over it — the table only once the frame shows the left wall past it; the desk and its chair,
-  // the display cabinet, the sofa, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
+  // the display cabinet, the sofa and its shelf, the wardrobe, the mezzanine and the rack stand in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
     const fits=show>=TB.z+TB.w,has=(u,ks)=>ks.some(k=>u[k]===true);
-    if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,['desk','deskChair','vitrine','sofa','wardrobe','mezzanine','rack']))o.visible=!on;else if(has(u,['table','chair','pendant','spice']))o.visible=!on||fits;});
+    if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack']))o.visible=!on;else if(has(u,['table','chair','pendant','spice']))o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
   foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w],[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],

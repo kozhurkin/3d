@@ -100,7 +100,7 @@ const INFO={
       'Нажатие открывает и закрывает двери.']};},
   curtain:()=>{const cm=v=>Math.round(v/10),C=CURT,r=curtRod();
     return {title:'Шторка для душа',lines:[`${cm(r.x1-r.xs+C.more)} × ${cm(C.h)} см, клеёнка (PEVA), полупрозрачная, матовая; кольца овальные.`,
-      `Штанга Г-образная, ${cm(r.x1-r.xb)} см: слева в перегородку, справа заходит за стенку у ниши и крепится к ней сзади; нержавеющая сталь, хром, Ø 2 см; в ${cm(curtRodY())} см от пола.`,
+      `Штанга прямая, ${cm(r.x1-r.xb)} см: слева в перегородку, справа заходит за стенку у ниши и упирается в шар кронштейна на её задней стороне; нержавеющая сталь, хром, Ø 2 см; в ${cm(curtRodY())} см от пола.`,
       `Низ шторки в ${cm(C.gap)} см над поддоном.`,
       'Нажатие задёргивает шторку или отодвигает её за стенку.']};},
   rack:()=>{const cm=v=>Math.round(v/10),R=RACK;
@@ -247,17 +247,18 @@ function buildRack(sani){
 }
 
 /* ---------- the shower curtain: on a rod across the shower just past the wall at the niche end ----------
-   The rod an «Г»: on the left (as one goes in) into the partition, on the right past the end of the wall at the niche end, then
-   turning to that wall's back (the shower's side). Drawn back the curtain gathers in folds behind that wall; a click draws it
+   The rod straight: on the left (as one goes in) into the partition, on the right past the end of the wall at the niche end,
+   into the ball of a bracket on that wall's back (the shower's side): a round flange on three screws, a stem, a ball with one
+   blind hole toward the partition, the rod's end in it. Drawn back the curtain gathers in folds behind that wall; a click draws it
    across the opening. Frosted half-clear vinyl, 2200 high down to 10 over the tray, on closed oval rings hung on the rod.
    One of the room's doors (key 'curtain', axis 'none': follow(a) shapes it): 0 drawn back, 1 across; a click, «Открыты/Закрыты»
    (open: across), a long press, the walk (it does not stop the walker). The cloth a strip of waves along the rod: its length kept,
    the narrower it is the deeper they are. Bath axes, mm */
-const CURT={h:2200,off:40,back:200,bend:20,gap:10,more:150,stack:150,folds:6,rings:8,pad:10,ring:[18,27]};   // the cloth's height; the rod's axis from the wall; how far past the wall's end it turns; its bend (a little over the rod's Ø20); the cloth's bottom over the tray; the cloth longer than the rod; its width drawn back; waves; rings; gaps at the ends; a ring's half width and half height
+const CURT={h:2200,off:40,back:200,ball:16,gap:10,more:150,stack:150,folds:6,rings:8,pad:10,ring:[18,27]};   // the cloth's height; the rod's axis from the wall; how far past the wall's end its bracket stands; the bracket's ball radius (the rod Ø20 through it); the cloth's bottom over the tray; the cloth longer than the rod; its width drawn back; waves; rings; gaps at the ends; a ring's half width and half height
 // the rod's height: the cloth from 10 over the tray, its top 4 under the rings, the rings' inside resting on the rod (Ø20, the ring's tube Ø5)
 const curtRodY=()=>{const C=CURT;return TRAY.H+C.gap+C.h+4+2*C.ring[1]-10-3;};
-// the rod (mm): where its leg meets the wall (xb, zw), its straight run from xs to x1 at z
-const curtRod=()=>{const C=CURT,xb=Math.max(60,A.bWs-C.back),zw=A.bL+A.wt;return {xb,zw,xs:xb+C.bend,x1:A.bWs+A.bGap,z:zw+C.off};};
+// the rod (mm): its bracket's ball at xb on the wall's back (zw), the rod's end in it, the run clear of the ball from xs to x1, at z
+const curtRod=()=>{const C=CURT,xb=Math.max(60,A.bWs-C.back),zw=A.bL+A.wt;return {xb,zw,xs:xb+C.ball,x1:A.bWs+A.bGap,z:zw+C.off};};
 // frosted vinyl: plain grey, 60 % clear
 const CURT_OP=.4,curtainMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#cccccc').convertSRGBToLinear(),roughness:.35,transparent:true,opacity:CURT_OP,depthWrite:false,side:THREE.DoubleSide});
 /* its half shadow: a shadow map knows no half clear, so for the shadow the cloth is a fine random sieve of 4 mm cells, as
@@ -270,16 +271,20 @@ const CELL=4,curtainShadowMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RG
       const v=((h^(h>>>16))>>>0)%255+1;g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(i,j,1,1);}},1,1))});
 let curtain=null;
 function buildCurtain(sani,opts){
-  const C=CURT,{xb,zw,xs,x1,z}=curtRod(),zr=z*MM,yr=curtRodY()*MM,R=C.bend*MM,len=x1-xs+C.more,N=C.folds*8,X0=xs+C.pad,y0=TRAY.H+C.gap;
+  const C=CURT,{xb,zw,xs,x1,z}=curtRod(),zr=z*MM,yr=curtRodY()*MM,rb0=C.ball*MM,len=x1-xs+C.more,N=C.folds*8,X0=xs+C.pad,y0=TRAY.H+C.gap;
   const [ra,rb]=C.ring.map(v=>v*MM),yc=yr+.01+.003-rb,y1=(yc-rb)/MM-4;   // a ring's centre: its inside resting on the rod; the cloth hangs from its bottom
   curtain=new THREE.Group();curtain.userData.curtain=true;curtain.userData.walkThrough=true;curtain.userData.info=INFO.curtain;sani.add(curtain);
-  // the rod (stays): its run, the bend, the leg to the wall, flanges on the partition and on the wall (Ø30, a little over the rod)
-  const put=(geo,x,y,zz,rx,rz)=>{const m=new THREE.Mesh(geo,chromeMat);m.position.set(x,y,zz);m.rotation.set(rx||0,0,rz||0);m.castShadow=true;curtain.add(m);return m;};
-  put(new THREE.CylinderGeometry(.01,.01,(x1-xs)*MM,24),(xs+x1)/2*MM,yr,zr,0,Math.PI/2);
-  put(new THREE.TorusGeometry(R,.01,12,16,Math.PI/2),xs*MM,yr,zr-R,Math.PI/2,Math.PI/2);   // the quarter from the run (+x) to the leg (−z)
-  put(new THREE.CylinderGeometry(.01,.01,zr-R-zw*MM,24),xb*MM,yr,(zw*MM+zr-R)/2,Math.PI/2);
-  put(new THREE.CylinderGeometry(.015,.015,.008,24),x1*MM-.004,yr,zr,0,Math.PI/2);
-  put(new THREE.CylinderGeometry(.015,.015,.008,24),xb*MM,yr,zw*MM+.004,Math.PI/2);
+  // the rod (stays): straight from the partition (a flange Ø30 there) into the bracket's ball, its end in the ball's blind hole (to its middle)
+  const put=(geo,x,y,zz,rx,rz,part,mat=chromeMat)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,zz);m.rotation.set(rx||0,0,rz||0);m.castShadow=true;if(part)m.userData.rodPart=part;curtain.add(m);return m;};
+  const r0=xb*MM,zw0=zw*MM;
+  put(new THREE.CylinderGeometry(.01,.01,x1*MM-r0,24),(r0+x1*MM)/2,yr,zr,0,Math.PI/2,'run');
+  put(new THREE.CylinderGeometry(.015,.015,.008,24),x1*MM-.004,yr,zr,0,Math.PI/2,'flange');
+  // the bracket: the flange Ø46 on the wall with three screws, the stem (a wider foot, a neck), the ball the rod goes through
+  put(new THREE.CylinderGeometry(.023,.023,.006,32),xb*MM,yr,zw0+.003,Math.PI/2,0,'flange');
+  [Math.PI/2,Math.PI*7/6,Math.PI*11/6].forEach(a=>put(new THREE.CylinderGeometry(.002,.002,.001,8),xb*MM+.016*Math.cos(a),yr+.016*Math.sin(a),zw0+.0062,Math.PI/2,0,null,darkMat));
+  put(new THREE.CylinderGeometry(.011,.012,.008,24),xb*MM,yr,zw0+.01,Math.PI/2);
+  put(new THREE.CylinderGeometry(.007,.009,zr-rb0-zw0-.014+.004,24),xb*MM,yr,(zw0+.014+zr-rb0+.004)/2,Math.PI/2);
+  put(new THREE.SphereGeometry(rb0,32,24),xb*MM,yr,zr,0,0,'ball');
   const g=new THREE.Group();curtain.add(g);
   const pos=new Float32Array((N+1)*2*3),idx=[];
   for(let i=0;i<N;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}

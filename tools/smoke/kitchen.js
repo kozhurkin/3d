@@ -720,6 +720,7 @@ check('кухня: два одинаковых металлических сте
     assert.ok(q.perf, 'the holes in the flanges\' broad faces only');
     assert.strictEqual(q.info.title, 'Металлический стеллаж');
     assert.strictEqual(q.info.lines[0], '57,3 × 20 см, высота 175 см.');
+    assert.strictEqual(q.info.lines[4], 'Место под оба — 117,6 см вдоль стены, от угла до шкафа; зазоры по 1 см с краёв и между ними.', 'the wall from the corner (z 0) to the wardrobe (1176)');
     assert.strictEqual(q.visible, false, 'not in the kitchen tab: on the plan and in the walk');
   });
   // a bolt in a hole: the mask's holes 42 apart from the posts' feet (10), one at each shelf's bolt (its top − 15)
@@ -780,10 +781,12 @@ check('кухня: угловой диван Hoff «Слим» у правой �
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const r = p.run(`(f=>f.appl.children.filter(o=>o.userData.sofa===true).map(q=>{
     const b=new THREE.Box3().setFromObject(q);return {at:[Math.round(q.position.x*1000),Math.round(q.position.z*1000)],turn:+q.rotation.y,
-      x0:Math.round((b.min.x-q.position.x)*1000),size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.z-b.min.z)*1000),Math.round(b.max.y*1000)],title:infoOf(q).title};}))(VIEWS.kitchen.furniture())`);
+      x0:Math.round((b.min.x-q.position.x)*1000),size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.z-b.min.z)*1000),Math.round(b.max.y*1000)],title:infoOf(q).title,buy:(i=>[i.price,i.url,i.shop])(infoOf(q))};}))(VIEWS.kitchen.furniture())`);
+  // its card: the price and the link to Hoff
+  assert.deepStrictEqual(r[0].buy, [29999, 'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875', 'Hoff']);
   // kitchen axes: the right wall at x 3200; its window end 150 from the window wall at 4750, as the desk's: from z 4600 − 2060 = 2540
   assert.deepStrictEqual(r.map((q) => q.at), [[3200, 2540], [3200, 2540]], 'the sofa and its chaise, one place');
-  assert.ok(r.every((q) => q.turn === -Math.PI / 2 && q.title === 'Угловой диван Hoff «Слим»'), 'its back to the wall, its seat toward the desk');
+  assert.ok(r.every((q) => q.turn === -Math.PI / 2 && q.title === 'Угловой диван-кровать «Слим» (Hoff)'), 'its back to the wall, its seat toward the desk');
   // own axes before the turn (the stub's boxes leave turns out): 2060 across, 850 deep, 910 high; the chaise 705 across, its box from the back
   // out to 1530, up to its back cushion's 910, at its far end (own x 1355…2060 → kitchen z 3895…4600: the window end; the stitches on
   // its sides stand 1.5 out of them)
@@ -809,7 +812,7 @@ check('кухня: сиденье оттоманки дивана целиком
   assert.deepStrictEqual(r.size, [705, 170, 1430], 'the chaise\'s seat, from the thin back to its front');
   // on it, the chaise's back cushion and the throw pillow in the corner (their middles: y, z)
   assert.deepStrictEqual(r.ride, [[680, 210], [640, 385]]);
-  assert.strictEqual(r.title, 'Угловой диван Hoff «Слим»');
+  assert.strictEqual(r.title, 'Угловой диван-кровать «Слим» (Hoff)');
   assert.deepStrictEqual(r.stitches, [5, 4, 4], 'stitched up its front and both its sides, 130 apart');
   assert.strictEqual(r.white, 5, 'the box white inside (flat boards besides the stitches): its bottom and four walls');
   // a click: up (its front edge rises over the seat), half as fast as a front: about 69 % of the way at 0.21 s

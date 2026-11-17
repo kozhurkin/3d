@@ -1,6 +1,6 @@
 // Остальное в комнате кухни (living.js): рабочее место — письменный стол, MacBook, кресло, витрина; жилая часть — угловой шкаф, антресоли,
 // полка над диваном, стеллажи, диван.
-const { all, runPage, PAGES, check, slide, near, assert } = require('./harness');
+const { runPage, PAGES, check, slide, near, assert } = require('./harness');
 
 /* ---------- рабочее место ---------- */
 

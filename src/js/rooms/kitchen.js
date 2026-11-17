@@ -311,7 +311,7 @@ function buildChairs(g,opts){
 /* the wall shelf over the dining table: on the left wall over the table's end, in the middle of its width, its bottom SPICE_Y over the floor.
    Two of them, one shown (spiceModel): a click on it (engine.js: userData.click; a click on a drawer works the drawer) or the link in its card shows the other;
    which one stays through the kitchen's rebuilds. Each in its own axes (mm): x along it from the window's side, y up from its bottom,
-   z from the wall into the room; both in one group turned onto the kitchen's as the desk: its x toward the kitchen wall (−z), its z along x.
+   z from the wall into the room; both in one group turned onto the kitchen's as the desk (living.js): its x toward the kitchen wall (−z), its z along x.
    The olive one, as the shop's «полка настенная из массива дерева с ящиками»: solid pine painted olive, 600 wide, 900 high, 120 deep.
    Two sides the whole height; a back of six tongue-and-groove boards; at the bottom three drawers with white ceramic knobs under the
    first shelf, two more shelves over it (lv); at the top a board, a front rail with a scalloped bottom under it and a scalloped crest

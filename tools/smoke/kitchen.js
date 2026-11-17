@@ -774,6 +774,14 @@ check('кухня: два одинаковых металлических сте
   [55, 475, 1735].forEach((y) => { const v = ((y - 10) / 42 + off) % 1; assert.ok(Math.abs(v - .5) < 1e-9, 'a hole at ' + y + ': ' + v); });
   p.run('showView("plan")'); p.fly();
   assert.deepStrictEqual(rk().map((q) => q.visible), [true, true]);
+  // a click on either makes both deeper: 250, 300, then 200 again — off the right wall (3200), the card and the walk's footprint with them
+  const click = (i) => p.run(`VIEWS.kitchen.furniture().appl.children.filter(o=>o.userData.rack===true)[${i}].userData.click()`);
+  [[0, 250], [1, 300], [0, 200]].forEach(([i, d]) => {
+    click(i); p.tick(); r = rk();
+    assert.deepStrictEqual(r.map((q) => q.box.slice(0, 2)), [[3200 - d, 3200], [3200 - d, 3200]], 'depth ' + d);
+    assert.deepStrictEqual(r.map((q) => q.visible), [true, true], 'still on the plan');
+    assert.strictEqual(r[0].info.lines[0], `57,3 × ${d / 10} см, высота 175 см.`);
+  });
   // a longer kitchen moves the sofa and the wardrobe toward the window: the racks grow with the empty wall
   slide(p, 'kL', 5000); p.tick();
   assert.deepStrictEqual(rk().map((q) => q.box.slice(2, 4)), [[10, 708], [718, 1416]]);

@@ -22,10 +22,10 @@ check('перелёт «Планировка» → «Кухня»: стены, �
   near(p.run('tr.e'), 0.5, 'progress');
   // a wall hidden on the plan and not in the kitchen stays hidden all the way (it does not pop up to sink again)
   assert.strictEqual(piece(p, 'window').visible, false, 'hidden window wall stays hidden');
-  // the left wall shrinks from the whole wall (z 0…6750) to the kitchen's frame (1900…3350): now 950…5050;
+  // the left wall shrinks from the whole wall (z 0…6700) to the kitchen's frame (1900…3350): now 950…5025;
   // the kitchen's 3/4 camera is left of it, so the kitchen's cut mode hides it: it also goes down, halfway now
   const lo = piece(p, 'leftOuter');
-  near(lo.sz, 4100 / 6750, 'left wall length'); near(lo.z, 3.0, 'left wall centre'); near(lo.sy, 0.5, 'left wall height');
+  near(lo.sz, 4075 / 6700, 'left wall length'); near(lo.z, 2.9875, 'left wall centre'); near(lo.sy, 0.5, 'left wall height');
   // a wall that is not in the kitchen is halfway down; the kitchen wall stays
   near(piece(p, 'hallBath').sy, 0.5, 'hall/bath wall height'); near(piece(p, 'kitchen').sy, 1, 'kitchen wall height');
   // footprints fade between the views: half gone under a wall that leaves, whole under one that stays; walls high above the floor are solid
@@ -77,7 +77,7 @@ check('перелёт: прерывание, мышь забирает каме�
   p.run('showView("kitchen")'); p.tick(25, 17);
   // back to the plan in the middle: the new flight starts from what is on screen
   p.run('showView("plan")');
-  assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 5050], [-2200, -2000, 0, 6750]]);
+  assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 5025], [-2200, -2000, 0, 6700]]);
   near(p.run('morph.w.get("leftOuter").cF'), 1300, 'the left wall starts from halfway down');
   near(p.run('tr.pres0.bath'), 0.5, 'the bathroom starts from halfway');
   p.fly();

@@ -8,7 +8,7 @@ const APT_A={
   hL1:700, bDoor:600, bDoorH:2000, hL2:600,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
                                     // (hL1: the door's 70 mm casing clears the 600 mm sink in the bathroom niche by 40)
   kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
-  kW:2200, kL:4700,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
+  kW:2200, kL:4650,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
   bNiche:1200,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet
   bL:1100, bWs:500, bStub:600,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet

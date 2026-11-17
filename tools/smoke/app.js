@@ -245,6 +245,34 @@ check('названия комнат на полу: холст по ширине
   assert.deepStrictEqual(paint(150).map((r) => r[2]), [0, 0, 0], 'the same width: the texture stays');
 });
 
+check('площадь комнаты: по контуру пола (прихожая до кухонной стены, санузел без вентшахты со стенками); наведение на площадь — рамка', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  assert.deepStrictEqual(p.run('ROOMS.map(roomCaption)'), ['Прихожая · 2,3 м²', 'Санузел · 3,2 м²', 'Кухня · 15,2 м²']);
+  assert.deepStrictEqual(p.run('ROOMS.map(r=>polyArea(roomPoly(r)))'), [1200 * 1900, 3160000, 15200000]);
+  // the band goes inward: the bath's outline moved 40 mm in, corners mitred (the shaft's notch included)
+  assert.deepStrictEqual(p.run('roomPoly(ROOMS[1])'), [[-2000, 0], [-100, 0], [-100, 1400], [-1000, 1400], [-1000, 1900], [-2000, 1900]]);
+  assert.deepStrictEqual(p.run('insetPoly(roomPoly(ROOMS[1]),40)').map((v) => v.map(Math.round)),
+    [[-1960, 40], [-140, 40], [-140, 1360], [-1040, 1360], [-1040, 1860], [-1960, 1860]]);
+  assert.deepStrictEqual(p.run('(setHoverRoom(1),[hoverFrame.visible,hoverFrame.children.length])'), [true, 2]);
+  assert.deepStrictEqual(p.run('(setHoverRoom(-1),[hoverFrame.visible,hoverFrame.children.length])'), [false, 0]);
+});
+
+check('площадь: наведение только на видимую подпись площади — за предметом или стеной контура нет', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  // the area part of the bath's name lies over u 0.6…0.9; the name is 5 m from the camera
+  const r = (u, front) => p.run(`(()=>{const n=nameTexts[1];n.c.width=100;n.g.measureText=t=>({width:t===n.text?78:48});
+    const lh=[{object:n.m,uv:{x:${u}},distance:5}],mesh=(d,o)=>({object:Object.assign({isMesh:true,visible:true,parent:null,material:{opacity:1}},o),point:{},distance:d});
+    return roomUnderCursor(lh,[${front}]);})()`);
+  assert.strictEqual(r(.7, ''), 1, 'the area, nothing in front');
+  assert.strictEqual(r(.3, ''), -1, 'the name part: no frame');
+  assert.strictEqual(r(.7, 'mesh(3)'), -1, 'a cabinet in front of the area');
+  assert.strictEqual(r(.7, 'mesh(7)'), 1, 'the floor behind it');
+  assert.strictEqual(r(.7, '{object:n.m,point:{},distance:5}'), 1, 'the name itself');
+  assert.strictEqual(r(.7, 'mesh(3,{parent:hoverFrame})'), 1, 'the frame itself');
+  assert.strictEqual(r(.7, 'mesh(3,{material:{opacity:1,clippingPlanes:[{distanceToPoint:()=>-1}]}})'), 1, 'a part clipped away at the walls\' height');
+  assert.strictEqual(r(.7, 'mesh(3,{material:{opacity:1,clippingPlanes:[{distanceToPoint:()=>1}]}})'), -1, 'a part below the cut');
+});
+
 check('shell: все вкладки — виды одного приложения в одном окне', () => {
   const shellPage = html.slice(html.indexOf('<header'));
   const shown = [];

@@ -191,6 +191,54 @@ frameHooks.push(()=>{
     labels.forEach(s=>{s.getWorldPosition(_v);const u=_v.distanceTo(camera.position)*k;s.scale.set(19*u*s.userData.ar,19*u,1);}); }
 });
 
+/* the area of a room's name under the cursor: its floor is tinted and framed by a band along the walls, drawn over them */
+const HOVER_BAND=40;   // mm, inward from the outline
+const hoverFillMat=new THREE.MeshBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true,opacity:.14,side:THREE.DoubleSide});
+const hoverBandMat=new THREE.MeshBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true,opacity:.9,side:THREE.DoubleSide});
+const hoverFrame=new THREE.Group();hoverFrame.visible=false;scene.add(hoverFrame);
+// the outline moved inward by d: each corner along the bisector of its two edges (mitred), mm
+function insetPoly(q,d){
+  const n=q.length,ccw=polySigned(q)>0;
+  const nrm=(a,b)=>{const dx=b[0]-a[0],dz=b[1]-a[1],l=Math.hypot(dx,dz);return ccw?[-dz/l,dx/l]:[dz/l,-dx/l];};   // the edge's inward normal
+  return q.map((p,i)=>{const a=nrm(q[(i+n-1)%n],p),b=nrm(p,q[(i+1)%n]),k=d/(1+a[0]*b[0]+a[1]*b[1]);return [p[0]+(a[0]+b[0])*k,p[1]+(a[1]+b[1])*k];});
+}
+function bandGeometry(q,d){
+  const r=insetPoly(q,d),n=q.length,pos=[],idx=[];
+  q.forEach((p,i)=>{pos.push(p[0]*MM,0,p[1]*MM,r[i][0]*MM,0,r[i][1]*MM);const j=(i+1)%n;idx.push(2*i,2*j,2*j+1,2*i,2*j+1,2*i+1);});
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);return g;
+}
+let hoverRoom=-1;
+function setHoverRoom(i){
+  if(i===hoverRoom)return;hoverRoom=i;
+  emptyGroup(hoverFrame,false);
+  if(i<0){hoverFrame.visible=false;return;}
+  const q=roomPoly(ROOMS[i]);
+  const fill=new THREE.Mesh(polyFloorGeometry(q),hoverFillMat);fill.renderOrder=17;
+  const band=new THREE.Mesh(bandGeometry(q,HOVER_BAND),hoverBandMat);band.renderOrder=18;
+  hoverFrame.add(fill,band);hoverFrame.visible=true;
+}
+// which room's area is under the cursor (-1: none): labelHits — the ray through the names, sceneHits — through the whole scene.
+// Only over the area («2,3 м²»), not the whole inscription, and only where it is seen: anything in front of it (a cabinet, a wall,
+// an item) hides it. The names themselves and the frame don't count, nor a part of a surface clipped away (furniture cut at the walls' height)
+const inGroup=(o,g)=>{while(o){if(o===g)return true;o=o.parent;}return false;};
+const clippedAt=h=>[].concat(h.object.material||[]).some(m=>m&&m.clippingPlanes&&m.clippingPlanes.some(p=>p.distanceToPoint(h.point)<0));
+function roomUnderCursor(labelHits,sceneHits){
+  const h=labelHits[0],i=h?nameTexts.findIndex(n=>n.m===h.object):-1;
+  if(i<0)return -1;
+  const [u0,u1]=areaSpan(nameTexts[i]);if(!h.uv||h.uv.x<u0||h.uv.x>u1)return -1;
+  const front=sceneHits.find(x=>hittable(x)&&!inGroup(x.object,namesGroup)&&!inGroup(x.object,hoverFrame)&&!clippedAt(x));
+  return front&&front.distance<h.distance-1e-4?-1:i;
+}
+canvas.addEventListener('pointermove',e=>{
+  if(view!=='plan'||inTransition()||!namesGroup.visible||e.buttons){setHoverRoom(-1);return;}
+  aimRay(e);
+  const lh=ray.intersectObjects(nameTexts.map(n=>n.m));
+  setHoverRoom(lh.length?roomUnderCursor(lh,ray.intersectObjects(scene.children,true)):-1);
+});
+canvas.addEventListener('pointerleave',()=>setHoverRoom(-1));
+modelHooks.push(()=>setHoverRoom(-1));   // the sizes changed: the frame is gone until the cursor moves
+frameHooks.push(()=>{if(hoverRoom>=0){if(!namesGroup.visible)setHoverRoom(-1);else hoverFrame.position.y=(wallFeetMode?0:wallCut)+.02;}});
+
 addView('plan',{
   rooms:'all',
   // the cut mode hides only the outer walls of the apartment, each while the camera looks at it from outside; inner walls always stay

@@ -36,13 +36,19 @@ function emptyGroup(g,own=true){
 /* room floors and the names on them: rebuilt when the sizes change */
 const roomGroup=new THREE.Group();scene.add(roomGroup);
 let roomMats=[];
+const roomPoly=r=>r.poly||[[r.r[0],r.r[2]],[r.r[1],r.r[2]],[r.r[1],r.r[3]],[r.r[0],r.r[3]]];   // the floor's outline [x,z]…
+const polySigned=q=>q.reduce((s,a,i)=>{const b=q[(i+1)%q.length];return s+a[0]*b[1]-b[0]*a[1];},0)/2;   // mm², > 0 counter-clockwise in x,z
+const polyArea=q=>Math.abs(polySigned(q));
+// a flat floor on an outline, lying at y 0
+const polyFloorGeometry=q=>new THREE.ShapeGeometry(new THREE.Shape(q.map(p=>new THREE.Vector2(p[0]*MM,-p[1]*MM)))).rotateX(-Math.PI/2);
+const roomArea=r=>`${(polyArea(roomPoly(r))/1e6).toFixed(1).replace('.',',')} м²`;
+const roomCaption=r=>`${r.name} · ${roomArea(r)}`;
 function buildRooms(){
   emptyGroup(roomGroup);emptyGroup(namesGroup);nameTexts.length=0;
   roomMats=ROOMS.map(r=>{
     const m=new THREE.MeshStandardMaterial({roughness:.9,...BEHIND});
-    const p=new THREE.Mesh(new THREE.PlaneGeometry((r.r[1]-r.r[0])*MM,(r.r[3]-r.r[2])*MM),m);
-    p.rotation.x=-Math.PI/2;p.position.set((r.r[0]+r.r[1])/2*MM,0,(r.r[2]+r.r[3])/2*MM);p.receiveShadow=true;roomGroup.add(p);return m;});
-  ROOMS.forEach(r=>floorText(r.name,r.at[0],r.at[1],.2));
+    const p=new THREE.Mesh(polyFloorGeometry(roomPoly(r)),m);p.receiveShadow=true;roomGroup.add(p);return m;});
+  ROOMS.forEach(r=>{const t=roomCaption(r);floorText(t,r.at[0],r.at[1],.17,t.length-roomArea(r).length);});   // the name and the floor area of the room
 }
 
 /* room names lying on the floor */
@@ -52,13 +58,15 @@ const nameFont=f=>`400 ${f}px "Tenor Sans", Georgia, serif`;
 // the canvas is as wide as the text in the font as it is now: built before the web font has come, a name is measured in
 // the fallback, narrower one, and paintNames widens it (canvas and plane) once the font is there
 const nameW=n=>{n.g.font=nameFont(n.f);return Math.ceil(n.g.measureText(n.text).width)+24;};
-function floorText(text,x,z,h){
+// where the area part of a name lies across the texture (0..1), in the font as it is now
+const areaSpan=n=>{n.g.font=nameFont(n.f);const w=n.c.width;return [(12+n.g.measureText(n.text.slice(0,n.cut)).width)/w,(12+n.g.measureText(n.text).width)/w];};
+function floorText(text,x,z,h,cut=0){   // cut: where the area starts in the text
   const c=document.createElement('canvas'),g=c.getContext('2d'),f=96;
   c.height=f+30;
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
   const m=new THREE.Mesh(new THREE.PlaneGeometry(1,h),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));
   m.rotation.x=-Math.PI/2;m.position.set(x*MM,.004,z*MM);m.renderOrder=2;namesGroup.add(m);
-  nameTexts.push({c,g,t,m,h,text,f});
+  nameTexts.push({c,g,t,m,h,text,f,cut});
 }
 function paintNames(){
   const col=css('--fg');

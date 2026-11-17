@@ -107,9 +107,7 @@ const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;};
 // what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at)
 function hitAt(e){
   if(inTransition())return null;
-  const rc=canvas.getBoundingClientRect();
-  ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
-  ray.setFromCamera(ndc,camera);
+  aimRay(e);
   return ray.intersectObjects(scene.children,true).find(hittable)||null;
 }
 function pickDoor(e,hit){
@@ -141,6 +139,7 @@ canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 // wheel zooms toward the point under the cursor (surface hit, or the plane through the pivot)
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
+function aimRay(e){const rc=canvas.getBoundingClientRect();ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);ray.setFromCamera(ndc,camera);}   // the ray through the cursor
 const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
 const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
 // what the cursor can hit: a visible surface (not a line, a label, or a wall turned see-through in «Контуры»)
@@ -149,9 +148,7 @@ const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeTh
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(ownMouse())return;camDrive=null;
   const r0=cam.r,r1=Math.min(30,Math.max(.3,r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012)))));
-  const rc=canvas.getBoundingClientRect();
-  ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);
-  ray.setFromCamera(ndc,camera);
+  aimRay(e);
   const hit=ray.intersectObjects(scene.children,true).find(hittable);
   if(hit)_zp.copy(hit.point);
   else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}

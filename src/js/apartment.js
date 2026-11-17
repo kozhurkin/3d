@@ -52,10 +52,13 @@ function apartment(a){
     {id:'shaft',name:'Стенка вентшахты',r:[xSh+A.wt,xB1,zV0,zV0+A.wt],rooms:['bath']},   // closes the shaft between the partition, the hall wall and the kitchen wall
     {id:'riser',name:'Канализационный короб',r:[xL,bx(A.rX),zB0,bz(A.rZ)],rooms:['bath']}
   ];
-  const ROOMS=[
-    {id:'hall',name:'Прихожая',r:[0,A.hallW,0,kZ1],origin:[0,0],col:'--fl-hall',at:[A.hallW/2,hLen/2+150]},
-    {id:'bath',name:'Санузел',r:[xL,xB1,zB0,kZ0],origin:[xL,zB0],col:'--fl-bath',at:[(xSh+xB1)/2-150,(bz(A.bStub)+bz(A.bL))/2+40]},   // open middle of the room, clear of all walls
-    {id:'kitchen',name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],origin:[xL,kZ1],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+675]}   // near the kitchen wall corner, where it was before the kitchen grew
+  const ROOMS=[   // poly: the floor's outline [x,z]… (else the rectangle r); the area on the plan is counted from it
+    {id:'hall',name:'Прихожая',r:[0,A.hallW,0,kZ1],origin:[0,0],col:'--fl-hall',poly:[[0,0],[A.hallW,0],[A.hallW,hLen],[0,hLen]],   // up to the kitchen wall: not its 200 mm ends nor the passage
+      at:[A.hallW/2,hLen/2+150]},
+    {id:'bath',name:'Санузел',r:[xL,xB1,zB0,kZ0],origin:[xL,zB0],col:'--fl-bath',
+      poly:[[xL,zB0],[xB1,zB0],[xB1,zV0],[xSh,zV0],[xSh,kZ0],[xL,kZ0]],   // without the vent shaft and its walls (the floor under the riser box stays in)
+      at:[(xSh+xB1)/2-150,(bz(A.bStub)+bz(A.bL))/2+40]},   // open middle of the room, clear of all walls
+    {id:'kitchen',name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],origin:[xL,kZ1],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+825]}   // near the kitchen wall corner, where it was before the kitchen grew
   ];
   const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
   return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};

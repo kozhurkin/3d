@@ -96,6 +96,24 @@ check('санузел: душевая стойка с термостатом и 
   assert.deepStrictEqual(at('head'), [442, 2065, 1550], 'the overhead shower 442 from the wall, as AM.PM Chic 2.0, under the arm at 2100');
   assert.deepStrictEqual(at('hand'), [120, 1550, 1550], 'the hand shower in its holder on the riser');
   assert.ok(p.run(`${R('wall')}.children.some(m=>m.userData.rackPart==='hose')`), 'its hose');
+  // the hand shower's head on the handle's end by its rim: the handle's end (50 over the holder) 12 inside the rim, not at the centre;
+  // its face turned down off the handle's line
+  const hh = p.run(`(h=>(m=>({c:[m.position.x,m.position.y].map(v=>Math.round(v*1000)),rot:m.rotation.z}))(h.children.find(m=>m.userData.rackPart==='handHead')))(${R('wall')}.children.find(m=>m.userData.rackPart==='hand'))`);
+  assert.strictEqual(Math.round(Math.hypot(hh.c[0], hh.c[1] - 50)), 43, 'the handle goes into the head\'s side: 55 − 12 from its centre');
+  assert.ok(hh.rot < -Math.PI / 2, 'the face tilted down from square to the handle');
+  // the hose: smooth (no step turns more than 15°), 1750 long, clear of the thermostat bar (Ø60 at 70 out, 1150 up) and of the tray
+  const path = p.run(`${R('wall')}.children.find(m=>m.userData.rackPart==='hose').userData.path`);
+  let len = 0, turn = 0, gap = 1;
+  path.forEach((q, i) => {
+    if (i) len += Math.hypot(q[0] - path[i - 1][0], q[1] - path[i - 1][1]);
+    if (i > 1) { const a = Math.atan2(q[1] - path[i - 1][1], q[0] - path[i - 1][0]) - Math.atan2(path[i - 1][1] - path[i - 2][1], path[i - 1][0] - path[i - 2][0]);
+      turn = Math.max(turn, Math.abs(Math.atan2(Math.sin(a), Math.cos(a)))); }
+    if (q[1] > 1.15 - 0.03) gap = Math.min(gap, Math.hypot(q[0] - 0.07, q[1] - 1.15) - 0.03 - 0.008);
+  });
+  assert.ok(Math.abs(len - 1.75) < 0.03, `the hose 1750 long: ${Math.round(len * 1000)}`);
+  assert.ok(turn < Math.PI / 12, 'no kink in the hose');
+  assert.ok(gap > 0.02, 'the hose clear of the thermostat');
+  assert.ok(Math.min(...path.map(q => q[1])) - 0.008 > 0.15, 'its loop over the tray');
   // the riser into the arm and the arm down to the head: rounded, quarter rings 60 and 30 mm in radius
   assert.deepStrictEqual(p.run(`${R('over')}.children.filter(m=>m.userData.rackPart==='bend').map(m=>[m.geometry.kind,Math.round(m.geometry.args[0]*1000),+(m.geometry.args[4]/Math.PI).toFixed(2)])`),
     [['THREE.TorusGeometry', 60, 0.5], ['THREE.TorusGeometry', 30, 0.5]]);
@@ -124,15 +142,15 @@ check('санузел: полупрозрачная шторка 220 см до �
   const C = 'VIEWS.bath.furniture().sani.children.find(m=>m.userData.curtain===true)';
   const D = "VIEWS.bath.furniture().doors.find(d=>d.key==='curtain')";
   const pos = (o) => p.run(`(m=>[m.position.x,m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${o})`);
-  // the rod, straight: from the bracket's ball (300, 200 past the end of the wall at the niche end, 500; its end in the ball's
-  // blind hole, to its middle — nothing comes out on the far side) to the shower partition (1000); 2405 from the floor (the cloth 2200 from 160 up — 10 over the tray —, the
-  // rings over it), 40 from the back of that wall (1200)
+  // the rod, straight: from the bracket's ball (250, half way along the wall at the niche end, 0–500; its end in the ball's
+  // blind hole, to its middle — nothing comes out on the far side) to the shower partition (1000); 2393 from the floor (the cloth 2200 from 160 up — 10 over the tray —, the
+  // rings through its eyelets, their inside on the rod), 45 from the back of that wall (1200)
   const rp = (k) => `${C}.children.find(m=>m.userData.rodPart==='${k}')`;
-  assert.deepStrictEqual(pos(rp('run')), [650, 2405, 1240]);
-  assert.strictEqual(p.run(`Math.round(${rp('run')}.geometry.args[2]*1000)`), 700);
-  assert.deepStrictEqual([...pos(rp('ball')), p.run(`${rp('ball')}.geometry.kind`), p.run(`Math.round(${rp('ball')}.geometry.args[0]*1000)`)], [300, 2405, 1240, 'THREE.SphereGeometry', 16]);
+  assert.deepStrictEqual(pos(rp('run')), [625, 2393, 1245]);
+  assert.strictEqual(p.run(`Math.round(${rp('run')}.geometry.args[2]*1000)`), 750);
+  assert.deepStrictEqual([...pos(rp('ball')), p.run(`${rp('ball')}.geometry.kind`), p.run(`Math.round(${rp('ball')}.geometry.args[0]*1000)`)], [250, 2393, 1245, 'THREE.SphereGeometry', 16]);
   // the flanges: Ø30 on the partition, the bracket's Ø46 on the wall
-  assert.deepStrictEqual(p.run(`${C}.children.filter(m=>m.userData.rodPart==='flange').map(m=>[Math.round(m.geometry.args[0]*2000),Math.round(m.position.x*1000),Math.round(m.position.z*1000)])`), [[30, 996, 1240], [46, 300, 1203]]);
+  assert.deepStrictEqual(p.run(`${C}.children.filter(m=>m.userData.rodPart==='flange').map(m=>[Math.round(m.geometry.args[0]*2000),Math.round(m.position.x*1000),Math.round(m.position.z*1000)])`), [[30, 996, 1245], [46, 250, 1203]]);
   assert.strictEqual(p.run(`${C}.children.some(m=>m.geometry.kind==='THREE.TorusGeometry')`), false, 'no bend');
   assert.strictEqual(p.run(`${C}.userData.walkThrough`), true, 'the walker goes through it');
   // frosted vinyl, grey, 60 % clear; its shadow 40 % of a full one: drawn through a sieve (its own depth material)
@@ -140,14 +158,26 @@ check('санузел: полупрозрачная шторка 220 см до �
   assert.strictEqual(p.run(`${D}.g.children[0].castShadow`), true);
   assert.match(PAGES.app, /cloth\.customDepthMaterial=curtainShadowMat/);
   assert.match(PAGES.app, /curtainShadowMat=new THREE\.MeshDepthMaterial\(\{depthPacking:THREE\.RGBADepthPacking,alphaTest:1-CURT_OP,/);
-  // drawn back: gathered in 150 behind the wall at the niche end, from the ball (up to 476 of its 500); a door of the room, closed
-  assert.deepStrictEqual(p.run(`[${D}.a,${D}.t,${D}.g.userData.edge]`), [0, 0, 476]);
-  // its rings: closed ovals, 54 high, the cloth from their bottoms: 2200 from 160
-  assert.deepStrictEqual(p.run(`${D}.g.children.filter(m=>m.userData.ring===true).map(m=>m.geometry.kind+':'+m.geometry.args[4])`), Array(8).fill('THREE.TubeGeometry:true'));
+  // drawn back: gathered behind the wall at the niche end, from the ball up to 10 short of its end (490 of its 500); a door of the room, closed
+  assert.deepStrictEqual(p.run(`[${D}.a,${D}.t,${D}.g.userData.edge]`), [0, 0, 490]);
+  // its rings: closed, chrome as the rod, 32 × 56 (half circles R16 joined by straight bits); the cloth 2200 from 160 up
+  assert.deepStrictEqual(p.run(`${D}.g.children.filter(m=>m.userData.ring===true).map(m=>m.geometry.kind+':'+m.geometry.args[4])`), Array(10).fill('THREE.TubeGeometry:true'));
+  assert.strictEqual(p.run(`${D}.g.children.find(m=>m.userData.ring===true).material===${rp('run')}.material`), true, 'as the rod');
   assert.strictEqual(p.run(`${D}.g.userData.top`), 2360);
+  // the eyelets: 12 under the cloth's top, one per ring, each ring through its hole (the hole's top on the ring's bottom: the ring's
+  // centre 2348 + 4 − 2.5 + 28), so the cloth's top is over the rings' bottoms; no faces over the holes
+  const eyes = () => p.run(`${D}.g.userData.eyes`), rings = () => p.run(`${D}.g.children.filter(m=>m.userData.ring===true).map(m=>[Math.round(m.position.x*1000),m.position.y*1000])`);
+  assert.deepStrictEqual(eyes().map((e) => e[1]), Array(10).fill(2348));
+  assert.deepStrictEqual(rings().map((r) => r[0]), eyes().map((e) => e[0]), 'a ring through each eyelet');
+  assert.ok(rings().every((r) => Math.abs(r[1] - 2377.5) < 0.01), 'its bottom in the hole\'s top');
+  assert.ok(2360 > 2377.5 - 28, 'the cloth over the rings\' bottoms');
+  assert.strictEqual(p.run(`${D}.g.children[0].userData.tris`), (2 + 10 * 4 + 9 * 7 - 1) * 3 * 2 - 10 * 2, 'a hole in the band at each eyelet: 105 columns, 4 rows, a quad less at each');
+  // the folds as deep to either side; drawn back 42, off the wall (the rod 45 out from it)
+  assert.strictEqual(p.run(`${D}.g.userData.fold`), 42);
   // a click: across the opening, up to 10 short of the partition
   p.run(`${D}.t=${D}.a=${D}.max`); p.tick();
   assert.strictEqual(p.run(`${D}.g.userData.edge`), 990);
+  assert.strictEqual(p.run(`${D}.g.userData.fold`), 34, 'drawn across: shallower');
   // hidden with the tray while the frame cuts the shower, shown with it
   assert.strictEqual(p.run(`${C}.visible`), false);
   const fl = p.document.querySelector('[data-panel="bath"]').querySelector('#bFrameL');
@@ -161,13 +191,13 @@ check('санузел: полупрозрачная шторка 220 см до �
   p.run(`VS.bath.Wm='auto'`); at(0.9);
   // its «i»
   assert.deepStrictEqual(p.run(`(i=>[i.title,...i.lines])(infoOf(${C}.children[0]))`), ['Шторка для душа',
-    '83 × 220 см, клеёнка (PEVA), полупрозрачная, матовая; кольца овальные.',
-    'Штанга прямая, 70 см: слева в перегородку, справа заходит за стенку у ниши и упирается в шар кронштейна на её задней стороне; нержавеющая сталь, хром, Ø 2 см; в 241 см от пола.',
+    '100 × 220 см, клеёнка (PEVA), полупрозрачная, матовая; люверсы и кольца — хром.',
+    'Штанга прямая, 75 см: слева в перегородку, справа заходит за стенку у ниши и упирается в шар кронштейна на её задней стороне; нержавеющая сталь, хром, Ø 2 см; в 239 см от пола.',
     'Низ шторки в 1 см над поддоном.',
     'Нажатие задёргивает шторку или отодвигает её за стенку.']);
   // a wider opening and a shorter niche on the plan (as the tray's check has them): the rod longer and nearer, the curtain stays drawn across
   p.run('setModel({bGap:600,bL:1000})'); p.tick();
-  assert.deepStrictEqual(pos(rp('run')), [700, 2405, 1140]);
+  assert.deepStrictEqual(pos(rp('run')), [675, 2393, 1145]);
   assert.strictEqual(p.run(`${D}.g.userData.edge`), 1090);
 });
 

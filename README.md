@@ -27,7 +27,7 @@
 | `src/decors.js` | Декоры: фото в base64 (3,4 МБ) и палитры. |
 | `tools/smoke.js` | Проверка в Node, без браузера: `npm run check`, часть — `npm run check -- kitchen`, список проверок — `--list`. |
 | `tools/smoke/harness.js` | Обвязка проверки: заглушка THREE, маленький DOM, `runPage`, помощники. |
-| `tools/smoke/*.js` | Проверки по частям: `app` (план, размеры стен, shell), `kitchen`, `bath`, `hall`, `flight`, `walk`. В `tools/fixtures/` — эталоны деталей шкафов из старых вкладок. |
+| `tools/smoke/*.js` | Проверки по частям: `app` (план, размеры стен, shell), `kitchen`, `living`, `bath`, `hall`, `flight`, `walk`. В `tools/fixtures/` — эталоны деталей шкафов из старых вкладок. |
 
 ## Настройки в браузере (`localStorage`)
 

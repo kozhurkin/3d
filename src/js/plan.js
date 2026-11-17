@@ -62,7 +62,7 @@ function fitR(wmm=BOX.x1-BOX.x0,dmm=BOX.z1-BOX.z0){
 function setCam(v){
   const f=fitR(),fr=fitR(3600,3550);   // fr: room views keep the scale of the hall + bathroom block
   const views={
-    plan:[0,.4,f*1.2,CX,0,CZ-.3],   // whole plan from above, tilted from the kitchen side
+    plan:[-.96,.57,f*.94,CX+.55,0,CZ-.3],   // whole plan at an angle from the kitchen's window corner by the bathroom side, the hall at the top left
     top:[0,.0005,f,CX,0,CZ],
     entry:[Math.PI-.4,.7,f*1.05,CX,0,CZ],
     hall:[1.2,.85,fr*.7,A.hallW/2*MM,.6,hLen/2*MM],   // through the outer right wall, facing the bathroom door

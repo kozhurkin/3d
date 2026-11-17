@@ -76,6 +76,16 @@ check('приложение: кнопки камеры плана двигают
   assert.ok(Number.isFinite(r.r) && r.r > 5 && r.r < 30, 'distance ' + r.r);
 });
 
+check('«Планировка»: камера «План» — под углом со стороны окна и санузла, левая стена и стена с окном убраны разрезом', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  p.document.querySelector('[data-cam="plan"]').click(); p.fly();
+  const r = p.run('({theta:cam.theta, phi:cam.phi, x:cam.target.x-CX, z:cam.target.z-CZ, k:cam.r/fitR()})');
+  near(r.theta, -0.96, 'angle'); near(r.phi, 0.57, 'tilt'); near(r.k, 0.94, 'distance');
+  near(r.x, 0.55, 'target to the right wall'); near(r.z, -0.3, 'target to the entry');
+  const vis = ['leftOuter', 'window', 'rightOuter', 'entry'].map((id) => p.run(`wallParts.find(w=>w.id==="${id}").m.visible`));
+  assert.deepStrictEqual(vis, [false, false, true, true]);
+});
+
 check('размеры стен: ползунок меняет модель и всё перестраивается', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const panel = p.document.querySelector('[data-panel="plan"]');

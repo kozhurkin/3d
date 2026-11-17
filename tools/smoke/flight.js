@@ -1,8 +1,12 @@
 // Перелёты между вкладками.
 const { all, runPage, PAGES, check, piece, near, assert } = require('./harness');
 
+// the plan's camera turned to face the window wall (θ 0): the left wall is seen there and hidden by the kitchen's cut,
+// so the flight shows it going down (the «План» preset looks from the left side, where the left wall is hidden too)
+const fromWindow = (p) => { p.run('cam.theta=goal.theta=0'); p.tick(); };
+
 check('перелёт «Планировка» → «Кухня»: стены, шкафы, солнце и камера движутся вместе', () => {
-  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick(); fromWindow(p);
   // the plan is seen from the window side: the window wall is hidden by its cut-mode rule
   assert.strictEqual(piece(p, 'window').visible, false);
   const c0 = p.run('({theta:cam.theta, r:cam.r})');
@@ -69,7 +73,7 @@ check('перелёт: разный вид стен у вкладок — выс
 });
 
 check('перелёт: прерывание, мышь забирает камеру, «уменьшить движение»', () => {
-  let p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  let p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick(); fromWindow(p);
   p.run('showView("kitchen")'); p.tick(25, 17);
   // back to the plan in the middle: the new flight starts from what is on screen
   p.run('showView("plan")');

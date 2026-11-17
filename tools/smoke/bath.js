@@ -171,13 +171,18 @@ check('санузел: полупрозрачная шторка 220 см до �
   assert.deepStrictEqual(rings().map((r) => r[0]), eyes().map((e) => e[0]), 'a ring through each eyelet');
   assert.ok(rings().every((r) => Math.abs(r[1] - 2377.5) < 0.01), 'its bottom in the hole\'s top');
   assert.ok(2360 > 2377.5 - 28, 'the cloth over the rings\' bottoms');
-  assert.strictEqual(p.run(`${D}.g.children[0].userData.tris`), (2 + 10 * 4 + 9 * 7 - 1) * 3 * 2 - 10 * 2, 'a hole in the band at each eyelet: 105 columns, 4 rows, a quad less at each');
+  assert.strictEqual(p.run(`${D}.g.children[0].userData.tris`), (2 + 10 * 4 + 9 * 23 - 1) * 3 * 2 - 10 * 2, 'a hole in the band at each eyelet: 249 columns, 4 rows, a quad less at each');
   // the folds as deep to either side; drawn back 42, off the wall (the rod 45 out from it)
   assert.strictEqual(p.run(`${D}.g.userData.fold`), 42);
+  // a fold's shape: off the rod a third of the way along the first fold (column 12) against its crest (column 16), the flat by the eyelet (column 4) at the rod;
+  // drawn back the crest blunt (steep sides: nearly the full depth there), drawn across plain sin² (sin²(π/3) = 0.75)
+  const third = () => p.run(`(z=>(z(12)-z(4))/(z(16)-z(4)))(c=>${D}.g.children[0].userData.pos[c*4*3+2])`);
+  assert.ok(third() > 0.97, 'drawn back: a blunt crest');
   // a click: across the opening, up to 10 short of the partition
   p.run(`${D}.t=${D}.a=${D}.max`); p.tick();
   assert.strictEqual(p.run(`${D}.g.userData.edge`), 990);
   assert.strictEqual(p.run(`${D}.g.userData.fold`), 34, 'drawn across: shallower');
+  assert.ok(Math.abs(third() - 0.75) < 0.01, 'drawn across: plain sin² folds');
   // hidden with the tray while the frame cuts the shower, shown with it
   assert.strictEqual(p.run(`${C}.visible`), false);
   const fl = p.document.querySelector('[data-panel="bath"]').querySelector('#bFrameL');

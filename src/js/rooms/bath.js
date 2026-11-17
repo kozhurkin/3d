@@ -266,7 +266,7 @@ function buildRack(sani){
    One of the room's doors (key 'curtain', axis 'none': follow(a) shapes it): 0 drawn back, 1 across; a click, «Открыты/Закрыты»
    (open: across), a long press, the walk (it does not stop the walker). The cloth's top flat along the rod about each eyelet,
    between them it bulges out to either side in turn: its width kept, the closer the rings the deeper the folds. Bath axes, mm */
-const CURT={h:2200,w:1000,off:45,ball:16,gap:10,rings:10,pad:10,edge:10,flat:5,ring:[16,28],tube:2.5,eye:[4,12]};   // the cloth's height and width; the rod's axis from the wall; the bracket's ball radius (the rod Ø20 through it); the cloth's bottom over the tray; rings; the gap at the partition and at the end of the wall at the niche end; an eyelet's centre from the cloth's side; the cloth flat on either side of an eyelet's centre; a ring's half width (its half circles' radius) and half height; its tube's radius; an eyelet's hole radius and its centre under the cloth's top
+const CURT={h:2200,w:1000,off:45,ball:16,gap:10,rings:10,pad:10,edge:10,flat:5,ring:[16,28],tube:2.5,eye:[4,12],round:3};   // the cloth's height and width; the rod's axis from the wall; the bracket's ball radius (the rod Ø20 through it); the cloth's bottom over the tray; rings; the gap at the partition and at the end of the wall at the niche end; an eyelet's centre from the cloth's side; the cloth flat on either side of an eyelet's centre; a ring's half width (its half circles' radius) and half height; its tube's radius; an eyelet's hole radius and its centre under the cloth's top; how blunt the folds' crests are drawn back (none drawn across)
 // the rod's height: the cloth from 10 over the tray; the hole's top resting on the ring's bottom, the ring's inside on the rod (Ø20)
 const curtRodY=()=>{const C=CURT,yh=TRAY.H+C.gap+C.h-C.eye[1];return yh+C.eye[0]-C.tube+2*C.ring[1]-C.tube-10;};
 // the rod (mm): its bracket's ball at xb on the wall's back (zw), the rod's end in it, the run clear of the ball from xs to x1, at z
@@ -276,7 +276,7 @@ const CURT_OP=.4,curtainMat=new THREE.MeshStandardMaterial({color:new THREE.Colo
 /* its half shadow: a shadow map knows no half clear, so for the shadow the cloth is a fine random sieve of 4 mm cells, as
    many of them stopping the light as the cloth is opaque (cells of random greys, those under 1 − opacity through), the soft
    shadow filter (PCF) blurs it into an even shadow 40 % of a full one. Cells in the cloth's own uv (its length and height),
-   so they go with it as it gathers. One more mesh of some four hundred triangles in the shadow pass, its shape made again only while it moves */
+   so they go with it as it gathers. One more mesh of some fifteen hundred triangles in the shadow pass, its shape made again only while it moves */
 const CELL=4,curtainShadowMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,alphaTest:1-CURT_OP,
   alphaMap:(t=>{t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;return t;})(drawnTex(64,g=>{
     for(let i=0;i<64;i++)for(let j=0;j<64;j++){let h=Math.imul(i,374761393)+Math.imul(j,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);
@@ -301,13 +301,13 @@ function buildCurtain(sani,opts){
   /* the cloth: columns across its width, four rows down it (its top, the eyelets' band, the hem); in the band no face over the
      eyelets' holes. Columns: the cloth's left side; for each eyelet the ends of the flat about it and the hole's sides; between
      eyelets M − 1 more along the fold. Where they stand along the width (t, 0…1) and how far off the rod (f) — shape() */
-  const n=C.rings,M=8,cols=[{t:0}];
+  const n=C.rings,M=24,cols=[{t:0}];
   for(let j=0;j<n;j++){cols.push({j,e:-C.flat},{j,e:-hr,hole:true},{j,e:hr},{j,e:C.flat});if(j<n-1)for(let k=1;k<M;k++)cols.push({j,u:k/M});}
   cols.push({t:1});
   const K=cols.length,ys=[y1,yh+hr,yh-hr,y0],pos=new Float32Array(K*4*3),uv=new Float32Array(K*4*2),idx=[],tile=64*CELL;   // the sieve's uv: one tile of its texture every 64 cells
   for(let c=0;c<K-1;c++)for(let r=0;r<3;r++){if(r===1&&cols[c].hole)continue;const a=c*4+r;idx.push(a,a+1,a+4,a+1,a+5,a+4);}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(pos,3));geo.setAttribute('uv',new THREE.BufferAttribute(uv,2));geo.setIndex(idx);
-  const cloth=new THREE.Mesh(geo,curtainMat);cloth.castShadow=cloth.receiveShadow=true;cloth.customDepthMaterial=curtainShadowMat;cloth.userData.part='Шторка для душа';cloth.userData.tris=idx.length/3;g.add(cloth);
+  const cloth=new THREE.Mesh(geo,curtainMat);cloth.castShadow=cloth.receiveShadow=true;cloth.customDepthMaterial=curtainShadowMat;cloth.userData.part='Шторка для душа';cloth.userData.tris=idx.length/3;cloth.userData.pos=pos;g.add(cloth);
   // a ring: two half circles joined by straight bits, across the rod; an eyelet: a chrome rim about the hole, on both faces of the cloth
   const st=rb-ra,ringPts=[];
   [1,-1].forEach(sd=>{for(let k=0;k<16;k++){const f=Math.PI*k/16;ringPts.push(new THREE.Vector3(0,sd*(st+ra*Math.sin(f)),sd*ra*Math.cos(f)));}
@@ -315,18 +315,21 @@ function buildCurtain(sani,opts){
   const ringGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(ringPts,true),48,tb,8,true),eyeGeo=new THREE.TorusGeometry((hr+1.25)*MM,1.25*MM,6,16);
   const rings=[...Array(n)].map(()=>{const r=new THREE.Mesh(ringGeo,chromeMat);r.castShadow=true;r.userData.ring=true;g.add(r);return r;});
   const eyes=[...Array(n)].map(()=>{const e=new THREE.Mesh(eyeGeo,chromeMat);e.userData.eyelet=true;g.add(e);return e;});
-  // a fold between two eyelets, its flat ends D apart: a hump A sin²(πu) to one side, as deep as makes it L long (halving A)
-  const foldLen=(A,D)=>{let L=0;for(let i=0;i<32;i++)L+=Math.hypot(D,A*Math.PI*Math.sin(2*Math.PI*(i+.5)/32));return L/32;};
-  const foldDepth=(L,D)=>{if(foldLen(0,D)>=L)return 0;let a=0,b=L;for(let i=0;i<30;i++){const m=(a+b)/2;if(foldLen(m,D)<L)a=m;else b=m;}return b;};
+  /* a fold between two eyelets, its flat ends D apart: a hump A·prof(u,c) to one side, as deep as makes it L long (halving A).
+     prof: sin² blunted by tanh, c how much: c → 0 plain sin², at 3 steep sides and a crest rounded to about half the fold's width
+     (drawn back the folds are 12 wide and 42 deep: plain sin² would come to a point there) */
+  const prof=(u,c)=>Math.tanh(c*Math.sin(Math.PI*u)**2)/Math.tanh(c);
+  const foldLen=(A,D,c)=>{let L=0,p=0;const N=64;for(let i=1;i<=N;i++){const q=prof(i/N,c);L+=Math.hypot(D/N,A*(q-p));p=q;}return L;};
+  const foldDepth=(L,D,c)=>{if(foldLen(0,D,c)>=L)return 0;let a=0,b=L;for(let i=0;i<30;i++){const m=(a+b)/2;if(foldLen(m,D,c)<L)a=m;else b=m;}return b;};
   // the cloth from behind the wall out to its edge, its folds as deep as keep its width
   let last=-1;
   const shape=a=>{const k=Math.min(1,Math.max(0,a));if(k===last)return;last=k;
     const w0=A.bWs-C.pad-X0,w=w0+k*(x1-C.pad-X0-w0),tj=j=>(C.edge+j*(w-2*C.edge)/(n-1))/w,D=(w-2*C.edge)/(n-1)-2*C.flat,Lf=(C.w-2*C.edge)/(n-1)-2*C.flat;
-    // as deep to either side (the eyelets evenly spaced), but off the wall at the niche end (the rod 45 out): drawn back a little shallower than its width asks
-    const fa=Math.min(foldDepth(Lf,D),C.off-3);
+    // the crests blunt drawn back, plain drawn across; as deep to either side (the eyelets evenly spaced), but off the wall at the niche end (the rod 45 out): drawn back a little shallower than its width asks
+    const cb=Math.max(1e-3,C.round*(1-k)),fa=Math.min(foldDepth(Lf,D,cb),C.off-3);
     cols.forEach((o,c)=>{let t,f=0;
       if(o.t!==undefined)t=o.t;else if(o.u===undefined)t=tj(o.j)+o.e/w;
-      else{const t0=tj(o.j)+C.flat/w;t=t0+o.u*(tj(o.j+1)-C.flat/w-t0);f=(o.j%2?-fa:fa)*Math.sin(Math.PI*o.u)**2;}
+      else{const t0=tj(o.j)+C.flat/w;t=t0+o.u*(tj(o.j+1)-C.flat/w-t0);f=(o.j%2?-fa:fa)*prof(o.u,cb);}
       const x=(X0+t*w)*MM;
       ys.forEach((y,r)=>{pos.set([x,y*MM,zr+(r<3?f:.8*f)*MM],(c*4+r)*3);uv.set([t*C.w/tile,(y-y0)/tile],(c*4+r)*2);});});
     geo.attributes.position.needsUpdate=geo.attributes.uv.needsUpdate=true;geo.computeVertexNormals();geo.computeBoundingSphere();

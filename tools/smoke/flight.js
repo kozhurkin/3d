@@ -120,10 +120,10 @@ check('перелёт «Планировка» ⇄ «Прихожая»: две�
   const now = p => p.run('(n=>[n.cut,n.h].map(Math.round))(morphWall(morph.w.get("hallBath"),morph.e))');
   const door = p => p.run('(d=>[d.g.visible, arcs.children.filter(l=>l.userData.hole===d.hole).every(l=>l.visible)])(doors.find(d=>d.hole==="hallBath:0"))');
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  p.run('showView("hall")'); p.tick(25, 17);
-  // halfway the wall is 0…1275 long and 1.3 m high: the doorway (650…1250) is still in it, the door goes down with it
-  assert.deepStrictEqual([now(p), door(p)], [[1300, 1300], [true, true]], 'halfway down, the door with the wall');
-  p.tick(10, 17);   // e ≈ 0.82: the wall is 0…875, the doorway is cut — the door is gone
+  p.run('showView("hall")'); p.tick(23, 17);
+  // at e ≈ 0.44 the wall is 0…1350 long and 1456 high: the doorway (700…1300) is still in it, the door goes down with it
+  assert.deepStrictEqual([now(p), door(p)], [[1456, 1456], [true, true]], 'on the way down, the door with the wall');
+  p.tick(12, 17);   // e ≈ 0.82: the wall is 0…875, the doorway is cut — the door is gone
   assert.deepStrictEqual(door(p), [false, false]);
   p.fly();
   assert.deepStrictEqual(door(p), [false, false], 'in the hall');
@@ -132,8 +132,8 @@ check('перелёт «Планировка» ⇄ «Прихожая»: две�
   assert.deepStrictEqual(now(p), [0, 0], 'from the floor');
   p.tick(10, 17);   // e ≈ 0.10: the wall is 0…780
   assert.deepStrictEqual(door(p), [false, false], 'the doorway is not in the wall yet');
-  p.tick(15, 17);   // e = 0.5: 0…1275
-  assert.deepStrictEqual([now(p), door(p)], [[1300, 1300], [true, true]], 'halfway up, the doorway in the wall');
+  p.tick(17, 17);   // e ≈ 0.56: 0…1350
+  assert.deepStrictEqual([now(p), door(p)], [[1456, 1456], [true, true]], 'on the way up, the doorway in the wall');
 });
 
 check('перелёт: без галочки «Анимированный перелёт» — как раньше: стены сразу, камера доезжает', () => {

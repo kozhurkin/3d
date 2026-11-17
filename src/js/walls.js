@@ -259,12 +259,16 @@ function fadeRule(w,vw){const r=fadeWall(w,vw).r.map(v=>v*MM),side=fadeSide(w,vw
 
 
 /* doors. Entrance: as in the hall tab — dark metal frame set 100 mm into the bearing wall from the hall side,
-   leaf hinged on the left, opening outward to the stairs, a handle on each side.
-   Bathroom: hinged at the entrance end, opens into the hall left to right. */
+   leaf hinged on the left, opening outward to the stairs, a square lever handle on a plate on each side (a key cylinder outside,
+   a thumb-turn inside).
+   Bathroom: hinged at the entrance end, opens into the hall left to right; a 10 mm lining through the wall round the opening
+   (two jambs, the head between them), the leaf in it; casings 70 mm on both faces of the wall over the lining's ends (flush with
+   its inner faces), jambs to the head, the head over them (white, as the leaf); a white square lever handle on each face. */
 const frameMat=new THREE.MeshStandardMaterial({color:0x34383b,roughness:.5,metalness:.3});
 const entMat=new THREE.MeshStandardMaterial({color:0x4a4f52,roughness:.45,metalness:.35});
 const handleMat=new THREE.MeshStandardMaterial({color:0xb9b9b5,metalness:.9,roughness:.25});
 const leafMat=new THREE.MeshStandardMaterial({color:0xf1efea,roughness:.6});
+const bathHandleMat=new THREE.MeshStandardMaterial({color:0xf7f7f5,roughness:.3});   // the bathroom door's handles: white
 const doorGroup=new THREE.Group();scene.add(doorGroup);
 function door(px,pz,size,pos,mat,max){
   const g=new THREE.Group();g.position.set(px*MM,0,pz*MM);
@@ -273,7 +277,20 @@ function door(px,pz,size,pos,mat,max){
   g.add(m);doorGroup.add(g);const d={g,h:size[1]*MM,t:0,a:0,max};doors.push(d);return d;
 }
 const EF=50,ED=70;   // entrance frame: bar width, bar depth; its hall-side face is A.eRv into the wall
-const doorParts=[];          // every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed
+const CW=70,CT=10,LT=10;   // bathroom door casings: width, thickness; the lining between them: thickness
+const doorParts=[];          // every door box (leaves, handles, frame bars) is cut at the wall height like the walls, never squashed;
+                             // a part marked whole (userData.whole: its top, m) shows only while the wall reaches it
+/* a square lever handle on one face of a leaf, in its holder g (mm, y up from the floor): at(o0,o1,u0,u1) turns a span o out from
+   the face and u along the leaf from the handle's axis toward the hinge into the holder's [x0,x1,z0,z1]. A rose 50 × 50 × 10 (or the
+   plate the caller makes), a neck 14 × 14 out to 44, the lever 16 × 16 × 130 toward the hinge, at hy. Every part whole or hidden: top
+   (mm) is the top of the whole handle, a wall cut under it hides it. Returns blk for more parts on the same face */
+function leverHandle(g,mat,hy,top,at,rose=true){
+  const blk=(o0,o1,u0,u1,y0,y1,m2=mat)=>{const [x0,x1,z0,z1]=at(o0,o1,u0,u1),m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM),m2);
+    m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=true;m.userData.whole=top*MM;g.add(m);return m;};
+  if(rose)blk(0,10,-25,25,hy-25,hy+25);
+  blk(10,44,-7,7,hy-7,hy+7);blk(44,60,-8,122,hy-8,hy+8);
+  return blk;
+}
 // doors are rebuilt when the sizes change; each stays as open as it was
 function buildDoors(){
   const keep=doors.map(d=>({t:d.t,a:d.a,last:d.last}));
@@ -281,25 +298,46 @@ function buildDoors(){
   if(arcs){scene.remove(arcs);emptyGroup(arcs);}
   const eLw=A.eD1-A.eD0-2*EF-6, eLh=A.eDH-EF-10, EZ=-A.eRv;   // entrance leaf inside the frame; hall-side face of the frame
   { const ent=door(A.eD0+EF+3,EZ-ED,[eLw,eLh,ED],[eLw/2,eLh/2+5,ED/2],entMat,1.75);ent.hole='entry:0';   // the door shows with this opening
-    [ED+20,-20].forEach(z=>{const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.025,.03),handleMat);hd.position.set((eLw-120)*MM,1.0,z*MM);hd.castShadow=true;ent.g.add(hd);});
+    // the handles, square as the bathroom's, on long plates 50 × 240 × 10, 80 in from the leaf's free edge, 1000 up: under the lever
+    // a key cylinder on the stairs side, a thumb-turn in the hall
+    { const hx=eLw-80,hy=1000,top=hy+70,toHinge=(u0,u1)=>[hx-u1,hx-u0];
+      [[ED,1],[0,-1]].forEach(([fz,s])=>{
+        const blk=leverHandle(ent.g,handleMat,hy,top,(o0,o1,u0,u1)=>[...toHinge(u0,u1),...(s>0?[fz+o0,fz+o1]:[fz-o1,fz-o0])],false);
+        blk(0,10,-25,25,hy-170,hy+70);                                     // the plate
+        if(s<0){blk(10,13,-9,9,hy-118,hy-82);blk(13,14,-1.5,1.5,hy-112,hy-94,frameMat);}   // the key cylinder, its keyway
+        else{blk(10,16,-10,10,hy-110,hy-90);blk(16,34,-3,3,hy-115,hy-85);}});}   // the thumb-turn: its base, its wing
     const fr=new THREE.Group();doorGroup.add(fr);ent.frame=fr;
     const bar=(x0,x1,y0,y1)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,ED*MM),frameMat);
       m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(EZ-ED/2)*MM);m.castShadow=m.receiveShadow=true;fr.add(m);};
     bar(A.eD0,A.eD0+EF,0,A.eDH);bar(A.eD1-EF,A.eD1,0,A.eDH);bar(A.eD0+EF,A.eD1-EF,A.eDH-EF,A.eDH);
-    const bw=A.bDoor-6,bh=A.bDoorH-10;
-    door(0,A.hL1+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5).hole='hallBath:0'; }
+    const bw=A.bDoor-2*LT-6,bh=A.bDoorH-LT-10;   // the leaf in the lining: 3 to either jamb, 5 under the head and over the floor
+    const bd=door(0,A.hL1+LT+3,[40,bh,bw],[-20,bh/2+5,bw/2],leafMat,1.5);bd.hole='hallBath:0';
+    // the handles, square: 1000 up, 60 in from the leaf's free edge, one out of each face
+    { const hz=bw-60,hy=1000;
+      [[0,1],[-40,-1]].forEach(([fx,s])=>leverHandle(bd.g,bathHandleMat,hy,hy+25,(o0,o1,u0,u1)=>[...(s>0?[fx+o0,fx+o1]:[fx-o1,fx-o0]),hz-u1,hz-u0])); }
+    const cs=new THREE.Group();doorGroup.add(cs);bd.frame=cs;   // the casings and the lining: a click on them works the door, they hide with it
+    const z0=A.hL1,z1=A.hL1+A.bDoor,yt=A.bDoorH;
+    const plank=(x0,x1,za,zb,ya,yb,role)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(yb-ya)*MM,(zb-za)*MM),leafMat);
+      m.position.set((x0+x1)/2*MM,(ya+yb)/2*MM,(za+zb)/2*MM);m.castShadow=m.receiveShadow=true;
+      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));m.userData[role]=true;cs.add(m);};
+    // the casings: the hall face, the bathroom face; their inner edges flush with the lining's faces, so they cover its ends
+    const c0=z0+LT,c1=z1-LT,ct=yt-LT;
+    [[0,CT],[-A.wt-CT,-A.wt]].forEach(([x0,x1])=>{
+      plank(x0,x1,c0-CW,c0,0,ct,'casing');plank(x0,x1,c1,c1+CW,0,ct,'casing');plank(x0,x1,c0-CW,c1+CW,ct,ct+CW,'casing');});
+    // the lining: face to face of the wall, its ends under the casings
+    plank(-A.wt,0,z0,z0+LT,0,yt-LT,'lining');plank(-A.wt,0,z1-LT,z1,0,yt-LT,'lining');plank(-A.wt,0,z0,z1,yt-LT,yt,'lining'); }
   // door swing on the floor, drawn the way plans show it
   { arcs=new THREE.Group();const am=new THREE.LineDashedMaterial({color:0x6b7069,dashSize:.04,gapSize:.03});
     const arc=(cx,cz,r,a0,a1,leaf,hole)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
       const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();l.userData.hole=hole;arcs.add(l);
       const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));e.userData.hole=hole;arcs.add(e);};
     arc(A.eD0+EF+3,EZ-ED,eLw,0,-Math.PI/2,-Math.PI/2,'entry:0');
-    arc(0,A.hL1+3,A.bDoor-6,Math.PI/2,0,0,'hallBath:0');
+    arc(0,A.hL1+LT+3,A.bDoor-2*LT-6,Math.PI/2,0,0,'hallBath:0');
     scene.add(arcs); }
   doors.forEach((d,i)=>{if(keep[i])Object.assign(d,keep[i]);});
   doorParts.length=0;
   doors.forEach(d=>{const id=d.hole.split(':')[0];[d.g,d.frame].forEach(g=>{if(g)g.traverse(o=>{o.userData.wall=id;});});});   // a door goes down with its wall
-  doorGroup.traverse(m=>{if(!m.isMesh)return;const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2,wall:m.userData.wall});});
+  doorGroup.traverse(m=>{if(!m.isMesh)return;if(typeof m.userData.whole==="number"){doorParts.push({m,whole:m.userData.whole,wall:m.userData.wall});return;}const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2,wall:m.userData.wall});});
 }
 buildDoors();
 
@@ -372,7 +410,7 @@ frameHooks.push((dt,ease)=>{
     if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}
     else d.a+=(d.t-d.a)*ease(.07);
     d.g.rotation.y=d.a;});
-  doorParts.forEach(p=>{const top=Math.min(p.t,doorCut(p.wall)),fits=top>p.b+.001;p.m.visible=fits;
+  doorParts.forEach(p=>{if(p.whole){p.m.visible=doorCut(p.wall)>=p.whole-.001;return;}const top=Math.min(p.t,doorCut(p.wall)),fits=top>p.b+.001;p.m.visible=fits;
     if(fits){p.m.scale.y=(top-p.b)/p.h;p.m.position.y=p.b+(top-p.b)/2;}});
   wallCut=Math.min(cut,H*MM);wallFeetMode=feet;
 });

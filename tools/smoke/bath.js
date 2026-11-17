@@ -518,3 +518,29 @@ check('санузел: смеситель раковины — высокий х
   assert.deepStrictEqual(r.lever, [[1182, 1190]]);
   assert.ok(r.lever[0][1] < 1300);
 });
+
+check('дверь санузла: наличники 70 с обеих сторон мимо раковины и вентшахты, добор между ними, полотно в нём, ручки с обеих сторон', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  const d = 'doors.find(d=>d.hole==="hallBath:0")';
+  // a part's box in plan mm, [x0, x1, y0, y1, z0, z1] (o: its holder's place, m); the casings first
+  const box = (m, o = [0, 0, 0]) => `(m=>{const g=m.geometry.args,c=m.position,o=${JSON.stringify(o)};return [[c.x,g[0]],[c.y,g[1]],[c.z,g[2]]].flatMap(([v,s],i)=>[v-s/2,v+s/2].map(u=>Math.round((u+o[i])*1000)));})(${m})`;
+  const cs = p.run(`${d}.frame.children.filter(m=>m.userData.casing===true).map(m=>${box('m')})`);
+  assert.deepStrictEqual(cs, [
+    [0, 10, 0, 1990, 640, 710], [0, 10, 0, 1990, 1290, 1360], [0, 10, 1990, 2060, 640, 1360],
+    [-110, -100, 0, 1990, 640, 710], [-110, -100, 0, 1990, 1290, 1360], [-110, -100, 1990, 2060, 640, 1360]], 'flush with the lining inside: they cover its ends');
+  // the lining, 10 thick, through the wall between them, its ends under the casings; the leaf in it, 3 to either jamb, 5 under its head
+  assert.deepStrictEqual(p.run(`${d}.frame.children.filter(m=>m.userData.lining===true).map(m=>${box('m')})`), [
+    [-100, 0, 0, 1990, 700, 710], [-100, 0, 0, 1990, 1290, 1300], [-100, 0, 1990, 2000, 700, 1300]]);
+  assert.deepStrictEqual(p.run(`${box(`${d}.g.children[0]`, [0, 0, 0.713])}`), [-40, 0, 5, 1985, 713, 1287], 'the leaf, its hinge at 700 + 10 + 3');
+  // the sink in the niche by the door ends at 600 from the back wall, the vent shaft wall starts at 1400: 40 to either
+  assert.deepStrictEqual(p.run('[APT_A.hL1+LT-CW, APT_A.hL1+APT_A.bDoor-LT+CW, zV0]'), [640, 1360, 1400]);
+  // the handles, square: on the leaf, 1000 up, 60 in from its free edge, the lever toward the hinge, one out of each face
+  const h = p.run(`${d}.g.children.filter(m=>typeof m.userData.whole==="number").map(m=>[Math.round(m.position.x*1000),Math.round(m.position.y*1000),Math.round(m.position.z*1000)])`);
+  assert.deepStrictEqual(h, [[5, 1000, 514], [27, 1000, 514], [52, 1000, 457], [-45, 1000, 514], [-67, 1000, 514], [-92, 1000, 457]]);
+  // a wall cut under the handles' top (1025) hides them whole, one at it shows them (the stub has no traverse: the parts are put in by hand)
+  const hs = `${d}.g.children.filter(m=>typeof m.userData.whole==="number")`;
+  p.run(`(doorParts.length=0, ${hs}.forEach(m=>doorParts.push({m,whole:m.userData.whole,wall:'hallBath'})))`);
+  const shown = (wh) => { p.run(`VS.plan.Wh=${wh}`); p.tick(); return p.run(`${hs}.map(m=>m.visible)`); };
+  assert.deepStrictEqual(shown(39), Array(6).fill(false), '1014 mm');
+  assert.deepStrictEqual(shown(40), Array(6).fill(true), '1040 mm');
+});

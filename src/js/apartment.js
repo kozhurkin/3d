@@ -5,7 +5,8 @@
 const APT_A={
   H:2600,                           // ceiling height
   hallW:1200,                       // hall between its side walls
-  hL1:650, bDoor:600, bDoorH:2000, hL2:650,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
+  hL1:700, bDoor:600, bDoorH:2000, hL2:600,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
+                                    // (hL1: the door's 70 mm casing clears the 600 mm sink in the bathroom niche by 40)
   kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kW:2200, kL:4750,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
@@ -14,7 +15,7 @@ const APT_A={
   bGap:500,                         // opening between the wall at the niche end and the shower partition
   shStep:200,                       // the step across that opening: a low wall, its height (the shower tray behind it is 150 high)
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
-  vOff:150,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway
+  vOff:100,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway (its casing ends 40 short)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
   eD0:84, eD1:976, eDH:2016,        // entrance door opening (as in the hall tab)
   eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)

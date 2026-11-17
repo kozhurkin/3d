@@ -95,7 +95,7 @@ renderFacts();
 /* the plan's own settings: the rooms' cabinets, dimensions, room names, floor colours */
 function syncPlan(){
   const V=VS.plan;
-  pq('#pFurn').checked=V.furn!==false;pq('#pFurnCut').checked=V.fcut!==false;
+  pq('#pFurn').checked=V.furn!==false;pq('#pFurnCut').checked=V.fcut===true;
   pq('#pFurnCut').disabled=V.furn===false;pq('#pFurnCutRow').style.opacity=V.furn===false?.45:1;   // nothing to cut without the cabinets
   pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;pq('#pFloors').checked=V.floors;
 }
@@ -243,7 +243,7 @@ addView('plan',{
   rooms:'all',
   // the cut mode hides only the outer walls of the apartment, each while the camera looks at it from outside; inner walls always stay
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
-  defaults:{Wm:'auto',Wh:100,dm:'closed',furn:true,fcut:true,dims:false,names:true,floors:true},
+  defaults:{Wm:'auto',Wh:100,dm:'closed',furn:true,fcut:false,dims:false,names:true,floors:true},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole apartment from any direction
   panel:planPanel,
   home:()=>setCam('plan'),

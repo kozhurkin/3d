@@ -27,7 +27,7 @@ check('приложение: «Планировка» открывается', (
   assert.strictEqual(r.lines, 13, 'all 13 walls on the plan (with the shower step)');
   assert.strictEqual(r.parts, 27, 'wall pieces (20) + window parts (7)');
   assert.deepStrictEqual(r.fade, { entry: '-z', rightOuter: '+x', leftOuter: '-x', window: '+z' });
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, fcut: true, dims: false, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(r.vs)), { Wm: 'auto', Wh: 100, dm: 'closed', furn: true, fcut: false, dims: false, names: true, floors: true });
   const panel = p.document.querySelector('[data-panel="plan"]'), shared = p.document.getElementById('shared');
   assert.strictEqual(panel.hidden, false, 'plan panel shown');
   assert.ok(matches(shared, '[data-panel="plan"] [data-shared-slot] #shared') && !shared.hidden, 'light and wall colour in the plan panel');
@@ -58,7 +58,7 @@ check('приложение: настройки вида и общие наст�
   p.document.querySelector('[data-wc="greige"]').click();
   const az = p.document.getElementById('Laz'); az.value = '12'; az.dispatch('input');
   p.tick();
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, fcut: true, dims: true, names: true, floors: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-plan-v1')), { Wm: 'row', Wh: 100, dm: 'open', furn: false, fcut: false, dims: true, names: true, floors: true });
   assert.deepStrictEqual(JSON.parse(storage.get('apt-shared-v1')), { wc: 'greige', light: { az: 12, el: 45, i: 100, a: 100 }, edge: true, fly: true });
   assert.ok(![...storage.keys()].some((k) => k.startsWith('apt-plan-view')), 'no old plan keys written');
   // reopened: everything comes back
@@ -198,13 +198,20 @@ check('«Планировка»: шкафы всех комнат по гало�
   at().forEach((r) => assert.deepStrictEqual(r.slice(0, 3), [true, 0, false]));
 });
 
-check('«Планировка»: «Резать шкафы по стенам» — срез на высоте стен, в «Следах» след на полу', () => {
+check('«Планировка»: «Резать шкафы по стенам» (по умолчанию снята) — срез на высоте стен, в «Следах» след на полу', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
   const plan = p.document.querySelector('[data-panel="plan"]'), rooms = ['kitchen', 'bath', 'hall'];
   // the top plane of a room (m), its footprint shown, its opacity
   const cut = (k) => p.run(`(f=>[f.clip[1].constant, f.foot.visible, f.foot.material.opacity])(VIEWS.${k}.furniture())`);
-  assert.strictEqual(plan.querySelector('#pFurnCut').checked, true);
+  // off by default: whole on the plan whatever the walls
+  const box = plan.querySelector('#pFurnCut');
+  assert.strictEqual(box.checked, false);
+  plan.querySelector('[data-wm="row"]').click(); p.tick();
+  rooms.forEach((k) => { assert.deepStrictEqual(cut(k).slice(1), [false, 0]); near(cut(k)[0], 2.65, k + ' whole'); });
+  plan.querySelector('[data-wm="auto"]').click(); p.tick();
+  box.checked = true; box.dispatch('change'); p.tick();
+  assert.strictEqual(JSON.parse(storage.get('apt-view-plan-v1')).fcut, true);
   // 1 mm above the walls: the tops of the cabinets up to the ceiling are not on the plane (they would flicker)
   near(cut('kitchen')[0], 2.601, '«Разрез» at 100 %: up to the ceiling, whole');
   assert.ok(cut('kitchen')[0] > 2.6 + 5e-4, 'the plane above the tops at the ceiling');
@@ -228,7 +235,7 @@ check('«Планировка»: «Резать шкафы по стенам» �
   assert.deepStrictEqual(cut('kitchen').slice(1), [false, 0]); near(cut('kitchen')[0], 2.65, 'whole in its own view');
   // off: whole on the plan whatever the walls; remembered; greyed out without the cabinets
   p.run('showView("plan")'); p.fly();
-  const box = plan.querySelector('#pFurnCut'); box.checked = false; box.dispatch('change'); p.tick();
+  box.checked = false; box.dispatch('change'); p.tick();
   assert.deepStrictEqual(cut('bath').slice(1), [false, 0]); near(cut('bath')[0], 2.65, 'whole');
   assert.strictEqual(JSON.parse(storage.get('apt-view-plan-v1')).fcut, false);
   const furn = plan.querySelector('#pFurn'); furn.checked = false; furn.dispatch('change');

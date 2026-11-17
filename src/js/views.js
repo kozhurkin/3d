@@ -106,7 +106,7 @@ function presence(id){const t=furnOn(id)?1:0;return tr?tr.pres0[id]+(t-tr.pres0[
 const furnWhole=()=>H*MM+.05;
 function furnRest(){
   const V=VS.plan;
-  if(view!=='plan'||V.fcut===false)return {c:furnWhole(),f:0};
+  if(view!=='plan'||V.fcut!==true)return {c:furnWhole(),f:0};
   // 1 mm above the walls: a top at exactly the cut (cabinets up to the ceiling at 100%) would flicker, half clipped
   const o=V.Wm==='feet';return {c:o?0:H*(V.Wm==='row'?10:V.Wh)/100*MM+.001,f:o?1:0};
 }

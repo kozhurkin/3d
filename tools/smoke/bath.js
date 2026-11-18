@@ -60,7 +60,7 @@ check('санузел: душевой поддон заполняет душ з�
   const box = (o) => p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*1000)))(new THREE.Box3().setFromObject(${o}))`);
   // the frame at 1400 cuts the shower: no tray
   assert.strictEqual(p.run(`${T}.visible`), false, 'hidden while the frame cuts it');
-  // from the left wall (−2000) to the shower partition (−1000), from the wall at the niche end (1200) to the kitchen wall (1900); 150 high
+  // from the left wall (−2050) to the shower partition (−1050), from the wall at the niche end (1200) to the kitchen wall (1900); 150 high
   const body = `${T}.children.find(m=>m.userData.part==='Душевой поддон')`;
   assert.deepStrictEqual(box(body), [-2050, -1050, 0, 150, 1200, 1900]);
   assert.ok(p.run(`(m=>m.length===6&&m[2]!==m[0]&&m.filter(x=>x===m[0]).length===5)(${body}.material)`), 'its top (+y) slate of its own, the five other faces plain');

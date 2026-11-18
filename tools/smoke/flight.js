@@ -102,11 +102,11 @@ check('перелёт «Санузел» → «Прихожая»: входна�
   const on = () => p.run('[entranceDoor().g.visible, entranceDoor().frame.visible, arcs.children.filter(l=>l.userData.hole==="entry:0").every(l=>l.visible)]');
   assert.deepStrictEqual(on(), [false, false, false], 'the opening is past the bathroom frame');
   p.run('showView("hall")');
-  // the bearing wall goes from the niche (x −2200…−700) to the hall (−100…1400): halfway it is −1150…350,
-  // the opening (84…976) is not in it yet — no door, no swing
+  // the bearing wall goes from the niche (x −2250…−700) to the hall (−100…1400): halfway it is −1175…350,
+  // the opening (50…942) is not in it yet — no door, no swing
   p.tick(25, 17);
   assert.deepStrictEqual(on(), [false, false, false], 'halfway');
-  // at 0.9 of the way the wall is −1255…1340: the opening is whole, the door is there with its own materials (nothing is cut)
+  // at 0.97 of the way the wall is −160…1341: the opening is whole, the door is there with its own materials (nothing is cut)
   p.tick(20, 17);
   assert.deepStrictEqual(on(), [true, true, true], 'the opening in the wall');
   assert.strictEqual(p.run('entranceDoor().g.children[0].material===entMat'), true);

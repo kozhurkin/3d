@@ -15,7 +15,7 @@ function useModel(a){
 }
 function setModel(a){useModel(a);modelHooks.forEach(f=>f());}
 // only the sizes that differ from the defaults, so a later change of a default still reaches the sizes nobody touched
-const modelDiff=()=>Object.fromEntries(Object.entries(A).filter(([k,v])=>APT_A[k]!==v));
+const modelDiff=()=>Object.fromEntries(Object.entries(A).filter(([k,v])=>k in APT_A&&APT_A[k]!==v));   // a size the model no longer has (an old save's) is dropped
 useModel((()=>{try{const a=JSON.parse(localStorage.getItem(MKEY)||'null');if(a&&!aptProblems(a).length)return a;}catch(e){}return {};})());
 
 /* ---------- three setup ---------- */

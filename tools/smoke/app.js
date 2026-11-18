@@ -116,12 +116,13 @@ check('«Планировка»: проём в санузел на плане �
   assert.strictEqual(p.run('doorDims.visible'), false, 'the walls are cut below the lintel: the height goes with it');
 });
 
-check('«Планировка»: перегородка у пенала 550 подписана вдоль неё со стороны унитаза, от задней стены до её конца', () => {
+check('«Планировка»: перегородка у пенала 550 подписана по самой стенке, от задней стены до её конца; вентшахта задана глубиной 400, от проёма до неё 150', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();
   const r = p.run('(()=>{const T=[],o=dimLabel;dimLabel=(t,h)=>{const s=o(t,h);T.push([t,s]);return s;};buildDims();dimLabel=o;return T.filter(([t])=>t==="550").map(([,s])=>[s.position.x,s.position.z].map(v=>Math.round(v/MM)));})()');
   assert.deepStrictEqual(p.run('[APT_A.bStub, WALLS.find(w=>w.id==="bathStub").r]'), [550, [-800, -700, 0, 550]]);
-  assert.deepStrictEqual(r, [[-920, 275]], 'in the middle of the partition, 120 off it in the toilet niche');
+  assert.deepStrictEqual(r, [[-750, 275]], 'on the partition, in its middle');
+  assert.deepStrictEqual(p.run('[APT_A.vD, zV0, zV0-A.hL1-A.bDoor]'), [400, 1400, 150]);
 });
 
 check('подписи размеров: вблизи не выше 22 px на экране, дальше уменьшаются вместе с моделью (на плане 150 мм, в комнате 95 мм), мельче 8 px гаснут, к 6 px исчезают', () => {
@@ -198,8 +199,10 @@ check('размеры стен: ползунок упирается и гово�
   assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 1200]);
   assert.match(msg.textContent, /Входной проём/);
   // a slider with step 10 stops on its step from the current value
-  slide(p, 'vOff', 1000);
-  const v = p.run('A.vOff'); assert.ok(v % 10 === 0 && v > 150 && !p.run('aptProblems(A)').length, 'vOff ' + v);
+  // the vent shaft is set by its depth; it stops before its wall meets the bathroom door's casing (1250 + 60): 1900 − 100 − 1310
+  slide(p, 'vD', 1000);
+  assert.strictEqual(p.run('A.vD'), 490); assert.ok(!p.run('aptProblems(A)').length);
+  assert.deepStrictEqual(p.run('aptProblems(Object.assign({},A,{vD:500}))'), ['Наличник двери санузла заходит на стенку вентшахты']);
 });
 
 check('размеры стен: «Запомнить» и «Вернуть исходные»', () => {
@@ -218,6 +221,11 @@ check('размеры стен: «Запомнить» и «Вернуть ис�
   storage.set('apt-model-v1', JSON.stringify({ bNiche: 5000 }));
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
   assert.strictEqual(p.run('A.bNiche'), 1250);
+  // a size the model no longer has (the vent shaft was once set from the doorway, vOff) is not saved again
+  storage.set('apt-model-v1', JSON.stringify({ vOff: 150, kW: 2300 }));
+  p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
+  p.document.getElementById('pSaveA').click();
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-model-v1')), { kW: 2300 });
 });
 
 check('шкафы: контуры деталей всегда видны, галочки нет', () => {

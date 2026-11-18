@@ -16,7 +16,7 @@ const APT_A={
   bGap:500,                         // opening between the wall at the niche end and the shower partition
   shStep:200,                       // the step across that opening: a low wall, its height (the shower tray behind it is 150 high)
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
-  vOff:150,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway (its casing ends 90 short)
+  vD:400,                           // vent shaft inside: from its wall to the kitchen wall (how far it is from the bathroom doorway follows)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
   eD0:54, eD1:946, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top
   eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
@@ -34,7 +34,7 @@ function apartment(a){
   const zB0=0;                         // the bathroom back wall continues the hall bearing wall
   const zEnd=kZ1+A.kL;                 // inner face of the outer wall with the window
   const winX=(xL+A.hallW)/2;           // window centre, middle of the kitchen
-  const zV0=A.hL1+A.bDoor+A.vOff;      // vent shaft wall (bathroom side); the shaft runs from it to the kitchen wall
+  const zV0=kZ0-A.wt-A.vD;             // vent shaft wall (bathroom side); the shaft runs from it to the kitchen wall
   const bx=v=>xL+v, bz=v=>zB0+v;       // bath tab coordinates → plan
   const xSh=bx(A.bWs+A.bGap);          // shower partition, bathroom-niche side
 
@@ -77,6 +77,7 @@ function aptProblems(a){
   if(A.eD0<0||A.eD1>A.hallW)out.push('Входной проём не помещается в ширину прихожей');
   if(A.bNiche+A.wt>m.xB1-m.xL)out.push('Ниша с перегородкой у пенала не помещается в ширину санузла');
   if(m.zV0<A.bL)out.push('Стенка вентшахты не доходит до перегородки душа');
+  if(m.zV0<A.hL1+A.bDoor+60)out.push('Наличник двери санузла заходит на стенку вентшахты');   // the casing: 70 wide, 10 over the lining
   if(A.winW>A.hallW-m.xL-200)out.push('Окно шире кухни (нужно хотя бы по 100 мм до боковых стен)');
   if(Math.max(A.eDH,A.bDoorH,A.winS+A.winH)>A.H-50)out.push('Проём выше потолка (нужно хотя бы 50 мм)');
   if(A.eRv+70>A.bear)out.push('Коробка входной двери (70 мм) не помещается в несущую стену');

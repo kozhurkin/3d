@@ -18,7 +18,8 @@ function stub(name = 'stub') {
       if (name === 'THREE.PerspectiveCamera') Object.assign(o, { fov: args[0], aspect: args[1], position: new Vec3() });
       // meshes and lines keep what they were made of, so checks can see their materials
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line'].includes(name)) Object.assign(o, { geometry: args[0], material: args[1] });
-      if (name === 'THREE.Sprite') o.material = args[0];
+      // a sprite knows where it is in the scene (places up the parents): the dimension labels are sized by their distance
+      if (name === 'THREE.Sprite') Object.assign(o, { material: args[0], getWorldPosition: (v) => { v.set(0, 0, 0); for (let q = o; q && q.position instanceof Vec3; q = q.parent) v.add(q.position); return v; } });
       // a material keeps whether it hides behind what stands in front (the dimensions between the shelves do, the others do not)
       if (/Material$/.test(name) && args[0] && 'depthTest' in args[0]) o.depthTest = args[0].depthTest;
       // and how metal it is (the sink is steel)

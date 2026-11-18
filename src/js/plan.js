@@ -1,16 +1,8 @@
 /* ---------- «Планировка» view: the whole apartment, plan dimensions, camera presets, what the plan assumes ---------- */
 /* ---------- dimension lines ---------- */
 const labels=[];
-function label(text){
-  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
-  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
-  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
-  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
-  g.fillStyle=text.includes('?')?'#9a4d16':'#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
-  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,transparent:true}));
-  s.renderOrder=20;s.userData.ar=w/c.height;labels.push(s);return s;
-}
+const LABEL_H=.15;   // m: a plan label's height in the scene (engine.js: dimLabel, fitLabels)
+function label(text){const s=dimLabel(text,LABEL_H);labels.push(s);return s;}
 const dimMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true});
 const dimsGroup=new THREE.Group();scene.add(dimsGroup);
 // a dimension line from a to b (m) with ticks ±t at its ends and its label in the middle
@@ -190,7 +182,6 @@ pq('#pCopyA').addEventListener('click',()=>{
 modelHooks.push(()=>{dimsDirty=true;renderFacts();syncSizes();});
 
 /* every frame: dimensions and room names belong to the plan; dimension lines lie on the cut walls, the window's stand at the window */
-const _v=new THREE.Vector3();
 insetHide.push(dimsGroup,winDims);
 frameHooks.push(()=>{
   // dimensions come when the plan is reached; room floors and names change halfway (room views have the plain floor, as before)
@@ -199,9 +190,8 @@ frameHooks.push(()=>{
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
   winDims.visible=dimsGroup.visible&&wallParts.some(w=>w.glass&&w.m.visible);   // the window's glass is on screen
-  // dimension labels keep the same size on screen at any zoom
-  { const k=2*Math.tan(camera.fov*Math.PI/360)/(viewer.clientHeight||1);
-    labels.forEach(s=>{s.getWorldPosition(_v);const u=_v.distanceTo(camera.position)*k;s.scale.set(19*u*s.userData.ar,19*u,1);}); }
+  // dimension labels: readable near, shrinking with the plan far (engine.js: fitLabels)
+  if(dimsGroup.visible)fitLabels(labels);
 });
 
 /* the area of a room's name under the cursor: its floor is tinted and framed by a band along the walls, drawn over them */

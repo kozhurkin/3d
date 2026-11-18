@@ -250,16 +250,7 @@ function buildParts(c,mats,{prev=[],open=false}={}){
 }
 /* ---------- dimension lines of a room (room axes, m): a line with ticks and its label, put into the room's group ----------
    (named apart from the plan's label/dim: all modules share one scope) */
-function roomLabel(text,depth=false){
-  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
-  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
-  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
-  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
-  g.fillStyle='#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
-  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:depth,transparent:true}));
-  const hgt=.075;s.scale.set(hgt*w/c.height,hgt,1);s.renderOrder=20;return s;
-}
+const ROOM_LABEL_H=.095;   // m: a room label's height in the scene, less than the plan's: it stands on furniture (engine.js: dimLabel, fitLabels)
 const roomDimMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:false,transparent:true});
 const roomDimDepthMat=new THREE.LineBasicMaterial({color:0x2f5d50,depthTest:true,transparent:true});
 // from a to b (vectors, m), ticks across along tick; seen through everything, or (depth) hidden behind what stands in front
@@ -267,7 +258,7 @@ function roomDim(g,a,b,txt,tick,depth=false){
   const t=tick.clone().multiplyScalar(.04);
   const pts=[a,b,a.clone().add(t),a.clone().sub(t),b.clone().add(t),b.clone().sub(t)];
   const l=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pts),depth?roomDimDepthMat:roomDimMat);l.renderOrder=19;g.add(l);
-  const s=roomLabel(txt,depth);s.position.copy(a).add(b).multiplyScalar(.5);g.add(s);
+  const s=dimLabel(txt,ROOM_LABEL_H,depth);s.position.copy(a).add(b).multiplyScalar(.5);g.add(s);
 }
 
 /* nothing of a room's furniture shows below the floor, from any side: it rises out of the floor and sinks into it in a flight

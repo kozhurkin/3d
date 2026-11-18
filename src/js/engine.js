@@ -312,6 +312,28 @@ frameHooks.push(()=>{
 });
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 const insetHide=[];    // objects kept out of the mini view (dimension labels are sized for the main camera)
+
+/* ---------- dimension labels, the plan's and the rooms': a white plate with the text over everything (or, depth, hidden behind
+   what stands in front). A label is h tall in the scene (m), but on screen no taller than LABEL_PX, and smaller than it can be
+   read it fades out: near it stays readable, far it shrinks with the model instead of covering it. fitLabels, every frame ---------- */
+const LABEL_PX=22,LABEL_FADE=[6,8];   // px: gone at the first, whole from the second
+function dimLabel(text,h,depth=false){
+  const c=document.createElement('canvas'),g=c.getContext('2d'),f=44;
+  g.font=`500 ${f}px "JetBrains Mono", monospace`;const w=Math.ceil(g.measureText(text).width)+36;
+  c.width=w;c.height=f+26;g.font=`500 ${f}px "JetBrains Mono", monospace`;
+  g.fillStyle='rgba(255,255,255,.94)';const r=12;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,c.height,r);g.arcTo(w,c.height,0,c.height,r);g.arcTo(0,c.height,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
+  g.fillStyle=text.includes('?')?'#9a4d16':'#1f4a3f';g.textBaseline='middle';g.fillText(text,18,c.height/2+2);
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:depth,transparent:true}));
+  s.renderOrder=20;s.userData.ar=w/c.height;s.userData.h=h;s.scale.set(h*s.userData.ar,h,1);return s;
+}
+const _lv=new THREE.Vector3();
+function fitLabels(list){
+  const k=2*Math.tan(camera.fov*Math.PI/360)/(viewer.clientHeight||1);   // m per px at 1 m
+  list.forEach(s=>{const H=s.userData.h;if(typeof H!=='number')return;   // a label (the lines beside it are left alone)
+    const px=H/Math.max(1e-9,s.getWorldPosition(_lv).distanceTo(camera.position)*k),h=H*Math.min(1,LABEL_PX/px);   // its own height on screen, px
+    s.scale.set(h*s.userData.ar,h,1);s.material.opacity=Math.min(1,Math.max(0,(px-LABEL_FADE[0])/(LABEL_FADE[1]-LABEL_FADE[0])));});
+}
 const _d=new THREE.Vector3();
 let lastT=performance.now();
 function loop(){

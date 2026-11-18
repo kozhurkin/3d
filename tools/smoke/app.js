@@ -99,6 +99,28 @@ check('«Планировка»: размеры окна у самого окн�
   assert.strictEqual(p.run('winDims.visible'), false, 'the window wall is cut away: its dimensions go with it');
 });
 
+check('подписи размеров: вблизи не выше 22 px на экране, дальше уменьшаются вместе с моделью (на плане 150 мм, в комнате 95 мм), мельче 8 px гаснут, к 6 px исчезают', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();
+  const K = 'const k=2*Math.tan(camera.fov*Math.PI/360)/viewer.clientHeight';   // m per px at 1 m
+  // the camera above a label, at the distance where the label's own height would be raw px on screen: [px on screen, opacity, keeps its proportions]
+  const at = (h, raws) => p.run(`(()=>{${K},s=dimLabel('1234',${h});
+    return ${JSON.stringify(raws)}.map(raw=>{const d=${h}/(raw*k);camera.position.set(0,d,0);fitLabels([s]);
+      return [+(s.scale.y/(d*k)).toFixed(3),+s.material.opacity.toFixed(3),+(s.scale.x/s.scale.y-s.userData.ar).toFixed(6)];});})()`);
+  const want = [[22, 1, 0], [22, 1, 0], [12, 1, 0], [8, 1, 0], [7, 0.5, 0], [6, 0, 0], [4, 0, 0]];
+  assert.deepStrictEqual(at(0.15, [100, 22, 12, 8, 7, 6, 4]), want, 'a plan label');
+  assert.deepStrictEqual(at(0.095, [100, 22, 12, 8, 7, 6, 4]), want, 'a room label');
+  // labels are sized every frame from the camera where it stands: [own height, px on screen, what it should be]
+  const seen = (list) => p.run(`(()=>{${K},v=new THREE.Vector3();
+    return ${list}.filter(s=>typeof s.userData.h==='number').map(s=>{const d=s.getWorldPosition(v).distanceTo(camera.position)*k;
+      return [s.userData.h, +(s.scale.y/d).toFixed(6), +Math.min(s.userData.h/d,22).toFixed(6)];});})()`);
+  const r = seen('labels');
+  assert.ok(r.length > 20 && r.every(([h, px, want]) => h === 0.15 && px === want), 'plan labels: 150 mm, at most 22 px');
+  p.run('showView("kitchen")'); p.fly(); p.tick();
+  const q = seen('VIEWS.kitchen.furniture().dims.children');
+  assert.ok(q.length > 0 && q.every(([h, px, want]) => h === 0.095 && px === want), 'room labels: 95 mm, at most 22 px');
+});
+
 check('размеры стен: ползунок меняет модель и всё перестраивается', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const panel = p.document.querySelector('[data-panel="plan"]');

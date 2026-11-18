@@ -84,6 +84,7 @@ function roomKit(id,cfg){
     if(foot){const o=fc.f*s;foot.visible=o>.01;foot.material.opacity=o;foot.position.y=.003-model.position.y;}   // the footprint stays on the floor, fading with the room
     // its dimension lines only in its own view, once it is reached; the extras go with the walls there, elsewhere the walls are there
     dimsGroup.visible=on&&V.dims!==false&&!inTransition();
+    if(dimsGroup.visible)fitLabels(dimsGroup.children);   // readable near, shrinking with the room far
     if(extra)extra.visible=!on||V.walls!==false;
     if(cfg.walls)cfg.walls(on);else if(on&&wallGroup)wallGroup.visible=V.walls!==false;
     if(cfg.frame)cfg.frame(on,{extra,dims:dimsGroup,show:show()});

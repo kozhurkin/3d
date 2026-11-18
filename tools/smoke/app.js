@@ -105,20 +105,20 @@ check('размеры стен: ползунок меняет модель и в
   p.tick();
   assert.strictEqual(p.run('dimsDirty'), false, 'dimensions rebuilt on the next frame');
   const r = p.run('({kW:A.kW, xL, lines:wallLines.length, parts:wallParts.length, doors:doors.length, open:doors.every(d=>d.t===d.max), labels:labels.length, rooms:roomMats.length})');
-  assert.deepStrictEqual(r, { kW: 2300, xL: -2100, lines: 13, parts: 27, doors: 2, open: true, labels: nLabels, rooms: 3 });
+  assert.deepStrictEqual(r, { kW: 2300, xL: -2150, lines: 13, parts: 27, doors: 2, open: true, labels: nLabels, rooms: 3 });
   assert.ok(panel.querySelector('#pFacts').children.length > 0);
   assert.match(panel.querySelector('#pSub').textContent, /^3750 × /, 'sub follows the size');
   assert.strictEqual(panel.querySelector('[data-size-out="kW"]').textContent, 2300);
   assert.strictEqual(panel.querySelector('#pSizeMsg').textContent, '');
 });
 
-check('размеры стен: стенки у прохода на кухню — слева выступ кухонной стены 200, справа своя 250 (ящик для инструмента и стеллажи по её сторонам)', () => {
+check('размеры стен: стенки у прохода на кухню — слева выступ кухонной стены 150, справа своя 250 (ящик для инструмента и стеллажи по её сторонам)', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const pass = () => p.run('(m=>[m.WALLS.find(w=>w.id==="kitchen").r[1],m.WALLS.find(w=>w.id==="passRight").r.slice(0,2),A.hallW])(apartment(A))');
-  // the hall 1250: the passage 1250 − 200 − 250 = 800
-  assert.deepStrictEqual(pass(), [200, [1000, 1250], 1250]);
+  // the hall 1200: the passage 1200 − 150 − 250 = 800
+  assert.deepStrictEqual(pass(), [150, [950, 1200], 1200]);
   // its own slider: the left one stays; the passage no narrower than 600
-  slide(p, 'kOverR', 300); assert.deepStrictEqual(pass(), [200, [950, 1250], 1250]);
+  slide(p, 'kOverR', 300); assert.deepStrictEqual(pass(), [150, [900, 1200], 1200]);
   slide(p, 'kOverR', 500); assert.strictEqual(p.run('A.kOverR'), 450, 'the passage 600');
   assert.match(p.document.getElementById('pSizeMsg').textContent, /Проход на кухню уже 600 мм/);
 });
@@ -126,16 +126,16 @@ check('размеры стен: стенки у прохода на кухню �
 check('размеры стен: ползунок упирается и говорит во что', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const msg = p.document.getElementById('pSizeMsg');
-  slide(p, 'bNiche', 2000);   // the bathroom is 1900 wide: niche + 100 partition fit up to 1800
-  assert.strictEqual(p.run('A.bNiche'), 1800);
+  slide(p, 'bNiche', 2000);   // the bathroom is 1950 wide: niche + 100 partition fit up to 1850
+  assert.strictEqual(p.run('A.bNiche'), 1850);
   assert.match(msg.textContent, /^Дальше нельзя: /);
   slide(p, 'bNiche', 1200);
   assert.strictEqual(p.run('A.bNiche'), 1200); assert.strictEqual(msg.textContent, '');
   // the entrance moves keeping its width; its width stops at the hall's right wall
   slide(p, 'eD0', 100);
   assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 992]);
-  slide(p, 'eW', 1200);   // 1250 wide: up to 1150 from 100
-  assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 1250]);
+  slide(p, 'eW', 1200);
+  assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 1200]);
   assert.match(msg.textContent, /Входной проём/);
   // a slider with step 10 stops on its step from the current value
   slide(p, 'vOff', 1000);
@@ -149,7 +149,7 @@ check('размеры стен: «Запомнить» и «Вернуть ис�
   p.document.getElementById('pSaveA').click();
   assert.deepStrictEqual(JSON.parse(storage.get('apt-model-v1')), { H: 2700, kW: 2300 }, 'only what differs from the defaults');
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
-  assert.deepStrictEqual(p.run('[A.kW,A.H,xL]'), [2300, 2700, -2100]);
+  assert.deepStrictEqual(p.run('[A.kW,A.H,xL]'), [2300, 2700, -2150]);
   assert.strictEqual(p.document.querySelector('[data-size-out="H"]').textContent, 2700);
   p.document.getElementById('pResetA').click();
   assert.deepStrictEqual(p.run('[A.kW,A.H]'), [2200, 2600]);
@@ -157,7 +157,7 @@ check('размеры стен: «Запомнить» и «Вернуть ис�
   // sizes that do not fit are not taken from the browser
   storage.set('apt-model-v1', JSON.stringify({ bNiche: 5000 }));
   p = runPage(PAGES.app, { hash: '#plan', storage }); p.tick();
-  assert.strictEqual(p.run('A.bNiche'), 1200);
+  assert.strictEqual(p.run('A.bNiche'), 1250);
 });
 
 check('шкафы: контуры деталей всегда видны, галочки нет', () => {
@@ -265,12 +265,12 @@ check('названия комнат на полу: холст по ширине
 
 check('площадь комнаты: по контуру пола (прихожая до кухонной стены, санузел без вентшахты со стенками); наведение на площадь — рамка', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  assert.deepStrictEqual(p.run('ROOMS.map(roomCaption)'), ['Прихожая · 2,38 м²', 'Санузел · 3,16 м²', 'Кухня · 14,95 м²']);
-  assert.deepStrictEqual(p.run('ROOMS.map(r=>polyArea(roomPoly(r)))'), [1250 * 1900, 3160000, 14950000]);
+  assert.deepStrictEqual(p.run('ROOMS.map(roomCaption)'), ['Прихожая · 2,28 м²', 'Санузел · 3,23 м²', 'Кухня · 14,95 м²']);
+  assert.deepStrictEqual(p.run('ROOMS.map(r=>polyArea(roomPoly(r)))'), [1200 * 1900, 3230000, 14950000]);
   // the band goes inward: the bath's outline moved 40 mm in, corners mitred (the shaft's notch included)
-  assert.deepStrictEqual(p.run('roomPoly(ROOMS[1])'), [[-2000, 0], [-100, 0], [-100, 1400], [-1000, 1400], [-1000, 1900], [-2000, 1900]]);
+  assert.deepStrictEqual(p.run('roomPoly(ROOMS[1])'), [[-2050, 0], [-100, 0], [-100, 1400], [-1050, 1400], [-1050, 1900], [-2050, 1900]]);
   assert.deepStrictEqual(p.run('insetPoly(roomPoly(ROOMS[1]),40)').map((v) => v.map(Math.round)),
-    [[-1960, 40], [-140, 40], [-140, 1360], [-1040, 1360], [-1040, 1860], [-1960, 1860]]);
+    [[-2010, 40], [-140, 40], [-140, 1360], [-1090, 1360], [-1090, 1860], [-2010, 1860]]);
   assert.deepStrictEqual(p.run('(setHoverRoom(1),[hoverFrame.visible,hoverFrame.children.length])'), [true, 2]);
   assert.deepStrictEqual(p.run('(setHoverRoom(-1),[hoverFrame.visible,hoverFrame.children.length])'), [false, 0]);
 });

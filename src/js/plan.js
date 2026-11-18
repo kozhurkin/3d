@@ -219,7 +219,7 @@ function setHoverRoom(i){
   hoverFrame.add(fill,band);hoverFrame.visible=true;
 }
 // which room's area is under the cursor (-1: none): labelHits — the ray through the names, sceneHits — through the whole scene.
-// Only over the area («2,38 м²»), not the whole inscription, and only where it is seen: anything in front of it (a cabinet, a wall,
+// Only over the area («2,28 м²»), not the whole inscription, and only where it is seen: anything in front of it (a cabinet, a wall,
 // an item) hides it. The names themselves and the frame don't count, nor a part of a surface clipped away (furniture cut at the walls' height)
 const inGroup=(o,g)=>{while(o){if(o===g)return true;o=o.parent;}return false;};
 const clippedAt=h=>[].concat(h.object.material||[]).some(m=>m&&m.clippingPlanes&&m.clippingPlanes.some(p=>p.distanceToPoint(h.point)<0));

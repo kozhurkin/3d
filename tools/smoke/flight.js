@@ -77,7 +77,7 @@ check('перелёт: прерывание, мышь забирает каме�
   p.run('showView("kitchen")'); p.tick(25, 17);
   // back to the plan in the middle: the new flight starts from what is on screen
   p.run('showView("plan")');
-  assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2200, -2000, 950, 4975], [-2200, -2000, 0, 6600]]);
+  assert.deepStrictEqual(p.run('[morph.w.get("leftOuter").rF, morph.w.get("leftOuter").rT]').map((r) => r.map(Math.round)), [[-2250, -2050, 950, 4975], [-2250, -2050, 0, 6600]]);
   near(p.run('morph.w.get("leftOuter").cF'), 1300, 'the left wall starts from halfway down');
   near(p.run('tr.pres0.bath'), 0.5, 'the bathroom starts from halfway');
   p.fly();

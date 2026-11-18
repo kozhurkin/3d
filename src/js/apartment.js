@@ -4,21 +4,21 @@
    origin: inner corner of the hall between the bearing wall with the entrance door and the hall's left wall */
 const APT_A={
   H:2600,                           // ceiling height
-  hallW:1250,                       // hall between its side walls
+  hallW:1200,                       // hall between its side walls
   hL1:700, bDoor:600, bDoorH:2000, hL2:600,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
                                     // (hL1: the door's 70 mm casing clears the 600 mm sink in the bathroom niche by 40)
-  kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
+  kOver:150,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kOverR:250,                       // the wall right of the way into the kitchen: this far out of the hall's right wall (the tool box by it, the racks behind)
   kW:2200, kL:4600,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
-  bNiche:1200,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet
+  bNiche:1250,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet (the sink's niche 600 past it)
   bL:1100, bWs:500, bStub:600,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
   bGap:500,                         // opening between the wall at the niche end and the shower partition
   shStep:200,                       // the step across that opening: a low wall, its height (the shower tray behind it is 150 high)
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
   vOff:100,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway (its casing ends 40 short)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
-  eD0:84, eD1:976, eDH:2016,        // entrance door opening (as in the hall tab)
+  eD0:34, eD1:926, eDH:2016,        // entrance door opening (the hall tab had it 84…976: the hall's left wall is 50 further in now)
   eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
 };
 

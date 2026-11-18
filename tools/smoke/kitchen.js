@@ -6,18 +6,18 @@ check('кухня: стены кухни, обрезанные рамкой, к�
   assert.strictEqual(p.run('view'), 'kitchen');
   // the kitchen tab: kitchen wall 2200 × 100 behind x 0..W; left wall 200 thick from the back of the kitchen wall to L = 1350
   assert.deepStrictEqual(p.run(kitchenWalls), [
-    { id: 'leftOuter', r: [-2200, -2000, 1900, 3350], fade: '-x' },
-    { id: 'kitchen', r: [-2000, 200, 1900, 2000], fade: '-z' },
+    { id: 'leftOuter', r: [-2250, -2050, 1900, 3350], fade: '-x' },
+    { id: 'kitchen', r: [-2050, 150, 1900, 2000], fade: '-z' },
   ]);
   assert.deepStrictEqual(p.run('[wallParts.length, doors.map(d=>d.g.visible)]'), [2, [false, false]], 'two wall pieces, no doors, no window');
   const kp = p.document.querySelector('[data-panel="kitchen"]');
   assert.strictEqual(kp.hidden, false); assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, true);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="kitchen"] #shared'), 'light and wall colour moved to the kitchen');
   assert.strictEqual(kp.querySelector('#kFrameLOut').textContent, 1350);
-  // camera: «3/4» on the first visit, the kitchen tab's targets moved to the kitchen's place on the plan (origin −2000, 2000)
-  assert.deepStrictEqual(vec(p, 'goalT'), [-1.15, 1.3, 2.45]); assert.deepStrictEqual(vec(p, 'cam.target'), [-1.15, 1.3, 2.45]);
+  // camera: «3/4» on the first visit, the kitchen tab's targets moved to the kitchen's place on the plan (origin −2050, 2000)
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.2, 1.3, 2.45]); assert.deepStrictEqual(vec(p, 'cam.target'), [-1.2, 1.3, 2.45]);
   kp.querySelector('[data-cam="sink"]').click();
-  assert.deepStrictEqual(vec(p, 'goalT'), [-1.775, 0.9, 2.3]);
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.825, 0.9, 2.3]);
 });
 
 check('кухня: рамка левой стены, переходы и размеры с «Планировки»', () => {
@@ -25,7 +25,7 @@ check('кухня: рамка левой стены, переходы и раз�
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'kitchen' } }); p.tick();
   const fl = p.document.getElementById('kFrameL');
   fl.value = '2000'; fl.dispatch('input');
-  assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2200, -2000, 1900, 4000]);
+  assert.deepStrictEqual(p.run(kitchenWalls)[0].r, [-2250, -2050, 1900, 4000]);
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-kitchen-v1')), { Wm: 'auto', Wh: 100, L: 2000, sizes: true, fronts: 'closed', dims: true, walls: true });
   fl.value = '9000'; fl.dispatch('input');   // no further than 2650 from the kitchen wall
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r[3]), [4650, 2000]);
@@ -38,8 +38,8 @@ check('кухня: рамка левой стены, переходы и раз�
   // a size changed on the plan reaches the kitchen
   slide(p, 'kW', 2300);
   p.run('showView("kitchen")'); p.fly();
-  assert.deepStrictEqual(vec(p, 'goalT'), [-1.875, 0.9, 2.3], 'sink target, kitchen moved 100 left');
-  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2300, -2100, 1900, 4650], [-2100, 200, 1900, 2000]]);
+  assert.deepStrictEqual(vec(p, 'goalT'), [-1.925, 0.9, 2.3], 'sink target, kitchen moved 100 left');
+  assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2350, -2150, 1900, 4650], [-2150, 150, 1900, 2000]]);
   assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
 });
 
@@ -303,11 +303,11 @@ check('кухня: варочная панель — стекло с кругл�
 
 check('кухня: стол у левой стены — 1330 от стены кухни, 700 вдоль стены, 1300 в комнату, столешница 30 мм на высоте 750', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  // the kitchen's origin on the plan: −2000, 2000; the table's top and legs among the appliances, in the walker's way
-  const r = p.run(`furnBoxes().map(b=>b.map(v=>Math.round(v*1000))).filter(b=>b[0]>=-2000&&b[1]<=-700&&b[2]>=3330&&b[3]<=4030)`);
-  assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 1300), [[-2000, -700, 3330, 4030, 720, 750]], 'the top');
+  // the kitchen's origin on the plan: −2050, 2000; the table's top and legs among the appliances, in the walker's way
+  const r = p.run(`furnBoxes().map(b=>b.map(v=>Math.round(v*1000))).filter(b=>b[0]>=-2050&&b[1]<=-750&&b[2]>=3330&&b[3]<=4030)`);
+  assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 1300), [[-2050, -750, 3330, 4030, 720, 750]], 'the top');
   assert.deepStrictEqual(r.filter((b) => b[1] - b[0] === 40).map((b) => [b[0], b[2], b[4], b[5]]),
-    [[-1950, 3380, 0, 720], [-790, 3380, 0, 720], [-1950, 3940, 0, 720], [-790, 3940, 0, 720]], 'four legs 40 × 40, 50 in from the edges');
+    [[-2000, 3380, 0, 720], [-840, 3380, 0, 720], [-2000, 3940, 0, 720], [-840, 3940, 0, 720]], 'four legs 40 × 40, 50 in from the edges');
 });
 
 check('кухня: четыре стула BERGMUND у стола — задвинуты, нажатие выдвигает их из-под стола; обход сквозь них проходит', () => {

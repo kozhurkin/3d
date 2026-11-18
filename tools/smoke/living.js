@@ -360,9 +360,10 @@ check('living: угловой диван Hoff «Слим» у правой ст�
   assert.ok(r.every((q) => q.turn === -Math.PI / 2 && q.title === 'Угловой диван-кровать «Слим» (Hoff)'), 'its back to the wall, its seat toward the desk');
   // own axes before the turn (the stub's boxes leave turns out): 2060 across, 850 deep, 910 high; the chaise 705 across, its box from the back
   // out to 1530, up to its back cushion's 910, at its far end (own x 1355…2060 → kitchen z 3745…4450: the window end; the stitches on
-  // its sides stand 1.5 out of them)
+  // its sides stand 1.5 out of them; its lid 10 toward the seat, over the sofa's seat, and its box's window side 10 in, in line
+  // with the lid: from 1345 to the stitches' 2051.5)
   assert.deepStrictEqual(r[0].size, [2060, 850, 910]);
-  assert.deepStrictEqual([Math.round((r[1].x0 - r[0].x0) * 10) / 10, r[1].size], [2060 - 705 - 1.5, [705 + 3, 1530, 910]]);
+  assert.deepStrictEqual([Math.round((r[1].x0 - r[0].x0) * 10) / 10, r[1].size], [2060 - 705 - 10, [705 + 2, 1530, 910]]);
 });
 
 check('living: сиденье оттоманки дивана целиком — крышка на петле у спинки, под ней короб для белья, подушки на ней поднимаются; открывается с фасадами кухни', () => {
@@ -381,8 +382,8 @@ check('living: сиденье оттоманки дивана целиком —
   // its upper back edge at the seat's height, at the thin back (100); the whole seat of the chaise
   assert.deepStrictEqual([r.axis, r.s, r.max, r.t, r.rot, r.inChaise, r.hinge], ['x', -1, 0.698, 0, 0, true, [450, 100]], 'closed, on its hinge in the chaise');
   assert.deepStrictEqual(r.size, [705, 170, 1430], 'the chaise\'s seat, from the thin back to its front');
-  // 10 mm to the left (toward the seat) of the chaise's box: its middle 705 / 2 + 10 from the chaise's end of the sofa (own x mirrored)
-  assert.strictEqual(p.run('(d=>Math.round(d.g.children[0].position.x*1000))(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'), 2060 - 705 / 2 - 10 | 0);
+  // 10 mm to the left (toward the seat) of the chaise's box: its middle 705 / 2 + 10 from the chaise's end (own x mirrored): 1697.5
+  assert.strictEqual(p.run('(d=>Math.round(d.g.children[0].position.x*1000))(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'), 1698);
   // on it, the chaise's back cushion and the throw pillow in the corner (their middles: y, z)
   assert.deepStrictEqual(r.ride, [[680, 210], [640, 385]]);
   assert.strictEqual(r.title, 'Угловой диван-кровать «Слим» (Hoff)');

@@ -5,7 +5,7 @@
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W, L, H, Rx, Rz are the plan's niche, ceiling and riser box
-const P={W:1200,H:2600,Rx:250,Rz:250,Hi:1200,Di:200,Gap:300,Du:200,Nu:2,Dt:300,L:1100,Lt:800,Wc:800,Dm:200,Pl:80,Sp:1500,Nb:2,Nh:3,Ec:30,T:16,TF:16,Mid:true,Feet:false};
+const P={W:1250,H:2600,Rx:250,Rz:250,Hi:1200,Di:200,Gap:300,Du:200,Nu:2,Dt:300,L:1100,Lt:800,Wc:800,Dm:200,Pl:80,Sp:1500,Nb:2,Nh:3,Ec:30,T:16,TF:16,Mid:true,Feet:false};
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -347,7 +347,7 @@ function buildCurtain(sani,opts){
    The machine stands in it facing the room, a flat «water lily» sink with its mixer hangs over it, and over the sink a wall
    cabinet with two hinged mirror doors and shelves, a lamp on its top (the machine's door opens, see washerDoor): a product of its own, not in the bathroom's cut list, no sizes in the panel
    (its finishes are the bathroom's). Bath axes, mm.
-   The bath tab's frame ends at the partition, so its own view hides them; the plan and the walk show them */
+   The bathroom view's frame ends at the partition, so its own view hides them; the plan and the walk show them */
 const WASH={W:595,H:850,D:540,back:40,sinkD:600,sinkY:880,sinkT:1000};
 const SINK_CAB={D:200,Gap:300,H:700,N:2};   // the cabinet over the sink: depth with its doors, from the sink's top up to its bottom, height, shelves
 let wash=null;

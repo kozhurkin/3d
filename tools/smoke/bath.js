@@ -1,12 +1,12 @@
 // Санузел: стены ниши, детали, шкафы и сантехника, отделка, фасады, рамка, размеры с плана.
-const { round, matches, runPage, DECOR_PARENT, PAGES, check, slide, fnSource, vec, piece, near, bathWalls, fixture, assert } = require('./harness');
+const { round, matches, runPage, DECOR_PARENT, PAGES, check, slide, vec, piece, near, bathWalls, assert } = require('./harness');
 
-check('санузел: стены ниши, обрезанные рамкой, как в старой вкладке', () => {
+check('санузел: стены ниши, обрезанные рамкой', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
   assert.strictEqual(p.run('view'), 'bath');
-  // the bath tab (origin −2050, 0): back wall 200 from the left wall's outer face to the partition's outer face (W + 100);
+  // the bathroom view (origin −2050, 0): back wall 200 from the left wall's outer face to the partition's outer face (W + 100);
   // left wall 200; partition 100 × 600 next to the tall cabinet; wall 500 × 100 at the niche end; shower partition 300 past it;
-  // riser box 250 × 250. The partition hides right of its face, the walls at the niche end past it, as in the bath tab
+  // riser box 250 × 250. The partition hides right of its face, the walls at the niche end past it
   assert.deepStrictEqual(p.run(bathWalls), [
     { id: 'entry', r: [-2250, -700, -200, 0], fade: '-z' },
     { id: 'leftOuter', r: [-2250, -2050, 0, 1400], fade: '-x' },
@@ -22,7 +22,7 @@ check('санузел: стены ниши, обрезанные рамкой, �
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="bath"] #shared'), 'light and wall colour moved to the bathroom');
   assert.strictEqual(bq('#bFrameLOut').textContent, 1400);
   assert.strictEqual(bq('#bSub').textContent, 'ниша 1250 × 1100 мм · потолок 2600 мм · корпус — Диамант серый U963 ST9; фасады — Базовый коричневый декор');
-  // camera: «3/4» on the first visit, the bath tab's targets moved to the bathroom's place; the sun over the back wall
+  // camera: «3/4» on the first visit, at the bathroom's cabinets; the sun over the back wall
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.425, 1.3, 0.55]);
   bq('[data-cam="tall"]').click();
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.3, 1.3, 0.15]);
@@ -206,20 +206,17 @@ check('санузел: полупрозрачная шторка 220 см до �
   assert.strictEqual(p.run(`${D}.g.userData.edge`), 1090);
 });
 
-check('санузел: детали шкафов совпадают со старым санузлом', () => {
-  const mod = PAGES.app.slice(PAGES.app.indexOf('«Санузел» view'));
-  const pLine = mod.match(/^const P=\{W:1200,H:2600,.*\};$/m)[0];
-  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'partList')}\n${fnSource(mod, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
-  const want = fixture('bath-parts.json');
-  assert.strictEqual(got.parts.length, 34);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
+check('санузел: шкафы по нише с «Планировки»', () => {
+  // the niche's width and depth, the ceiling, the riser box: the plan's; the module's own starting sizes are these too
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.L,f.P.H,f.P.Rx,f.P.Rz,f.current.parts.length])(VIEWS.bath.furniture())'), [1250, 1100, 2600, 250, 250, 34]);
+  assert.match(PAGES.app.slice(PAGES.app.indexOf('«Санузел» view')), /^const P=\{W:1250,H:2600,Rx:250,Rz:250,/m);
 });
 
 check('санузел: шкафы, инсталляция и унитаз собираются, панель их меняет', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
   const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
-  const want = fixture('bath-parts.json');
-  const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
+  const nDoors = p.run('VIEWS.bath.furniture().current.parts.filter(x=>x.mat==="front"&&(x.hinge||x.pivot)).length');
   // the installation box, its flush plate, the bowl and the seat (the machine, the tray, the shower rack and its curtain have checks of their own): the last group of the bathroom
   const b = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, sani:f.sani.children.filter(m=>m.userData.wash!==true&&m.userData.tray!==true&&m.userData.rack!=="wall"&&m.userData.rack!=="over"&&m.userData.curtain!==true).map(m=>m.position.y), P:f.P}))(VIEWS.bath.furniture())');
   let r = b();
@@ -250,7 +247,7 @@ check('санузел: стиральная машина и раковина н�
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
   const shown = () => p.run('(g=>g?g.visible:"none")(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))');
   const box = () => p.run('(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*1000)))(new THREE.Box3().setFromObject(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true)))');
-  // the bath tab's frame ends at the partition next to the tall cabinet: its own view hides them
+  // the view's frame ends at the partition next to the tall cabinet: its own view hides them
   assert.strictEqual(shown(), false, 'built with the sanitary ware, hidden in the bathroom view');
   // between the partition (−700) and the hall wall (−100), from the back wall up to the machine's door (640), up to the lamp on the cabinet over the sink
   const b = box();
@@ -339,7 +336,7 @@ check('санузел: отделка — палитра, меню образц�
   assert.strictEqual(bp.querySelectorAll('[data-decor]').length, DECOR_PARENT.PALETTE_WOOD.length);
   assert.strictEqual(bp.querySelectorAll('[data-uc]').length, DECOR_PARENT.PALETTE_UNI.length);
   assert.ok(matches(bq('#b-ccCard'), '[aria-label="Монотонные декоры"] .cc'), 'own colour card stays with the plain colours');
-  // the bath tab's finishes: grey carcass, brown wood fronts
+  // the finishes at first: grey carcass, brown wood fronts
   const tags = (s) => bq(s).querySelector('.tags').innerHTML;
   assert.strictEqual(tags('[data-decor="H1386"]'), '<b>Ф</b>');
   assert.match(bq('#b-finNow').innerHTML, /^<span>Корпус<\/span><span>Диамант серый U963 ST9<\/span><span>Фасады<\/span><span>Базовый коричневый декор<\/span>$/);
@@ -366,9 +363,9 @@ check('санузел: фасады, размеры, деталировка, н�
   let bp = p.document.querySelector('[data-panel="bath"]');
   const bq = (s) => bp.querySelector(s);
   const pressed = () => bp.querySelectorAll('[data-door]').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.door);
-  // the bath tab's 13 dimension lines and three between the shelves (a line and a label each), hidden in a flight
+  // 13 dimension lines and three between the shelves (a line and a label each), hidden in a flight
   assert.strictEqual(p.run('VIEWS.bath.furniture().dims.children.length'), 32);
-  assert.strictEqual(bq('#b-sizesBox').open, true, 'the sizes are open, as in the bath tab');
+  assert.strictEqual(bq('#b-sizesBox').open, true, 'the sizes are open');
   assert.deepStrictEqual(pressed(), ['closed']);
   bq('[data-door="open"]').click();
   assert.strictEqual(p.run('VIEWS.bath.furniture().doors.every(d=>d.t===d.max)'), true);

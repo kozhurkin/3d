@@ -18,7 +18,7 @@ const APT_A={
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
   vOff:100,                         // vent shaft wall: this far from the kitchen-side edge of the bathroom doorway (its casing ends 40 short)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
-  eD0:50, eD1:942, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top (the hall tab had it 84…976)
+  eD0:50, eD1:942, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top
   eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
 };
 

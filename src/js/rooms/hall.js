@@ -1,5 +1,5 @@
 /* ---------- «Прихожая» view: the portal cabinet around the entrance door, the tool box in the far corner ----------
-   Hall coordinates as in the hall tab, mm: x along the bearing wall from the left wall, y up, z from the bearing wall into the room;
+   Hall coordinates, mm: x along the bearing wall from the left wall, y up, z from the bearing wall into the room;
    the hall's (0,0) is its origin on the plan. The walls make the entrance opening, the cabinet follows it: its width is the hall
    (A.hallW), the false panel and the shelf column reach the opening's sides, the mezzanine sits on its top (A.eD0, A.eD1, A.eDH),
    the reveal cladding is as deep as the door frame sits in the wall (A.eRv). How far the side walls show is the view's frame (VS.hall.Sd).
@@ -88,7 +88,7 @@ function fromModel(w){
 }
 
 /* ---------- finishes and materials ---------- */
-// finish per part group, as in the hall tab: wood decor or plain colour (no worktop here)
+// finish per part group: wood decor or plain colour (no worktop here)
 const FIN={carcass:{type:'wood',decor:'H1386'},front:{type:'wood',decor:'H1386'}};
 const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
@@ -203,7 +203,7 @@ const k=roomKit('hall',{
   view:{
     // the bearing wall from the outer face of the left wall to the outer face of the right one, the side walls up to Sd from it
     frame:Sd=>{const [ox,oz]=O();return [ox-A.wt,ox+A.hallW+A.bear,oz-A.bear,oz+Sd];},
-    // as in the hall tab: the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
+    // the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
     sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
     defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true}
   }

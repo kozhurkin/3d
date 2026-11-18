@@ -645,9 +645,10 @@ function buildSofa(g,opts){
   [0,xr].forEach(x=>S(x,x+arm,lg,armH,0,D,26));   // the arms, alike, down to the legs
   const cushion=[0,1,2].map(i=>(i?S:C)(arm+i*650+3,arm+(i+1)*650-3,seat,H,back,back+220,80))[0];
   // the chaise: its box for bedding from the back to its front, walls 20 mm (white inside, 1 mm), its bottom 15 mm: inside
-  // 145 × 21 × 61 cm; in front of the arm (it ends with the seat) the base fills out to the chaise's side
+  // 145 × 21 × 61 cm; in front of the arm (it ends with the seat) the base fills out to the chaise's side, in line with the lid
+  // (lidDx in from the arm's side)
   const bz=Dc-base,t=20;
-  C(0,xc,lg,ys,bz-t,bz,8);C(arm,xc,lg,ys,0,t,8);C(arm,arm+t,lg,ys,t,bz-t,8);C(xc-t,xc,lg,ys,t,bz-t,8);C(0,arm,lg,ys,D,bz-t,8);
+  C(lidDx,xc,lg,ys,bz-t,bz,8);C(arm,xc,lg,ys,0,t,8);C(arm,arm+t,lg,ys,t,bz-t,8);C(xc-t,xc,lg,ys,t,bz-t,8);C(lidDx,arm,lg,ys,D,bz-t,8);
   Cf(arm+t,xc-t,lg,lg+15,t,bz-t,sofaBoxMat);
   Cf(arm+t,xc-t,lg+15,ys,bz-t-1,bz-t,sofaBoxMat);Cf(arm+t,xc-t,lg+15,ys,t,t+1,sofaBoxMat);
   Cf(arm+t,arm+t+1,lg+15,ys,t+1,bz-t-1,sofaBoxMat);Cf(xc-t-1,xc-t,lg+15,ys,t+1,bz-t-1,sofaBoxMat);
@@ -658,7 +659,7 @@ function buildSofa(g,opts){
   // stitches up the fronts of the bases, 130 mm apart
   for(let x=130;x<xc-40;x+=130)Cf(x-2,x+2,lg+15,ys-15,Dc-base,Dc-base+1.5,seamMat);
   // and up the chaise base's sides in front of the arm and of the sofa's base, as far apart, from its front back
-  for(let z=bz-130;z>D+40;z-=130)[[-1.5,0],[xc,xc+1.5]].forEach(([x0,x1])=>Cf(x0,x1,lg+15,ys-15,z-2,z+2,seamMat));
+  for(let z=bz-130;z>D+40;z-=130)[[lidDx-1.5,lidDx],[xc,xc+1.5]].forEach(([x0,x1])=>Cf(x0,x1,lg+15,ys-15,z-2,z+2,seamMat));
   // legs
   [[30,30],[W-80,30],[W-80,D-base-80]].forEach(([x,z])=>S(x,x+50,0,lg,z,z+50,8,sofaLegMat));
   [[30,Dc-base-80],[xc-80,Dc-base-80]].forEach(([x,z])=>C(x,x+50,0,lg,z,z+50,8,sofaLegMat));

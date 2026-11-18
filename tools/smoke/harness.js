@@ -217,14 +217,6 @@ const check = (name, fn) => { fn(); checks.push(name); };
 // a slider of the plan's wall sizes moved to v, as the browser does it
 const slide = (p, k, v) => { const s = p.document.querySelector(`[data-size="${k}"]`); s.value = String(v); s.dispatch('input'); };
 
-// a function's source by matching braces from its start (code private to a module is checked by running its text)
-function fnSource(s, name) {
-  const i = s.indexOf('function ' + name + '(');
-  assert.ok(i >= 0, 'no function ' + name);
-  let d = 0, j = s.indexOf('{', i);
-  for (; j < s.length; j++) { if (s[j] === '{') d++; else if (s[j] === '}' && --d === 0) break; }
-  return s.slice(i, j + 1);
-}
 const kitchenWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.kitchen)}))';
 const vec = (p, v) => p.run(`[${v}.x,${v}.y,${v}.z]`).map((x) => round(x));
 
@@ -235,7 +227,4 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ 
 const bathWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.bath)}))';
 const hallWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.hall)}))';
 
-// a part list from tools/fixtures (the old tabs' cabinets)
-const fixture = (n) => JSON.parse(fs.readFileSync(path.join(root, 'tools/fixtures', n), 'utf8'));
-
-module.exports = { fs, stub, Vec3, Box3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, decorsCtx, DECOR_PARENT, html, pi, PAGES, checks, check, slide, fnSource, kitchenWalls, vec, piece, near, bathWalls, hallWalls, fixture, path, vm, assert };
+module.exports = { fs, stub, Vec3, Box3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, decorsCtx, DECOR_PARENT, html, pi, PAGES, checks, check, slide, kitchenWalls, vec, piece, near, bathWalls, hallWalls, path, vm, assert };

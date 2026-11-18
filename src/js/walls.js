@@ -266,7 +266,7 @@ function fadeSide(w,vw){
 function fadeRule(w,vw){const r=fadeWall(w,vw).r.map(v=>v*MM),side=fadeSide(w,vw);return side?()=>sideVisible(side,r,camera.position):()=>true;}
 
 
-/* doors. Entrance: as in the hall tab — dark metal frame set 100 mm into the bearing wall from the hall side,
+/* doors. Entrance: dark metal frame set 100 mm into the bearing wall from the hall side,
    leaf hinged on the left, opening outward to the stairs, a square lever handle on a plate on each side (a key cylinder outside,
    a thumb-turn inside).
    Bathroom: hinged at the entrance end, opens into the hall left to right; a 10 mm lining through the wall round the opening

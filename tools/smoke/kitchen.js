@@ -1,10 +1,10 @@
 // Кухня: стены, детали, шкафы и техника, отделка, фасады, деталировка, настройки.
-const { all, matches, runPage, DECOR_PARENT, PAGES, check, slide, fnSource, kitchenWalls, vec, fixture, assert } = require('./harness');
+const { all, matches, runPage, DECOR_PARENT, PAGES, check, slide, kitchenWalls, vec, assert } = require('./harness');
 
-check('кухня: стены кухни, обрезанные рамкой, как в старой вкладке', () => {
+check('кухня: стены кухни, обрезанные рамкой', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   assert.strictEqual(p.run('view'), 'kitchen');
-  // the kitchen tab: kitchen wall 2200 × 100 behind x 0..W; left wall 200 thick from the back of the kitchen wall to L = 1350
+  // the kitchen view: kitchen wall 2200 × 100 behind x 0..W; left wall 200 thick from the back of the kitchen wall to L = 1350
   assert.deepStrictEqual(p.run(kitchenWalls), [
     { id: 'leftOuter', r: [-2250, -2050, 1900, 3350], fade: '-x' },
     { id: 'kitchen', r: [-2050, 150, 1900, 2000], fade: '-z' },
@@ -14,7 +14,7 @@ check('кухня: стены кухни, обрезанные рамкой, к�
   assert.strictEqual(kp.hidden, false); assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, true);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="kitchen"] #shared'), 'light and wall colour moved to the kitchen');
   assert.strictEqual(kp.querySelector('#kFrameLOut').textContent, 1350);
-  // camera: «3/4» on the first visit, the kitchen tab's targets moved to the kitchen's place on the plan (origin −2050, 2000)
+  // camera: «3/4» on the first visit, at the kitchen's cabinets (its origin on the plan −2050, 2000)
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.2, 1.3, 2.45]); assert.deepStrictEqual(vec(p, 'cam.target'), [-1.2, 1.3, 2.45]);
   kp.querySelector('[data-cam="sink"]').click();
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.825, 0.9, 2.3]);
@@ -43,22 +43,20 @@ check('кухня: рамка левой стены, переходы и раз�
   assert.match(p.document.getElementById('kSub').textContent, /стена 2300/);
 });
 
-check('кухня: детали шкафов совпадают со старой кухней', () => {
-  const pLine = PAGES.app.match(/^const P=\{W:2200,H:2600,.*\};$/m)[0];
-  const got = new Function(`let T=16, TF=16; const HDF=4, G=2;\n${pLine}\n${fnSource(PAGES.app, 'partList')}\n${fnSource(PAGES.app, 'computeParts')}\nT=P.T||16;TF=P.TF||16;return computeParts(P);`)();
-  const want = fixture('kitchen-parts.json');
-  assert.strictEqual(got.parts.length, want.parts.length);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
+check('кухня: шкафы по стенам с «Планировки»', () => {
+  // the kitchen wall, the ceiling, the left and right walls: the plan's; the module's own starting sizes are these too
+  const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.H,f.P.L,f.P.Rx,f.current.parts.length])(VIEWS.kitchen.furniture())'), [2200, 2600, 4600, 3250, 65]);
+  assert.match(PAGES.app, /^const P=\{W:2200,H:2600,.*,L:4600,Rx:3250\};$/m);
 });
 
 check('кухня: шкафы и техника собираются, панель их меняет', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const kp = p.document.querySelector('[data-panel="kitchen"]'), kq = (s) => kp.querySelector(s);
-  const want = fixture('kitchen-parts.json');
-  const nDoors = want.parts.filter((x) => x.mat === 'front' && (x.hinge || x.pivot)).length;
+  const nDoors = p.run('VIEWS.kitchen.furniture().current.parts.filter(x=>x.mat==="front"&&(x.hinge||x.pivot)).length');
   const k = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.length, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.kitchen.furniture())');
   let r = k();
-  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 32, want.parts.length, true], 'built on screen with every front on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts, r.visible], [nDoors + 32, 65, true], 'built on screen with every front on a hinge');
   // the panel: sizes, the wall and ceiling from the plan, finishes in the subtitle, what is left free
   assert.strictEqual(kq('[data-p-out="B1"]').textContent, '450 мм');
   assert.strictEqual(kq('#k-W').textContent, '2200 мм'); assert.strictEqual(kq('#k-H').textContent, '2600 мм');

@@ -206,10 +206,10 @@ check('кухня: короткая стена ничего не ужимает,
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
   const kq = (s) => p.document.querySelector('[data-panel="kitchen"]').querySelector(s);
   const P = () => p.run('(f=>[f.P.W,f.P.Fr,f.P.Hx])(VIEWS.kitchen.furniture())');
-  // the kitchen wall down to its least on the plan and back: the fridge niche stays, the panel says how much is over
+  // the kitchen wall down to its least on the plan (the bathroom narrowed to the shaft, the shower opening and their walls: 1700) and back: the fridge niche stays, the panel says how much is over
   slide(p, 'bW', 1350); p.tick();
-  assert.deepStrictEqual(P(), [1600, 600, -150]);
-  assert.deepStrictEqual([kq('#k-runOver').hidden, kq('#k-runOver').textContent], [false, 'Тумбы и ниша холодильника длиннее стены на 500 мм']);
+  assert.deepStrictEqual(P(), [1700, 600, -150]);
+  assert.deepStrictEqual([kq('#k-runOver').hidden, kq('#k-runOver').textContent], [false, 'Тумбы и ниша холодильника длиннее стены на 400 мм']);
   slide(p, 'bW', 1950); p.tick();
   assert.deepStrictEqual(P(), [2200, 600, -150]);
   assert.strictEqual(kq('#k-runOver').hidden, true);

@@ -13,11 +13,11 @@ const APT_A={
   bW:1950, kL:4600,                 // bathroom from the hall's left wall to the left bearing wall (the kitchen wall's length follows); kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
   bNiche:1250,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet (the sink's niche 600 past it)
-  bL:1100, bWs:500, bStub:550,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
-  bGap:500,                         // opening between the wall at the niche end and the shower partition
+  bL:1100, bStub:550,               // bath tab: niche depth, partition stub next to the tall cabinet
+  bGap:500,                         // opening into the shower, between the wall at the niche end and the shower partition (the wall at the niche end is what is left)
   shStep:200,                       // the step across that opening: a low wall, its height (the shower tray behind it is 150 high)
   rX:250, rZ:250,                   // sewer riser box in the back-left corner of the bathroom
-  vD:400,                           // vent shaft inside: from its wall to the kitchen wall (how far it is from the bathroom doorway follows)
+  vW:850, vD:400,                   // vent shaft inside: from the shower partition to the hall wall, from its wall to the kitchen wall (how far it is from the bathroom doorway follows)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
   eD0:54, eD1:946, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top
   eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
@@ -38,7 +38,8 @@ function apartment(a){
   const winX=(xL+A.hallW)/2;           // window centre, middle of the kitchen
   const zV0=kZ0-A.wt-A.vD;             // vent shaft wall (bathroom side); the shaft runs from it to the kitchen wall
   const bx=v=>xL+v, bz=v=>zB0+v;       // bath tab coordinates → plan
-  const xSh=bx(A.bWs+A.bGap);          // shower partition, bathroom-niche side
+  const xSh=xB1-A.vW-A.wt;             // shower partition, bathroom-niche side: the vent shaft past it
+  const bWs=xSh-xL-A.bGap;             // wall at the niche end: from the left wall up to the opening into the shower
 
   const WALLS=[
     {id:'entry',name:'Несущая стена: вход и санузел',r:[xL-A.bear,A.hallW+A.bear,-A.bear,0],ext:'-z',rooms:['hall','bath'],holes:[[A.eD0,A.eD1,A.eDH]]},
@@ -49,9 +50,9 @@ function apartment(a){
     {id:'kitchen',name:'Стена кухни',r:[xL,A.kOver,kZ0,kZ1],rooms:['kitchen','bath','hall']},
     {id:'passRight',name:'Стенка справа от прохода на кухню',r:[A.hallW-A.kOverR,A.hallW,kZ0,kZ1],rooms:['hall','kitchen']},   // as the kitchen wall's end on the other side of the passage, its own length
     {id:'bathStub',name:'Перегородка у пенала',r:[bx(A.bNiche),bx(A.bNiche+A.wt),zB0,bz(A.bStub)],rooms:['bath']},
-    {id:'nicheEnd',name:'Стенка в конце ниши',r:[xL,bx(A.bWs),bz(A.bL),bz(A.bL+A.wt)],rooms:['bath']},
+    {id:'nicheEnd',name:'Стенка в конце ниши',r:[xL,bx(bWs),bz(A.bL),bz(A.bL+A.wt)],rooms:['bath']},
     {id:'shower',name:'Стенка между душем и раковиной',r:[xSh,xSh+A.wt,bz(A.bL),kZ0],rooms:['bath']},   // from the niche end down to the kitchen wall
-    {id:'showerStep',name:'Ступенька в душ',r:[bx(A.bWs),xSh,bz(A.bL),bz(A.bL+A.wt)],h:A.shStep,rooms:['bath']},   // across the opening to the shower, as thick as the walls
+    {id:'showerStep',name:'Ступенька в душ',r:[bx(bWs),xSh,bz(A.bL),bz(A.bL+A.wt)],h:A.shStep,rooms:['bath']},   // across the opening to the shower, as thick as the walls
     {id:'shaft',name:'Стенка вентшахты',r:[xSh+A.wt,xB1,zV0,zV0+A.wt],rooms:['bath']},   // closes the shaft between the partition, the hall wall and the kitchen wall
     {id:'riser',name:'Канализационный короб',r:[xL,bx(A.rX),zB0,bz(A.rZ)],rooms:['bath']}
   ];
@@ -64,7 +65,7 @@ function apartment(a){
     {id:'kitchen',name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],origin:[xL,kZ1],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+825]}   // near the kitchen wall corner, where it was before the kitchen grew
   ];
   const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
-  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,kW,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
+  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,kW,bWs,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
 }
 
 /* What does not fit with these sizes: [] when everything does. The plan's size sliders stop at the last value that fits.

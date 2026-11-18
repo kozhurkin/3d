@@ -48,10 +48,10 @@ function buildDims(){
   dim(A.hallW-200,kZ1,A.hallW-200,zEnd,`${A.kL}`);
   dim(xL,zEnd-250,A.hallW,zEnd-250,`${A.hallW-xL}`);
   dim(xL,bz(A.bL)-400,xB1,bz(A.bL)-400,`${xB1-xL}`);
-  dim(xL,bz(A.bL)+200,bx(A.bWs+A.bGap),bz(A.bL)+200,`${A.bWs+A.bGap}`);
-  dim(bx(A.bWs+A.bGap+A.wt),bz(A.bL)+200,xB1,bz(A.bL)+200,`${xB1-bx(A.bWs+A.bGap+A.wt)}`);
+  dim(xL,bz(A.bL)+200,bx(bWs+A.bGap),bz(A.bL)+200,`${bWs+A.bGap}`);
+  dim(bx(bWs+A.bGap+A.wt),bz(A.bL)+200,xB1,bz(A.bL)+200,`${A.vW}`);
   dim(-280,A.hL1+A.bDoor,-280,zV0,`${zV0-A.hL1-A.bDoor}`);
-  dim(bx(A.bWs+A.bGap+A.wt)+80,zV0+A.wt,bx(A.bWs+A.bGap+A.wt)+80,kZ0,`${A.vD}`);
+  dim(bx(bWs+A.bGap+A.wt)+80,zV0+A.wt,bx(bWs+A.bGap+A.wt)+80,kZ0,`${A.vD}`);
   dim(xL,zB0+420,bx(A.bNiche),zB0+420,`${A.bNiche}`);
   dim(bx(A.bNiche+A.wt),zB0+420,xB1,zB0+420,`${xB1-bx(A.bNiche+A.wt)}`);
   dim(-1350,zB0,-1350,kZ0,`${kZ0-zB0}`);
@@ -93,7 +93,7 @@ function renderFacts(){
     `<div class="room">Прихожая</div><dl class="facts">${
       row('Ширина',A.hallW)+row('Левая стена',`${A.hL1} + проём ${A.bDoor} (h ${A.bDoorH}) + ${hLen-A.hL1-A.bDoor}`)+row('Правая стена',`${hLen} до кухонной стены`)+row('Входной проём',`${A.eD1-A.eD0} × ${A.eDH}, откос до двери ${A.eRv}, несущая стена ${A.bear}`)}</dl>`+
     `<div class="room">Санузел</div><dl class="facts">${
-      row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Вентшахта',`${xB1-bx(A.bWs+A.bGap+A.wt)} × ${A.vD}, стенка в ${zV0-A.hL1-A.bDoor} от проёма`)}</dl>`+
+      row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Душ',`${bWs+A.bGap}, вход ${A.bGap}, стенка в конце ниши ${bWs}`)+row('Вентшахта',`${A.vW} × ${A.vD}, стенка в ${zV0-A.hL1-A.bDoor} от проёма`)}</dl>`+
     `<div class="room">Кухня</div><dl class="facts">${
       row('Стена',`${kW}, выступает за стену прихожей на ${A.kOver}`)+row('Левая и правая стены',A.kL)+row('Ширина',A.hallW-xL)+row('Окно',`${A.winW} × ${A.winH}, от пола ${A.winS}, по центру внешней стены`)+row('Проход из прихожей',`${A.hallW-A.kOver-A.kOverR}, стенки ${A.kOver} слева и ${A.kOverR} справа`)}</dl>`+
     `<p class="note" style="margin:10px 0 0">Внешние стены ${A.bear} мм (со входом, левая стена санузла и кухни, правая стена прихожей и кухни, стена с окном), остальные ${A.wt} мм, потолок ${H}. Исходные размеры внутренних стенок санузла взяты из вкладки «Санузел», входного проёма — из «Прихожей».</p>`;
@@ -140,8 +140,8 @@ const SIZES=[
     {k:'rX',n:'Короб: вдоль задней стены',min:100,max:600,step:10},
     {k:'rZ',n:'Короб: вдоль левой стены',min:100,max:600,step:10},
     {k:'bStub',n:'Перегородка у пенала',min:0,max:1500,step:10},
-    {k:'bWs',n:'Стенка в конце ниши',min:0,max:1500,step:10},
     {k:'bGap',n:'Проход к душу',min:300,max:1000,step:10},
+    {k:'vW',n:'Вентшахта: ширина',min:100,max:2000,step:10},
     {k:'vD',n:'Вентшахта: глубина',min:100,max:1500,step:10}]],
   ['Кухня',[
     {k:'kOver',n:'Выступ кухонной стены в прихожую',min:0,max:500,step:10},

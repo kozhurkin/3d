@@ -45,9 +45,11 @@ check('санузел: ступенька в проёме к душу — 200 м
   assert.strictEqual(p.run(`wallLines.find(l=>l.w.id==='showerStep').e.material===edgeMat`), true);
   assert.deepStrictEqual(p.run(`wallFeet.map(f=>f.m.material===lowFootMat?f.id:f.m.material===footMat?'':'?').filter(Boolean)`), ['showerStep']);
   assert.ok(r.walk.length === 1 && r.walk[0] < p.run('STEP'), 'lower than what the walker steps over');
-  // it follows the opening on the plan
-  p.run('setModel({bGap:600,bWs:400})'); p.tick();
+  // it follows the opening on the plan: the opening grows into the wall at the niche end, the shower partition and the vent shaft (850) stay
+  p.run('setModel({bGap:600})'); p.tick();
   assert.deepStrictEqual(p.run(`WALLS.find(w=>w.id==='showerStep').r`), [-1650, -1050, 1100, 1200]);
+  assert.deepStrictEqual(p.run(`['nicheEnd','shower','shaft'].map(id=>WALLS.find(w=>w.id===id).r.slice(0,2))`), [[-2050, -1650], [-1050, -950], [-950, -100]]);
+  assert.deepStrictEqual(p.run('[bWs, A.vW]'), [400, 850]);
   // the cut height lower than the step cuts it as well
   p.run('VS.bath.Wh=4'); p.tick();
   near(p.run(`wallParts.find(x=>x.id==='showerStep').m.scale.y`), 104 / 200, 'cut at 4 % of 2600 = 104 mm');
@@ -80,7 +82,7 @@ check('санузел: душевой поддон заполняет душ з�
   // on the plan always; it follows the shower's walls
   p.run('showView("plan")'); p.fly(); p.tick();
   assert.strictEqual(p.run(`${T}.visible`), true, 'on the plan');
-  p.run('setModel({bGap:600,bL:1000})'); p.tick();
+  p.run('setModel({vW:750,bL:1000})'); p.tick();
   assert.deepStrictEqual(box(body), [-2050, -950, 0, 150, 1100, 1900]);
   assert.match(info(body)[1], /^110 × 80 см/);
 });
@@ -200,8 +202,8 @@ check('санузел: полупрозрачная шторка 220 см до �
     'Штанга прямая, 75 см: слева в перегородку, справа заходит за стенку у ниши и упирается в шар кронштейна на её задней стороне; нержавеющая сталь, хром, Ø 2 см; в 239 см от пола.',
     'Низ шторки в 1 см над поддоном.',
     'Нажатие задёргивает шторку или отодвигает её за стенку.']);
-  // a wider opening and a shorter niche on the plan (as the tray's check has them): the rod longer and nearer, the curtain stays drawn across
-  p.run('setModel({bGap:600,bL:1000})'); p.tick();
+  // a wider opening (the shaft narrower, the wall at the niche end as it was) and a shorter niche on the plan: the rod longer and nearer, the curtain stays drawn across
+  p.run('setModel({bGap:600,vW:750,bL:1000})'); p.tick();
   assert.deepStrictEqual(pos(rp('run')), [675, 2393, 1145]);
   assert.strictEqual(p.run(`${D}.g.userData.edge`), 1090);
 });

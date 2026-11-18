@@ -48,7 +48,7 @@ function buildRooms(){
   roomMats=ROOMS.map(r=>{
     const m=new THREE.MeshStandardMaterial({roughness:.9,...BEHIND});
     const p=new THREE.Mesh(polyFloorGeometry(roomPoly(r)),m);p.receiveShadow=true;roomGroup.add(p);return m;});
-  ROOMS.forEach(r=>{const t=roomCaption(r);floorText(t,r.at[0],r.at[1],.17,t.length-roomArea(r).length);});   // the name and the floor area of the room
+  ROOMS.forEach(r=>{const t=roomCaption(r);floorText(t,r.at[0],r.at[1],.153,t.length-roomArea(r).length);});   // the name and the floor area of the room (153 mm a line)
 }
 
 /* room names lying on the floor */

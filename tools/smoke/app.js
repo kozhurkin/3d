@@ -255,6 +255,7 @@ check('«Планировка»: «Резать шкафы по стенам» (
 
 check('названия комнат на полу: холст по ширине текста в шрифте, как он есть сейчас (веб-шрифт пришёл позже — шире)', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  assert.deepStrictEqual(p.run('nameTexts.map(n=>n.h)'), [0.153, 0.153, 0.153], 'a line 153 mm high (170 less 10 %)');
   // the fallback font: 100 px wide; then the web font has come: 150 px
   const paint = (w) => p.run(`(()=>{nameTexts.forEach(n=>{n.g.measureText=()=>({width:${w}});n.t.__d=0;n.t.dispose=()=>{n.t.__d++;};});paintNames();
     return nameTexts.map(n=>[n.c.width,+(n.m.scale.x/n.h).toFixed(4),n.t.__d]);})()`);

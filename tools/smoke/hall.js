@@ -274,7 +274,7 @@ check('прихожая: ящик для инструмента STANLEY FatMax �
 
 check('входная дверь: квадратные ручки на накладках, снаружи личинка, в прихожей вертушка, ничего не выходит за откос', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
-  // the handle's parts on the leaf, in its holder's mm: [x0, x1, y0, y1, z0, z1]; the leaf is 0…eLw along x, 0…70 across (the hall at 70)
+  // the handle's parts on the leaf, in its holder's mm: [x0, x1, y0, y1, z0, z1]; the leaf is -eLw…0 along x (hinged at 0), 0…70 across (the hall at 70)
   const parts = p.run(`doors.find(d=>d.hole==="entry:0").g.children.filter(m=>typeof m.userData.whole==="number").map(m=>{const g=m.geometry.args,c=m.position;
     return [[c.x,g[0]],[c.y,g[1]],[c.z,g[2]]].flatMap(([v,s])=>[v-s/2,v+s/2].map(u=>Math.round(u*1000)));})`);
   const hall = parts.filter((b) => b[4] >= 70), out = parts.filter((b) => b[5] <= 0);
@@ -282,11 +282,23 @@ check('входная дверь: квадратные ручки на накл�
   // neck, lever, plate on each side; the thumb-turn in the hall (base, wing), the key cylinder and its keyway outside
   assert.deepStrictEqual([hall.length, out.length], [5, 5]);
   const eLw = p.run('A.eD1-A.eD0-2*EF-6');
-  assert.deepStrictEqual(hall[2], [eLw - 105, eLw - 55, 830, 1070, 70, 80], 'the plate, 80 in from the free edge');
-  assert.deepStrictEqual(hall[1], [eLw - 202, eLw - 72, 992, 1008, 114, 130], 'the lever toward the hinge, 60 out');
-  assert.deepStrictEqual(out[1], [eLw - 202, eLw - 72, 992, 1008, -60, -44]);
+  assert.deepStrictEqual(hall[2], [55 - eLw, 105 - eLw, 830, 1070, 70, 80], 'the plate, 80 in from the free edge');
+  assert.deepStrictEqual(hall[1], [72 - eLw, 202 - eLw, 992, 1008, 114, 130], 'the lever toward the hinge, 60 out');
+  assert.deepStrictEqual(out[1], [72 - eLw, 202 - eLw, 992, 1008, -60, -44]);
   assert.deepStrictEqual(hall[4].slice(2), [885, 915, 86, 104], 'the thumb-turn\'s wing');
   assert.deepStrictEqual(out[3].slice(2), [882, 918, -13, -10], 'the key cylinder under the lever');
   // the hall's side: nothing past the reveal the door sits in (A.eRv)
   assert.ok(Math.max(...hall.map((b) => b[5])) - 70 < p.run('A.eRv'));
+});
+
+check('входная дверь навешена на правый косяк и открывается наружу, к лестнице', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  // the hinge 3 in from the right bar of the frame; the leaf toward the left one
+  assert.strictEqual(p.run('Math.round(entranceDoor().g.position.x*1000)'), p.run('A.eD1-EF-3'));
+  assert.strictEqual(p.run('Math.round((entranceDoor().g.children[0].position.x)*1000)'), p.run('-(A.eD1-A.eD0-2*EF-6)/2'));
+  // opened: its free edge is out on the stairs (past the frame's outer face), by the right jamb
+  p.run('(entranceDoor().t=entranceDoor().max, doorsChanged())'); for (let i = 0; i < 200; i++) p.tick();
+  const [x, z] = p.run(`(()=>{const d=entranceDoor(),eLw=(A.eD1-A.eD0-2*EF-6)*MM,a=d.s*d.a;return [d.g.position.x-eLw*Math.cos(a),d.g.position.z+eLw*Math.sin(a)].map(v=>Math.round(v*1000));})()`);
+  assert.ok(z < p.run('-A.eRv-ED'), 'the free edge outside');
+  assert.ok(x > p.run('(A.eD0+A.eD1)/2'), 'by the right jamb');
 });

@@ -329,7 +329,6 @@ check('обход: от входа можно дойти в душ, санузе
       if(u<0||v<0||u>=nx||v>=nz||seen[u*nz+v])return;seen[u*nz+v]=1;if(free(u,v))q.push([u,v]);else seen[u*nz+v]=2;});}
     const at=(x,z)=>{const [i,j]=cell(x*MM,z*MM);return seen[i*nz+j]===1;};
     // the shower: between the wall at the niche end, the shower partition, the kitchen wall and the left wall
-    const xSh=bx(bWs+A.bGap);
     return {shower:at((xL+xSh)/2,(bz(A.bL+A.wt)+kZ0)/2),bath:at(...ROOMS.find(r=>r.id==='bath').at),kitchen:at((xL+A.hallW)/2,(kZ1+zEnd)/2)};
   })()`);
   assert.deepStrictEqual(r, { shower: true, bath: true, kitchen: true });

@@ -1,7 +1,9 @@
 /* ---------- apartment model, mm: one for every tab ----------
    Plain data and arithmetic only (no THREE, no DOM), so it also runs in Node for checks.
    x → right, z → from the entrance door toward the kitchen (top view: entrance at the top, kitchen at the bottom).
-   origin: inner corner of the hall between the bearing wall with the entrance door and the hall's left wall */
+   origin: inner corner of the hall between the bearing wall with the entrance door and the hall's left wall
+   Set here: what the building has (walls, the vent shaft) and where an opening stands in it; what is left between them
+   (the wall past the bathroom door, the kitchen wall's length, the wall at the bathroom niche end) follows in apartment() */
 const APT_A={
   H:2600,                           // ceiling height
   hallW:1200,                       // hall between its side walls
@@ -10,8 +12,9 @@ const APT_A={
                                     // (hL1: the door's 70 mm casing clears the 550 mm sink in the bathroom niche by 40)
   kOver:150,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kOverR:250,                       // the wall right of the way into the kitchen: this far out of the hall's right wall (the tool box by it, the racks behind)
-  bW:1950, kL:4600,                 // bathroom from the hall's left wall to the left bearing wall (the kitchen wall's length follows); kitchen left and right walls from the kitchen wall to the window wall
+  kL:4600,                          // kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
+  bW:1950,                          // bathroom from the hall's left wall to the left bearing wall (the kitchen wall's length follows)
   bNiche:1250,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet (the sink's niche 600 past it)
   bL:1100, bStub:550,               // bath tab: niche depth, partition stub next to the tall cabinet
   bGap:500,                         // opening into the shower, between the wall at the niche end and the shower partition (the wall at the niche end is what is left)
@@ -65,7 +68,7 @@ function apartment(a){
     {id:'kitchen',name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],origin:[xL,kZ1],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+825]}   // near the kitchen wall corner, where it was before the kitchen grew
   ];
   const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
-  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,kW,bWs,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
+  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,kW,xSh,bWs,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
 }
 
 /* What does not fit with these sizes: [] when everything does. The plan's size sliders stop at the last value that fits.

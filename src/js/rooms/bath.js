@@ -133,7 +133,7 @@ function buildSanitary(g,opts){
    The bath tab shows it only while the frame takes it in whole (the left wall up to the kitchen wall). Bath axes, mm */
 const TRAY={H:150,drain:120,at:.25};   // height; the drain's side; where it is along the tray from the left wall
 let tray=null;
-const trayRect=()=>[0,bWs+A.bGap,A.bL+A.wt,kZ0-zB0];   // x0, x1, z0, z1
+const trayRect=()=>[0,xSh-xL,A.bL+A.wt,kZ0-zB0];   // x0, x1, z0, z1
 /* the top's relief as a height field (mm), lit through a normal map; its colour an even white, a shade darker down in the relief.
    The slate: value noise bent by noise of its own (domain warp) cut in thin layers, each ending in a short sharp step, as split
    stone flakes; a fine grain over it; the four faces falling 6 mm to the drain. 1 px ≈ 1 mm of a 1000 × 700 tray.
@@ -270,7 +270,7 @@ const CURT={h:2200,w:1000,off:45,ball:16,gap:10,rings:10,pad:10,edge:10,flat:5,r
 // the rod's height: the cloth from 10 over the tray; the hole's top resting on the ring's bottom, the ring's inside on the rod (Ø20)
 const curtRodY=()=>{const C=CURT,yh=TRAY.H+C.gap+C.h-C.eye[1];return yh+C.eye[0]-C.tube+2*C.ring[1]-C.tube-10;};
 // the rod (mm): its bracket's ball at xb on the wall's back (zw), the rod's end in it, the run clear of the ball from xs to x1, at z
-const curtRod=()=>{const C=CURT,xb=bWs/2,zw=A.bL+A.wt;return {xb,zw,xs:xb+C.ball,x1:bWs+A.bGap,z:zw+C.off};};
+const curtRod=()=>{const C=CURT,xb=bWs/2,zw=A.bL+A.wt;return {xb,zw,xs:xb+C.ball,x1:xSh-xL,z:zw+C.off};};
 // frosted vinyl: plain grey, 60 % clear
 const CURT_OP=.4,curtainMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#cccccc').convertSRGBToLinear(),roughness:.35,transparent:true,opacity:CURT_OP,depthWrite:false,side:THREE.DoubleSide});
 /* its half shadow: a shadow map knows no half clear, so for the shadow the cloth is a fine random sieve of 4 mm cells, as

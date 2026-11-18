@@ -124,16 +124,20 @@ function buildCase(g){
   b(x0-3,x0,lid+30,lid+58,zc-45,zc+45,badgeMat,'badge');
 }
 
-/* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ---------- */
+/* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ----------
+   The cabinet goes from wall to wall: what stands at its sides is inside the hall, 60 in from them (as the kitchen's and the bathroom's) */
 function buildDims(dim,gaps){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),z=P.D+60,Hb=current.Hb;
-  const ow=P.W-P.Lw-P.Rw;
+  const ow=P.W-P.Lw-P.Rw,xr=P.W-60;
   dim(V(0,P.H+140,z),V(P.W,P.H+140,z),`${P.W}`,Y);
-  dim(V(P.W+160,0,z),V(P.W+160,P.H,z),`${P.H}`,X);
-  dim(V(-160,Hb,z),V(-160,P.H,z),`${P.Ht}`,X);
+  dim(V(xr,0,z),V(xr,P.H,z),`${P.H}`,X);
+  dim(V(60,Hb,z),V(60,P.H,z),`${P.Ht}`,X);
+  // across the opening at 260: the left column (the false panel), the opening, the right column
+  dim(V(0,260,z),V(P.Lw,260,z),`${P.Lw}`,Y);
   dim(V(P.Lw,260,z),V(P.W-P.Rw,260,z),`проём ${ow}`,Y);
+  dim(V(P.W-P.Rw,260,z),V(P.W,260,z),`${P.Rw}`,Y);
   dim(V((P.Lw+P.W-P.Rw)/2,0,z),V((P.Lw+P.W-P.Rw)/2,Hb,z),`${Hb}`,X);
-  dim(V(P.W+160,P.H+140,0),V(P.W+160,P.H+140,P.D),`${P.D}`,Y);
+  dim(V(xr,P.H+140,0),V(xr,P.H+140,P.D),`${P.D}`,Y);
   // between the shelves of the right column; in the mezzanine, each shelf with the bottom and the top over it (two boxes,
   // or the sections of one)
   if(P.N)gaps(current.parts.filter(q=>/^(Дно|Полка|Крышка) правой колонны$/.test(q.name)));

@@ -103,7 +103,7 @@ check('перелёт «Санузел» → «Прихожая»: входна�
   assert.deepStrictEqual(on(), [false, false, false], 'the opening is past the bathroom frame');
   p.run('showView("hall")');
   // the bearing wall goes from the niche (x −2250…−700) to the hall (−100…1400): halfway it is −1175…350,
-  // the opening (50…942) is not in it yet — no door, no swing
+  // the opening (54…946) is not in it yet — no door, no swing
   p.tick(25, 17);
   assert.deepStrictEqual(on(), [false, false, false], 'halfway');
   // at 0.97 of the way the wall is −160…1341: the opening is whole, the door is there with its own materials (nothing is cut)

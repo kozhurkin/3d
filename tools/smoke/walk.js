@@ -2,7 +2,7 @@
 const { runPage, PAGES, check, near, assert } = require('./harness');
 
 // the first visit: the back to the entrance door, the left shoulder to the shelf column (m)
-const HX = 0.762, HZ = 0.16;   // the opening 50 from the hall's left wall
+const HX = 0.766, HZ = 0.16;   // the opening 54 from the hall's left wall
 const eye = (p) => p.run('[camera.position.x, camera.position.y, camera.position.z]');
 // a key held for n frames of 16 ms
 const hold = (p, code, n) => { p.key('keydown', code); p.tick(n); p.key('keyup', code); };
@@ -89,11 +89,11 @@ check('обход: стены и закрытая дверь не пускают
   near(yaw(p), Math.PI / 2, 'facing −x');
   // from the start, along the entrance door: the left false panel's side stops the body, its whole face
   hold(p, 'KeyW', 90);
-  near(eye(p)[0], 0.066 + 0.15, 'stops at the false panel (66 wide)');
+  near(eye(p)[0], 0.070 + 0.15, 'stops at the false panel (70 wide)');
   p.run('setEye(0.6,1.65,0.45)'); p.tick();
   hold(p, 'KeyW', 90);
-  // by the entrance: the hall cabinet's cladding of the reveal ends 50 mm before the eyes (z 0.4, x up to 65 mm): its corner stops the body
-  near(eye(p)[0], 0.065 + Math.sqrt(0.15 ** 2 - 0.05 ** 2), 'stops at the corner of the cladding');
+  // by the entrance: the hall cabinet's cladding of the reveal ends 50 mm before the eyes (z 0.4, x up to 69 mm): its corner stops the body
+  near(eye(p)[0], 0.069 + Math.sqrt(0.15 ** 2 - 0.05 ** 2), 'stops at the corner of the cladding');
   // past the bathroom door, nothing along the wall: up to the wall itself
   p.run('setEye(0.6,1.65,1.55)'); p.tick();
   hold(p, 'KeyW', 90);

@@ -7,7 +7,7 @@
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
-const P={W:1200,H:2600,D:400,Ht:600,Lw:66,Rw:274,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
+const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
 
 /* ---------- parts (mm) ---------- */

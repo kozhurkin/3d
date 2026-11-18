@@ -616,7 +616,7 @@ function buildWardrobe(g,opts){
    tips its front up over the drawer's front, slides forward and rises level with the seat, its back against the seat's front:
    one bed with the chaise, 1950 × 1420 between the arms in front of the thin back. Both go as the kitchen's fronts do
    (clicks — on the seat or the drawer for the bed, «Открыты/Закрыты», the walk) */
-const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20,gap:150,lidDx:10};   // gap: from the window wall; lidDx: the chaise's lid to the left of its box
+const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20,gap:150,lidDx:10,boxDx:20};   // gap: from the window wall; lidDx: the chaise's lid in from the arm's side; boxDx: its box's window side
 const LID_MAX=40*Math.PI/180;   // rad: how far the chaise's lid opens: 40°, as far as its gas struts go
 const LID_EASE=1-Math.sqrt(1-.09),LID_HOLD=HOLD_RATE/2;   // it goes half as fast as a cabinet front (common.js), on a click and held
 const BED_TILT=22*Math.PI/180;  // rad: the bed block's front up over the drawer's front as it comes out
@@ -629,7 +629,7 @@ const sofaBoxMat=new THREE.MeshStandardMaterial({color:0xeeeeea,roughness:.8}); 
 const bedMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3d3e40').convertSRGBToLinear(),roughness:.9});   // the bed block: anthracite cloth
 const sofaAt=()=>P.L-SF.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
 function buildSofa(g,opts){
-  const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base,lidDx}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
+  const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base,lidDx,boxDx}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
   const group=()=>{const q=new THREE.Group();q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,sofaAt()*MM);q.userData.info=INFO.sofa;q.userData.sofa=true;g.add(q);return q;};
   // a soft piece: rounded by r (mm) all round; mirrored, so the chaise is at x W; in a holder at (oy, oz) of its group
   const mk=(q,oy=0,oz=0)=>(x0,x1,y0,y1,z0,z1,r,mat=velourMat)=>{
@@ -645,10 +645,10 @@ function buildSofa(g,opts){
   [0,xr].forEach(x=>S(x,x+arm,lg,armH,0,D,26));   // the arms, alike, down to the legs
   const cushion=[0,1,2].map(i=>(i?S:C)(arm+i*650+3,arm+(i+1)*650-3,seat,H,back,back+220,80))[0];
   // the chaise: its box for bedding from the back to its front, walls 20 mm (white inside, 1 mm), its bottom 15 mm: inside
-  // 145 × 21 × 61 cm; in front of the arm (it ends with the seat) the base fills out to the chaise's side, in line with the lid
-  // (lidDx in from the arm's side)
+  // 145 × 21 × 61 cm; in front of the arm (it ends with the seat) the base fills out to the chaise's side, under the lid
+  // (boxDx in from the arm's side, 10 deeper than the lid's edge)
   const bz=Dc-base,t=20;
-  C(lidDx,xc,lg,ys,bz-t,bz,8);C(arm,xc,lg,ys,0,t,8);C(arm,arm+t,lg,ys,t,bz-t,8);C(xc-t,xc,lg,ys,t,bz-t,8);C(lidDx,arm,lg,ys,D,bz-t,8);
+  C(boxDx,xc,lg,ys,bz-t,bz,8);C(arm,xc,lg,ys,0,t,8);C(arm,arm+t,lg,ys,t,bz-t,8);C(xc-t,xc,lg,ys,t,bz-t,8);C(boxDx,arm,lg,ys,D,bz-t,8);
   Cf(arm+t,xc-t,lg,lg+15,t,bz-t,sofaBoxMat);
   Cf(arm+t,xc-t,lg+15,ys,bz-t-1,bz-t,sofaBoxMat);Cf(arm+t,xc-t,lg+15,ys,t,t+1,sofaBoxMat);
   Cf(arm+t,arm+t+1,lg+15,ys,t+1,bz-t-1,sofaBoxMat);Cf(xc-t-1,xc-t,lg+15,ys,t+1,bz-t-1,sofaBoxMat);
@@ -659,7 +659,7 @@ function buildSofa(g,opts){
   // stitches up the fronts of the bases, 130 mm apart
   for(let x=130;x<xc-40;x+=130)Cf(x-2,x+2,lg+15,ys-15,Dc-base,Dc-base+1.5,seamMat);
   // and up the chaise base's sides in front of the arm and of the sofa's base, as far apart, from its front back
-  for(let z=bz-130;z>D+40;z-=130)[[lidDx-1.5,lidDx],[xc,xc+1.5]].forEach(([x0,x1])=>Cf(x0,x1,lg+15,ys-15,z-2,z+2,seamMat));
+  for(let z=bz-130;z>D+40;z-=130)[[boxDx-1.5,boxDx],[xc,xc+1.5]].forEach(([x0,x1])=>Cf(x0,x1,lg+15,ys-15,z-2,z+2,seamMat));
   // legs
   [[30,30],[W-80,30],[W-80,D-base-80]].forEach(([x,z])=>S(x,x+50,0,lg,z,z+50,8,sofaLegMat));
   [[30,Dc-base-80],[xc-80,Dc-base-80]].forEach(([x,z])=>C(x,x+50,0,lg,z,z+50,8,sofaLegMat));

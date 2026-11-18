@@ -360,10 +360,10 @@ check('living: угловой диван Hoff «Слим» у правой ст�
   assert.ok(r.every((q) => q.turn === -Math.PI / 2 && q.title === 'Угловой диван-кровать «Слим» (Hoff)'), 'its back to the wall, its seat toward the desk');
   // own axes before the turn (the stub's boxes leave turns out): 2060 across, 850 deep, 910 high; the chaise 705 across, its box from the back
   // out to 1530, up to its back cushion's 910, at its far end (own x 1355…2060 → kitchen z 3745…4450: the window end; the stitches on
-  // its sides stand 1.5 out of them; its lid 10 toward the seat, over the sofa's seat, and its box's window side 10 in, in line
-  // with the lid: from 1345 to the stitches' 2051.5)
+  // its sides stand 1.5 out of them; its lid 10 toward the seat, over the sofa's seat, and its box's window side 20 in, 10 under
+  // the lid's edge: from 1345 to the lid's 2050)
   assert.deepStrictEqual(r[0].size, [2060, 850, 910]);
-  assert.deepStrictEqual([Math.round((r[1].x0 - r[0].x0) * 10) / 10, r[1].size], [2060 - 705 - 10, [705 + 2, 1530, 910]]);
+  assert.deepStrictEqual([Math.round((r[1].x0 - r[0].x0) * 10) / 10, r[1].size], [2060 - 705 - 10, [705, 1530, 910]]);
 });
 
 check('living: сиденье оттоманки дивана целиком — крышка на петле у спинки, под ней короб для белья, подушки на ней поднимаются; открывается с фасадами кухни', () => {

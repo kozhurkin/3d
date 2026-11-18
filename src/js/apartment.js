@@ -10,7 +10,7 @@ const APT_A={
                                     // (hL1: the door's 70 mm casing clears the 550 mm sink in the bathroom niche by 40)
   kOver:150,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kOverR:250,                       // the wall right of the way into the kitchen: this far out of the hall's right wall (the tool box by it, the racks behind)
-  kW:2200, kL:4600,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
+  bW:1950, kL:4600,                 // bathroom from the hall's left wall to the left bearing wall (the kitchen wall's length follows); kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
   bNiche:1250,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet (the sink's niche 600 past it)
   bL:1100, bWs:500, bStub:550,      // bath tab: niche depth, wall at the niche end, partition stub next to the tall cabinet
@@ -30,8 +30,9 @@ function apartment(a){
   const A=Object.assign({},APT_A,a);
   const hLen=A.hL;                     // hall left wall up to the kitchen wall
   const kZ0=hLen, kZ1=hLen+A.wt;       // kitchen wall (bathroom side, kitchen side)
-  const xL=A.kOver-A.kW;               // inner face of the common left wall
   const xB1=-A.wt;                     // bathroom side of the hall's left wall
+  const xL=xB1-A.bW;                   // inner face of the common left wall
+  const kW=A.kOver-xL;                 // the kitchen wall: from the left wall to its end in the hall
   const zB0=0;                         // the bathroom back wall continues the hall bearing wall
   const zEnd=kZ1+A.kL;                 // inner face of the outer wall with the window
   const winX=(xL+A.hallW)/2;           // window centre, middle of the kitchen
@@ -63,7 +64,7 @@ function apartment(a){
     {id:'kitchen',name:'Кухня',r:[xL,A.hallW,kZ1,zEnd],origin:[xL,kZ1],col:'--fl-kit',at:[(xL+A.kOver)/2,kZ1+825]}   // near the kitchen wall corner, where it was before the kitchen grew
   ];
   const BOX={x0:xL-A.bear,x1:A.hallW+A.bear,z0:-A.bear,z1:zEnd+A.bear};
-  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
+  return {A,H:A.H,hLen,kZ0,kZ1,xL,xB1,kW,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX};
 }
 
 /* What does not fit with these sizes: [] when everything does. The plan's size sliders stop at the last value that fits.

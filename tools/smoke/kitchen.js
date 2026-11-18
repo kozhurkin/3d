@@ -36,7 +36,7 @@ check('кухня: рамка левой стены, переходы и раз�
   assert.deepStrictEqual(p.run('[view, wallLines.length, doors.map(d=>d.g.visible)]'), ['plan', 13, [true, true]]);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="plan"] #shared'));
   // a size changed on the plan reaches the kitchen
-  slide(p, 'kW', 2300);
+  slide(p, 'bW', 2050);
   p.run('showView("kitchen")'); p.fly();
   assert.deepStrictEqual(vec(p, 'goalT'), [-1.925, 0.9, 2.3], 'sink target, kitchen moved 100 left');
   assert.deepStrictEqual(p.run(kitchenWalls).map((w) => w.r), [[-2350, -2150, 1900, 4650], [-2150, 150, 1900, 2000]]);
@@ -105,7 +105,7 @@ check('кухня: шкафы в своей вкладке и на «Плани�
   // «Шкафы» off: the kitchen leaves the plan
   const furn = p.document.getElementById('pFurn'); furn.checked = false; furn.dispatch('change'); p.tick();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().model.visible'), false, 'hidden on the plan');
-  slide(p, 'kW', 2300); p.tick();
+  slide(p, 'bW', 2050); p.tick();
   p.run('showView("kitchen")'); p.fly();
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
   assert.match(p.document.getElementById('k-gapBase').textContent, /справа свободно 200 мм/);
@@ -207,10 +207,10 @@ check('кухня: короткая стена ничего не ужимает,
   const kq = (s) => p.document.querySelector('[data-panel="kitchen"]').querySelector(s);
   const P = () => p.run('(f=>[f.P.W,f.P.Fr,f.P.Hx])(VIEWS.kitchen.furniture())');
   // the kitchen wall down to its least on the plan and back: the fridge niche stays, the panel says how much is over
-  slide(p, 'kW', 1600); p.tick();
+  slide(p, 'bW', 1350); p.tick();
   assert.deepStrictEqual(P(), [1600, 600, -150]);
   assert.deepStrictEqual([kq('#k-runOver').hidden, kq('#k-runOver').textContent], [false, 'Тумбы и ниша холодильника длиннее стены на 500 мм']);
-  slide(p, 'kW', 2200); p.tick();
+  slide(p, 'bW', 1950); p.tick();
   assert.deepStrictEqual(P(), [2200, 600, -150]);
   assert.strictEqual(kq('#k-runOver').hidden, true);
   // a narrower oven cabinet moves the hob in; a wider one gives it its place back
@@ -366,7 +366,7 @@ check('кухня: светильник над серединой обеденн
   click(); assert.deepStrictEqual(st(), ['MISTERHULT', 650, 1450, 1680, 754, 350, 2554, true, 'Подвесной светильник MISTERHULT (IKEA)']);
   click(); assert.strictEqual(st()[0], 'BLÅSVERK');
   // the one hung stays when the kitchen is built again
-  click(); slide(p, 'kW', 2300); p.tick(); assert.strictEqual(st()[0], 'BUNKEFLO');
+  click(); slide(p, 'bW', 2050); p.tick(); assert.strictEqual(st()[0], 'BUNKEFLO');
   // the plan's highest ceiling: BLÅSVERK's cord is 1100, so it goes up (3200 − 65 − 1100 − 460); MISTERHULT's 1600 is enough
   click(); click(); slide(p, 'H', 3200); p.tick();
   assert.deepStrictEqual(st().slice(0, 7), ['BLÅSVERK', 650, 1575, 1680, 1100, 460, 3135]);

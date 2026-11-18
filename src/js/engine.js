@@ -6,11 +6,11 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* ---------- the apartment as built now (js/apartment.js) ----------
    Its sizes are edited on the plan: setModel() swaps the model, then modelHooks rebuild what depends on it
    (walls, doors, floors, dimensions…). The sizes remembered in this browser (apt-model-v1) are the ones to start with. */
-let A,H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX,CX,CZ;
+let A,H,hLen,kZ0,kZ1,xL,xB1,kW,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX,CX,CZ;
 const MKEY='apt-model-v1';
 const modelHooks=[];
 function useModel(a){
-  ({A,H,hLen,kZ0,kZ1,xL,xB1,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX}=apartment(a));
+  ({A,H,hLen,kZ0,kZ1,xL,xB1,kW,zB0,zEnd,winX,zV0,bx,bz,WALLS,ROOMS,BOX}=apartment(a));
   CX=(BOX.x0+BOX.x1)/2*MM;CZ=(BOX.z0+BOX.z1)/2*MM;
 }
 function setModel(a){useModel(a);modelHooks.forEach(f=>f());}

@@ -189,9 +189,9 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
   const col = () => { const w = wc(); return [w[2], w[4]]; };
   p.run(`infoOf(${g0}.children[0]).next()`);
   assert.deepStrictEqual(col(), ['2/2', 'Цвет: Диамант серый U963 ST9.']);
-  const kW = p.run('A.kW'); slide(p, 'kW', kW + 200); p.tick();
+  const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick();
   assert.deepStrictEqual(col(), ['2/2', 'Цвет: Диамант серый U963 ST9.'], 'through a rebuild');
-  slide(p, 'kW', kW); p.tick();
+  slide(p, 'bW', bW); p.tick();
   p.run(`clickOf({object:${g0}.children[0]})()`);
   assert.deepStrictEqual(col(), ['1/2', 'Цвет: Белый.'], 'a click: white again');
   // hinged at their outer ends, away from the inner corner: the leg's toward the kitchen wall, the other two into the room

@@ -1,6 +1,6 @@
 /* ---------- «Кухня» view: the kitchen wall with its left wall, the cabinets and the appliances along it ----------
    Kitchen coordinates as in the kitchen tab, mm: x along the kitchen wall from the left wall, y up, z from the wall into the room;
-   the kitchen's (0,0) is its origin on the plan. The wall width and the ceiling come from the plan (A.kW, A.H),
+   the kitchen's (0,0) is its origin on the plan. The wall width and the ceiling come from the plan (kW, A.H),
    how far the left wall shows is the view's frame (VS.kitchen.L). The rest of the room (the desk, the sofa, the wardrobe…) is
    living.js's, built here with the kitchen. Own scope: the room modules share names (P, T, computeParts…). */
 (function(){
@@ -97,7 +97,7 @@ const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on 
 // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
 function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
 // sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
-function fromModel(w){P.W=A.kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+A.kW;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);
+function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);
   // the worktop's cut-out for the sink's bowl, under its rim (not in the cut list's parts: they stay as the old kitchen's)
   const top=current.parts.find(q=>q.name==='Столешница'),x=P.B1/2;
   if(top)top.hole=[x-SK.w/2,x+SK.w/2,SK.z-SK.d/2,SK.z+SK.d/2];
@@ -730,9 +730,9 @@ const k=roomKit('kitchen',{
   afterSyncFinish:()=>{const ar=kq('#k-apronReset');if(ar)ar.addEventListener('click',()=>{FIN.apron=null;applyMaterials(mats,FIN,P.Ec);k.syncFinish();k.updatePanel();});},
   view:{
     // the kitchen wall whole and the left wall up to L from it, as the kitchen tab showed them
-    frame:L=>{const [ox,oz]=O();return [ox-A.bear,ox+A.kW,kZ0,oz+L];},
+    frame:L=>{const [ox,oz]=O();return [ox-A.bear,ox+kW,kZ0,oz+L];},
     // as in the kitchen tab: the sun aims at the middle of the wall, shadows cover 6 × 6 m
-    sun:()=>{const [ox,oz]=O();return {x:(ox+A.kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
+    sun:()=>{const [ox,oz]=O();return {x:(ox+kW/2)*MM,y:A.H/2*MM,z:oz*MM,half:3};},
     defaults:{Wm:'auto',Wh:100,L:1350,sizes:true,fronts:'closed',dims:true,walls:true}
   }
 });

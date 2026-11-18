@@ -317,8 +317,11 @@ check('living: два одинаковых металлических стелл
         perf:mats[5]===perf&&perf.alphaTest===.5&&typeof perf.alphaMap.offset.y==='number'&&[0,1,2,3].every(i=>mats[i]!==perf),info:infoOf(g.children[0]),visible:g.visible};});})(VIEWS.kitchen.furniture())`);
   let r = rk();
   // kitchen axes: on the right wall (3200), their fronts at 3000 — in line with the end of the wall right of the way in; from the kitchen
-  // wall (z 0) toward the wardrobe's add-on section (1026): 500 each; 10 apart would take 1030, so 8 from the corner and between them, 10 left at the wardrobe
-  assert.deepStrictEqual(r.map((q) => q.box), [[3000, 3200, 8, 508, 0, 1750], [3000, 3200, 516, 1016, 0, 1750]]);
+  // wall (z 0) toward the wardrobe's add-on section (1026): 500 each, 4 mm bolt heads on their ends; 10 clear of them would take 1046, so of the
+  // 10 left a fifth at the corner (2: the box at 6), three fifths between them (6 between the heads: the boxes 14 apart), the rest at the wardrobe
+  assert.deepStrictEqual(r.map((q) => q.box), [[3000, 3200, 6, 506, 0, 1750], [3000, 3200, 520, 1020, 0, 1750]]);
+  const heads = p.run(`VIEWS.kitchen.furniture().appl.children.filter(o=>o.userData.rack===true).map(g=>(zs=>[Math.min(...zs),Math.max(...zs)])(g.children.filter(o=>o.userData.bolt===true).map(o=>Math.round(o.position.z*1000))))`);
+  assert.deepStrictEqual(heads, [[4, 508], [518, 1022]], 'the heads\' middles 2 out of the ends: 2 clear of the wall, 6 between the racks');
   r.forEach((q) => {
     assert.strictEqual(q.posts, 4);
     assert.deepStrictEqual(q.shelves, [70, 490, 910, 1330, 1750], 'evenly from near the floor up to the posts\' tops, 10 holes apart');
@@ -326,7 +329,7 @@ check('living: два одинаковых металлических стелл
     assert.ok(q.perf, 'the holes in the flanges\' broad faces only');
     assert.strictEqual(q.info.title, 'Металлический стеллаж');
     assert.strictEqual(q.info.lines[0], '50 × 20 см, высота 175 см.');
-    assert.strictEqual(q.info.lines[4], 'Место под оба — 102,6 см вдоль стены, от угла до шкафа; от угла и между ними по 0,8 см, до шкафа 1 см.', 'the wall from the corner (z 0) to the wardrobe (1026)');
+    assert.strictEqual(q.info.lines[4], 'Место под оба — 102,6 см вдоль стены, от угла до шкафа; от угла 0,6 см, между ними 1,4 см, до шкафа 0,6 см (с болтами по 4 мм на торцах).', 'the wall from the corner (z 0) to the wardrobe (1026)');
     assert.strictEqual(q.visible, false, 'not in the kitchen tab: on the plan and in the walk');
   });
   // a bolt in a hole: the mask's holes 42 apart from the posts' feet (10), one at each shelf's bolt (its top − 15)
@@ -342,10 +345,10 @@ check('living: два одинаковых металлических стелл
     assert.deepStrictEqual(r.map((q) => q.visible), [true, true], 'still on the plan');
     assert.strictEqual(r[0].info.lines[0], `50 × ${d / 10} см, высота 175 см.`);
   });
-  // a longer kitchen moves the sofa and the wardrobe toward the window: the racks stay 500, 10 from the corner and apart, the rest at the wardrobe
+  // a longer kitchen moves the sofa and the wardrobe toward the window: the racks stay 500, 10 clear of the heads at the corner and between them, the rest at the wardrobe
   slide(p, 'kL', 5000); p.tick();
-  assert.deepStrictEqual(rk().map((q) => q.box.slice(2, 4)), [[10, 510], [520, 1020]]);
-  assert.strictEqual(rk()[0].info.lines[4], 'Место под оба — 142,6 см вдоль стены, от угла до шкафа; от угла и между ними по 1 см, до шкафа 40,6 см.');
+  assert.deepStrictEqual(rk().map((q) => q.box.slice(2, 4)), [[14, 514], [532, 1032]]);
+  assert.strictEqual(rk()[0].info.lines[4], 'Место под оба — 142,6 см вдоль стены, от угла до шкафа; от угла 1,4 см, между ними 1,8 см, до шкафа 39,4 см (с болтами по 4 мм на торцах).');
   // a shorter one: they do not fit, none stands, the walk passes there
   slide(p, 'kL', 4550); p.tick();
   assert.deepStrictEqual(rk(), []);

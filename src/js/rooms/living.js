@@ -22,7 +22,7 @@ const INFO={
   mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
     buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
   mirror:()=>({title:'Зеркало',lines:[`40 × 40 см, в чёрной рамке ${WR.mirror.frame} мм.`,'На торце углового шкафа, от 130 до 170 см от пола.']}),
-  rack:()=>({title:'Металлический стеллаж',lines:[`${cm(RK.W)} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(rackRoom())} см вдоль стены, от угла до шкафа; от угла и между ними по ${cm(rackGap())} см, до шкафа ${cm(rackRoom()-rackAt(1)-RK.W)} см.`]}),
+  rack:()=>({title:'Металлический стеллаж',lines:[`${cm(RK.W)} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(rackRoom())} см вдоль стены, от угла до шкафа; от угла ${cm(rackAt(0))} см, между ними ${cm(rackAt(1)-rackAt(0)-RK.W)} см, до шкафа ${cm(rackRoom()-rackAt(1)-RK.W)} см (с болтами по ${RK.boltH} мм на торцах).`]}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
   sofa:{title:'Угловой диван-кровать «Слим» (Hoff)',price:29999,url:'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875',shop:'Hoff',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
@@ -500,8 +500,8 @@ function buildSofaShelf(g){
   return [];
 }
 /* the metal racks on the right wall's empty stretch: two alike side by side, RK.W wide, from the corner by the way into the kitchen (the
-   kitchen wall, z 0) toward the wardrobe's add-on section, RK.gap from the corner and between them — less, as much as the stretch leaves,
-   when it is short (none fits: none stands); 200 deep at first — their fronts in line with the end of
+   kitchen wall, z 0) toward the wardrobe's add-on section, clear of the bolt heads on their ends by RK.gap from the corner and between
+   them; on a short stretch less — a fifth of what is left at the corner, three fifths between them (none fits: none stands); 200 deep at first — their fronts in line with the end of
    the wall right of the way in; a click on either (engine.js: userData.click) makes both 250 deep, then 300, then 200 again (RK_D; it
    stays through the kitchen's rebuilds) — and 1750 high. Each: four perforated L-angle posts at its corners (their flanges outward, on plastic
    feet; round holes RK.hole across, RK.pitch apart, through both flanges), RK.n shelves evenly from near the floor up to the posts'
@@ -517,17 +517,17 @@ if(perfTex.offset){const b=RK.y0-RK.lip/2-RK.foot;perfTex.offset.y=(.5-b/RK.pitc
 const perfMat=rackMat.clone();perfMat.alphaMap=perfTex;perfMat.alphaTest=.5;   // the posts: as the rest, with the holes
 const rackFootMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.7});
 const boltMat=new THREE.MeshStandardMaterial({color:0xb9bdc1,roughness:.3,metalness:.85});   // zinc-plated
-// the stretch from the corner to the wardrobe; the gaps there (whole mm, the same at the corner, between them and at the wardrobe at
-// the most; <0: they do not fit); where each starts along the wall
+// the stretch from the corner to the wardrobe; the gaps clear of the bolt heads (whole mm): [at the corner, between them], null when
+// they do not fit; where each starts along the wall
 const rackRoom=()=>wardAt()-WR.W;
-const rackGap=()=>Math.min(RK.gap,Math.floor((rackRoom()-2*RK.W)/3));
-const rackAt=i=>rackGap()+i*(RK.W+rackGap());
+const rackGaps=()=>{const f=rackRoom()-2*(RK.W+2*RK.boltH);if(f<0)return null;const e=Math.min(RK.gap,Math.floor(f/5));return [e,Math.min(RK.gap,f-2*e)];};
+const rackAt=i=>{const [e,m]=rackGaps();return RK.boltH+e+i*(RK.W+2*RK.boltH+m);};
 // the shelves' tops: evenly from y0 to the posts' tops (the spacing a whole number of pitches, so every bolt finds its hole)
 const rackShelves=()=>[...Array(RK.n)].map((_,i)=>Math.round(RK.y0+i*(RK.H-RK.y0)/(RK.n-1)));
 // the next depth for both, the kitchen built again (its footprint for the walk with them)
 const rackClick=()=>{RK.D=RK_D[(RK_D.indexOf(RK.D)+1)%RK_D.length];rebuild();};
 function buildRack(g){
-  const W=RK.W;if(rackGap()<0)return [];
+  const W=RK.W;if(!rackGaps())return [];
   const {D,H,post:a,pt,foot,sheet,lip,bolt,boltH}=RK,X=P.Rx,x0=X-D,mm=v=>v*MM;
   [0,1].forEach(r=>{
     const z0=rackAt(r),z1=z0+W;
@@ -704,7 +704,7 @@ return {
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks
   foot:()=>[[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
-    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackGap()>=0?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+RK.W]]:[]),
+    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackGaps()?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+RK.W]]:[]),
   // the userData keys its groups in g have
   keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack']
 };

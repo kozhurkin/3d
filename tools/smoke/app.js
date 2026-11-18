@@ -254,8 +254,8 @@ check('названия комнат на полу: холст по ширине
 
 check('площадь комнаты: по контуру пола (прихожая до кухонной стены, санузел без вентшахты со стенками); наведение на площадь — рамка', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
-  assert.deepStrictEqual(p.run('ROOMS.map(roomCaption)'), ['Прихожая · 2,3 м²', 'Санузел · 3,2 м²', 'Кухня · 14,9 м²']);
-  assert.deepStrictEqual(p.run('ROOMS.map(r=>polyArea(roomPoly(r)))'), [1200 * 1900, 3160000, 14880000]);
+  assert.deepStrictEqual(p.run('ROOMS.map(roomCaption)'), ['Прихожая · 2,3 м²', 'Санузел · 3,2 м²', 'Кухня · 14,7 м²']);
+  assert.deepStrictEqual(p.run('ROOMS.map(r=>polyArea(roomPoly(r)))'), [1200 * 1900, 3160000, 14720000]);
   // the band goes inward: the bath's outline moved 40 mm in, corners mitred (the shaft's notch included)
   assert.deepStrictEqual(p.run('roomPoly(ROOMS[1])'), [[-2000, 0], [-100, 0], [-100, 1400], [-1000, 1400], [-1000, 1900], [-2000, 1900]]);
   assert.deepStrictEqual(p.run('insetPoly(roomPoly(ROOMS[1]),40)').map((v) => v.map(Math.round)),

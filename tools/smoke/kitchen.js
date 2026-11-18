@@ -464,13 +464,13 @@ check('кухня: «i» у обеденного стола — его стол�
   // the dining table: its top's decor in the card
   const table = p.run(`(f=>{const m=f.appl.children.filter(o=>{const i=infoOf(o);return i&&i.title==='Обеденный стол';});return [m.length, infoOf(m[0]).lines];})(VIEWS.kitchen.furniture())`);
   assert.strictEqual(table[0], 5, 'its top and four legs');
-  // the room by its long sides: from 1330 to the worktop's edge (600), from 2030 to the display cabinet's front (4650 − 150 − 1550 − 370 = 2580)
+  // the room by its long sides: from 1330 to the worktop's edge (600), from 2030 to the display cabinet's front (4600 − 100 − 1550 − 370 = 2580)
   assert.deepStrictEqual(table[1], ['130 × 70 см, высота 75 см, торцом к левой стене.', 'Столешница 30 мм — Дуб Каселла натуральный H1385 ST40, как у кухни.', 'Четыре стальные ножки 40 × 40 мм.',
     'Свободно по бокам: 73 см до столешницы кухни, 55 см до витрины.']);
   // a longer kitchen: the display cabinet goes with the window wall, the card follows
   p.run('showView("plan")'); p.fly(); slide(p, 'kL', 5000); p.run('showView("kitchen")'); p.fly();
   assert.strictEqual(p.run(`(f=>infoOf(f.appl.children.find(o=>{const i=infoOf(o);return i&&i.title==='Обеденный стол';})).lines[3])(VIEWS.kitchen.furniture())`),
-    'Свободно по бокам: 73 см до столешницы кухни, 90 см до витрины.');
+    'Свободно по бокам: 73 см до столешницы кухни, 95 см до витрины.');
   // the «i» by the cursor, its card on a click; Esc closes it
   const dot = p.document.getElementById('itemDot'), card = p.document.getElementById('itemCard');
   assert.deepStrictEqual([dot.hidden, card.hidden], [true, true]);

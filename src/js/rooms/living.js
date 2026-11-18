@@ -22,7 +22,7 @@ const INFO={
   mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
     buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
   mirror:()=>({title:'Зеркало',lines:[`40 × 40 см, в чёрной рамке ${WR.mirror.frame} мм.`,'На торце углового шкафа, от 130 до 170 см от пола.']}),
-  rack:()=>({title:'Металлический стеллаж',lines:[`${cm(rackW())} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(wardAt()-WR.W)} см вдоль стены, от угла до шкафа; зазоры по ${cm(RK.gap)} см с краёв и между ними.`]}),
+  rack:()=>({title:'Металлический стеллаж',lines:[`${cm(RK.W)} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(rackRoom())} см вдоль стены, от угла до шкафа; от угла и между ними по ${cm(rackGap())} см, до шкафа ${cm(rackRoom()-rackAt(1)-RK.W)} см.`]}),
   hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
   sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
   sofa:{title:'Угловой диван-кровать «Слим» (Hoff)',price:29999,url:'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875',shop:'Hoff',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
@@ -35,9 +35,9 @@ const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
 /* the writing desk as IKEA HEMNES 155×65, black-brown, with its add-on unit: 1550 × 650, 740 high, 670 free under its knee rail. A top on two
    pedestals of 50 mm legs: on the left a cabinet with a frame-and-panel door and a shelf, on the right two drawers; inset
-   fronts with knobs. Along the left wall of the kitchen, its end 150 mm from the window wall. Its own axes (mm): x along it from
+   fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall. Its own axes (mm): x along it from
    the window end, y up, z from the wall into the room; turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
-const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:150};   // gap: from the window wall
+const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:100};   // gap: from the window wall
 const deskFIN={carcass:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},front:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},top:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},apron:null};
 const deskMats=makeMats();applyMaterials(deskMats,deskFIN,0);   // solid wood: the end faces as dark as the rest (no edge-band contrast)
 function deskParts(){
@@ -499,15 +499,16 @@ function buildSofaShelf(g){
   g.add(q);
   return [];
 }
-/* the metal racks on the right wall's empty stretch: two alike side by side, from the corner by the way into the kitchen (the kitchen
-   wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 200 deep at first — their fronts in line with the end of
+/* the metal racks on the right wall's empty stretch: two alike side by side, RK.W wide, from the corner by the way into the kitchen (the
+   kitchen wall, z 0) toward the wardrobe's add-on section, RK.gap from the corner and between them — less, as much as the stretch leaves,
+   when it is short (none fits: none stands); 200 deep at first — their fronts in line with the end of
    the wall right of the way in; a click on either (engine.js: userData.click) makes both 250 deep, then 300, then 200 again (RK_D; it
    stays through the kitchen's rebuilds) — and 1750 high. Each: four perforated L-angle posts at its corners (their flanges outward, on plastic
    feet; round holes RK.hole across, RK.pitch apart, through both flanges), RK.n shelves evenly from near the floor up to the posts'
    tops: each a sheet with its edges bent down all round, bolted to the posts through their holes — a hex head on each visible flange.
    Light grey powder-coated steel. Kitchen axes (mm), a group each with its «i» */
 const RK_D=[200,250,300];
-const RK={D:RK_D[0],H:1750,n:5,post:35,pt:2,foot:10,sheet:1,lip:30,y0:70,gap:10,hole:10,pitch:42,bolt:10,boltH:4};
+const RK={W:500,D:RK_D[0],H:1750,n:5,post:35,pt:2,foot:10,sheet:1,lip:30,y0:70,gap:10,hole:10,pitch:42,bolt:10,boltH:4};
 const rackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#c9ccc9').convertSRGBToLinear(),roughness:.55,metalness:.35});
 // the posts' holes: a mask, one hole a tile (across the flange × one pitch along it), in the middle of it
 const perfTex=drawnTex(64,c=>{c.fillStyle='#fff';c.fillRect(0,0,64,64);c.fillStyle='#000';c.beginPath();
@@ -516,15 +517,17 @@ if(perfTex.offset){const b=RK.y0-RK.lip/2-RK.foot;perfTex.offset.y=(.5-b/RK.pitc
 const perfMat=rackMat.clone();perfMat.alphaMap=perfTex;perfMat.alphaTest=.5;   // the posts: as the rest, with the holes
 const rackFootMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.7});
 const boltMat=new THREE.MeshStandardMaterial({color:0xb9bdc1,roughness:.3,metalness:.85});   // zinc-plated
-// one rack's width; where each starts along the wall
-const rackW=()=>Math.max(0,Math.floor((wardAt()-WR.W-3*RK.gap)/2));
-const rackAt=i=>RK.gap+i*(rackW()+RK.gap);
+// the stretch from the corner to the wardrobe; the gaps there (whole mm, the same at the corner, between them and at the wardrobe at
+// the most; <0: they do not fit); where each starts along the wall
+const rackRoom=()=>wardAt()-WR.W;
+const rackGap=()=>Math.min(RK.gap,Math.floor((rackRoom()-2*RK.W)/3));
+const rackAt=i=>rackGap()+i*(RK.W+rackGap());
 // the shelves' tops: evenly from y0 to the posts' tops (the spacing a whole number of pitches, so every bolt finds its hole)
 const rackShelves=()=>[...Array(RK.n)].map((_,i)=>Math.round(RK.y0+i*(RK.H-RK.y0)/(RK.n-1)));
 // the next depth for both, the kitchen built again (its footprint for the walk with them)
 const rackClick=()=>{RK.D=RK_D[(RK_D.indexOf(RK.D)+1)%RK_D.length];rebuild();};
 function buildRack(g){
-  const W=rackW();if(W<300)return [];
+  const W=RK.W;if(rackGap()<0)return [];
   const {D,H,post:a,pt,foot,sheet,lip,bolt,boltH}=RK,X=P.Rx,x0=X-D,mm=v=>v*MM;
   [0,1].forEach(r=>{
     const z0=rackAt(r),z1=z0+W;
@@ -606,7 +609,7 @@ function buildWardrobe(g,opts){
    530 in front of the cushions; the chaise 650 wide out to 1530. Two arms alike, 55 wide, from the legs up to 635, as deep as the seat;
    three back cushions 650 × 460 × 220 over the seat and the chaise, two throw pillows 480 × 360; the base stands
    20 mm back under the seat, stitched upright. Every soft piece rounded (furniture.js: roundBoxGeo). Its back against the right wall, opposite the desk, its window end 150 mm from the
-   window wall, lined up with the desk's; the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
+   window wall (SF.gap; the desk's is 100); the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
    Own axes (mm): x across its front, y up, z from its back to its front, described with the chaise at x 0 and mirrored onto x W − x;
    turned onto the kitchen's: its x along z, its z along −x. Two groups — the sofa and the chaise —
    so the walk is stopped by its L, not by the whole rectangle.
@@ -616,7 +619,7 @@ function buildWardrobe(g,opts){
    tips its front up over the drawer's front, slides forward and rises level with the seat, its back against the seat's front:
    one bed with the chaise, 1950 × 1420 between the arms in front of the thin back. Both go as the kitchen's fronts do
    (clicks — on the seat or the drawer for the bed, «Открыты/Закрыты», the walk) */
-const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20};
+const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20,gap:150};   // gap: from the window wall
 const LID_MAX=40*Math.PI/180;   // rad: how far the chaise's lid opens: 40°, as far as its gas struts go
 const LID_EASE=1-Math.sqrt(1-.09),LID_HOLD=HOLD_RATE/2;   // it goes half as fast as a cabinet front (common.js), on a click and held
 const BED_TILT=22*Math.PI/180;  // rad: the bed block's front up over the drawer's front as it comes out
@@ -627,7 +630,7 @@ const seamMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#968c84').c
 const sofaLegMat=new THREE.MeshStandardMaterial({color:0x1b1b1b,roughness:.6});
 const sofaBoxMat=new THREE.MeshStandardMaterial({color:0xeeeeea,roughness:.8});   // the chaise's box inside: white board
 const bedMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3d3e40').convertSRGBToLinear(),roughness:.9});   // the bed block: anthracite cloth
-const sofaAt=()=>P.L-DK.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
+const sofaAt=()=>P.L-SF.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
 function buildSofa(g,opts){
   const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
   const group=()=>{const q=new THREE.Group();q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,sofaAt()*MM);q.userData.info=INFO.sofa;q.userData.sofa=true;g.add(q);return q;};
@@ -701,7 +704,7 @@ return {
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks
   foot:()=>[[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
-    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[]),
+    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackGap()>=0?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+RK.W]]:[]),
   // the userData keys its groups in g have
   keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack']
 };

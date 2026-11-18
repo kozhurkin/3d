@@ -23,21 +23,26 @@ function buildWinDims(){
   dimLine(winDims,new THREE.Vector3(x0,y,z),new THREE.Vector3(x1,y,z),new THREE.Vector3(0,.05,0),`${A.winW} × ${A.winH}`);
   dimLine(winDims,new THREE.Vector3(xs,0,z),new THREE.Vector3(xs,A.winS*MM,z),new THREE.Vector3(.05,0,0),`${A.winS}`);
 }
+// the bathroom doorway's height stands at the doorway too: from the floor up on the hall face of its wall, 150 past its kitchen-side edge; it shows with the lintel over it, to a camera on the hall side (else it would show through the wall)
+const doorDims=new THREE.Group();scene.add(doorDims);
+function buildDoorDims(){
+  const x=10*MM,z=(A.hL1+A.bDoor+150)*MM;
+  dimLine(doorDims,new THREE.Vector3(x,0,z),new THREE.Vector3(x,A.bDoorH*MM,z),new THREE.Vector3(0,0,.05),`${A.bDoorH}`);
+}
 // dimension lines are computed from A; when the sizes change they are rebuilt the next time they are on screen
 let dimsDirty=true;
 function buildDims(){
-  [dimsGroup,winDims].forEach(g=>g.children.slice().forEach(o=>{g.remove(o);if(o.isSprite){o.material.map.dispose();o.material.dispose();}else o.geometry.dispose();}));   // sprites share one geometry
+  [dimsGroup,winDims,doorDims].forEach(g=>g.children.slice().forEach(o=>{g.remove(o);if(o.isSprite){o.material.map.dispose();o.material.dispose();}else o.geometry.dispose();}));   // sprites share one geometry
   labels.length=0;
   dim(0,250,A.hallW,250,`${A.hallW}`);
   dim(A.eD0,-330,A.eD1,-330,`вход ${A.eD1-A.eD0}`);
   dim(200,0,200,A.hL1,`${A.hL1}`);
-  dim(200,A.hL1,200,A.hL1+A.bDoor,`проём ${A.bDoor} · h${A.bDoorH}`);
+  dim(200,A.hL1,200,A.hL1+A.bDoor,`${A.bDoor}`);
   dim(200,A.hL1+A.bDoor,200,hLen,`${A.hL2}`);
   dim(A.hallW-200,0,A.hallW-200,hLen,`${hLen}`);
   dim(0,hLen-140,A.kOver,hLen-140,`${A.kOver}`);
-  dim(A.kOver,hLen-140,A.hallW-A.kOverR,hLen-140,`проход ${A.hallW-A.kOver-A.kOverR}`);
+  dim(A.kOver,hLen-140,A.hallW-A.kOverR,hLen-140,`${A.hallW-A.kOver-A.kOverR}`);
   dim(A.hallW-A.kOverR,hLen-140,A.hallW,hLen-140,`${A.kOverR}`);
-  dim(A.kOver,kZ1+350,A.hallW,kZ1+350,`${A.hallW-A.kOver}`);
   dim(xL,kZ1+160,A.kOver,kZ1+160,`${A.kW}`);
   dim(xL+200,kZ1,xL+200,zEnd,`${A.kL}`);
   dim(A.hallW-200,kZ1,A.hallW-200,zEnd,`${A.kL}`);
@@ -51,7 +56,8 @@ function buildDims(){
   dim(bx(A.bNiche+A.wt),zB0+420,xB1,zB0+420,`${xB1-bx(A.bNiche+A.wt)}`);
   dim(-1350,zB0,-1350,kZ0,`${kZ0-zB0}`);
   dim(xL+420,zB0,xL+420,bz(A.bL),`${A.bL}`);
-  buildWinDims();
+  dim(bx(A.bNiche)-120,zB0,bx(A.bNiche)-120,bz(A.bStub),`${A.bStub}`);   // the partition next to the tall cabinet, on the toilet's side
+  buildWinDims();buildDoorDims();
   dimsDirty=false;
 }
 
@@ -181,8 +187,8 @@ pq('#pCopyA').addEventListener('click',()=>{
 // the sizes changed: the plan's dimensions, numbers and sliders follow
 modelHooks.push(()=>{dimsDirty=true;renderFacts();syncSizes();});
 
-/* every frame: dimensions and room names belong to the plan; dimension lines lie on the cut walls, the window's stand at the window */
-insetHide.push(dimsGroup,winDims);
+/* every frame: dimensions and room names belong to the plan; dimension lines lie on the cut walls, the window's and the doorway height stand at them */
+insetHide.push(dimsGroup,winDims,doorDims);
 frameHooks.push(()=>{
   // dimensions come when the plan is reached; room floors and names change halfway (room views have the plain floor, as before)
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
@@ -190,6 +196,7 @@ frameHooks.push(()=>{
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
   winDims.visible=dimsGroup.visible&&wallParts.some(w=>w.glass&&w.m.visible);   // the window's glass is on screen
+  doorDims.visible=dimsGroup.visible&&camera.position.x>0&&wallParts.some(w=>w.id==='hallBath'&&Math.abs(w.b-A.bDoorH*MM)<1e-6&&w.m.visible);   // the lintel over the doorway is on screen, seen from the hall
   // dimension labels: readable near, shrinking with the plan far (engine.js: fitLabels)
   if(dimsGroup.visible)fitLabels(labels);
 });

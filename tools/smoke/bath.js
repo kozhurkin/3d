@@ -5,12 +5,12 @@ check('санузел: стены ниши, обрезанные рамкой', 
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
   assert.strictEqual(p.run('view'), 'bath');
   // the bathroom view (origin −2050, 0): back wall 200 from the left wall's outer face to the partition's outer face (W + 100);
-  // left wall 200; partition 100 × 600 next to the tall cabinet; wall 500 × 100 at the niche end; shower partition 300 past it;
+  // left wall 200; partition 100 × 550 next to the tall cabinet; wall 500 × 100 at the niche end; shower partition 300 past it;
   // riser box 250 × 250. The partition hides right of its face, the walls at the niche end past it
   assert.deepStrictEqual(p.run(bathWalls), [
     { id: 'entry', r: [-2250, -700, -200, 0], fade: '-z' },
     { id: 'leftOuter', r: [-2250, -2050, 0, 1400], fade: '-x' },
-    { id: 'bathStub', r: [-800, -700, 0, 600], fade: '+x' },
+    { id: 'bathStub', r: [-800, -700, 0, 550], fade: '+x' },
     { id: 'nicheEnd', r: [-2050, -1550, 1100, 1200], fade: '+z' },
     { id: 'shower', r: [-1050, -950, 1100, 1400], fade: '+z' },
     { id: 'showerStep', r: [-1550, -1050, 1100, 1200], fade: '+z' },
@@ -249,20 +249,20 @@ check('санузел: стиральная машина и раковина н�
   const box = () => p.run('(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*1000)))(new THREE.Box3().setFromObject(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true)))');
   // the view's frame ends at the partition next to the tall cabinet: its own view hides them
   assert.strictEqual(shown(), false, 'built with the sanitary ware, hidden in the bathroom view');
-  // between the partition (−700) and the hall wall (−100), from the back wall up to the machine's door (640), up to the lamp on the cabinet over the sink
+  // between the partition (−700) and the hall wall (−100), from the back wall up to the machine's door (590), up to the lamp on the cabinet over the sink
   const b = box();
-  assert.deepStrictEqual([b[0], b[1], b[4], b[5]], [-700, -100, 0, 640]);
+  assert.deepStrictEqual([b[0], b[1], b[4], b[5]], [-700, -100, 0, 590]);
   assert.strictEqual(b[3], 2055);
-  // the machine 595 × 850 × 540, 40 mm off the back wall, in the middle of the niche (x 1302.5…1897.5 → −697.5…−102.5 on the plan,
-  // its front panel with the opening is not in the stub's box, the drawer is: 6 mm out to 586): hollow, a drum inside (cuff, drum, front ring, back)
+  // the machine 595 × 850 × 490, 40 mm off the back wall, in the middle of the niche (x 1302.5…1897.5 → −697.5…−102.5 on the plan,
+  // its front panel with the opening is not in the stub's box, the drawer is: 6 mm out to 536): hollow, a drum inside (cuff, drum, front ring, back)
   const mc = 'VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true).children.find(m=>m.userData.machine===true)';
-  assert.deepStrictEqual(p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*10000)))(new THREE.Box3().setFromObject(${mc}))`), [-6975, -1025, 0, 8500, 400, 5860]);
+  assert.deepStrictEqual(p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*10000)))(new THREE.Box3().setFromObject(${mc}))`), [-6975, -1025, 0, 8500, 400, 5360]);
   assert.strictEqual(p.run(`${mc}.children.filter(m=>m.userData.drum===true).length`), 4);
   // the drum Ø470 × 340 behind a 40 mm cuff, its axis through the door's centre (440 up)
-  assert.deepStrictEqual(p.run(`(m=>[m.geometry.args[0]*2,m.geometry.args[2],m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${mc}.children.filter(m=>m.userData.drum===true)[1])`), [470, 340, 440, 358]);
-  // the sink's bottom: 600 × 600 from the back wall, 30 mm over the machine
+  assert.deepStrictEqual(p.run(`(m=>[m.geometry.args[0]*2,m.geometry.args[2],m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${mc}.children.filter(m=>m.userData.drum===true)[1])`), [470, 340, 440, 308]);
+  // the sink's bottom: 600 × 550 from the back wall, 30 mm over the machine
   const sink = p.run('(g=>{const c=g.children[2];return [c.geometry.args,c.position.y,c.position.z].flat().map(v=>Math.round(v*1000));})(VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true))');
-  assert.deepStrictEqual(sink, [600, 20, 600, 890, 300]);
+  assert.deepStrictEqual(sink, [600, 20, 550, 890, 275]);
   // on the plan it shows
   p.run('showView("plan")'); p.tick();
   assert.strictEqual(shown(), true, 'shown on the plan');
@@ -446,7 +446,7 @@ check('санузел: рамка левой стены, размеры с «П�
   assert.deepStrictEqual(JSON.parse(storage.get('apt-view-bath-v1')), { Wm: 'auto', Wh: 100, L: 1900, sizes: true, fronts: 'closed', dims: true, walls: true });
   // the plan makes the niche wider: the frame, the partition, the cabinets and the panel follow
   p.run('setModel({bNiche:1350})'); p.tick();
-  assert.deepStrictEqual(p.run(bathWalls).find((x) => x.id === 'bathStub').r, [-700, -600, 0, 600]);
+  assert.deepStrictEqual(p.run(bathWalls).find((x) => x.id === 'bathStub').r, [-700, -600, 0, 550]);
   assert.deepStrictEqual(p.run(bathWalls)[0].r, [-2250, -600, -200, 0]);
   assert.strictEqual(p.run('VIEWS.bath.furniture().P.W'), 1350);
   assert.match(bq('#bSub').textContent, /^ниша 1350 × 1100 мм/);
@@ -528,14 +528,14 @@ check('дверь санузла: наличники 70 с обеих сторо
   const box = (m, o = [0, 0, 0]) => `(m=>{const g=m.geometry.args,c=m.position,o=${JSON.stringify(o)};return [[c.x,g[0]],[c.y,g[1]],[c.z,g[2]]].flatMap(([v,s],i)=>[v-s/2,v+s/2].map(u=>Math.round((u+o[i])*1000)));})(${m})`;
   const cs = p.run(`${d}.frame.children.filter(m=>m.userData.casing===true).map(m=>${box('m')})`);
   assert.deepStrictEqual(cs, [
-    [0, 10, 0, 1990, 640, 710], [0, 10, 0, 1990, 1290, 1360], [0, 10, 1990, 2060, 640, 1360],
-    [-110, -100, 0, 1990, 640, 710], [-110, -100, 0, 1990, 1290, 1360], [-110, -100, 1990, 2060, 640, 1360]], 'flush with the lining inside: they cover its ends');
+    [0, 10, 0, 1990, 590, 660], [0, 10, 0, 1990, 1240, 1310], [0, 10, 1990, 2060, 590, 1310],
+    [-110, -100, 0, 1990, 590, 660], [-110, -100, 0, 1990, 1240, 1310], [-110, -100, 1990, 2060, 590, 1310]], 'flush with the lining inside: they cover its ends');
   // the lining, 10 thick, through the wall between them, its ends under the casings; the leaf in it, 3 to either jamb, 5 under its head
   assert.deepStrictEqual(p.run(`${d}.frame.children.filter(m=>m.userData.lining===true).map(m=>${box('m')})`), [
-    [-100, 0, 0, 1990, 700, 710], [-100, 0, 0, 1990, 1290, 1300], [-100, 0, 1990, 2000, 700, 1300]]);
-  assert.deepStrictEqual(p.run(`${box(`${d}.g.children[0]`, [0, 0, 0.713])}`), [-40, 0, 5, 1985, 713, 1287], 'the leaf, its hinge at 700 + 10 + 3');
-  // the sink in the niche by the door ends at 600 from the back wall, the vent shaft wall starts at 1400: 40 to either
-  assert.deepStrictEqual(p.run('[APT_A.hL1+LT-CW, APT_A.hL1+APT_A.bDoor-LT+CW, zV0]'), [640, 1360, 1400]);
+    [-100, 0, 0, 1990, 650, 660], [-100, 0, 0, 1990, 1240, 1250], [-100, 0, 1990, 2000, 650, 1250]]);
+  assert.deepStrictEqual(p.run(`${box(`${d}.g.children[0]`, [0, 0, 0.663])}`), [-40, 0, 5, 1985, 663, 1237], 'the leaf, its hinge at 650 + 10 + 3');
+  // the sink in the niche by the door ends at 550 from the back wall, the vent shaft wall starts at 1400: 40 and 90 to the casings
+  assert.deepStrictEqual(p.run('[APT_A.hL1+LT-CW, APT_A.hL1+APT_A.bDoor-LT+CW, zV0]'), [590, 1310, 1400]);
   // the handles, square: on the leaf, 1000 up, 60 in from its free edge, the lever toward the hinge, one out of each face
   const h = p.run(`${d}.g.children.filter(m=>typeof m.userData.whole==="number").map(m=>[Math.round(m.position.x*1000),Math.round(m.position.y*1000),Math.round(m.position.z*1000)])`);
   assert.deepStrictEqual(h, [[5, 1000, 514], [27, 1000, 514], [52, 1000, 457], [-45, 1000, 514], [-67, 1000, 514], [-92, 1000, 457]]);

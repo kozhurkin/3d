@@ -348,7 +348,7 @@ function buildCurtain(sani,opts){
    cabinet with two hinged mirror doors and shelves, a lamp on its top (the machine's door opens, see washerDoor): a product of its own, not in the bathroom's cut list, no sizes in the panel
    (its finishes are the bathroom's). Bath axes, mm.
    The bathroom view's frame ends at the partition, so its own view hides them; the plan and the walk show them */
-const WASH={W:595,H:850,D:540,back:40,sinkD:600,sinkY:880,sinkT:1000};
+const WASH={W:595,H:850,D:490,back:40,sinkD:550,sinkY:880,sinkT:1000};
 const SINK_CAB={D:200,Gap:300,H:700,N:2};   // the cabinet over the sink: depth with its doors, from the sink's top up to its bottom, height, shelves
 let wash=null;
 const washNiche=()=>{const x0=A.bNiche+A.wt,x1=xB1-xL;return {x0,x1,cx:(x0+x1)/2,w:x1-x0};};

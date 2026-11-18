@@ -99,6 +99,31 @@ check('«Планировка»: размеры окна у самого окн�
   assert.strictEqual(p.run('winDims.visible'), false, 'the window wall is cut away: its dimensions go with it');
 });
 
+check('«Планировка»: проём в санузел на плане — просто «600», его высота «2000» у самого проёма, от пола на стене прихожей; видна со стороны прихожей вместе с перемычкой над ним; проход — «800», без размера «1050» от кухонной стены до правой', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change');
+  p.document.querySelector('[data-cam="hall"]').click(); p.fly(); p.tick();
+  const r = p.run('({vis:doorDims.visible, S:doorDims.children.filter(o=>labels.includes(o)).map(s=>[s.position.x,s.position.y,s.position.z].map(v=>Math.round(v/MM))), z:A.hL1+A.bDoor+150})');
+  assert.strictEqual(r.vis, true, 'the doorway is on screen from the hall');
+  assert.deepStrictEqual(r.S, [[10, 1000, r.z]], 'the height from the floor on the hall face, 150 past the doorway');
+  const texts = p.run('(()=>{const T=[],o=dimLabel;dimLabel=(t,h)=>{T.push(t);return o(t,h);};buildDims();dimLabel=o;return T;})()');
+  assert.ok(texts.includes('600') && texts.includes('800') && texts.includes('2000') && !texts.includes('1050'), texts.join(','));
+  assert.ok(!texts.some((t) => /проём|проход|h\d/.test(t)), texts.join(','));
+  p.document.querySelector('[data-cam="plan"]').click(); p.fly(); p.tick();
+  assert.strictEqual(p.run('doorDims.visible'), false, 'from the bathroom side it would show through the wall');
+  p.document.querySelector('[data-cam="hall"]').click(); p.fly(); p.tick();
+  p.run('VS.plan.Wh=50'); p.tick();
+  assert.strictEqual(p.run('doorDims.visible'), false, 'the walls are cut below the lintel: the height goes with it');
+});
+
+check('«Планировка»: перегородка у пенала 550 подписана вдоль неё со стороны унитаза, от задней стены до её конца', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();
+  const r = p.run('(()=>{const T=[],o=dimLabel;dimLabel=(t,h)=>{const s=o(t,h);T.push([t,s]);return s;};buildDims();dimLabel=o;return T.filter(([t])=>t==="550").map(([,s])=>[s.position.x,s.position.z].map(v=>Math.round(v/MM)));})()');
+  assert.deepStrictEqual(p.run('[APT_A.bStub, WALLS.find(w=>w.id==="bathStub").r]'), [550, [-800, -700, 0, 550]]);
+  assert.deepStrictEqual(r, [[-920, 275]], 'in the middle of the partition, 120 off it in the toilet niche');
+});
+
 check('подписи размеров: вблизи не выше 22 px на экране, дальше уменьшаются вместе с моделью (на плане 150 мм, в комнате 95 мм), мельче 8 px гаснут, к 6 px исчезают', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();

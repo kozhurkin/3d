@@ -41,7 +41,7 @@ const polySigned=q=>q.reduce((s,a,i)=>{const b=q[(i+1)%q.length];return s+a[0]*b
 const polyArea=q=>Math.abs(polySigned(q));
 // a flat floor on an outline, lying at y 0
 const polyFloorGeometry=q=>new THREE.ShapeGeometry(new THREE.Shape(q.map(p=>new THREE.Vector2(p[0]*MM,-p[1]*MM)))).rotateX(-Math.PI/2);
-const roomArea=r=>`${(polyArea(roomPoly(r))/1e6).toFixed(1).replace('.',',')} м²`;
+const roomArea=r=>`${(polyArea(roomPoly(r))/1e6).toFixed(2).replace('.',',')} м²`;
 const roomCaption=r=>`${r.name} · ${roomArea(r)}`;
 function buildRooms(){
   emptyGroup(roomGroup);emptyGroup(namesGroup);nameTexts.length=0;

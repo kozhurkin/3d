@@ -38,7 +38,7 @@ function buildDims(){
   dim(A.eD0,-330,A.eD1,-330,`вход ${A.eD1-A.eD0}`);
   dim(200,0,200,A.hL1,`${A.hL1}`);
   dim(200,A.hL1,200,A.hL1+A.bDoor,`${A.bDoor}`);
-  dim(200,A.hL1+A.bDoor,200,hLen,`${A.hL2}`);
+  dim(200,A.hL1+A.bDoor,200,hLen,`${hLen-A.hL1-A.bDoor}`);
   dim(A.hallW-200,0,A.hallW-200,hLen,`${hLen}`);
   dim(0,hLen-140,A.kOver,hLen-140,`${A.kOver}`);
   dim(A.kOver,hLen-140,A.hallW-A.kOverR,hLen-140,`${A.hallW-A.kOver-A.kOverR}`);
@@ -91,7 +91,7 @@ const row=(k,v,q)=>`<dt>${k}</dt><dd${q?' class="q"':''}>${v}</dd>`;
 function renderFacts(){
   pq('#pFacts').innerHTML=
     `<div class="room">Прихожая</div><dl class="facts">${
-      row('Ширина',A.hallW)+row('Левая стена',`${A.hL1} + проём ${A.bDoor} (h ${A.bDoorH}) + ${A.hL2}`)+row('Правая стена',`${hLen} до кухонной стены`)+row('Входной проём',`${A.eD1-A.eD0} × ${A.eDH}, откос до двери ${A.eRv}, несущая стена ${A.bear}`)}</dl>`+
+      row('Ширина',A.hallW)+row('Левая стена',`${A.hL1} + проём ${A.bDoor} (h ${A.bDoorH}) + ${hLen-A.hL1-A.bDoor}`)+row('Правая стена',`${hLen} до кухонной стены`)+row('Входной проём',`${A.eD1-A.eD0} × ${A.eDH}, откос до двери ${A.eRv}, несущая стена ${A.bear}`)}</dl>`+
     `<div class="room">Санузел</div><dl class="facts">${
       row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Вентшахта',`${xB1-bx(A.bWs+A.bGap+A.wt)} × ${A.vD}, стенка в ${zV0-A.hL1-A.bDoor} от проёма`)}</dl>`+
     `<div class="room">Кухня</div><dl class="facts">${
@@ -125,10 +125,10 @@ const SIZES=[
     {k:'wt',n:'Внутренние стены',min:50,max:200,step:10}]],
   ['Прихожая',[
     {k:'hallW',n:'Ширина',min:900,max:2000,step:10},
-    {k:'hL1',n:'Левая стена до двери санузла',min:100,max:2000,step:10},
+    {k:'hL',n:'Длина до кухонной стены',min:1000,max:4000,step:10},
+    {k:'hL1',n:'Дверь санузла: от стены со входом',min:100,max:2000,step:10},   // the doorway moves, the wall stays
     {k:'bDoor',n:'Дверь санузла: ширина',min:500,max:1000,step:10},
     {k:'bDoorH',n:'Дверь санузла: высота',min:1800,max:2500,step:10},
-    {k:'hL2',n:'Левая стена после двери',min:100,max:2500,step:10},
     {k:'eD0',n:'Вход: от левой стены',min:0,max:600,step:1,set:(a,v)=>({...a,eD0:v,eD1:v+a.eD1-a.eD0})},   // the opening moves, its width stays
     {k:'eW',n:'Вход: ширина',min:600,max:1200,step:1,get:a=>a.eD1-a.eD0,set:(a,v)=>({...a,eD1:a.eD0+v})},
     {k:'eDH',n:'Вход: высота',min:1800,max:2500,step:1},

@@ -199,6 +199,11 @@ check('размеры стен: ползунок упирается и гово�
   assert.deepStrictEqual(p.run('[A.eD0,A.eD1]'), [100, 1200]);
   assert.match(msg.textContent, /Входной проём/);
   // a slider with step 10 stops on its step from the current value
+  // the bathroom door moves along the hall's left wall, the wall stays: up to where its casing meets the vent shaft wall (1400 − 60 − 600)
+  slide(p, 'hL1', 2000);
+  assert.deepStrictEqual(p.run('[A.hL1, kZ0, hLen-A.hL1-A.bDoor]'), [740, 1900, 560]);
+  assert.match(msg.textContent, /вентшахты/);
+  slide(p, 'hL1', 650);
   // the vent shaft is set by its depth; it stops before its wall meets the bathroom door's casing (1250 + 60): 1900 − 100 − 1310
   slide(p, 'vD', 1000);
   assert.strictEqual(p.run('A.vD'), 490); assert.ok(!p.run('aptProblems(A)').length);
@@ -255,12 +260,12 @@ check('«Планировка»: шкафы всех комнат по гало�
   assert.strictEqual(JSON.parse(storage.get('apt-view-plan-v1')).furn, true);
   // a wall moved elsewhere only moves a room's cabinets; its own sizes build them anew
   p.run(`${rooms}.forEach(k=>{VIEWS[k].furniture().model.userData.tag=k;})`);
-  p.run('setModel({hL1:APT_A.hL1+100})'); p.tick();
+  p.run('setModel({hL:APT_A.hL+100})'); p.tick();
   at().forEach((r) => { near(r[3], 0, 'x'); near(r[4], 0, 'z'); });
   // (the hall's length is the hall's own: its tool case stands at the kitchen wall)
   assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), ['kitchen', 'bath', null], 'moved, not rebuilt; the hall rebuilt');
   p.run('VIEWS.hall.furniture().model.userData.tag="hall"');
-  p.run('setModel({hL1:APT_A.hL1+100, kW:2300})'); p.tick();
+  p.run('setModel({hL:APT_A.hL+100, kW:2300})'); p.tick();
   assert.deepStrictEqual(p.run(`${rooms}.map(k=>VIEWS[k].furniture().model.userData.tag)`), [null, 'bath', 'hall'], 'the kitchen rebuilt');
   assert.strictEqual(p.run('VIEWS.kitchen.furniture().P.W'), 2300);
   // the fronts swing on the plan too; the kitchen tab knows they are open and remembers it

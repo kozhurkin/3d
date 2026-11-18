@@ -268,7 +268,7 @@ check('прихожая: ящик для инструмента STANLEY FatMax �
   // its footprint is on the plan with the cabinet's
   assert.ok(p.run('VIEWS.hall.furniture().foot') !== null);
   // the hall grows: the box goes with the kitchen wall
-  slide(p, 'hL2', p.run('APT_A.hL2') + 100); p.tick();
+  slide(p, 'hL', p.run('APT_A.hL') + 100); p.tick();
   assert.deepStrictEqual(cs().body[0].slice(4), [1332, 1986]);
 });
 

@@ -5,7 +5,8 @@
 const APT_A={
   H:2600,                           // ceiling height
   hallW:1200,                       // hall between its side walls
-  hL1:650, bDoor:600, bDoorH:2000, hL2:650,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
+  hL:1900,                          // hall left wall from the entrance wall up to the kitchen wall
+  hL1:650, bDoor:600, bDoorH:2000,  // the bathroom doorway in it: this far from the entrance wall, its width, its height (the wall past it follows)
                                     // (hL1: the door's 70 mm casing clears the 550 mm sink in the bathroom niche by 40)
   kOver:150,                        // kitchen wall runs this far past the hall side of the hall's left wall
   kOverR:250,                       // the wall right of the way into the kitchen: this far out of the hall's right wall (the tool box by it, the racks behind)
@@ -27,7 +28,7 @@ const APT_A={
    rooms: the tabs that show the wall. Rooms: floor rect r and origin — where the room tab's own (0,0) lies on the plan */
 function apartment(a){
   const A=Object.assign({},APT_A,a);
-  const hLen=A.hL1+A.bDoor+A.hL2;      // hall left wall up to the kitchen wall
+  const hLen=A.hL;                     // hall left wall up to the kitchen wall
   const kZ0=hLen, kZ1=hLen+A.wt;       // kitchen wall (bathroom side, kitchen side)
   const xL=A.kOver-A.kW;               // inner face of the common left wall
   const xB1=-A.wt;                     // bathroom side of the hall's left wall

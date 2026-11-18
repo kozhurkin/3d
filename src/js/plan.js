@@ -48,7 +48,9 @@ function buildDims(){
   dim(A.hallW-200,kZ1,A.hallW-200,zEnd,`${A.kL}`);
   dim(xL,zEnd-250,A.hallW,zEnd-250,`${A.hallW-xL}`);
   dim(xL,bz(A.bL)-400,xB1,bz(A.bL)-400,`${xB1-xL}`);
-  dim(xL,bz(A.bL)+200,xSh,bz(A.bL)+200,`${xSh-xL}`);
+  dim(xL,kZ0-150,xSh,kZ0-150,`${xSh-xL}`);   // the shower: its width along the kitchen wall, its depth by the left wall, its opening on the step itself
+  dim(xL+200,bz(A.bL+A.wt),xL+200,kZ0,`${kZ0-bz(A.bL+A.wt)}`);
+  dim(bx(bWs),bz(A.bL+A.wt/2),xSh,bz(A.bL+A.wt/2),`${A.bGap}`);
   dim(xSh+A.wt,bz(A.bL)+200,xB1,bz(A.bL)+200,`${A.vW}`);
   dim(-280,A.hL1+A.bDoor,-280,zV0,`${zV0-A.hL1-A.bDoor}`);
   dim(xSh+A.wt+80,zV0+A.wt,xSh+A.wt+80,kZ0,`${A.vD}`);

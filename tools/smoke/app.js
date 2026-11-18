@@ -125,6 +125,16 @@ check('«Планировка»: перегородка у пенала 550 по
   assert.deepStrictEqual(p.run('[APT_A.vD, zV0, zV0-A.hL1-A.bDoor]'), [400, 1400, 150]);
 });
 
+check('«Планировка»: душ 1000 × 700 — ширина у кухонной стены, глубина у левой, вход 500 подписан по самой ступеньке', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();
+  const at = t => p.run(`(()=>{const T=[],o=dimLabel;dimLabel=(t,h)=>{const s=o(t,h);T.push([t,s]);return s;};buildDims();dimLabel=o;return T.filter(([t])=>t===${JSON.stringify(t)}).map(([,s])=>[s.position.x,s.position.z].map(v=>Math.round(v/MM)));})()`);
+  assert.deepStrictEqual(at('1000'), [[-1550, 1750]], 'across the shower by the kitchen wall');
+  assert.deepStrictEqual(at('700'), [[-1850, 1550]], 'from the step to the kitchen wall');
+  assert.deepStrictEqual(at('500'), [[-1300, 1150]], 'on the step, in its middle');
+  assert.deepStrictEqual(p.run('WALLS.find(w=>w.id==="showerStep").r'), [-1550, -1050, 1100, 1200]);
+});
+
 check('подписи размеров: вблизи не выше 22 px на экране, дальше уменьшаются вместе с моделью (на плане 150 мм, в комнате 95 мм), мельче 8 px гаснут, к 6 px исчезают', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change'); p.tick();

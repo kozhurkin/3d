@@ -4,10 +4,11 @@
    origin: inner corner of the hall between the bearing wall with the entrance door and the hall's left wall */
 const APT_A={
   H:2600,                           // ceiling height
-  hallW:1200,                       // hall between its side walls
+  hallW:1250,                       // hall between its side walls
   hL1:700, bDoor:600, bDoorH:2000, hL2:600,   // hall left wall: wall, bathroom doorway, wall up to the kitchen wall
                                     // (hL1: the door's 70 mm casing clears the 600 mm sink in the bathroom niche by 40)
   kOver:200,                        // kitchen wall runs this far past the hall side of the hall's left wall
+  kOverR:250,                       // the wall right of the way into the kitchen: this far out of the hall's right wall (the tool box by it, the racks behind)
   kW:2200, kL:4600,                 // kitchen wall; kitchen left and right walls from the kitchen wall to the window wall
   winW:1500, winH:1200, winS:800,   // kitchen window in the outer wall, centred: width, height, sill height from the floor
   bNiche:1200,                      // bathroom along its back wall: toilet niche, then the partition next to the tall cabinet
@@ -44,7 +45,7 @@ function apartment(a){
     {id:'window',name:'Стена кухни с окном (внешняя)',r:[xL-A.bear,A.hallW+A.bear,zEnd,zEnd+A.bear],ext:'+z',rooms:['kitchen'],holes:[[winX-A.winW/2,winX+A.winW/2,A.winS+A.winH,A.winS]]},
     {id:'hallBath',name:'Стена прихожая / санузел',r:[xB1,0,0,hLen],rooms:['hall','bath'],holes:[[A.hL1,A.hL1+A.bDoor,A.bDoorH]]},
     {id:'kitchen',name:'Стена кухни',r:[xL,A.kOver,kZ0,kZ1],rooms:['kitchen','bath','hall']},
-    {id:'passRight',name:'Стенка справа от прохода на кухню',r:[A.hallW-A.kOver,A.hallW,kZ0,kZ1],rooms:['hall','kitchen']},   // mirrors the kitchen wall end: the passage gets 200 mm on both sides
+    {id:'passRight',name:'Стенка справа от прохода на кухню',r:[A.hallW-A.kOverR,A.hallW,kZ0,kZ1],rooms:['hall','kitchen']},   // as the kitchen wall's end on the other side of the passage, its own length
     {id:'bathStub',name:'Перегородка у пенала',r:[bx(A.bNiche),bx(A.bNiche+A.wt),zB0,bz(A.bStub)],rooms:['bath']},
     {id:'nicheEnd',name:'Стенка в конце ниши',r:[xL,bx(A.bWs),bz(A.bL),bz(A.bL+A.wt)],rooms:['bath']},
     {id:'shower',name:'Стенка между душем и раковиной',r:[xSh,xSh+A.wt,bz(A.bL),kZ0],rooms:['bath']},   // from the niche end down to the kitchen wall
@@ -72,7 +73,7 @@ function aptProblems(a){
   m.WALLS.forEach((p,i)=>m.WALLS.slice(i+1).forEach(q=>{
     const ox=Math.min(p.r[1],q.r[1])-Math.max(p.r[0],q.r[0]),oz=Math.min(p.r[3],q.r[3])-Math.max(p.r[2],q.r[2]);
     if(ox>.5&&oz>.5)out.push(`«${p.name}» и «${q.name}» пересекаются`);}));
-  if(A.hallW-2*A.kOver<600)out.push('Проход на кухню уже 600 мм');
+  if(A.hallW-A.kOver-A.kOverR<600)out.push('Проход на кухню уже 600 мм');
   if(A.eD0<0||A.eD1>A.hallW)out.push('Входной проём не помещается в ширину прихожей');
   if(A.bNiche+A.wt>m.xB1-m.xL)out.push('Ниша с перегородкой у пенала не помещается в ширину санузла');
   if(m.zV0<A.bL)out.push('Стенка вентшахты не доходит до перегородки душа');

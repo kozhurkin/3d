@@ -500,13 +500,13 @@ function buildSofaShelf(g){
   return [];
 }
 /* the metal racks on the right wall's empty stretch: two alike side by side, from the corner by the way into the kitchen (the kitchen
-   wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 200 deep at first — their fronts in line with the end of
-   the wall right of the way in; a click on either (engine.js: userData.click) makes both 250 deep, then 300, then 200 again (RK_D; it
+   wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 250 deep at first — their fronts in line with the end of
+   the wall right of the way in; a click on either (engine.js: userData.click) makes both 300 deep, then 350, then 250 again (RK_D; it
    stays through the kitchen's rebuilds) — and 1750 high. Each: four perforated L-angle posts at its corners (their flanges outward, on plastic
    feet; round holes RK.hole across, RK.pitch apart, through both flanges), RK.n shelves evenly from near the floor up to the posts'
    tops: each a sheet with its edges bent down all round, bolted to the posts through their holes — a hex head on each visible flange.
    Light grey powder-coated steel. Kitchen axes (mm), a group each with its «i» */
-const RK_D=[200,250,300];
+const RK_D=[250,300,350];
 const RK={D:RK_D[0],H:1750,n:5,post:35,pt:2,foot:10,sheet:1,lip:30,y0:70,gap:10,hole:10,pitch:42,bolt:10,boltH:4};
 const rackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#c9ccc9').convertSRGBToLinear(),roughness:.55,metalness:.35});
 // the posts' holes: a mask, one hole a tile (across the flange × one pitch along it), in the middle of it

@@ -7,8 +7,8 @@ check('прихожая: несущая стена с входной дверь�
   // the hall tab: the bearing wall 200 from 100 left of the left wall to 200 right of the hall (the outer wall), the opening in it;
   // the side walls up to Sd = 650 from it; each hides from outside, as in the hall tab
   assert.deepStrictEqual(p.run(hallWalls), [
-    { id: 'entry', r: [-100, 1400, -200, 0], fade: '-z' },
-    { id: 'rightOuter', r: [1200, 1400, 0, 650], fade: '+x' },
+    { id: 'entry', r: [-100, 1450, -200, 0], fade: '-z' },
+    { id: 'rightOuter', r: [1250, 1450, 0, 650], fade: '+x' },
     { id: 'hallBath', r: [-100, 0, 0, 650], fade: '-x' },
   ]);
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, false], 'the entrance door of the model; the bathroom door is past the frame');
@@ -16,14 +16,14 @@ check('прихожая: несущая стена с входной дверь�
   assert.strictEqual(hp.hidden, false);
   assert.ok(matches(p.document.getElementById('shared'), '[data-panel="hall"] #shared'), 'light and wall colour moved to the hall');
   assert.strictEqual(hq('#hFrameSdOut').textContent, 650);
-  assert.strictEqual(hq('#hSub').textContent, '1200 × 2600 × 400 мм · Базовый коричневый декор');
+  assert.strictEqual(hq('#hSub').textContent, '1250 × 2600 × 400 мм · Базовый коричневый декор');
   // the opening left between the claddings, as the hall tab showed it
   assert.strictEqual(hq('#h-chips').innerHTML, '<span class="chip">ширина 860 мм</span><span class="chip">высота 2000 мм</span>');
-  // camera: «3/4» on the first visit at the hall tab's target; the mezzanine; the sun over the middle of the cabinet
-  assert.deepStrictEqual(vec(p, 'goalT'), [0.6, 1.3, 0.16]);
+  // camera: «3/4» on the first visit at the hall tab's target (the middle of the 1250 hall); the mezzanine; the sun over the middle of the cabinet
+  assert.deepStrictEqual(vec(p, 'goalT'), [0.625, 1.3, 0.16]);
   hq('[data-cam="mezz"]').click();
-  assert.deepStrictEqual(vec(p, 'goalT'), [0.6, 2.3, 0.2]);
-  assert.deepStrictEqual([...vec(p, 'VIEWS.hall.sun()'), p.run('sunHalf')], [0.6, 1.3, 0, 3]);
+  assert.deepStrictEqual(vec(p, 'goalT'), [0.625, 2.3, 0.2]);
+  assert.deepStrictEqual([...vec(p, 'VIEWS.hall.sun()'), p.run('sunHalf')], [0.625, 1.3, 0, 3]);
 });
 
 check('прихожая: детали шкафа совпадают со старой прихожей', () => {
@@ -33,9 +33,10 @@ check('прихожая: детали шкафа совпадают со ста�
   const want = fixture('hall-parts.json');
   assert.strictEqual(got.parts.length, 36);
   assert.deepStrictEqual(JSON.parse(JSON.stringify(got)), want);
-  // in the app the same sizes come from the walls: the default opening gives the hall tab's false panel, column and mezzanine
+  // in the app the sizes come from the walls: the default opening gives the hall tab's false panel and mezzanine; the hall is 1250 now,
+  // the column right of the opening 50 wider
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
-  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 100, 240, 600, 100, 36]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1250, 100, 290, 600, 100, 36]);
 });
 
 check('прихожая: шкаф-портал собирается, «Состав» и размеры его меняют, проём остаётся', () => {
@@ -48,7 +49,7 @@ check('прихожая: шкаф-портал собирается, «Сост�
   assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 36, true], 'built on screen, every door on a hinge');
   assert.strictEqual(nDoors, 3, 'three mezzanine doors');
   // the panel: what comes from the plan, the cabinet sizes, the space between the shelves
-  assert.deepStrictEqual(['W', 'Hc', 'Rv', 'Ht', 'Lw', 'Rw'].map((k) => hq('#h-' + k).textContent), ['1200 мм', '2600 мм', '100 мм', '600 мм', '100 мм', '240 мм']);
+  assert.deepStrictEqual(['W', 'Hc', 'Rv', 'Ht', 'Lw', 'Rw'].map((k) => hq('#h-' + k).textContent), ['1250 мм', '2600 мм', '100 мм', '600 мм', '100 мм', '290 мм']);
   assert.strictEqual(hq('#h-shelfGap').textContent, 'Между полками 301,3 мм · секций 6');
   assert.strictEqual(hq('#h-sizesBox').open, true, 'the sizes are open, as in the hall tab');
   // the height: from the mezzanine's least (the opening's top + 300) to the ceiling
@@ -61,13 +62,13 @@ check('прихожая: шкаф-портал собирается, «Сост�
   // no reveal cladding: its boards go, the false panel and the column shrink to the opening, the mezzanine goes down to it
   const rev = hq('#h-tReveal'); rev.checked = false; rev.dispatch('change');
   // (the cabinet was at its least: it grows by the board, so the mezzanine stays 300)
-  r = h(); assert.deepStrictEqual([r.P.Lw, r.P.Rw, r.P.Ht, r.P.H], [84, 224, 300, 2316]);
+  r = h(); assert.deepStrictEqual([r.P.Lw, r.P.Rw, r.P.Ht, r.P.H], [84, 274, 300, 2316]);
   assert.ok(!r.parts.includes('Обрамление откоса левое'));
   assert.strictEqual(hq('#h-Lw').textContent, '84 мм');
   rev.checked = true; rev.dispatch('change');
   // thicker boards: the cladding is thicker, the false panel and the column grow with it
   hq('[data-thick="18"][data-for="T"]').click();
-  r = h(); assert.deepStrictEqual([r.P.T, r.P.Lw, r.P.Rw], [18, 102, 242]);
+  r = h(); assert.deepStrictEqual([r.P.T, r.P.Lw, r.P.Rw], [18, 102, 292]);
   // no plinth: its board goes, its height is off; feet under both columns
   const pl = hq('#h-tPlinth'); pl.checked = false; pl.dispatch('change');
   r = h(); assert.ok(!r.parts.includes('Цоколь правой колонны (со стороны проёма)')); assert.strictEqual(hq('#h-Pl').disabled, true);
@@ -165,12 +166,12 @@ check('прихожая: отделка, фасады, входная дверь
   p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick();
   hp = p.document.querySelector('[data-panel="hall"]');
   assert.deepStrictEqual(p.run('(f=>[f.P.H,f.P.Ht,f.P.Lw])(VIEWS.hall.furniture())'), [2500, 500, 100]);
-  assert.match(sub(), /^1200 × 2500 × 400 мм · Дуб Чарльстон тёмно-коричневый/);
+  assert.match(sub(), /^1250 × 2500 × 400 мм · Дуб Чарльстон тёмно-коричневый/);
   assert.deepStrictEqual(pressed(), ['hidden'], 'the view remembers the fronts taken off');
   hq('#h-resetDef').click();
   assert.deepStrictEqual(p.run('(f=>[f.P.H,f.P.Ht])(VIEWS.hall.furniture())'), [2600, 600]);
   assert.ok(!storage.has('apt-hall-v2'));
-  assert.strictEqual(sub(), '1200 × 2600 × 400 мм · Базовый коричневый декор');
+  assert.strictEqual(sub(), '1250 × 2600 × 400 мм · Базовый коричневый декор');
 });
 
 check('прихожая: шкаф следует проёму с «Планировки», откос — размер двери, рамка боковых стен', () => {
@@ -178,7 +179,7 @@ check('прихожая: шкаф следует проёму с «Планир�
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
   // the opening moves and grows on the plan: the false panel and the column reach its sides, the mezzanine sits on its top
   p.run('setModel({eD0:150, eD1:1000, eDH:2100})'); p.tick();
-  assert.deepStrictEqual(p.run('(f=>[f.P.Lw,f.P.Rw,f.P.Ht])(VIEWS.hall.furniture())'), [166, 216, 516]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.Lw,f.P.Rw,f.P.Ht])(VIEWS.hall.furniture())'), [166, 266, 516]);
   // the door frame sits as deep as the reveal; the plan's slider stops where the 70 mm frame leaves the 200 mm wall
   slide(p, 'eRv', 300); p.tick();
   assert.strictEqual(p.run('A.eRv'), 130);
@@ -220,12 +221,12 @@ check('прихожая: размер между полками — в прав�
   const at = () => p.run(`${f}.dims.children.slice(12).filter((o,i)=>i%2).map(s=>[s.position.x,s.position.y,s.position.z].map(v=>Math.round(v/MM)))`);
   // the column; the mezzanine's central and right boxes, under their shelf
   assert.deepStrictEqual(gaps(), ['301', '276', '276']);
-  assert.deepStrictEqual(at(), [[1072, 881, 200], [480, 2154, 182], [1080, 2154, 182]]);
+  assert.deepStrictEqual(at(), [[1097, 881, 200], [480, 2154, 182], [1105, 2154, 182]]);
   assert.deepStrictEqual(p.run(`(d=>d.children.map(o=>o.material.depthTest===true))(${f}.dims)`), [...Array(12).fill(false), ...Array(6).fill(true)]);
   // the mezzanine in one box: its sections, on either side of the partition
   const one = hq('#h-tMezzOne'); one.checked = true; one.dispatch('change');
   assert.deepStrictEqual(gaps(), ['301', '276', '276']);
-  assert.deepStrictEqual(at().slice(1), [[484, 2154, 182], [1076, 2154, 182]]);
+  assert.deepStrictEqual(at().slice(1), [[484, 2154, 182], [1101, 2154, 182]]);
   const n = hq('[data-p="N"]'); n.value = '2'; n.dispatch('input');
   assert.deepStrictEqual(gaps(), ['619', '276', '276']);
 });
@@ -238,15 +239,15 @@ check('прихожая: ящик для инструмента STANLEY FatMax �
     const by=k=>g.children.filter(o=>o.userData[k]===true).map(box),bs=g.children.map(box);
     return {box:[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i]))),base:by('base'),body:by('body'),lid:by('lid'),grip:by('grip'),latch:by('latch'),badge:by('badge'),info:infoOf(g.children[0]),visible:g.visible};})(VIEWS.hall.furniture())`);
   let r = cs();
-  // hall axes: 10 from the right wall (1200) and from the kitchen wall (1900), the latches 14 out of its front toward the hall
-  assert.deepStrictEqual(r.box, [883, 1190, 0, 295, 1228, 1890]);
-  assert.deepStrictEqual(r.base, [[897, 1190, 0, 40, 1228, 1890]]);
-  assert.deepStrictEqual(r.body, [[901, 1186, 40, 200, 1232, 1886]], 'the grey body 4 in from the base and the lid');
-  assert.deepStrictEqual(r.lid, [[897, 1190, 200, 272, 1228, 1890]]);
+  // hall axes: 10 from the right wall (1250) and from the kitchen wall (1900), the latches 14 out of its front toward the hall
+  assert.deepStrictEqual(r.box, [933, 1240, 0, 295, 1228, 1890]);
+  assert.deepStrictEqual(r.base, [[947, 1240, 0, 40, 1228, 1890]]);
+  assert.deepStrictEqual(r.body, [[951, 1236, 40, 200, 1232, 1886]], 'the grey body 4 in from the base and the lid');
+  assert.deepStrictEqual(r.lid, [[947, 1240, 200, 272, 1228, 1890]]);
   assert.strictEqual(r.grip.length, 1);
   assert.deepStrictEqual(r.grip[0].slice(2), [280, 295, 1498, 1620], 'the handle folded on the lid, in its middle');
-  assert.deepStrictEqual(r.latch, [[883, 887, 170, 245, 1285, 1331], [883, 887, 170, 245, 1787, 1833]], 'two latches on the front, 80 in from the ends');
-  assert.deepStrictEqual(r.badge, [[894, 897, 230, 258, 1514, 1604]]);
+  assert.deepStrictEqual(r.latch, [[933, 937, 170, 245, 1285, 1331], [933, 937, 170, 245, 1787, 1833]], 'two latches on the front, 80 in from the ends');
+  assert.deepStrictEqual(r.badge, [[944, 947, 230, 258, 1514, 1604]]);
   assert.strictEqual(r.info.title, 'Ящик для инструмента STANLEY FatMax');
   assert.strictEqual(r.info.lines[0], '662 × 293 мм, высота 295 мм; 57 л.');
   // the hall tab's frame (650) does not reach it; stretched to the kitchen wall it shows

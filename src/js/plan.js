@@ -32,8 +32,8 @@ function buildDims(){
   dim(200,A.hL1+A.bDoor,200,hLen,`${A.hL2}`);
   dim(A.hallW-200,0,A.hallW-200,hLen,`${hLen}`);
   dim(0,hLen-140,A.kOver,hLen-140,`${A.kOver}`);
-  dim(A.kOver,hLen-140,A.hallW-A.kOver,hLen-140,`проход ${A.hallW-2*A.kOver}`);
-  dim(A.hallW-A.kOver,hLen-140,A.hallW,hLen-140,`${A.kOver}`);
+  dim(A.kOver,hLen-140,A.hallW-A.kOverR,hLen-140,`проход ${A.hallW-A.kOver-A.kOverR}`);
+  dim(A.hallW-A.kOverR,hLen-140,A.hallW,hLen-140,`${A.kOverR}`);
   dim(A.kOver,kZ1+350,A.hallW,kZ1+350,`${A.hallW-A.kOver}`);
   dim(xL,kZ1+160,A.kOver,kZ1+160,`${A.kW}`);
   dim(xL+200,kZ1,xL+200,zEnd,`${A.kL}`);
@@ -86,7 +86,7 @@ function renderFacts(){
     `<div class="room">Санузел</div><dl class="facts">${
       row('Вдоль задней стены',`${xB1-xL} = ${A.bNiche} + ${A.wt} + ${xB1-bx(A.bNiche+A.wt)}`)+row('Глубина',`${kZ0-zB0}`)+row('Ниша с инсталляцией',`${A.bNiche} × ${A.bL}`)+row('Вентшахта',`${xB1-bx(A.bWs+A.bGap+A.wt)} × ${kZ0-zV0-A.wt}, стенка в ${A.vOff} от проёма`)}</dl>`+
     `<div class="room">Кухня</div><dl class="facts">${
-      row('Стена',`${A.kW}, выступает за стену прихожей на ${A.kOver}`)+row('Левая и правая стены',A.kL)+row('Ширина',A.hallW-xL)+row('Окно',`${A.winW} × ${A.winH}, от пола ${A.winS}, по центру внешней стены`)+row('Проход из прихожей',`${A.hallW-2*A.kOver}, стенки по ${A.kOver} с обеих сторон`)}</dl>`+
+      row('Стена',`${A.kW}, выступает за стену прихожей на ${A.kOver}`)+row('Левая и правая стены',A.kL)+row('Ширина',A.hallW-xL)+row('Окно',`${A.winW} × ${A.winH}, от пола ${A.winS}, по центру внешней стены`)+row('Проход из прихожей',`${A.hallW-A.kOver-A.kOverR}, стенки ${A.kOver} слева и ${A.kOverR} справа`)}</dl>`+
     `<p class="note" style="margin:10px 0 0">Внешние стены ${A.bear} мм (со входом, левая стена санузла и кухни, правая стена прихожей и кухни, стена с окном), остальные ${A.wt} мм, потолок ${H}. Исходные размеры внутренних стенок санузла взяты из вкладки «Санузел», входного проёма — из «Прихожей».</p>`;
   pq('#pSub').textContent=`${(BOX.x1-BOX.x0)} × ${(BOX.z1-BOX.z0)} мм по внешним стенам · потолок ${H}`;
 }
@@ -136,6 +136,7 @@ const SIZES=[
   ['Кухня',[
     {k:'kW',n:'Кухонная стена',min:1500,max:4000,step:10},
     {k:'kOver',n:'Выступ кухонной стены в прихожую',min:0,max:500,step:10},
+    {k:'kOverR',n:'Стенка справа от прохода',min:0,max:500,step:10},
     {k:'kL',n:'Длина до стены с окном',min:2000,max:8000,step:10},
     {k:'winW',n:'Окно: ширина',min:600,max:3000,step:10},
     {k:'winH',n:'Окно: высота',min:600,max:2000,step:10},

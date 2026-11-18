@@ -616,7 +616,7 @@ function buildWardrobe(g,opts){
    tips its front up over the drawer's front, slides forward and rises level with the seat, its back against the seat's front:
    one bed with the chaise, 1950 × 1420 between the arms in front of the thin back. Both go as the kitchen's fronts do
    (clicks — on the seat or the drawer for the bed, «Открыты/Закрыты», the walk) */
-const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20,gap:150};   // gap: from the window wall
+const SF={W:2060,D:850,Dc:1530,H:910,seat:450,leg:55,arm:55,armH:635,chaise:650,back:100,backH:680,ys:280,base:20,gap:150,lidDx:10};   // gap: from the window wall; lidDx: the chaise's lid to the left of its box
 const LID_MAX=40*Math.PI/180;   // rad: how far the chaise's lid opens: 40°, as far as its gas struts go
 const LID_EASE=1-Math.sqrt(1-.09),LID_HOLD=HOLD_RATE/2;   // it goes half as fast as a cabinet front (common.js), on a click and held
 const BED_TILT=22*Math.PI/180;  // rad: the bed block's front up over the drawer's front as it comes out
@@ -629,7 +629,7 @@ const sofaBoxMat=new THREE.MeshStandardMaterial({color:0xeeeeea,roughness:.8}); 
 const bedMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3d3e40').convertSRGBToLinear(),roughness:.9});   // the bed block: anthracite cloth
 const sofaAt=()=>P.L-SF.gap-SF.W;   // kitchen z of its end toward the kitchen wall; the chaise is at the other
 function buildSofa(g,opts){
-  const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
+  const {W,D,Dc,H,seat,leg:lg,arm,armH,chaise:cw,back,backH,ys,base,lidDx}=SF,xc=arm+cw,xr=W-arm;   // xc: the chaise ends, the seat begins; xr: the right arm
   const group=()=>{const q=new THREE.Group();q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,sofaAt()*MM);q.userData.info=INFO.sofa;q.userData.sofa=true;g.add(q);return q;};
   // a soft piece: rounded by r (mm) all round; mirrored, so the chaise is at x W; in a holder at (oy, oz) of its group
   const mk=(q,oy=0,oz=0)=>(x0,x1,y0,y1,z0,z1,r,mat=velourMat)=>{
@@ -652,9 +652,9 @@ function buildSofa(g,opts){
   Cf(arm+t,xc-t,lg+15,ys,bz-t-1,bz-t,sofaBoxMat);Cf(arm+t,xc-t,lg+15,ys,t,t+1,sofaBoxMat);
   Cf(arm+t,arm+t+1,lg+15,ys,t+1,bz-t-1,sofaBoxMat);Cf(xc-t-1,xc-t,lg+15,ys,t+1,bz-t-1,sofaBoxMat);
   // its seat in one piece from the back to its front (a seam left against the sofa's seat): the lid on its hinge; a click on the
-  // chaise's box lifts it too (its frame), as one on the drawer lays out the bed
+  // chaise's box lifts it too (its frame), as one on the drawer lays out the bed; 10 mm to the left, toward the sofa's seat (lidDx)
   const lid=new THREE.Group();lid.position.set(0,seat*MM,back*MM);chaise.add(lid);
-  mk(lid,seat,back)(0,xc,ys,seat,back,Dc,45);
+  mk(lid,seat,back)(lidDx,xc+lidDx,ys,seat,back,Dc,45);
   // stitches up the fronts of the bases, 130 mm apart
   for(let x=130;x<xc-40;x+=130)Cf(x-2,x+2,lg+15,ys-15,Dc-base,Dc-base+1.5,seamMat);
   // and up the chaise base's sides in front of the arm and of the sofa's base, as far apart, from its front back

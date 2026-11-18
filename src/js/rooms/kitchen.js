@@ -137,9 +137,9 @@ const INFO={
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Задвинут под стол; нажатие выдвигает его и обратно.']},
 };
 
-/* the room by the dining table's long sides (kitchen mm), as its card has it: [toward the kitchen wall, toward the window]. There the
-   kitchen's run below 1 m along the table's length (its worktop's edge), else the kitchen wall; here the nearest of the rest of the
-   room along it (living.js: foot — the display cabinet), else the window wall */
+/* the room by the dining table's long sides (kitchen mm), as its card has it: [toward the kitchen wall, toward the window].
+   Toward the kitchen wall: up to the kitchen's run below 1 m along the table's length (its worktop's edge), else the wall itself;
+   toward the window: up to the nearest of the rest of the room along it (living.js: foot — the display cabinet), else the window wall */
 function tableRoom(){
   const over=r=>r[0]<TB.l&&r[1]>0,z1=TB.z+TB.w;
   const k=Math.max(0,...current.parts.filter(q=>over([q.x0,q.x1])&&q.y0<1000&&q.z1<=TB.z).map(q=>q.z1));

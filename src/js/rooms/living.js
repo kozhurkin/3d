@@ -35,9 +35,11 @@ const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
 /* the writing desk as IKEA HEMNES 155×65, black-brown, with its add-on unit: 1550 × 650, 740 high, 670 free under its knee rail. A top on two
    pedestals of 50 mm legs: on the left a cabinet with a frame-and-panel door and a shelf, on the right two drawers; inset
-   fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall. Its own axes (mm): x along it from
-   the window end, y up, z from the wall into the room; turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
-const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:100};   // gap: from the window wall
+   fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall (DK.gap; less when the dining area
+   needs the room: kitchen.js, placeDining). Its own axes (mm): x along it from the window end, y up, z from the wall into the room;
+   turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
+const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:100};   // gap: from the window wall (set by the kitchen: living.setGap)
+const GAP=DK.gap;
 const deskFIN={carcass:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},front:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},top:{type:'uni',color:'#3b302a',name:'Чёрно-коричневый'},apron:null};
 const deskMats=makeMats();applyMaterials(deskMats,deskFIN,0);   // solid wood: the end faces as dark as the rest (no edge-band contrast)
 function deskParts(){
@@ -606,7 +608,7 @@ function buildWardrobe(g,opts){
    530 in front of the cushions; the chaise 650 wide out to 1530. Two arms alike, 55 wide, from the legs up to 635, as deep as the seat;
    three back cushions 650 × 460 × 220 over the seat and the chaise, two throw pillows 480 × 360; the base stands
    20 mm back under the seat, stitched upright. Every soft piece rounded (furniture.js: roundBoxGeo). Its back against the right wall, opposite the desk, its window end 150 mm from the
-   window wall (SF.gap; the desk's is 100); the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
+   window wall (SF.gap; the desk's is DK.gap); the chaise at that end (corner on the right, seen from the front: the shop's picture mirrored).
    Own axes (mm): x across its front, y up, z from its back to its front, described with the chaise at x 0 and mirrored onto x W − x;
    turned onto the kitchen's: its x along z, its z along −x. Two groups — the sofa and the chaise —
    so the walk is stopped by its L, not by the whole rectangle.
@@ -697,6 +699,9 @@ function buildSofa(g,opts){
 
 return {
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
+  // the work place toward the dining table: its desk's gap from the window wall at most (GAP), the desk and the display cabinet as deep
+  // along the left wall as they stand (back); the kitchen sets the gap (kitchen.js: placeDining)
+  GAP,back:DK.W+VT.D,setGap(g){DK.gap=g;},
   // all of it in g, in this order; their doors (the kitchen makes them loose)
   build:(g,o)=>[].concat(buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g)),
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks

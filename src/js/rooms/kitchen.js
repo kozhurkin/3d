@@ -8,8 +8,8 @@ let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W and H are the plan's kitchen wall and ceiling, L and Rx where the window wall and the right wall are (kitchen axes): from the plan too
 const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,AntUp:false,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38,L:4600,Rx:3250};
 let current=null;
-// dining table by the left wall: from the kitchen wall z, along the wall w (its short side, the end against the wall), into the room l, top t thick, h high
-const TB={z:1330,w:700,l:1300,t:30,h:750,leg:40,in:50};
+// dining table by the left wall: from the kitchen wall z (placeDining), along the wall w (its short side, the end against the wall), into the room l, top t thick, h high
+const TB={z:0,w:700,l:1300,t:30,h:750,leg:40,in:50};
 
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
@@ -97,7 +97,7 @@ const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on 
 // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
 function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
 // sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
-function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);
+function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);placeDining();
   // the worktop's cut-out for the sink's bowl, under its rim (not in the cut list's parts: they stay as the old kitchen's)
   const top=current.parts.find(q=>q.name==='Столешница'),x=P.B1/2;
   if(top)top.hole=[x-SK.w/2,x+SK.w/2,SK.z-SK.d/2,SK.z+SK.d/2];
@@ -137,14 +137,26 @@ const INFO={
   chair:{title:'Стул BERGMUND (IKEA)',lines:['Чёрный, массив дерева; мягкое сиденье и спинка в чехле из тёмно-серой рогожки.','52 × 52 см, высота 95 см; сиденье 52 × 41 см на высоте 51 см.','Спинка 48 см, сужается кверху до 37 см; угол к сиденью 104°.','Задвинут под стол; нажатие выдвигает его и обратно.']},
 };
 
+// over the table's length (kitchen x, mm); the kitchen's run below 1 m over it reaches this far from the kitchen wall (its worktop's edge; 0 without it)
+const overTable=r=>r[0]<TB.l&&r[1]>0;
+const runEdge=()=>Math.max(0,...current.parts.filter(q=>overTable([q.x0,q.x1])&&q.y0<1000).map(q=>q.z1));   // the kitchen's run is all by the kitchen wall
 /* the room by the dining table's long sides (kitchen mm), as its card has it: [toward the kitchen wall, toward the window].
-   Toward the kitchen wall: up to the kitchen's run below 1 m along the table's length (its worktop's edge), else the wall itself;
+   Toward the kitchen wall: up to the run's edge, else the wall itself;
    toward the window: up to the nearest of the rest of the room along it (living.js: foot — the display cabinet), else the window wall */
 function tableRoom(){
-  const over=r=>r[0]<TB.l&&r[1]>0,z1=TB.z+TB.w;
-  const k=Math.max(0,...current.parts.filter(q=>over([q.x0,q.x1])&&q.y0<1000&&q.z1<=TB.z).map(q=>q.z1));
-  const w=Math.min(P.L,...living.foot().filter(r=>over(r)&&r[2]>=z1).map(r=>r[2]));
-  return [TB.z-k,w-z1];
+  const z1=TB.z+TB.w,w=Math.min(P.L,...living.foot().filter(r=>overTable(r)&&r[2]>=z1).map(r=>r[2]));
+  return [TB.z-runEdge(),w-z1];
+}
+/* where the dining table stands along the left wall, the window wall's distance given (kitchen mm). The free room by its long sides,
+   from the worktop's edge to the display cabinet's front, is split: the worktop's side 200 more (room to come up to the worktop), the
+   rest in halves, the 10 mm rounding to the display cabinet's side. The room shrinks down to DIN.min; past it the desk with the
+   display cabinet moves toward the window wall, its gap down to nothing (living.setGap); nearer still, the room shrinks again */
+const DIN={more:200,min:1200};
+function placeDining(){
+  const k=runEdge(),free=g=>P.L-g-living.back-k-TB.w;
+  const gap=Math.max(0,Math.min(living.GAP,living.GAP-DIN.min+free(living.GAP)));
+  living.setGap(gap);
+  TB.z=k+Math.floor((free(gap)+DIN.more)/20)*10;
 }
 
 /* the dining table: a worktop-decor top on four steel legs, its end against the left wall (kitchen axes, m) */

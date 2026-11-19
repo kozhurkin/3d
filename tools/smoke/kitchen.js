@@ -313,10 +313,11 @@ check('кухня: четыре стула BERGMUND у стола — задви
   const st = () => p.run(`(f=>f.doors.filter(d=>/^chair/.test(d.key)).map(d=>{const c=d.g.parent;
     return [d.key,d.axis,Math.round(d.travel*1000),Math.round(c.position.x*1000),Math.round(c.position.z*1000),+c.rotation.y.toFixed(2),Math.round(d.g.position.z*1000),c.parent===f.appl];}))(VIEWS.kitchen.furniture())`);
   // two along each long side (the kitchen wall's, the far one), 20 mm clear of the table's legs, 40 apart; the far ones turned round;
-  // all pushed in at first, the seat's front 10 short of the table's middle (1690 from the kitchen wall); pulled out by 420 (the seat's front 80 past the table's edge)
+  // all pushed in at first, the seat's front 10 short of the table's middle (1690 from the kitchen wall); pulled out by 420 (the seat's front 80 past the table's edge),
+  // the far ones by 360: 540 to the display cabinet, the chair 520 deep
   assert.deepStrictEqual(st(), [
     ['chair0', 'z', -420, 110, 1160, 0, 0, true], ['chair1', 'z', -420, 670, 1160, 0, 0, true],
-    ['chair2', 'z', -420, 630, 2220, 3.14, 0, true], ['chair3', 'z', -420, 1190, 2220, 3.14, 0, true]]);
+    ['chair2', 'z', -360, 630, 2220, 3.14, 0, true], ['chair3', 'z', -360, 1190, 2220, 3.14, 0, true]]);
   const info = p.run(`(f=>{const m=f.appl.children.filter(o=>o.userData.chair===true);return [m.length,infoOf(m[0].children[0].children[3]).title];})(VIEWS.kitchen.furniture())`);
   assert.deepStrictEqual(info, [4, 'Стул BERGMUND (IKEA)']);
   // as the drawing: the seat 510 high at its front, sloping to 470 over its 410; the back to it 104°; 950 high
@@ -473,6 +474,15 @@ check('кухня: обеденная зона по длине до окна —
   assert.deepStrictEqual([s.getAttribute('min'), s.getAttribute('max')], ['4000', '5000']);
   assert.deepStrictEqual(room(4000), [[49, 29], 0]);
   assert.deepStrictEqual([p.run('A.kL'), p.document.getElementById('pSizeMsg').textContent], [4000, '']);
+});
+
+check('кухня: стулья выдвигаются не дальше своего промежутка — спинка не дальше края столешницы и витрины', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+  // how far each pulls out (mm): the kitchen wall's side, the far one
+  const out = (L) => { slide(p, 'kL', L); p.tick(); return p.run(`(f=>{const t=k=>Math.round(-f.doors.find(d=>d.key===k).travel*1000);return [t('chair0'),t('chair2')];})(VIEWS.kitchen.furniture())`); };
+  assert.deepStrictEqual(out(5000), [420, 420], '940 and 740: both the full 80 past the table\'s edge');
+  assert.deepStrictEqual(out(4600), [420, 360], '740 and 540: the far one 20 past it, its back at the display cabinet');
+  assert.deepStrictEqual(out(4000), [310, 110], '490 and 290: both stay under the table by 30 and 230');
 });
 
 check('кухня: «i» у обеденного стола — его столешница в карточке; «i» у курсора, карточка по клику, цена, варианты', () => {

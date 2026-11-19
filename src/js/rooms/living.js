@@ -18,12 +18,15 @@ const INFO={
   shelf:()=>({title:'Настенная полка',lines:[`${SHC[shelfColor].desc}; на двух ${SHC[shelfColor].brName} стальных кронштейнах с косынкой.`,'150 × 25 см, толщина 3 см.','Кронштейны из стальной полосы 4 мм шириной 25 мм, в 15 см от краёв полки: плечо 20 см под полкой, стойка 15 см по стене вниз, косынка между ними.','Над надстройкой стола, в 30 см над ней: низ на 167 см от пола.',`Нажатие меняет цвет: ${SHC.map(c=>c.name).join(' → ')}.`]}),
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
   vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
-  wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).','Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.','В угловом слева четыре полки, справа — полка и две штанги для вешалок; в доп. секции четыре полки.'],buy:WARD_PRODUCTS})),
+  wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',
+    wardExt()?'Угловой 96,4 × 96,4 см и две доп. секции 40 × 50 см — вдоль стены и на торце, высота 220 см, глубина 50 см.':'Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.',
+    `В угловом слева четыре полки, справа — полка и две штанги для вешалок; в ${wardExt()?'доп. секциях по':'доп. секции'} четыре полки.`],
+    buy:WARD_PRODUCTS.map((b,i)=>i&&wardExt()?Object.assign({n:2},b):b)})),
   mezzanine:()=>mzColor.card(INFO.mezzanine,ozon({title:'Антресоль «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',`${MZ.n} секции по ${MZ.L/10} см, глубина ${MZ.d/10} см, высота ${(MZ.y1-MZ.y0)/10} см; по две двери в каждой.`,'На стене над диваном, от 170 до 220 см от пола — вровень со шкафом.'],
     buy:[{name:'Антресоль 100 × 50 × 50',n:MZ.n,price:MZ.price,url:MZ.url}]})),
-  mirror:()=>({title:'Зеркало',lines:[`40 × 40 см, в чёрной рамке ${WR.mirror.frame} мм.`,'На торце углового шкафа, от 130 до 170 см от пола.']}),
+  mirror:()=>({title:'Зеркало',lines:[`40 × 40 см, в чёрной рамке ${WR.mirror.frame} мм.`,`На торце ${wardEndName()}, от 130 до 170 см от пола.`]}),
   rack:()=>({title:'Металлический стеллаж',lines:[`${Math.round(rackW()/10)} × ${RK.D/10} см, высота ${RK.H/10} см.`,`Светло-серый, порошковая окраска; стойки — перфорированный уголок ${RK.post} × ${RK.post} мм, полки на болтах.`,`${RK.n} полок, нижняя у пола.`,'Два одинаковых рядом на правой стене, между проходом на кухню и угловым шкафом.',`Место под оба — ${cm(wardAt()-WR.W)} см вдоль стены, от угла до шкафа; зазоры по ${cm(RK.gap)} см с краёв и между ними.`]}),
-  hanger:{title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.','На торце углового шкафа под зеркалом, на высоте 117 см.']},
+  hanger:()=>({title:'Настенная вешалка',lines:['Чёрная планка 38 × 3 см, четыре крючка с деревянными шариками.',`На торце ${wardEndName()}${wardExt()?",":""} под зеркалом, на высоте 117 см.`]}),
   sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
   sofa:{title:'Угловой диван-кровать «Слим» (Hoff)',price:29999,url:'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875',shop:'Hoff',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
@@ -390,10 +393,13 @@ function buildVitrine(g,opts){
    add-on section 400 wide — 1364 along the right wall, 964 out from it, 2200 high. Against the right wall by the sofa's end toward the
    kitchen wall: its leg (500 wide) out from the wall along the sofa's arm, its door toward the kitchen wall; along the wall from the
    leg the corner unit's other door, then the add-on section, their doors into the room. The corner unit as the shop's picture: on the
-   left (along the wall) a narrow part with four shelves, a partition at the inner corner; on the right the leg with the corner behind
-   it, for hangers — a shelf at the top, two rods one over the other through the leg up to the wall; shelves in the add-on section.
+   left (along the wall) a carcass 480 wide with four shelves, its back against the wall; on the right the leg, a carcass 964 wide, its
+   back at the sofa, with the corner behind the left one, for hangers — a shelf at the top, two rods one over the other through the leg
+   up to its side at the wall; shelves in the add-on section.
    At the inner corner a fixed L-shaped stile of two strips, one in each front's plane: the corner unit's doors go up to them, so they
-   open clear of each other. On the leg's end, into the room: a mirror in a black frame, a coat rail under it. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
+   open clear of each other. As a variant (wardExt) a second add-on section on the leg's end, the first one's mirror image: 400 along
+   the leg, out into the room (the leg 1364 out from the wall), its door toward the kitchen wall in line with the leg's, hinged at its
+   outer end. On the leg's end (the section's, if it has one), into the room: a mirror in a black frame, a coat rail under it. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
    Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
    the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
 const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
@@ -401,22 +407,28 @@ const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelve
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
    // (its frame, its bottom); the coat rail under it: HK
 // the wardrobe and the mezzanine, each in one finish all over, each its own: white or Диамант серый U963 ST9 (furniture.js: UNI, as the
-// bathroom's carcass) — the next one by a click on its panels (a door's click opens it) or by its card's «Следующий вариант →»; it stays through the kitchen's rebuilds
+// bathroom's carcass) — the next one by a click on its panels (a door's click opens it) or by its card's «Следующий вариант →»; it stays through the kitchen's rebuilds.
+// Of forms (the wardrobe: without and with the section on the leg's end) each in both colours: variant i — colour i % colours, form
+// ⌊i / colours⌋ (form); a new form builds the kitchen again
 const WARD_COLORS=[{type:'uni',color:'#F1F0EA',name:'Белый'},UNI.U963];
-function colorSwitch(){
-  const o={i:0,mats:makeMats(),
-    paint(){const f=WARD_COLORS[o.i];applyMaterials(o.mats,{carcass:f,front:f,top:f,apron:null},30);},
-    click(){o.i=(o.i+1)%WARD_COLORS.length;o.paint();},
-    // its card c (card() gives it again): its colour first, which colour of how many and a link to the next one (engine.js: info.variant, info.next)
-    card:(card,c)=>Object.assign(c,{lines:[`Цвет: ${finName(WARD_COLORS[o.i])}.`].concat(c.lines),variant:[o.i+1,WARD_COLORS.length],next:()=>{o.click();return card();}})};
+function colorSwitch(forms=1){
+  const k=WARD_COLORS.length;
+  const o={i:0,form:0,mats:makeMats(),
+    paint(){const f=WARD_COLORS[o.i%k];applyMaterials(o.mats,{carcass:f,front:f,top:f,apron:null},30);},
+    click(){o.i=(o.i+1)%(k*forms);o.paint();const f=Math.floor(o.i/k);if(f!==o.form){o.form=f;rebuild();}},
+    // its card c (card() gives it again): its colour first, which variant of how many and a link to the next one (engine.js: info.variant, info.next)
+    card:(card,c)=>Object.assign(c,{lines:[`Цвет: ${finName(WARD_COLORS[o.i%k])}.`].concat(c.lines),variant:[o.i+1,k*forms],next:()=>{o.click();return card();}})};
   o.paint();return o;
 }
-const wardColor=colorSwitch(),mzColor=colorSwitch();
+const wardColor=colorSwitch(2),mzColor=colorSwitch();
+const wardExt=()=>wardColor.form===1;   // the wardrobe with its second add-on section, on the leg's end
+const wardLeg=()=>WR.D+(wardExt()?WR.W-WR.C:0);   // how far the leg goes out from the wall: up to the section's end, if it has one
+const wardEndName=()=>wardExt()?'доп. секции, выступающей в комнату':'углового шкафа';   // whose end the mirror and the coat rail are on
 // a card of what is bought on Ozon as products (c.buy: [{name, n, price, url}], a row each in the card): the shop, the sum under its lines
 const ozon=c=>Object.assign(c,{shop:'Ozon',lines:c.lines.concat(`Вместе ${c.buy.reduce((t,b)=>t+(b.n||1)*b.price,0).toLocaleString('ru-RU')} ₽.`)});
 // the two OZON products it is made of (its card has a row for each)
 const WARD_PRODUCTS=[
-  {name:'Угловой 96,4 × 96,4 × 220',price:12000,url:'https://ozon.ru/t/sXBC1uj'},
+  {name:'Угловой 96,4 × 96,4 × 220',price:12000,url:'https://ozon.ru/t/8LOFiwQ'},
   {name:'Доп. секция 40 × 50 × 220',price:5500,url:'https://ozon.ru/t/BSIni7B'}];
 const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
 function wardrobeParts(){
@@ -424,26 +436,26 @@ function wardrobeParts(){
   const {W,D,C,d,H,pl,t,ft,gap}=WR,X=P.Rx,s=wardAt(),yt=H-t,cd=d-ft;   // X: the wall; cd: the carcass's depth behind the doors
   const xF=X-d,zF=s-d,xE=X-D,zE=s-C,zA=s-W;   // the doors' faces: along the wall, the leg's; the leg's end; the corner unit's far side; the add-on's
   const fy0=pl+gap,fy1=H-gap,cu=' углового шкафа',ad=' доп. секции';
-  // the corner unit: its leg's end, its back at the sofa, its far side along the wall; an HDF back against the wall
-  add('Торцевая стенка'+cu,'carcass',xE,xE+t,0,H,zF+ft,s);
-  add('Стенка у дивана'+cu,'carcass',xE+t,X,0,H,s-t,s);
-  add('Боковина'+cu,'carcass',X-cd,X,0,H,zE,zE+t);
-  add('Задняя стенка'+cu+' — у дивана','back',X-4,X,pl,yt,zF+ft,s-t);
-  add('Задняя стенка'+cu+' — вдоль стены','back',X-4,X,pl,yt,zE+t,zF+ft);
-  // the top and the bottom in two pieces each, the plinth under both doors
-  [['Крыша',yt,H],['Дно',pl,pl+t]].forEach(([n,y0,y1])=>{
-    add(n+cu+' — у дивана','carcass',xE+t,X-4,y0,y1,zF+ft,s-t);
-    add(n+cu+' — вдоль стены','carcass',xF+ft,X-4,y0,y1,zE+t,zF+ft);
-  });
-  // the left part: the partition at the inner corner, in line with the leg's door, and its shelves evenly between the bottom and the top
-  add('Перегородка'+cu,'carcass',xF+ft,X-4,pl+t,yt,zF,zF+t);
+  // a carcass as the shop's: sides down to the floor at its ends, the top, the bottom and the plinth between them, the HDF back, its
+  // shelves at ys (20 in from the front); across its width u0–u1, its body from behind its doors (v0) to its back (v1); along the wall
+  // (u: z, v: x) or along the leg (u: x, v: z)
+  const carcass=(nm,u0,u1,v0,v1,leg,ys)=>{
+    const a=(n,mat,ua,ub,y0,y1,va,vb)=>leg?add(n+nm,mat,ua,ub,y0,y1,va,vb):add(n+nm,mat,va,vb,y0,y1,ua,ub);
+    [u0,u1-t].forEach(u=>a('Боковина','carcass',u,u+t,0,H,v0,v1));
+    a('Крыша','carcass',u0+t,u1-t,yt,H,v0,v1-4);
+    a('Дно','carcass',u0+t,u1-t,pl,pl+t,v0,v1-4);
+    a('Цоколь','carcass',u0+t,u1-t,0,pl,v0,v0+t);
+    a('Задняя стенка','back',u0+t,u1-t,pl,yt,v1-4,v1);
+    ys.forEach(y=>a('Полка','carcass',u0+t,u1-t,y,y+t,v0+20,v1-4));
+  };
+  // the corner unit: two carcasses, held together by the stile. On the left (along the wall, zE up to the leg's carcass: 480) the one
+  // for shelves, its back against the wall, four shelves as the add-on's, its side at the leg in the leg's door plane, against the leg's
+  // carcass (fixed to it); on the right the leg (xE to the wall: 964), for hangers, its back at the sofa, a side against the wall: the
+  // shelf at the top, the rods under it (buildWardrobe) through the corner behind the left one
   const n=WR.shelves,st=(yt-pl-t-n*t)/(n+1),shelfY=[...Array(n)].map((_,i)=>Math.round(pl+t+(i+1)*st+i*t));   // the add-on section's too
-  shelfY.forEach(y=>add('Полка'+cu+' — слева','carcass',xF+ft+20,X-4,y,y+t,zE+t,zF));
-  // the right part: its top shelf through the leg and the corner, on the leg's end, the panel at the sofa and the partition; the rods
-  // under it (buildWardrobe)
-  add('Полка'+cu+' — справа','carcass',xE+t,X-4,WR.top,WR.top+t,zF+ft,s-t);
-  add('Цоколь'+cu+' — у дивана','carcass',xE+t,xF+ft,0,pl,zF+ft,zF+ft+t);
-  add('Цоколь'+cu+' — вдоль стены','carcass',xF+ft,xF+ft+t,0,pl,zE+t,zF+ft+t);
+  carcass(cu+' — слева',zE,zF+ft,X-cd,X,false,shelfY);   // up to the leg's carcass
+  carcass(cu+' — справа',xE,X,s-cd,s,true,[]);
+  add('Полка'+cu+' — справа','carcass',xE+t,X-t,WR.top,WR.top+t,s-cd,s-4);
   // the stile at the inner corner: a strip in each front's plane, the one along the wall over the corner where they meet
   const w=WR.strip;
   add('Планка'+cu+' — у дивана','carcass',xF-w,xF,fy0,fy1,zF,zF+ft);
@@ -451,14 +463,16 @@ function wardrobeParts(){
   // its two doors, hinged at their outer ends, up to the strips: the leg's toward the kitchen wall, the other into the room
   add('Дверь'+cu+' — у дивана','front',xE+gap/2,xF-w-gap,fy0,fy1,zF,zF+ft,{pivot:{x:xE+gap/2,z:zF,s:1}});
   add('Дверь'+cu+' — вдоль стены','front',xF,xF+ft,fy0,fy1,zE+gap/2,zF-w-gap,{pivot:{x:xF,z:zE+gap/2,s:-1}});
-  // the add-on section: its own sides, top, bottom, plinth, back, four shelves as the corner unit's left part, its door hinged at the far end
-  [zA,zE-t].forEach(z=>add('Боковина'+ad,'carcass',X-cd,X,0,H,z,z+t));
-  add('Крыша'+ad,'carcass',X-cd,X-4,yt,H,zA+t,zE-t);
-  add('Дно'+ad,'carcass',X-cd,X-4,pl,pl+t,zA+t,zE-t);
-  add('Цоколь'+ad,'carcass',X-cd,X-cd+t,0,pl,zA+t,zE-t);
-  add('Задняя стенка'+ad,'back',X-4,X,pl,yt,zA+t,zE-t);
-  shelfY.forEach(y=>add('Полка'+ad,'carcass',X-cd+20,X-4,y,y+t,zA+t,zE-t));
+  // the add-on section: four shelves as the corner unit's left part, its door hinged at the far end
+  carcass(ad,zA,zE,X-cd,X,false,shelfY);
   add('Дверь'+ad,'front',xF,xF+ft,fy0,fy1,zA+gap/2,zE-gap/2,{pivot:{x:xF,z:zA+gap/2,s:-1}});
+  // the second one, if it has it: on the leg's end (xN its outer side), the first one turned to the leg — its back at the sofa, its door in
+  // line with the leg's, hinged at its outer end
+  if(wardExt()){
+    const xN=X-wardLeg(),an=ad+' — на торце';
+    carcass(an,xN,xE,s-cd,s,true,shelfY);
+    add('Дверь'+an,'front',xN+gap/2,xE-gap/2,fy0,fy1,zF,zF+ft,{pivot:{x:xN+gap/2,z:zF,s:1}});
+  }
   return parts;
 }
 /* the mezzanine as OZON «Уютная логика» 100×50×50 (two of them), white or grey (mzColor), apart from the wardrobe: two sections 1000 long, 500 deep and 500 high, two handleless doors
@@ -567,10 +581,10 @@ const knobWoodMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#9c7552
 /* the coat rail under the mirror: a black bar along the face, hooks off it — each a black peg, a wooden ball on its end.
    L along the face, h its height, t out from the face, y its bottom; the pegs' length and Ø, the balls' Ø */
 const HK={L:380,h:30,t:12,y:1170,n:4,peg:40,pegD:8,ball:26};
-/* the mirror and the coat rail on the leg's end (its face at x Rx − D, the room on its −x side), in the middle of its width, in g;
+/* the mirror and the coat rail on the leg's end (its face at x Rx − wardLeg(), the room on its −x side), in the middle of its width, in g;
    each its own group with its own «i» */
 function wardrobeEnd(g){
-  const {mirror:M}=WR,x=P.Rx-WR.D,zc=wardAt()-WR.d/2,f=M.frame,y1=M.y0+M.h,mm=v=>v*MM;
+  const {mirror:M}=WR,x=P.Rx-wardLeg(),zc=wardAt()-WR.d/2,f=M.frame,y1=M.y0+M.h,mm=v=>v*MM;
   const group=(info,key)=>{const q=new THREE.Group();q.userData.info=info;q.userData[key]=true;g.add(q);return q;};
   const at=(q,m,x,y,z)=>{m.position.set(mm(x),mm(y),mm(z));m.castShadow=true;q.add(m);return m;};
   // the mirror: the frame round the glass, the glass set into it
@@ -588,13 +602,13 @@ function wardrobeEnd(g){
   }
 }
 function buildWardrobe(g,opts){
-  const ps=wardrobeParts(),s=wardAt(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the partition goes with the run
+  const ps=wardrobeParts(),s=wardAt(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the left carcass's side at it goes with the run
   return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
     const d=buildParts({parts},wardColor.mats,opts);
     d.model.userData.wardrobe=true;d.model.userData.info=INFO.wardrobe;
-    d.model.children.forEach(o=>{o.userData.click=wardColor.click;});   // its panels, before the rods, the mirror and the coat rail join them
-    // the rods in the leg: across its opening, in the middle of its depth, from its end to the wall
-    if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-4,z=(zF+WR.ft+s-WR.t)/2;
+    d.model.children.forEach(o=>{o.userData.click=wardColor.click;});   // its panels (a new form: the kitchen built again), before the rods, the mirror and the coat rail join them
+    // the rods in the leg: across its opening, in the middle of its depth behind the door, from side to side
+    if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-WR.t,z=(zF+WR.ft+s-4)/2;
       WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);
         r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});
       wardrobeEnd(d.model);}
@@ -707,7 +721,7 @@ return {
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks
   foot:()=>[[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
-    [P.Rx-WR.D,P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[]),
+    [P.Rx-wardLeg(),P.Rx,wardAt()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardAt()-WR.W,wardAt()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[]),
   // the userData keys its groups in g have
   keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack']
 };

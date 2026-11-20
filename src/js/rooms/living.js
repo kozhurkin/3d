@@ -20,7 +20,8 @@ const INFO={
     return Object.assign(c.hemnes?{title:'Полка навесная HEMNES (IKEA)',price:8000,url:'https://ozon.ru/t/GIfrq0T',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны.',`${cm(HM.W)} × ${cm(HM.D)} см, высота ${cm(HM.H)} см.`,`Над надстройкой стола, в ${cm(hemnesY0()-DK.H-AU.H)} см над ней; верх вровень с витриной: от ${cm(hemnesY0())} до ${cm(VT.H)} см от пола.`]}
       :{title:'Настенная полка',lines:[`${c.desc}; на двух ${c.brName} стальных кронштейнах с косынкой.`,'150 × 25 см, толщина 3 см.','Кронштейны из стальной полосы 4 мм шириной 25 мм, в 15 см от краёв полки: плечо 20 см под полкой, стойка 15 см по стене вниз, косынка между ними.','Над надстройкой стола, в 30 см над ней: низ на 167 см от пола.']},pager);},
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
-  vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',price:31000,url:'https://ozon.ru/t/sZF7R6J',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
+  // which of the two (VTC) and a link to the next one, as the shelf's
+  vitrine:()=>Object.assign({},VTC[vitPick].card,{variant:[vitPick+1,VTC.length],next:()=>{nextVitrine();return INFO.vitrine();}}),
   wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',
     wardExt()?'Угловой 96,4 × 96,4 см и две доп. секции 40 × 50 см — вдоль стены и на торце, высота 220 см, глубина 50 см.':'Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.',
     `В угловом слева четыре полки, справа — полка и две штанги для вешалок; в ${wardExt()?'доп. секциях по':'доп. секции'} четыре полки.`],
@@ -373,7 +374,7 @@ function buildMacbook(desk,opts){
   return [applDoor(q,{key:'macbook',axis:'none',max:open,startOpen:true,follow},opts)];
 }
 
-/* the display cabinet as IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
+/* the display cabinet, one of two (VTC; or the bookcase), at first IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
    45 mm corner posts, two glass doors over three adjustable shelves, three drawers under them; all of it dark, as the desk.
    Its back against the desk's end by the kitchen wall, its side against the left wall, its fronts toward the kitchen wall.
    Own axes (mm): x across its front from the left wall's far side as seen from the front, y up, z from its back to its front;
@@ -409,10 +410,38 @@ function vitrineParts(){
   });
   return parts;
 }
+/* or IKEA HEMNES bookcase, black-brown, solid pine: as big (900 × 370, 1970 high), in its place. 45 mm posts at the corners, the
+   carcass 890 × 340 (the top 5 proud of it at the ends, 15 in front and behind); sides between the posts and the back in their
+   grooves from 110 up (the legs under them), a rail 80 under the bottom in front and 60 under the top; five shelves evenly between
+   them, 800 between the front posts, 290 deep from the back. Its own axes as the display cabinet's */
+const BC={y0:110,low:80,head:60,shelves:5,sd:290};
+function bookcaseParts(){
+  const [parts,add]=partList();
+  const {W,D,H,post:l,top}=VT,yt=H-top,zF=D-15,z0=15,t=16,st=18,nm=' стеллажа';
+  const xa=5,xb=W-5,ia=xa+l,ib=xb-l,zb=z0+23,yb=BC.y0+BC.low,yh=yt-BC.head;   // the back's front face; the bottom's top; the head rail's underside
+  add('Столешница'+nm,'top',0,W,yt,H,0,D);
+  [xa,xb-l].forEach(x=>[z0,zF-l].forEach(z=>add('Стойка'+nm,'carcass',x,x+l,0,yt,z,z+l)));
+  [xa,xb-l].forEach(x=>add('Боковина'+nm,'carcass',x+(l-t)/2,x+(l+t)/2,BC.y0,yt,z0+l,zF-l));
+  add('Задняя стенка'+nm,'carcass',ia,ib,BC.y0,yt,zb-8,zb);
+  add('Нижняя царга'+nm,'carcass',ia,ib,BC.y0,yb,zF-20,zF);
+  add('Дно'+nm,'carcass',ia,ib,yb-st,yb,zb,zF-20);
+  add('Верхняя царга'+nm,'carcass',ia,ib,yh,yt,zF-20,zF);
+  const n=BC.shelves,gap=(yh-yb-n*st)/(n+1);
+  for(let i=0;i<n;i++){const y=Math.round(yb+(i+1)*gap+i*st);add('Полка'+nm,'carcass',ia,ib,y,y+st,zb,zb+BC.sd);}
+  return parts;
+}
+/* the two in its place (VTC): the display cabinet at first, the bookcase. A click on its body (a door's click opens the door) or its
+   card's «Следующий вариант →» shows the other: the kitchen built again; the one shown stays through the rebuilds */
+const VTC=[{parts:vitrineParts,card:{title:'Витрина HEMNES с 3 ящиками (IKEA)',price:31000,url:'https://ozon.ru/t/sZF7R6J',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']}},
+  {parts:bookcaseParts,card:{title:'Стеллаж книжный HEMNES (IKEA)',price:17500,url:'https://ozon.ru/t/1NWYtIl',shop:'Ozon',lines:['Чёрно-коричневый, массив сосны.','90 × 37 см, высота 197 см.','Пять переставных полок; внутри 80 × 29 см.']}}];
+let vitPick=0;
+const nextVitrine=()=>{vitPick=(vitPick+1)%VTC.length;rebuild();};
 function buildVitrine(g,opts){
-  const d=buildParts({parts:vitrineParts()},deskMats,opts);
+  const d=buildParts({parts:VTC[vitPick].parts()},deskMats,opts);
   hemnesFronts(d.doors,deskMats);
-  d.model.rotation.y=Math.PI;d.model.position.set(VT.W*MM,0,vitAt()*MM);d.model.userData.vitrine=true;d.model.userData.info=INFO.vitrine;
+  d.model.rotation.y=Math.PI;d.model.position.set(VT.W*MM,0,vitAt()*MM);
+  Object.assign(d.model.userData,{vitrine:true,info:INFO.vitrine});
+  d.model.children.forEach(o=>{o.userData.click=nextVitrine;});   // its body: the other one (a door's click opens it)
   g.add(d.model);
   return d.doors;
 }

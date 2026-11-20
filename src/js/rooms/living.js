@@ -41,8 +41,8 @@ const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
 /* the writing desk as IKEA HEMNES 155×65, black-brown, with its add-on unit: 1550 × 650, 740 high, 670 free under its knee rail. A top on two
    pedestals of 50 mm legs: on the left a cabinet with a frame-and-panel door and a shelf, on the right two drawers; inset
-   fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall (DK.gap; less when the dining area
-   needs the room: kitchen.js, placeDining). Its own axes (mm): x along it from the window end, y up, z from the wall into the room;
+   fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall (DK.gap; against it when
+   the kitchen says so: kitchen.js, placeDining, DeskWall). Its own axes (mm): x along it from the window end, y up, z from the wall into the room;
    turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
 const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:100};   // gap: from the window wall (set by the kitchen: living.setGap)
 const GAP=DK.gap;
@@ -743,7 +743,7 @@ function buildSofa(g,opts){
 
 return {
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
-  // the work place toward the dining table: its desk's gap from the window wall at most (GAP), the desk and the display cabinet as deep
+  // the work place toward the dining table: its desk's gap from the window wall (GAP, or none), the desk and the display cabinet as deep
   // along the left wall as they stand (back); the kitchen sets the gap (kitchen.js: placeDining)
   GAP,back:DK.W+VT.D,setGap(g){DK.gap=g;},
   // all of it in g, in this order; their doors (the kitchen makes them loose)

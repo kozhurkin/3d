@@ -44,10 +44,10 @@ check('кухня: рамка левой стены, переходы и раз�
 });
 
 check('кухня: шкафы по стенам с «Планировки»', () => {
-  // the kitchen wall, the ceiling, the left and right walls: the plan's; the module's own starting sizes are these too
+  // the kitchen wall, the ceiling, the left and right walls, the desk against the window wall or not: the plan's; the module's own starting sizes are these too
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.H,f.P.L,f.P.Rx,f.current.parts.length])(VIEWS.kitchen.furniture())'), [2200, 2600, 4600, 3250, 65]);
-  assert.match(PAGES.app, /^const P=\{W:2200,H:2600,.*,L:4600,Rx:3250\};$/m);
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.H,f.P.L,f.P.Rx,f.P.DeskWall,f.current.parts.length])(VIEWS.kitchen.furniture())'), [2200, 2600, 4600, 3250, false, 65]);
+  assert.match(PAGES.app, /^const P=\{W:2200,H:2600,.*,L:4600,Rx:3250,DeskWall:false\};$/m);
 });
 
 check('кухня: шкафы и техника собираются, панель их меняет', () => {
@@ -458,22 +458,31 @@ check('кухня: над обеденным столом сначала трё�
   assert.ok(p.run(`(q=>{const d=q.children[1],h=d.children.find(o=>o.userData.front===true);return pickDoor(null,{object:h.children[0],point:new THREE.Vector3()})===VIEWS.kitchen.furniture().doors.find(x=>x.g===h);})(${q})`));
 });
 
-check('кухня: обеденная зона по длине до окна — у столешницы на 200 больше, остальное пополам (округление к витрине); до 1200 в сумме, потом письменный стол к окну, до него; ползунок 4000–5000', () => {
-  const p = runPage(PAGES.app, { parentWin: { appView: 'plan' } }); p.tick();
+check('кухня: обеденная зона по длине до окна — у столешницы на 200 больше, остальное пополам (округление к витрине); письменный стол в 100 от окна или впритык (галочка на планировке); ползунок 4000–5000', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
   // the room by the table's sides (from the worktop's edge, 600; to the display cabinet's front), cm on its card, and the desk's gap from the window wall, mm
   const room = (L) => { slide(p, 'kL', L); p.tick(); return p.run(`(f=>{const t=f.appl.children.find(o=>{const i=infoOf(o);return i&&i.title==='Обеденный стол';}),
     d=f.appl.children.find(o=>o.userData.desk===true);return [infoOf(t).lines[3].match(/\\d+/g).map(Number),A.kL-Math.round(d.position.z*1000)];})(VIEWS.kitchen.furniture())`); };
   assert.deepStrictEqual(room(4600), [[74, 54], 100], '1280: 740 and 540');
   assert.deepStrictEqual(room(4610), [[74, 55], 100], '1290: 740 and 550, the 5 to the display cabinet');
   assert.deepStrictEqual(room(5000), [[94, 74], 100], 'a longer room: both sides grow');
-  assert.deepStrictEqual(room(4520), [[70, 50], 100], 'the least: 1200');
-  assert.deepStrictEqual(room(4470), [[70, 50], 50], 'past it the desk goes toward the window');
-  assert.deepStrictEqual(room(4420), [[70, 50], 0], 'up to it');
-  // the slider goes from 4000 to 5000, no stop on the way: nearer still the room by the table shrinks again (780: 490 and 290)
+  assert.deepStrictEqual(room(4420), [[65, 45], 100], 'no threshold: the desk stays 100 from the window, the room by the table shrinks');
+  // the slider goes from 4000 to 5000, no stop on the way
   const s = p.document.querySelector('[data-size="kL"]');
   assert.deepStrictEqual([s.getAttribute('min'), s.getAttribute('max')], ['4000', '5000']);
-  assert.deepStrictEqual(room(4000), [[49, 29], 0]);
+  assert.deepStrictEqual(room(4000), [[44, 24], 100]);
   assert.deepStrictEqual([p.run('A.kL'), p.document.getElementById('pSizeMsg').textContent], [4000, '']);
+  // «Рабочий стол впритык к стене» on the plan: no gap, its 100 go to the dining area; kept with the sizes; off again — back
+  const t = p.document.getElementById('pDeskWall');
+  assert.strictEqual(t.checked, false);
+  t.checked = true; t.dispatch('change');
+  assert.deepStrictEqual(room(4600), [[79, 59], 0], '1380: 790 and 590');
+  assert.deepStrictEqual(p.run('modelDiff()'), { deskWall: true });
+  p.document.getElementById('k-saveDef').click();
+  assert.ok(!('DeskWall' in JSON.parse(storage.get('apt-kitchen-v2')).P), 'not among the kitchen\'s own settings');
+  t.checked = false; t.dispatch('change');
+  assert.deepStrictEqual(room(4600), [[74, 54], 100]);
 });
 
 check('кухня: стулья выдвигаются не дальше своего промежутка — спинка не дальше края столешницы и витрины', () => {
@@ -482,7 +491,7 @@ check('кухня: стулья выдвигаются не дальше сво�
   const out = (L) => { slide(p, 'kL', L); p.tick(); return p.run(`(f=>{const t=k=>Math.round(-f.doors.find(d=>d.key===k).travel*1000);return [t('chair0'),t('chair2')];})(VIEWS.kitchen.furniture())`); };
   assert.deepStrictEqual(out(5000), [420, 420], '940 and 740: both the full 80 past the table\'s edge');
   assert.deepStrictEqual(out(4600), [420, 360], '740 and 540: the far one 20 past it, its back at the display cabinet');
-  assert.deepStrictEqual(out(4000), [310, 110], '490 and 290: both stay under the table by 30 and 230');
+  assert.deepStrictEqual(out(4000), [260, 60], '440 and 240: both stay under the table by 80 and 280');
 });
 
 check('кухня: «i» у обеденного стола — его столешница в карточке; «i» у курсора, карточка по клику, цена, варианты', () => {

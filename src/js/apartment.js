@@ -23,7 +23,8 @@ const APT_A={
   vW:850, vD:400,                   // vent shaft inside: from the shower partition to the hall wall, from its wall to the kitchen wall (how far it is from the bathroom doorway follows)
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
   eD0:54, eD1:946, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top
-  eRv:100                           // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
+  eRv:100,                          // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
+  deskWall:false                    // the kitchen's writing desk against the window wall (else 100 from it: living.js, DK.gap)
 };
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.

@@ -158,7 +158,7 @@ sizeFields.forEach(f=>{f.get=f.get||(a=>a[f.k]);f.set=f.set||((a,v)=>({...a,[f.k
 pq('#pSizes').innerHTML=SIZES.map(([g,fs])=>`<div><h3>${g}, мм</h3>${fs.map(f=>
   `<div class="field"><label for="pS-${f.k}">${f.n}</label><output data-size-out="${f.k}"></output><input type="range" id="pS-${f.k}" data-size="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}"></div>`).join('')}</div>`).join('');
 const sizeMsg=pq('#pSizeMsg');
-function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});}
+function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});pq('#pDeskWall').checked=!!A.deskWall;}
 // the value v if everything fits with it; otherwise the last one toward v that fits (on the slider's step from the current value)
 function fitSize(f,v){
   const cur=f.get(A),bad=aptProblems(f.set(A,v));
@@ -172,6 +172,8 @@ sizeFields.forEach(f=>pq(`[data-size="${f.k}"]`).addEventListener('input',e=>{
   if(v!==f.get(A))setModel(f.set(A,v));
   syncSizes();sizeMsg.textContent=why?`Дальше нельзя: ${why}`:'';
 }));
+// the kitchen's writing desk against the window wall: kept with the sizes (the kitchen takes it from A)
+pq('#pDeskWall').addEventListener('change',e=>setModel(Object.assign({},A,{deskWall:e.target.checked})));
 syncSizes();
 const sizesBox=pq('#pSizesBox');
 { const s=readJSON('apt-plan-sizes');sizesBox.open=s!==false; }

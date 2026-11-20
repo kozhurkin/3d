@@ -15,9 +15,12 @@ const INFO={
   desk:{title:'Письменный стол HEMNES (IKEA)',lines:['Чёрно-коричневый, массив сосны.','155 × 65 см, высота 74 см, под столом 67 см.','Слева тумба с дверцей и полкой, справа два ящика.']},
   addon:{title:'Надстройка HEMNES для стола (IKEA)',lines:['Чёрно-коричневая, массив сосны.','152 × 25 см, высота 63 см; стол с ней — 137 см.','По краям две секции с ящиком и полками, посередине открытая полка.']},
   macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
-  shelf:()=>({title:'Настенная полка',lines:[`${SHC[shelfColor].desc}; на двух ${SHC[shelfColor].brName} стальных кронштейнах с косынкой.`,'150 × 25 см, толщина 3 см.','Кронштейны из стальной полосы 4 мм шириной 25 мм, в 15 см от краёв полки: плечо 20 см под полкой, стойка 15 см по стене вниз, косынка между ними.','Над надстройкой стола, в 30 см над ней: низ на 167 см от пола.',`Нажатие меняет цвет: ${SHC.map(c=>c.name).join(' → ')}.`]}),
+  // which of the four (SHC) and a link to the next one (engine.js: info.variant, info.next — it shows the next and gives its card)
+  shelf:()=>{const c=SHC[shelfPick],pager={variant:[shelfPick+1,SHC.length],next:()=>{nextShelf();return INFO.shelf();}};
+    return Object.assign(c.hemnes?{title:'Полка навесная HEMNES (IKEA)',price:8000,url:'https://ozon.ru/t/GIfrq0T',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны.',`${cm(HM.W)} × ${cm(HM.D)} см, высота ${cm(HM.H)} см.`,`Над надстройкой стола, в ${cm(hemnesY0()-DK.H-AU.H)} см над ней; верх вровень с витриной: от ${cm(hemnesY0())} до ${cm(VT.H)} см от пола.`]}
+      :{title:'Настенная полка',lines:[`${c.desc}; на двух ${c.brName} стальных кронштейнах с косынкой.`,'150 × 25 см, толщина 3 см.','Кронштейны из стальной полосы 4 мм шириной 25 мм, в 15 см от краёв полки: плечо 20 см под полкой, стойка 15 см по стене вниз, косынка между ними.','Над надстройкой стола, в 30 см над ней: низ на 167 см от пола.']},pager);},
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
-  vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
+  vitrine:{title:'Витрина HEMNES с 3 ящиками (IKEA)',price:31000,url:'https://ozon.ru/t/sZF7R6J',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']},
   wardrobe:()=>wardColor.card(INFO.wardrobe,ozon({title:'Угловой шкаф «Уютная логика» (OZON)',lines:['Распашные двери без ручек (открываются нажатием).',
     wardExt()?'Угловой 96,4 × 96,4 см и две доп. секции 40 × 50 см — вдоль стены и на торце, высота 220 см, глубина 50 см.':'Угловой 96,4 × 96,4 см и доп. секция 40 × 50 см, высота 220 см, глубина 50 см.',
     `В угловом слева четыре полки, справа — полка и две штанги для вешалок; в ${wardExt()?'доп. секциях по':'доп. секции'} четыре полки.`],
@@ -110,22 +113,26 @@ function addOnParts(add){
     a('Дно ящика'+n,'back',bx0,bx1,by0-4,by0,bz0,fz0,{inSlide:k});
   });
 }
-/* the wall shelf over the add-on unit: a board 1500 × 250, 30 thick, in the middle of the desk's length, its bottom 300 over the
-   add-on unit (1370 + 300 = 1670). Black-brown as the desk at first; a click on it or its brackets (engine.js: userData.click) paints
-   it oak Casella (on dark grey brackets both), then white (on white ones), then as the desk again; the colour stays through the
-   kitchen's rebuilds. Desk axes, mm */
+/* the shelf over the add-on unit, in the middle of the desk's length, one of four (SHC): IKEA HEMNES wall shelf at first (hemnesParts),
+   its top level with the display cabinet's; or a board 1500 × 250, 30 thick, its bottom 300 over the add-on unit (1370 + 300 = 1670),
+   on two brackets: black-brown as the desk, oak Casella (on dark grey brackets both), white (on white ones). A click on any of them
+   (engine.js: userData.click) shows the next; the one shown stays through the kitchen's rebuilds. Desk axes, mm */
 const SH={W:1500,D:250,t:30,gap:300,name:'Полка над столом'};
 const shelfFinMats=f=>{const m=makeMats();applyMaterials(m,Object.assign({},deskFIN,{carcass:f}),0);return m;};
 const bracketWhite=new THREE.MeshStandardMaterial({color:0xf2f2ef,roughness:.45,metalness:.2}),bracketGrey=new THREE.MeshStandardMaterial({color:0x222325,roughness:.45,metalness:.3});
-const SHC=[{name:'как стол',desc:'Чёрно-коричневая, как стол',mats:deskMats,br:bracketGrey,brName:'тёмно-серых'},
-  {name:'дуб Каселла',desc:'Дуб Каселла натуральный, как столешница кухни',mats:shelfFinMats({type:'wood',decor:'C1385'}),br:bracketGrey,brName:'тёмно-серых'},
-  {name:'белый',desc:'Белый премиум W1000 ST9, как корпуса кухни',mats:shelfFinMats({type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'}),br:bracketWhite,brName:'белых'}];
-let shelfColor=0;
-const isShelf=o=>o.userData.shelfBracket===true||!!(o.userData.part&&o.userData.part.name===SH.name);
-// the shelf's board and its brackets in the desk's built group: the colours they have now
-function paintShelf(desk){
-  const c=SHC[shelfColor],is=(m,k)=>SHC.some(s=>s.mats[k]===m);
+const SHC=[{name:'HEMNES',hemnes:true,mats:deskMats,br:bracketGrey},   // its mats and br: the board's and its brackets' while hidden
+  {name:'доска как стол',desc:'Чёрно-коричневая, как стол',mats:deskMats,br:bracketGrey,brName:'тёмно-серых'},
+  {name:'доска дуб Каселла',desc:'Дуб Каселла натуральный, как столешница кухни',mats:shelfFinMats({type:'wood',decor:'C1385'}),br:bracketGrey,brName:'тёмно-серых'},
+  {name:'доска белая',desc:'Белый премиум W1000 ST9, как корпуса кухни',mats:shelfFinMats({type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'}),br:bracketWhite,brName:'белых'}];
+let shelfPick=0,nextShelf=()=>{};   // which one is shown; nextShelf: shows the next on the desk built last (buildShelf)
+const isHemnes=o=>!!(o.userData.part&&o.userData.part.hemnes===true);
+const isShelf=o=>o.userData.shelfBracket===true||isHemnes(o)||!!(o.userData.part&&o.userData.part.name===SH.name);
+// the shelves in the desk's built group: HEMNES or the board on its brackets shown, the board's colours as they are now
+function showShelf(desk){
+  const c=SHC[shelfPick],is=(m,k)=>SHC.some(s=>s.mats[k]===m);
   desk.children.filter(isShelf).forEach(o=>{
+    const hm=isHemnes(o);o.visible=hm===!!c.hemnes;
+    if(hm||c.hemnes)return;
     if(o.userData.shelfBracket===true){o.material=c.br;return;}
     o.material=o.material.map(m=>is(m,'carcass')?c.mats.carcass:is(m,'carcassEnd')?c.mats.carcassEnd:m);
     o.children.forEach(e=>{if(is(e.material,'edge'))e.material=c.mats.edge;});
@@ -135,8 +142,31 @@ const shelfY0=()=>DK.H+AU.H+SH.gap;
 function shelfParts(add){
   const x0=(DK.W-SH.W)/2,y0=shelfY0();
   add(SH.name,'carcass',x0,x0+SH.W,y0,y0+SH.t,0,SH.D,{info:INFO.shelf});
+  hemnesParts(add);
 }
-/* its brackets: two powder-coated steel L-brackets under it (white or dark grey, as the shelf: paintShelf), 25 wide, 4 thick,
+/* IKEA HEMNES wall shelf, black-brown, solid pine: 1480 × 364 (its top), 339 high; its top level with the display cabinet's (1970).
+   A top 22 over the carcass, 10 proud of it at the ends and in front; the carcass 1460 × 354: at each end a frame of two posts and
+   two rails round a panel 268 wide (the frame's outer face 8 proud of it), a bottom 22 between them, a back at the wall; three open
+   compartments 255 high, about 451 wide, two dividers between them, a rail 40 under the top across the front. Desk axes, mm */
+const HM={W:1480,D:364,H:339,d:354,top:22,ov:10,side:35,post:43,rail:50,inset:8,bottom:22,front:40,div:18,back:8};
+const hemnesY0=()=>VT.H-HM.H;
+function hemnesParts(add){
+  const {W,D,H,d,top,ov,side:sd,post,rail,inset,bottom:bt,front:fr,div,back:bk}=HM,ox=(DK.W-W)/2,oy=hemnesY0(),yt=H-top,nm=' полки HEMNES';
+  const a=(name,x0,x1,y0,y1,z0,z1,mat='carcass')=>add(name+nm,mat,ox+x0,ox+x1,oy+y0,oy+y1,z0,z1,{info:INFO.shelf,hemnes:true});
+  a('Верх',0,W,yt,H,0,D,'top');
+  const ia=ov+sd,ib=W-ov-sd;   // inside, between the ends
+  [[ov,ia,ov+inset,ia],[ib,W-ov,ib,W-ov-inset]].forEach(([x0,x1,p0,p1])=>{
+    [0,d-post].forEach(z=>a('Стойка',x0,x1,0,yt,z,z+post));
+    [[0,rail],[yt-rail,yt]].forEach(([y0,y1])=>a('Царга боковины',x0,x1,y0,y1,post,d-post));
+    a('Филёнка боковины',p0,p1,rail,yt-rail,post,d-post);
+  });
+  a('Дно',ia,ib,0,bt,0,d);
+  a('Задняя стенка',ia,ib,bt,yt,0,bk);
+  a('Передняя царга',ia,ib,yt-fr,yt,d-20,d);
+  const o=(ib-ia-2*div)/3;   // each compartment's width
+  [1,2].forEach(k=>{const x=ia+k*o+(k-1)*div;a('Перегородка',x,x+div,bt,yt-fr,bk,d);});
+}
+/* its brackets: two powder-coated steel L-brackets under it (white or dark grey, as the shelf: showShelf), 25 wide, 4 thick,
    150 from its ends; an arm 200 under the board, another 150 down the wall, a strut at 45° between them. Added to the desk's built
    group (m), the board's colour on it and them; a click on any of them the next colour */
 const SHB={end:150,w:25,t:4,arm:200,leg:150};
@@ -150,12 +180,12 @@ function lBracket(box,c,y0,{w,t,arm,leg},mat,up=false){
   return ms;
 }
 function buildShelf(desk){
-  const box=boxIn(desk),x0=(DK.W-SH.W)/2,y0=shelfY0(),br=SHC[shelfColor].br;
+  const box=boxIn(desk),x0=(DK.W-SH.W)/2,y0=shelfY0(),br=SHC[shelfPick].br;
   const ms=[x0+SHB.end,x0+SH.W-SHB.end].flatMap(c=>lBracket(box,c,y0,SHB,br));
   ms.forEach(o=>Object.assign(o.userData,{info:INFO.shelf,shelfBracket:true}));
-  const next=()=>{shelfColor=(shelfColor+1)%SHC.length;paintShelf(desk);};
-  desk.children.filter(isShelf).forEach(o=>{o.userData.click=next;});
-  paintShelf(desk);
+  nextShelf=()=>{shelfPick=(shelfPick+1)%SHC.length;showShelf(desk);};
+  desk.children.filter(isShelf).forEach(o=>{o.userData.click=nextShelf;});
+  showShelf(desk);
 }
 /* the fronts of the HEMNES pieces, on their doors (they swing and slide with them): knobs [[x,y]…], a frame round a door's
    panel (panel), or a glass door (glass): its front a 4 mm pane in the middle of a frame of the front's thickness. Part mm, m */
@@ -507,7 +537,7 @@ function buildMezzanine(g,opts){
    Its own axes as the desk shelf's: x along the wall from the wardrobe's side, z out from the wall; turned onto the kitchen's as the sofa */
 const SS={L:2000,D:250,t:25,y0:1375,name:'Полка над диваном'};
 function buildSofaShelf(g){
-  const white=SHC.find(c=>c.name==='белый'),[parts,add]=partList();
+  const white=SHC.find(c=>c.name==='доска белая'),[parts,add]=partList();
   add(SS.name,'carcass',0,SS.L,SS.y0,SS.y0+SS.t,SHB.t,SHB.t+SS.D);
   const q=buildParts({parts},white.mats).model,box=boxIn(q);
   [SHB.end,SS.L/2,SS.L-SHB.end].forEach(c=>lBracket(box,c,SS.y0,SHB,white.br,true).forEach(o=>{o.userData.bracket=true;}));

@@ -432,6 +432,8 @@ function buildVitrine(g,opts){
    outer end. On the leg's end (the section's, if it has one), into the room: a mirror in a black frame, a coat rail under it. Sides down to the floor, a 70 mm plinth between them, the overlay doors over it.
    Built in the kitchen's axes (mm): no turn — the doors turn on their own hinges (pivot), the leg's way and the wall's. Two groups —
    the leg and the run along the wall — so the walk is stopped by its L, not by the whole rectangle */
+// the «Уютная логика» backs (the wardrobe's and the mezzanine's): HDF t thick, nailed over the carcass's rear edges, in from its edges
+const HDF={t:4,in:2};
 const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,
   mirror:{w:400,h:400,y0:1300,frame:10,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
@@ -466,26 +468,28 @@ function wardrobeParts(){
   const {W,D,C,d,H,pl,t,ft,gap}=WR,X=P.Rx,s=wardAt(),yt=H-t,cd=d-ft;   // X: the wall; cd: the carcass's depth behind the doors
   const xF=X-d,zF=s-d,xE=X-D,zE=s-C,zA=s-W;   // the doors' faces: along the wall, the leg's; the leg's end; the corner unit's far side; the add-on's
   const fy0=pl+gap,fy1=H-gap,cu=' углового шкафа',ad=' доп. секции';
-  // a carcass as the shop's: sides down to the floor at its ends, the top, the bottom and the plinth between them, the HDF back, its
-  // shelves at ys (20 in from the front); across its width u0–u1, its body from behind its doors (v0) to its back (v1); along the wall
-  // (u: z, v: x) or along the leg (u: x, v: z)
-  const carcass=(nm,u0,u1,v0,v1,leg,ys)=>{
+  // a carcass as the shop's: sides down to the floor at its ends, the top, the bottom and the plinth between them, all as deep; the HDF
+  // back over their rear edges, 2 in from the carcass's edges, down to the bottom's underside (the plinth only in front), in as many
+  // sheets alike, edge to edge; its shelves at ys (20 in from the front); across its width u0–u1, its body from behind its doors (v0) to
+  // its back's outer face (v1); along the wall (u: z, v: x) or along the leg (u: x, v: z)
+  const carcass=(nm,u0,u1,v0,v1,leg,ys,sheets=1)=>{
     const a=(n,mat,ua,ub,y0,y1,va,vb)=>leg?add(n+nm,mat,ua,ub,y0,y1,va,vb):add(n+nm,mat,va,vb,y0,y1,ua,ub);
-    [u0,u1-t].forEach(u=>a('Боковина','carcass',u,u+t,0,H,v0,v1));
-    a('Крыша','carcass',u0+t,u1-t,yt,H,v0,v1-4);
-    a('Дно','carcass',u0+t,u1-t,pl,pl+t,v0,v1-4);
+    [u0,u1-t].forEach(u=>a('Боковина','carcass',u,u+t,0,H,v0,v1-HDF.t));
+    a('Крыша','carcass',u0+t,u1-t,yt,H,v0,v1-HDF.t);
+    a('Дно','carcass',u0+t,u1-t,pl,pl+t,v0,v1-HDF.t);
     a('Цоколь','carcass',u0+t,u1-t,0,pl,v0,v0+t);
-    a('Задняя стенка','back',u0+t,u1-t,pl,yt,v1-4,v1);
-    ys.forEach(y=>a('Полка','carcass',u0+t,u1-t,y,y+t,v0+20,v1-4));
+    const b0=u0+HDF.in,sw=(u1-u0-2*HDF.in)/sheets;
+    for(let i=0;i<sheets;i++)a(sheets>1?`Лист ${i+1} задней стенки`:'Задняя стенка','back',b0+i*sw,b0+(i+1)*sw,pl,H-HDF.in,v1-HDF.t,v1);
+    ys.forEach(y=>a('Полка','carcass',u0+t,u1-t,y,y+t,v0+20,v1-HDF.t));
   };
   // the corner unit: two carcasses, held together by the stile. On the left (along the wall, zE up to the leg's carcass: 480) the one
   // for shelves, its back against the wall, four shelves as the add-on's, its side at the leg in the leg's door plane, against the leg's
-  // carcass (fixed to it); on the right the leg (xE to the wall: 964), for hangers, its back at the sofa, a side against the wall: the
-  // shelf at the top, the rods under it (buildWardrobe) through the corner behind the left one
+  // carcass (fixed to it); on the right the leg (xE to the wall: 964), for hangers, its back at the sofa in two sheets, a side against
+  // the wall: the shelf at the top, the rods under it (buildWardrobe) through the corner behind the left one
   const n=WR.shelves,st=(yt-pl-t-n*t)/(n+1),shelfY=[...Array(n)].map((_,i)=>Math.round(pl+t+(i+1)*st+i*t));   // the add-on section's too
   carcass(cu+' — слева',zE,zF+ft,X-cd,X,false,shelfY);   // up to the leg's carcass
-  carcass(cu+' — справа',xE,X,s-cd,s,true,[]);
-  add('Полка'+cu+' — справа','carcass',xE+t,X-t,WR.top,WR.top+t,s-cd,s-4);
+  carcass(cu+' — справа',xE,X,s-cd,s,true,[],2);
+  add('Полка'+cu+' — справа','carcass',xE+t,X-t,WR.top,WR.top+t,s-cd,s-HDF.t);
   // the stile at the inner corner: a strip in each front's plane, the one along the wall over the corner where they meet
   const w=WR.strip;
   add('Планка'+cu+' — у дивана','carcass',xF-w,xF,fy0,fy1,zF,zF+ft);
@@ -514,10 +518,11 @@ function mezzanineParts(){
   const {n,L,d,y0,y1,t,ft,gap}=MZ,X=P.Rx,cd=d-ft,xF=X-d;
   for(let i=0;i<n;i++){
     const z0=wardAt()+i*L,z1=z0+L,zm=(z0+z1)/2,nm=' антресоли — секция '+(i+1);
-    [z0,z1-t].forEach(z=>add('Боковина'+nm,'carcass',X-cd,X,y0,y1,z,z+t));
-    add('Крыша'+nm,'carcass',X-cd,X-4,y1-t,y1,z0+t,z1-t);
-    add('Дно'+nm,'carcass',X-cd,X-4,y0,y0+t,z0+t,z1-t);
-    add('Задняя стенка'+nm,'back',X-4,X,y0+t,y1-t,z0+t,z1-t);
+    // the sides, the top and the bottom as deep, the HDF back over their rear edges (as the wardrobe's)
+    [z0,z1-t].forEach(z=>add('Боковина'+nm,'carcass',X-cd,X-HDF.t,y0,y1,z,z+t));
+    add('Крыша'+nm,'carcass',X-cd,X-HDF.t,y1-t,y1,z0+t,z1-t);
+    add('Дно'+nm,'carcass',X-cd,X-HDF.t,y0,y0+t,z0+t,z1-t);
+    add('Задняя стенка'+nm,'back',X-HDF.t,X,y0+HDF.in,y1-HDF.in,z0+HDF.in,z1-HDF.in);
     add('Дверь'+nm+', левая','front',xF,xF+ft,y0+gap,y1-gap,z0+gap/2,zm-gap/2,{pivot:{x:xF,z:z0+gap/2,s:-1}});
     add('Дверь'+nm+', правая','front',xF,xF+ft,y0+gap,y1-gap,zm+gap/2,z1-gap/2,{pivot:{x:xF,z:z1-gap/2,s:1}});
   }

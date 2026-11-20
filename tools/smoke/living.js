@@ -287,13 +287,15 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
   // two carcasses held by the stile: on the left one 480 along the wall (1426–1906) for shelves — LDSP sides at its ends (the one at the
   // leg in the leg's door plane, against its carcass: no gap), the HDF back against the wall; on the right the leg, 964 out from the wall (2286–3250) for hangers — LDSP sides at its end and against the wall,
   // the HDF back at the sofa (2390) in two sheets of 480, edge to edge; each its top, bottom and plinth, the carcass 484 behind the doors;
-  // the sides, the top and the bottom all as deep, the 4 HDF back over their rear edges, 2 in from the carcass's edges, from the bottom's underside (70) up
+  // the sides, the top and the bottom all as deep, a plinth at the back too (in front of the back: no hole under the bottom), the 4 HDF back over
+  // their rear edges, 2 in from the carcass's edges, from the bottom's underside (70) up
   assert.deepStrictEqual(inside.carL, [
     ['Боковина углового шкафа — слева', 'carcass', 2766, 3246, 1426, 1442, 0, 2200],
     ['Боковина углового шкафа — слева', 'carcass', 2766, 3246, 1890, 1906, 0, 2200],
     ['Крыша углового шкафа — слева', 'carcass', 2766, 3246, 1442, 1890, 2184, 2200],
     ['Дно углового шкафа — слева', 'carcass', 2766, 3246, 1442, 1890, 70, 86],
     ['Цоколь углового шкафа — слева', 'carcass', 2766, 2782, 1442, 1890, 0, 70],
+    ['Цоколь задний углового шкафа — слева', 'carcass', 3230, 3246, 1442, 1890, 0, 70],
     ['Задняя стенка углового шкафа — слева', 'back', 3246, 3250, 1428, 1904, 70, 2198]]);
   assert.deepStrictEqual(inside.carR, [
     ['Боковина углового шкафа — справа', 'carcass', 2286, 2302, 1906, 2386, 0, 2200],
@@ -301,6 +303,7 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
     ['Крыша углового шкафа — справа', 'carcass', 2302, 3234, 1906, 2386, 2184, 2200],
     ['Дно углового шкафа — справа', 'carcass', 2302, 3234, 1906, 2386, 70, 86],
     ['Цоколь углового шкафа — справа', 'carcass', 2302, 3234, 1906, 1922, 0, 70],
+    ['Цоколь задний углового шкафа — справа', 'carcass', 2302, 3234, 2370, 2386, 0, 70],
     ['Лист 1 задней стенки углового шкафа — справа', 'back', 2288, 2768, 2386, 2390, 70, 2198],
     ['Лист 2 задней стенки углового шкафа — справа', 'back', 2768, 3248, 2386, 2390, 70, 2198]]);
   assert.deepStrictEqual(inside.right, [[1650, 2302, 3234, 1906, 2386]], 'between its sides, up to its back: nothing in the air');
@@ -365,6 +368,7 @@ check('living: угловой шкаф — по клику вторая доп. 
     ['Крыша доп. секции — на торце', 1902, 2270, 1906, 2386, 2184, 2200],
     ['Дно доп. секции — на торце', 1902, 2270, 1906, 2386, 70, 86],
     ['Цоколь доп. секции — на торце', 1902, 2270, 1906, 1922, 0, 70],
+    ['Цоколь задний доп. секции — на торце', 1902, 2270, 2370, 2386, 0, 70],
     ['Задняя стенка доп. секции — на торце', 1888, 2284, 2386, 2390, 70, 2198],
     ...[493, 916, 1338, 1761].map((y) => ['Полка доп. секции — на торце', 1902, 2270, y, y + 16].slice(0, 3).concat([1926, 2386, y, y + 16])),
     ['Дверь доп. секции — на торце', 1887, 2285, 1890, 1906, 72, 2198]]);
@@ -390,6 +394,86 @@ check('living: угловой шкаф — по клику вторая доп. 
   slide(p, 'bW', bW); p.tick();
   click();
   r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0], r.end.length, r.mirror], ['1/4', 'Цвет: Белый.', [2286, 3250, 1890, 2390], 0, [2266, 2286, 1940, 2340]]);
+});
+
+check('living: «Задняя стенка шкафа из ЛДСП» на «Планировке» — задние стенки шкафа к дивану из ЛДСП 16 в цвет корпуса, клик по ним меняет их цвет', () => {
+  const storage = new Map();
+  const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
+  const g0 = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true)';
+  const wr = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
+    const ps=g=>{const o=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.x1>m.userData.part.x0)o.push(m);(m.children||[]).forEach(w);};w(g);return o;};
+    const all=gs.flatMap(ps),pt=m=>m.userData.part,bk=all.filter(m=>/^(Лист [0-9] )?[Зз]адн(яя|ей) стенк[аи] (шкафа — у дивана|углового шкафа — справа|доп. секции — на торце)/.test(pt(m).name));
+    const body=gs[0].children[0],ic=infoOf(body);
+    return {backs:bk.map(m=>{const q=pt(m);return [q.name,q.mat,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1];}),
+      leg:all.map(pt).filter(q=>/^(Боковина|Крыша|Дно|Полка) углового шкафа — справа/.test(q.name)).map(q=>q.z1),
+      side:all.map(pt).filter(q=>/^Боковина углового шкафа — справа/.test(q.name)).map(q=>q.z1-q.z0),
+      boxes:gs.map(g=>{const q=ps(g).map(pt);return [Math.min(...q.map(q=>q.z0)),Math.max(...q.map(q=>q.z1))];}),
+      doors:f.doors.filter(x=>gs.includes(x.g.parent)).map(x=>x.g.children[0].userData.part.pivot.z),
+      rack:infoOf(f.appl.children.find(o=>o.userData.rack===true).children[0]).lines[4].match(/[0-9,]+ см/)[0],
+      foot:living.foot().filter(r=>r[1]===3250&&r[0]===2286),
+      mirror:(m=>{const z=m.children.map(o=>[o.position.z-o.geometry.args[2]/2,o.position.z+o.geometry.args[2]/2]);return [Math.round(Math.min(...z.map(a=>a[0]))*1000),Math.round(Math.max(...z.map(a=>a[1]))*1000)];})(gs[0].children.find(o=>o.userData.mirror===true)),
+      rods:gs[0].children.filter(o=>o.userData.rod===true).map(r=>Math.round(r.position.z*1000)),
+      own:bk.every(m=>m.material!==body.material&&clickOf({object:m})===clickOf({object:bk[0]})&&clickOf({object:m})!==clickOf({object:body})&&infoOf(m).title==='Задняя стенка шкафа со стороны дивана'&&ic.title==='Угловой шкаф «Уютная логика» (OZON)'),
+      // the wardrobe's colour, the backs' (their own card)
+      lines:ic.lines.slice(0,1).concat(bk.filter(m=>pt(m).sofaBack===true).slice(0,1).map(m=>infoOf(m).lines[0])),
+      card:bk.filter(m=>pt(m).sofaBack===true).slice(0,1).map(m=>(i=>[i.lines.slice(1),i.price,i.url,i.shop,i.variant.join('/')])(infoOf(m)))[0],
+      ward:ic.lines.some(l=>/Задн/.test(l))};})(VIEWS.kitchen.furniture())`);
+  const backClick = () => p.run(`(g=>{const f=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.sofaBack===true)f.push(m);(m.children||[]).forEach(w);};w(g);clickOf({object:f[0]})();return 0;})(${g0})`);
+  const t = p.document.getElementById('pWardBack');
+  // off: the HDF backs at the sofa, two sheets of the leg's; the carcass 4 short of the sofa's end (2390)
+  let r = wr();
+  assert.strictEqual(t.checked, false);
+  assert.deepStrictEqual(r.backs.map((q) => q.slice(0, 2)), [['Лист 1 задней стенки углового шкафа — справа', 'back'], ['Лист 2 задней стенки углового шкафа — справа', 'back']]);
+  assert.deepStrictEqual([new Set(r.leg), r.side, r.rods, r.lines], [new Set([2386]), [480, 480], [2146, 2146], ['Цвет: Белый.']]);
+  assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1890, 2390], [1026, 1906]], [1890, 1427, 1027], '102,6 см', [[2286, 3250, 1890, 2390]], [1940, 2340]]);
+  // on: LDSP 16 over the leg's rear, floor to top, in two sheets of 480 (an add-on section's sides) edge to edge from its end, 4 short of the wall; the carcasses as deep (480),
+  // so the wardrobe 12 more: its back's outer face still at the sofa (2390), all the rest 12 toward the kitchen wall — its doors, the run
+  // along the wall, the walk's stop, the mirror in the middle of the leg's end; the racks' room 12 less. Its colour the carcass's, a card line on it;
+  // kept with the sizes, not with the kitchen's settings
+  t.checked = true; t.dispatch('change'); p.tick();
+  r = wr();
+  assert.deepStrictEqual(r.backs, [
+    ['Лист 1 задней стенки шкафа — у дивана', 'carcass', 2286, 2766, 2374, 2390, 0, 2200],
+    ['Лист 2 задней стенки шкафа — у дивана', 'carcass', 2766, 3246, 2374, 2390, 0, 2200]]);
+  // their own «i»: cut from one more add-on section — its sides; its Ozon link and price; the wardrobe's card says nothing of them
+  assert.deepStrictEqual([r.card, r.ward], [[[
+    'Листы ЛДСП 16 мм вместо ХДФ — взяты из боковин 48 × 220 см ещё одной доп. секции 40 × 50 × 220.',
+    'Нажатие перекрашивает все задние стенки.'], 5500, 'https://ozon.ru/t/BSIni7B', 'Ozon', '1/2'], false]);
+  assert.deepStrictEqual([new Set(r.leg), r.side, r.rods, r.own], [new Set([2374]), [480, 480], [2134, 2134], true]);
+  assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1878, 2390], [1014, 1894]], [1878, 1415, 1015], '101,4 см', [[2286, 3250, 1878, 2390]], [1934, 2334]]);
+  assert.deepStrictEqual(r.lines, ['Цвет: Белый.', 'Цвет: Белый.']);
+  assert.deepStrictEqual(p.run('modelDiff()'), { wardBack: true });
+  p.document.getElementById('k-saveDef').click();
+  assert.ok(!('WardBack' in JSON.parse(storage.get('apt-kitchen-v2')).P), 'not among the kitchen\'s own settings');
+  // a click on a back: the backs grey, the carcass stays white; through a rebuild; again — white
+  backClick();
+  assert.deepStrictEqual(wr().lines, ['Цвет: Белый.', 'Цвет: Диамант серый U963 ST9.']);
+  const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick(); slide(p, 'bW', bW); p.tick();
+  assert.deepStrictEqual(wr().lines[1], 'Цвет: Диамант серый U963 ST9.', 'through a rebuild');
+  backClick();
+  assert.deepStrictEqual(wr().lines[1], 'Цвет: Белый.');
+  // the carcass grey with the add-on section on the leg's end: the backs' row over its rear too; their click paints them all, not the carcass
+  p.run(`clickOf({object:${g0}.children[0]})()`); p.run(`clickOf({object:${g0}.children[0]})()`); p.run(`clickOf({object:${g0}.children[0]})()`);
+  r = wr();
+  // one row over the leg's whole rear, the end section's too (1364: flush with its end, 4 short of the wall): the two sides from its end, the door (400, 2126 high, its
+  // top level with theirs) against the wall — its shortfall behind the sofa; the first side over the joint of the leg and the end section (2286)
+  assert.deepStrictEqual(r.backs, [
+    ['Лист 1 задней стенки шкафа — у дивана', 'carcass', 1886, 2366, 2374, 2390, 0, 2200],
+    ['Лист 2 задней стенки шкафа — у дивана', 'carcass', 2366, 2846, 2374, 2390, 0, 2200],
+    ['Лист 3 задней стенки шкафа — у дивана', 'carcass', 2846, 3246, 2374, 2390, 74, 2200]]);
+  assert.deepStrictEqual(r.card[0], [
+    'Листы ЛДСП 16 мм вместо ХДФ — взяты из боковин 48 × 220 см и фасада 40 × 212,6 см ещё одной доп. секции 40 × 50 × 220.',
+    'Фасад — у стены: он ниже боковин, недостача внизу прячется за диваном.', 'Нажатие перекрашивает все задние стенки.']);
+  assert.deepStrictEqual([r.own, r.lines], [true, ['Цвет: Диамант серый U963 ST9.', 'Цвет: Белый.']]);
+  backClick();
+  assert.deepStrictEqual(wr().lines, ['Цвет: Диамант серый U963 ST9.', 'Цвет: Диамант серый U963 ST9.']);
+  // off and on again: in the carcass's colour anew
+  t.checked = false; t.dispatch('change'); p.tick();
+  r = wr();
+  assert.deepStrictEqual([r.backs.map((q) => q[1]), r.lines], [['back', 'back', 'back'], ['Цвет: Диамант серый U963 ST9.']]);
+  p.run(`clickOf({object:${g0}.children[0]})()`);
+  t.checked = true; t.dispatch('change'); p.tick();
+  assert.deepStrictEqual(wr().lines, ['Цвет: Белый.', 'Цвет: Белый.']);
 });
 
 check('living: антресоль OZON над диваном — две секции по 1000, глубина 500, от 1700 до 2200 (вровень со шкафом), от шкафа к окну; четыре двери открываются', () => {

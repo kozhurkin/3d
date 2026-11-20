@@ -24,7 +24,8 @@ const APT_A={
   bear:200, wt:100,                 // outer bearing walls of the apartment (entrance + bathroom back, bathroom/kitchen left), inner walls
   eD0:54, eD1:946, eDH:2016,        // entrance door opening: its sides from the hall's left wall, its top
   eRv:100,                          // entrance door frame: this far into the bearing wall from the hall (the reveal the hall cabinet clads)
-  deskWall:false                    // the kitchen's writing desk against the window wall (else 100 from it: living.js, DK.gap)
+  deskWall:false,                   // the kitchen's writing desk against the window wall (else 100 from it: living.js, DK.gap)
+  wardBack:false                    // the kitchen's wardrobe: its backs at the sofa of 16 LDSP in a colour of its own (else HDF: living.js, wardrobeParts)
 };
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.

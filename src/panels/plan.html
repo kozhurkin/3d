@@ -27,6 +27,11 @@
         <label><input type="checkbox" id="pNames" checked> Названия и площади комнат</label>
         <label><input type="checkbox" id="pFloors" checked> Цвет пола по комнатам</label>
       </div>
+      <h3>Расстановка</h3>
+      <div class="toggles">
+        <label title="Без зазора 100 мм до стены с окном: обеденной зоне достаётся больше места"><input type="checkbox" id="pDeskWall"> Рабочий стол впритык к стене</label>
+        <label title="Задние стенки шкафа, обращённые к дивану, — ЛДСП 16 мм вместо ХДФ; сначала в цвет корпуса, клик по ним меняет цвет"><input type="checkbox" id="pWardBack"> Задняя стенка шкафа из ЛДСП</label>
+      </div>
       <h3>Камера</h3>
       <div class="views" data-cams>
         <button class="btn" data-cam="plan" title="Весь план под углом со стороны кухни">План</button>
@@ -43,12 +48,6 @@
       <div class="sizes-body">
         <p class="note" style="margin:0">Размеры стен меняются только здесь; вкладки комнат берут их отсюда.</p>
         <div id="pSizes" style="display:contents"></div>
-        <div>
-          <h3>Расстановка</h3>
-          <div class="toggles" style="margin-top:0">
-            <label title="Без зазора 100 мм до стены с окном: обеденной зоне достаётся больше места"><input type="checkbox" id="pDeskWall"> Рабочий стол впритык к стене</label>
-          </div>
-        </div>
         <p class="note" id="pSizeMsg" aria-live="polite" style="margin:0;color:var(--warn)"></p>
       </div>
     </details>

@@ -206,6 +206,9 @@ check('living: на месте витрины второй вариант — к
     'Чёрно-коричневый, массив сосны.', '90 × 37 см, высота 197 см.', 'Пять переставных полок; внутри 80 × 29 см.']);
   assert.deepStrictEqual([r.at, r.turn, r.doors], [[900, 2950], Math.PI, 0], 'where the display cabinet was, no doors');
   assert.deepStrictEqual(r.box, [0, 900, 0, 1970, 0, 370], 'as big as the display cabinet: the HEMNES shelf over the desk still level with it');
+  // the others' cards name what stands there now: the table's, the HEMNES shelf's
+  const named = p.run(`(f=>[infoOf(f.appl.children.find(o=>o.userData.table===true)).lines[3],infoOf(f.appl.children.find(o=>o.userData.desk===true).children.find(o=>o.userData.part&&o.userData.part.hemnes===true)).lines[2]])(VIEWS.kitchen.furniture())`);
+  assert.ok(/ см до стеллажа\.$/.test(named[0]) && /верх вровень со стеллажом:/.test(named[1]), named.join(' | '));
   // five shelves evenly between the bottom (190) and the head rail (1888), 800 between the front posts, 290 deep
   assert.deepStrictEqual([r.shelves, r.inside], [[458, 744, 1030, 1316, 1602], [800, 290]]);
   // it stays through a rebuild; the card's «Следующий вариант →» brings the display cabinet back

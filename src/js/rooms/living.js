@@ -1,7 +1,7 @@
 /* ---------- the rest of the kitchen room: what is not the kitchen ----------
    The room on the plan is one (ROOMS: kitchen). Along the kitchen wall stands the kitchen (kitchen.js: its cabinets, its appliances,
    the dining table with its chairs, its lamp and the shelf over it); the rest of the room is here: the work place by the left wall
-   (the desk with its add-on unit and the shelf over it, the MacBook, the desk chair, the display cabinet) and the living part by the
+   (the desk with its add-on unit and the shelf over it, the MacBook, the desk chair, the display cabinet or the bookcase) and the living part by the
    right wall (the wardrobe with its mirror and coat rail, the mezzanine, the sofa and the shelf over it, the metal racks).
    Kitchen coordinates (kitchen.js), mm. The kitchen builds all of it with its own things (kitchen.js: extra) and gives it what it
    needs (attach): where the walls are (P: Rx, L), its appliances' doors (applDoor), their handles' grey (handleMat), its rebuild.
@@ -17,7 +17,7 @@ const INFO={
   macbook:{title:'MacBook Pro 16″ (Apple)',lines:['Серебристый, алюминиевый корпус.','35,57 × 24,81 см, толщина 1,68 см; 2,1 кг.','Экран Liquid Retina XDR 16,2″, 3456 × 2234; крышка открывается до 110°.']},
   // which of the four (SHC) and a link to the next one (engine.js: info.variant, info.next — it shows the next and gives its card)
   shelf:()=>{const c=SHC[shelfPick],pager={variant:[shelfPick+1,SHC.length],next:()=>{nextShelf();return INFO.shelf();}};
-    return Object.assign(c.hemnes?{title:'Полка навесная HEMNES (IKEA)',price:8000,url:'https://ozon.ru/t/GIfrq0T',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны.',`${cm(HM.W)} × ${cm(HM.D)} см, высота ${cm(HM.H)} см.`,`Над надстройкой стола, в ${cm(hemnesY0()-DK.H-AU.H)} см над ней; верх вровень с витриной: от ${cm(hemnesY0())} до ${cm(VT.H)} см от пола.`]}
+    return Object.assign(c.hemnes?{title:'Полка навесная HEMNES (IKEA)',price:8000,url:'https://ozon.ru/t/GIfrq0T',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны.',`${cm(HM.W)} × ${cm(HM.D)} см, высота ${cm(HM.H)} см.`,`Над надстройкой стола, в ${cm(hemnesY0()-DK.H-AU.H)} см над ней; верх вровень ${VTC[vitPick].with}: от ${cm(hemnesY0())} до ${cm(VT.H)} см от пола.`]}
       :{title:'Настенная полка',lines:[`${c.desc}; на двух ${c.brName} стальных кронштейнах с косынкой.`,'150 × 25 см, толщина 3 см.','Кронштейны из стальной полосы 4 мм шириной 25 мм, в 15 см от краёв полки: плечо 20 см под полкой, стойка 15 см по стене вниз, косынка между ними.','Над надстройкой стола, в 30 см над ней: низ на 167 см от пола.']},pager);},
   deskChair:{title:'Офисное кресло MILLBERGET (IKEA)',lines:['Бумстад золотисто-коричневый (кожа); подлокотники и крестовина на колёсиках чёрные.','65 × 65 см, высота 118–128 см; сиденье 52 × 49 см на высоте 46–56 см.','Выдвинуто от письменного стола; нажатие задвигает его под стол и обратно.']},
   // which of the two (VTC) and a link to the next one, as the shelf's
@@ -374,7 +374,7 @@ function buildMacbook(desk,opts){
   return [applDoor(q,{key:'macbook',axis:'none',max:open,startOpen:true,follow},opts)];
 }
 
-/* the display cabinet, one of two (VTC; or the bookcase), at first IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
+/* the display cabinet (or the bookcase in its place: VTC) as IKEA HEMNES glass-door cabinet with 3 drawers, black-brown/light brown: 900 × 370, 1970 high, solid pine.
    45 mm corner posts, two glass doors over three adjustable shelves, three drawers under them; all of it dark, as the desk.
    Its back against the desk's end by the kitchen wall, its side against the left wall, its fronts toward the kitchen wall.
    Own axes (mm): x across its front from the left wall's far side as seen from the front, y up, z from its back to its front;
@@ -431,9 +431,10 @@ function bookcaseParts(){
   return parts;
 }
 /* the two in its place (VTC): the display cabinet at first, the bookcase. A click on its body (a door's click opens the door) or its
-   card's «Следующий вариант →» shows the other: the kitchen built again; the one shown stays through the rebuilds */
-const VTC=[{parts:vitrineParts,card:{title:'Витрина HEMNES с 3 ящиками (IKEA)',price:31000,url:'https://ozon.ru/t/sZF7R6J',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']}},
-  {parts:bookcaseParts,card:{title:'Стеллаж книжный HEMNES (IKEA)',price:17500,url:'https://ozon.ru/t/1NWYtIl',shop:'Ozon',lines:['Чёрно-коричневый, массив сосны.','90 × 37 см, высота 197 см.','Пять переставных полок; внутри 80 × 29 см.']}}];
+   card's «Следующий вариант →» shows the other: the kitchen built again; the one shown stays through the rebuilds. Its name in the
+   others' cards: of (genitive), with (with its preposition) */
+const VTC=[{parts:vitrineParts,of:'витрины',with:'с витриной',card:{title:'Витрина HEMNES с 3 ящиками (IKEA)',price:31000,url:'https://ozon.ru/t/sZF7R6J',shop:'Ozon',lines:['Чёрно-коричневая, массив сосны, закалённое стекло.','90 × 37 см, высота 197 см.','Две стеклянные дверцы, три переставные полки, три ящика.']}},
+  {parts:bookcaseParts,of:'стеллажа',with:'со стеллажом',card:{title:'Стеллаж книжный HEMNES (IKEA)',price:17500,url:'https://ozon.ru/t/1NWYtIl',shop:'Ozon',lines:['Чёрно-коричневый, массив сосны.','90 × 37 см, высота 197 см.','Пять переставных полок; внутри 80 × 29 см.']}}];
 let vitPick=0;
 const nextVitrine=()=>{vitPick=(vitPick+1)%VTC.length;rebuild();};
 function buildVitrine(g,opts){
@@ -779,7 +780,8 @@ return {
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
   // the work place toward the dining table: its desk's gap from the window wall (GAP, or none), the desk and the display cabinet as deep
   // along the left wall as they stand (back); the kitchen sets the gap (kitchen.js: placeDining)
-  GAP,back:DK.W+VT.D,setGap(g){DK.gap=g;},
+  GAP,back:DK.W+VT.D,vitName:()=>VTC[vitPick].of,   // what stands at the desk's end, for the table's card
+  setGap(g){DK.gap=g;},
   // all of it in g, in this order; their doors (the kitchen makes them loose)
   build:(g,o)=>[].concat(buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g)),
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks

@@ -6,7 +6,7 @@ check('living: витрина HEMNES спинкой к торцу стола, б
   const vit = () => p.run(`(f=>{const d=tt.item("vitrine");
     return {at:[tt.mm(d.position.x),tt.mm(d.position.z)],turn:+d.rotation.y,
       glass:d.children.filter(o=>o.userData.front===true).map(h=>h.children[0]).filter(m=>m.userData.part.glass===50).length,
-      doors:tt.doors(d).map(x=>[x.axis||'y',Math.round((x.travel||0)*1000),x.t])};})(VIEWS.kitchen.furniture())`);
+      doors:tt.doors(d).map(x=>[x.axis||'y',Math.round((x.travel||0)*1000),x.t])};})(tt.fur())`);
   let r = vit();
   // kitchen axes: the desk's end toward the kitchen wall at 4600 − 100 − 1550 = 2950; the cabinet 900 wide from the left wall
   assert.deepStrictEqual(r.at, [900, 2950]);
@@ -26,7 +26,7 @@ check('living: «i» у письменного стола и витрины — 
     const deskDoor=desk.children.find(o=>o.userData.front===true&&o.children[0].userData.part.name==='Дверца — тумба с дверцей');
     const t=o=>{const i=infoOf(o);return i&&i.title;};
     return {desk:t(deskDoor.children[deskDoor.children.length-1]),au:t(auPart),auKnob:t(auDrawer.children[auDrawer.children.length-1]),
-      vit:t(vit.children[0]),vitBuy:(i=>[i.price,i.url,i.shop])(infoOf(vit.children[0]))};})(VIEWS.kitchen.furniture())`);
+      vit:t(vit.children[0]),vitBuy:(i=>[i.price,i.url,i.shop])(infoOf(vit.children[0]))};})(tt.fur())`);
   assert.deepStrictEqual([r.desk, r.au, r.auKnob, r.vit], ['Письменный стол HEMNES (IKEA)', 'Надстройка HEMNES для стола (IKEA)', 'Надстройка HEMNES для стола (IKEA)', 'Витрина HEMNES с 3 ящиками (IKEA)']);
   assert.deepStrictEqual(r.vitBuy, [31000, 'https://ozon.ru/t/sZF7R6J', 'Ozon'], 'the display cabinet on Ozon');
 });
@@ -39,7 +39,7 @@ check('living: на месте витрины второй вариант — к
     return {at:[tt.mm(d.position.x),tt.mm(d.position.z)],turn:+d.rotation.y,doors:tt.doors(d).length,
       box:tt.box(ps,"xyz"),
       shelves:sh.map(q=>q.y0),inside:sh.length?[sh[0].x1-sh[0].x0,sh[0].z1-sh[0].z0]:null,
-      card:[i.title,i.variant.join('/'),i.price,i.url,i.shop].concat(i.lines)};})(VIEWS.kitchen.furniture())`);
+      card:[i.title,i.variant.join('/'),i.price,i.url,i.shop].concat(i.lines)};})(tt.fur())`);
   let r = st();
   assert.deepStrictEqual([r.card[0], r.card[1], r.doors], ['Витрина HEMNES с 3 ящиками (IKEA)', '1/2', 5], 'the display cabinet at first');
   // a door's click opens it, its body's shows the bookcase: the kitchen built again, in the same place, the same size
@@ -50,7 +50,7 @@ check('living: на месте витрины второй вариант — к
   assert.deepStrictEqual([r.at, r.turn, r.doors], [[900, 2950], Math.PI, 0], 'where the display cabinet was, no doors');
   assert.deepStrictEqual(r.box, [0, 900, 0, 1970, 0, 370], 'as big as the display cabinet: the HEMNES shelf over the desk still level with it');
   // the others' cards name what stands there now: the table's, the HEMNES shelf's
-  const named = p.run(`(f=>[infoOf(tt.item("table")).lines[3],infoOf(tt.item("desk").children.find(o=>o.userData.part&&o.userData.part.hemnes===true)).lines[2]])(VIEWS.kitchen.furniture())`);
+  const named = p.run(`(f=>[infoOf(tt.item("table")).lines[3],infoOf(tt.item("desk").children.find(o=>o.userData.part&&o.userData.part.hemnes===true)).lines[2]])(tt.fur())`);
   assert.ok(/ см до стеллажа\.$/.test(named[0]) && /верх вровень со стеллажом:/.test(named[1]), named.join(' | '));
   // five shelves evenly between the bottom (190) and the head rail (1888), 800 between the front posts, 290 deep
   assert.deepStrictEqual([r.shelves, r.inside], [[458, 744, 1030, 1316, 1602], [800, 290]]);

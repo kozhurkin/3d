@@ -9,7 +9,7 @@ check('living: радиатор под подоконником — 10 белы�
     const bs=q.children.filter(o=>o.geometry.kind==='THREE.BoxGeometry').map(o=>{const [sx,sy,sz]=o.geometry.args,c=o.position;return [c.x-sx/2,c.x+sx/2,c.y-sy/2,c.y+sy/2,c.z-sz/2,c.z+sz/2].map(mm);});
     const ext=[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(b=>b[i])));
     return {at:[mm(q.position.x),mm(q.position.z)],turn:+q.rotation.y,ext,fronts:bs.filter(b=>b[5]===100&&b[3]-b[2]===530).map(b=>b[1]-b[0]),tops:q.children.filter(o=>o.userData.top===true).map(o=>{const [r0,,len,,,,t0,tl]=o.geometry.args;return [mm(len),mm(o.position.y+r0),mm(o.position.z-r0),mm(o.position.z+r0),t0,+tl.toFixed(4)];}),mat:q.children.every(o=>o.userData.valve===true||o.material===winMat),
-      valve:mm(q.children.find(o=>o.userData.valve===true).position.x),info:infoOf(q),foot:rd};})(VIEWS.kitchen.furniture())`);
+      valve:mm(q.children.find(o=>o.userData.valve===true).position.x),info:infoOf(q),foot:rd};})(tt.fur())`);
   let r = rad();
   // kitchen axes: in the middle of the window wall (the window is in the middle of the room: 3250 / 2), turned to face the room
   assert.deepStrictEqual([r.at, r.turn], [[1625, 4600], Math.PI]);

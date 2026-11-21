@@ -9,7 +9,7 @@ check('living: на письменном столе MacBook Pro 16″ — пос
       faces:[body,lid.children[0]].map(m=>m.material.map(x=>m.material.indexOf(x))),lidParts:lid.children.length,glow:lid.children[0].material[3].emissiveIntensity,
       offsets:[body,lid.children[0]].flatMap(m=>m.material).filter(x=>x.polygonOffset===true).length,
       max:Math.round(d.max*180/Math.PI),t:d.t,rot:+lid.rotation.x.toFixed(2),title:infoOf(body).title,
-      pick:pickDoor(null,{object:body,point:new THREE.Vector3()})===d};})(VIEWS.kitchen.furniture())`);
+      pick:pickDoor(null,{object:body,point:new THREE.Vector3()})===d};})(tt.fur())`);
   let r = mb();
   // desk axes: in the middle of its 1550, on its top at 740, its back 360 from the wall (the add-on unit 250 deep, the desk 650)
   assert.ok(r.onDesk, 'on the desk: it moves and hides with it');
@@ -26,7 +26,7 @@ check('living: на письменном столе MacBook Pro 16″ — пос
   // a click on any of it closes it
   assert.deepStrictEqual([r.max, Math.round(r.t * 180 / Math.PI), r.rot, r.title, r.pick], [110, 110, -1.92, 'MacBook Pro 16″ (Apple)', true], 'open; a click on any of it closes it');
   assert.strictEqual(r.glow, 1, 'the display alight');
-  const click = () => { p.run('(d=>{d.t=d.t!==0?0:d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="macbook"))'); p.tick(120); };
+  const click = () => { p.run('(d=>{d.t=d.t!==0?0:d.max;doorsChanged();})(tt.fur().doors.find(x=>x.key==="macbook"))'); p.tick(120); };
   click(); r = mb(); assert.ok(Math.abs(r.rot) < .02 && r.glow === 0, 'closed, the display dark');
   // closed, it stays closed through a rebuild
   const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();

@@ -9,7 +9,7 @@ check('living: два одинаковых металлических стелл
       const post=g.children.find(o=>o.userData.post===true),mats=post.material,perf=mats[4];
       return {box:[ext[0],ext[1],ext[4],ext[5],ext[2],ext[3]],posts:g.children.filter(o=>o.userData.post===true).length,
         shelves:g.children.filter(o=>o.userData.shelf===true).map(o=>box(o)[3]),bolts:g.children.filter(o=>o.userData.bolt===true).length,
-        perf:mats[5]===perf&&perf.alphaTest===.5&&typeof perf.alphaMap.offset.y==='number'&&[0,1,2,3].every(i=>mats[i]!==perf),info:infoOf(g.children[0]),visible:g.visible};});})(VIEWS.kitchen.furniture())`);
+        perf:mats[5]===perf&&perf.alphaTest===.5&&typeof perf.alphaMap.offset.y==='number'&&[0,1,2,3].every(i=>mats[i]!==perf),info:infoOf(g.children[0]),visible:g.visible};});})(tt.fur())`);
   let r = rk();
   // kitchen axes: on the right wall (3250), 250 deep, their fronts at 3000 — in line with the end of the wall right of the way in; from the kitchen
   // wall (z 0) up to the wardrobe's add-on section (1026): 10 from each and between them, 498 each

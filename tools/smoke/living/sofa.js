@@ -14,7 +14,7 @@ check('living: белая полка 2000 × 250 над диваном — по�
     return {at:[mm(q.position.x),mm(q.position.z)],turn:+q.rotation.y,board:(b=>[b.x0,b.x1,b.y0,b.y1,b.z0,b.z1])(board.userData.part),
       boardWhite:board.material.includes(white.carcass),deskWhite:infoOf(ds.children.find(o=>o.userData.shelfBracket===true)).lines[0],n:br.length,white:br.every(o=>o.material===white.br),
       struts:br.length-straight.length,arms:straight.filter(o=>o.geometry.args[2]>.01).map(o=>[mm(o.position.x),box(o)[5]]),low:Math.min(...ys.map(b=>b[2])),high:Math.max(...ys.map(b=>b[3])),
-      info:infoOf(q),pick:infoOf(br[0]).title===infoOf(board).title};})(VIEWS.kitchen.furniture())`);
+      info:infoOf(q),pick:infoOf(br[0]).title===infoOf(board).title};})(tt.fur())`);
   // kitchen axes: on the right wall (3250) from the wardrobe's side at the sofa (2390), as the mezzanine; turned as the sofa
   assert.deepStrictEqual([r.at, r.turn], [[3250, 2390], -Math.PI / 2]);
   // own axes: 2000 along the wall, 25 thick, 250 deep, off the wall by the brackets' 4; 1375…1400 — over the sofa's 910, under the mezzanine's 1700
@@ -34,7 +34,7 @@ check('living: угловой диван Hoff «Слим» у правой ст�
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const r = p.run(`(f=>tt.items("sofa").map(q=>{
     const b=new THREE.Box3().setFromObject(q);return {at:[tt.mm(q.position.x),tt.mm(q.position.z)],turn:+q.rotation.y,
-      x0:(b.min.x-q.position.x)*1000,size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.z-b.min.z)*1000),tt.mm(b.max.y)],title:infoOf(q).title,buy:(i=>[i.price,i.url,i.shop])(infoOf(q))};}))(VIEWS.kitchen.furniture())`);
+      x0:(b.min.x-q.position.x)*1000,size:[Math.round((b.max.x-b.min.x)*1000),Math.round((b.max.z-b.min.z)*1000),tt.mm(b.max.y)],title:infoOf(q).title,buy:(i=>[i.price,i.url,i.shop])(infoOf(q))};}))(tt.fur())`);
   // its card: the price and the link to Hoff
   assert.deepStrictEqual(r[0].buy, [29999, 'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875', 'Hoff']);
   // kitchen axes: the right wall at x 3250; its window end 150 from the window wall at 4600 (the desk's 100): from z 4450 − 2060 = 2390
@@ -56,16 +56,16 @@ check('living: сиденье оттоманки дивана целиком —
       ride:[[.644,.46],[.48,.36]].map(([w,h])=>{const m=c.children.find(o=>o.geometry&&o.geometry.args&&Math.abs(o.geometry.args[0]-w)<1e-6&&Math.abs(o.geometry.args[1]-h)<1e-6);return m&&[tt.mm(m.position.y),tt.mm(m.position.z)];}),
       stitches:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material,st=fl(c).filter(m=>m.material===seam).map(m=>m.geometry.args);
         return [st.filter(a=>a[2]<.002).length,st.filter(a=>a[0]<.002).length/2,st.filter(a=>a[0]<.002).length/2];})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3)),
-      white:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(VIEWS.kitchen.furniture())`);
+      white:(fl=>{const seam=fl(f.doors.find(x=>x.key==="sofa-bed").g.children[0])[0].material;return fl(c).filter(m=>m.material!==seam).length;})(q=>q.children.filter(m=>m.geometry&&m.geometry.kind==="THREE.BoxGeometry"&&m.geometry.args.length===3))};})(tt.fur())`);
   let r = lid();
   // a click on the box under it lifts it too, as one on the bed's drawer lays out the bed
   assert.deepStrictEqual(p.run(`(f=>{const d=f.doors.find(x=>x.key==="sofa-lid"),c=d.g.parent,box=c.children.find(o=>o.geometry&&o.position.y<.3);   // its walls and legs, under the seat
-    const pick=o=>(x=>x&&x.key)(pickDoor(null,{object:o,point:new THREE.Vector3()}));return [pick(box),pick(d.g.children[0])];})(VIEWS.kitchen.furniture())`), ['sofa-lid', 'sofa-lid']);
+    const pick=o=>(x=>x&&x.key)(pickDoor(null,{object:o,point:new THREE.Vector3()}));return [pick(box),pick(d.g.children[0])];})(tt.fur())`), ['sofa-lid', 'sofa-lid']);
   // its upper back edge at the seat's height, at the thin back (100); the whole seat of the chaise
   assert.deepStrictEqual([r.axis, r.s, r.max, r.t, r.rot, r.inChaise, r.hinge], ['x', -1, 0.698, 0, 0, true, [450, 100]], 'closed, on its hinge in the chaise');
   assert.deepStrictEqual(r.size, [705, 170, 1430], 'the chaise\'s seat, from the thin back to its front');
   // 10 mm to the left (toward the seat) of the chaise's box: its middle 705 / 2 + 10 from the chaise's end (own x mirrored): 1697.5
-  assert.strictEqual(p.run('(d=>tt.mm(d.g.children[0].position.x))(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'), 1698);
+  assert.strictEqual(p.run('(d=>tt.mm(d.g.children[0].position.x))(tt.fur().doors.find(x=>x.key==="sofa-lid"))'), 1698);
   // on it, the chaise's back cushion and the throw pillow in the corner (their middles: y, z)
   assert.deepStrictEqual(r.ride, [[680, 210], [640, 385]]);
   assert.strictEqual(r.title, 'Угловой диван-кровать «Слим» (Hoff)');
@@ -75,22 +75,22 @@ check('living: сиденье оттоманки дивана целиком —
   // (a front: 90 %), and down again; no front, the kitchen's «Открыты» leaves it
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click(); p.tick(13);
   assert.strictEqual(lid().t, 0, 'not with the fronts');
-  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'); p.tick(13);
-  const early = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
+  p.run('(d=>{d.t=d.max;doorsChanged();})(tt.fur().doors.find(x=>x.key==="sofa-lid"))'); p.tick(13);
+  const early = p.run('(d=>d.a/d.max)(tt.fur().doors.find(x=>x.key==="sofa-lid"))');
   assert.ok(early > .62 && early < .76, 'on its way: ' + early);
   p.tick(107);
   // (a turn about x by a < 0 lifts what lies in front of the hinge: y = −z·sin a)
   r = lid(); assert.ok(r.t === 0.698 && r.rot === -0.7, 'open at 40°: its front edge up');
   // held: 30°/s
-  assert.strictEqual(p.run('+(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid").holdRate*180/Math.PI).toFixed(1)'), 30);
+  assert.strictEqual(p.run('+(tt.fur().doors.find(x=>x.key==="sofa-lid").holdRate*180/Math.PI).toFixed(1)'), 30);
   // straight up till their lower front edges are on the lid's top: the cushion's at 450 + (320 − 100)·tan 40° = 635; the pillow's
   // (496, 486) at 783, its middle 640 + 296
   assert.deepStrictEqual(r.ride, [[865, 210], [936, 385]], 'the pillows up out of its way');
-  p.run('(d=>{d.t=0;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))'); p.tick(120);
+  p.run('(d=>{d.t=0;doorsChanged();})(tt.fur().doors.find(x=>x.key==="sofa-lid"))'); p.tick(120);
   r = lid(); assert.ok(Math.abs(r.rot) < .02, 'closed again');
   assert.ok(r.ride.every(([y, z], i) => Math.abs(y - [680, 640][i]) < 3 && Math.abs(z - [210, 385][i]) < 2), 'the pillows back down');
   // a click opens it alone, and it stays open through a rebuild
-  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-lid"))');
+  p.run('(d=>{d.t=d.max;doorsChanged();})(tt.fur().doors.find(x=>x.key==="sofa-lid"))');
   const b1 = p.document.querySelector('[data-panel="kitchen"] [data-p="B1"]'); b1.value = '500'; b1.dispatch('input'); p.tick();
   assert.strictEqual(lid().t, 0.698);
 });
@@ -101,7 +101,7 @@ check('living: диван раскладывается «дельфином» �
     ${a === undefined ? '' : `d.a=d.t=d.max*${a};turnDoor(d);`}
     const dr=d.g.children[0],bl=dr.children[0],st=bl.children[0],b=new THREE.Box3().setFromObject(sf),R=v=>tt.mm(v);
     return {axis:d.axis,inSofa:d.g.parent===sf,seat:d.g.children[1].geometry.args.slice(0,3).map(R),max:d.max,t:+d.t.toFixed(2),drawer:R(dr.position.z),
-      block:[R(bl.position.y),R(bl.position.z),+bl.rotation.x.toFixed(2)],size:bl.children[1].geometry.args.slice(0,3).map(R),strap:st.visible,depth:R(b.max.z-b.min.z)};})(VIEWS.kitchen.furniture())`);
+      block:[R(bl.position.y),R(bl.position.z),+bl.rotation.x.toFixed(2)],size:bl.children[1].geometry.args.slice(0,3).map(R),strap:st.visible,depth:R(b.max.z-b.min.z)};})(tt.fur())`);
   let r = bed();
   // the seat in its holder (a click on it lays the bed out); closed: the drawer in, the block on its bottom (its back lower edge
   // 75 up, 130 from the sofa's back), the strap hidden; the sofa 850 deep
@@ -116,15 +116,15 @@ check('living: диван раскладывается «дельфином» �
   r = bed(1); assert.deepStrictEqual([r.drawer, r.block, r.strap, r.depth], [680, [280, 170, 0], true, 1535], 'one bed with the chaise, out to 1530 (its strap 5 in front)');
   bed(0);
   // a click, evenly in 1.4 s: half way at 0.7 s (the drawer out, the block on its way), and back
-  p.run('(d=>{d.t=d.max;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))'); p.tick(44);
-  const half = p.run('(d=>d.a/d.max)(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))');
+  p.run('(d=>{d.t=d.max;doorsChanged();})(tt.fur().doors.find(x=>x.key==="sofa-bed"))'); p.tick(44);
+  const half = p.run('(d=>d.a/d.max)(tt.fur().doors.find(x=>x.key==="sofa-bed"))');
   assert.ok(half > .45 && half < .55, 'half way: ' + half); assert.strictEqual(bed().drawer, 680);
   p.tick(156);
   r = bed(); assert.deepStrictEqual([r.t, r.drawer, r.block, r.strap], [1.45, 680, [280, 170, 0], true]);
-  p.run('(d=>{d.t=0;doorsChanged();})(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))'); p.tick(200);
+  p.run('(d=>{d.t=0;doorsChanged();})(tt.fur().doors.find(x=>x.key==="sofa-bed"))'); p.tick(200);
   r = bed(); assert.deepStrictEqual([r.drawer, r.block, r.strap], [0, [75, 130, 0], false]);
   // held, the whole way in 3 s: slower than a click, as the other doors (they ease in about 0.3 s, held at 60°/s)
-  p.run('held={d:VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"),dir:1}'); p.tick(94);
-  const held = p.run('(d=>(held=null,d.a/d.max))(VIEWS.kitchen.furniture().doors.find(x=>x.key==="sofa-bed"))');
+  p.run('held={d:tt.fur().doors.find(x=>x.key==="sofa-bed"),dir:1}'); p.tick(94);
+  const held = p.run('(d=>(held=null,d.a/d.max))(tt.fur().doors.find(x=>x.key==="sofa-bed"))');
   assert.ok(held > .45 && held < .55, 'half way in 1.5 s held: ' + held);
 });

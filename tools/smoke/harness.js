@@ -165,14 +165,14 @@ function matches(e, sel) {
 }
 
 /* ---------- helpers in the page for checks' p.run code: tt ----------
-   tt.item(k) / tt.items(k): the view's furniture groups with userData[k] true (the kitchen's, or view v's);
+   tt.fur(v): the furniture of view v (the kitchen by default); tt.item(k, v) / tt.items(k, v): its extra groups (kitchen appl, bath sani) with userData[k] true;
    tt.meshes(g, fn) / tt.parts(g, fn): the meshes in g's subtree whose part q passes fn(q, o) / their parts (the stub answers any key: fn decides);
    tt.find(g, fn): the first object in g's subtree that passes fn; tt.box(ps, 'xzy'): [min, max] of the parts on those axes in that order;
    tt.mm(v): metres → whole mm; tt.doors(g or [g…]): the furniture's doors on those groups */
 const PAGE_KIT = `var tt={
   fur:(v='kitchen')=>VIEWS[v].furniture(),
-  item:(k,v)=>tt.fur(v).appl.children.find(o=>o.userData[k]===true),
-  items:(k,v)=>tt.fur(v).appl.children.filter(o=>o.userData[k]===true),
+  item:(k,v)=>tt.fur(v).extra.children.find(o=>o.userData[k]===true),
+  items:(k,v)=>tt.fur(v).extra.children.filter(o=>o.userData[k]===true),
   meshes:(g,fn)=>{const r=[];const w=o=>{const q=o.userData&&o.userData.part;if(q&&fn(q,o))r.push(o);(o.children||[]).forEach(w);};w(g);return r;},
   parts:(g,fn)=>tt.meshes(g,fn).map(o=>o.userData.part),
   find:(g,fn)=>{let r=null;const w=o=>{if(!r&&fn(o))r=o;(o.children||[]).forEach(w);};w(g);return r;},

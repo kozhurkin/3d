@@ -58,8 +58,8 @@
 | `src/decors.js` | Декоры: фото в base64 (3,4 МБ) и палитры. |
 | `tools/smoke.js` | Проверка в Node, без браузера: `npm run check`, часть — `npm run check -- kitchen`, предмет части-папки — `npm run check -- living/sofa`, список проверок — `--list`. |
 | `tools/smoke/harness.js` | Обвязка проверки: заглушка THREE, маленький DOM, `runPage`, помощники; в самой странице — `tt` для кода в `p.run(...)` (`PAGE_KIT`: предмет вида по ключу `userData`, его детали, габарит, мм, двери). |
-| `tools/smoke/*.js` | Проверки по частям: `app` (план, размеры стен, shell), `bath`, `hall`, `flight`, `walk`. |
-| `tools/smoke/kitchen/`, `tools/smoke/living/` | Проверки `kitchen` и `living` по предметам — файлы как в `src/js/rooms/<комната>/`; `index.js` подключает их по порядку. |
+| `tools/smoke/*.js` | Проверки по частям: `app` (план, размеры стен, shell), `hall`, `flight`, `walk`. |
+| `tools/smoke/kitchen/`, `living/`, `bath/` | Проверки `kitchen`, `living` и `bath` по предметам — файлы как в `src/js/rooms/<комната>/`; `index.js` подключает их по порядку. |
 
 ## Настройки в браузере (`localStorage`)
 

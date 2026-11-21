@@ -164,6 +164,23 @@ function matches(e, sel) {
   });
 }
 
+/* ---------- helpers in the page for checks' p.run code: tt ----------
+   tt.item(k) / tt.items(k): the view's furniture groups with userData[k] true (the kitchen's, or view v's);
+   tt.meshes(g, fn) / tt.parts(g, fn): the meshes in g's subtree whose part q passes fn(q, o) / their parts (the stub answers any key: fn decides);
+   tt.find(g, fn): the first object in g's subtree that passes fn; tt.box(ps, 'xzy'): [min, max] of the parts on those axes in that order;
+   tt.mm(v): metres → whole mm; tt.doors(g or [g…]): the furniture's doors on those groups */
+const PAGE_KIT = `var tt={
+  fur:(v='kitchen')=>VIEWS[v].furniture(),
+  item:(k,v)=>tt.fur(v).appl.children.find(o=>o.userData[k]===true),
+  items:(k,v)=>tt.fur(v).appl.children.filter(o=>o.userData[k]===true),
+  meshes:(g,fn)=>{const r=[];const w=o=>{const q=o.userData&&o.userData.part;if(q&&fn(q,o))r.push(o);(o.children||[]).forEach(w);};w(g);return r;},
+  parts:(g,fn)=>tt.meshes(g,fn).map(o=>o.userData.part),
+  find:(g,fn)=>{let r=null;const w=o=>{if(!r&&fn(o))r=o;(o.children||[]).forEach(w);};w(g);return r;},
+  box:(ps,axes='xyz')=>[...axes].flatMap(a=>[Math.min(...ps.map(q=>q[a+'0'])),Math.max(...ps.map(q=>q[a+'1']))]),
+  mm:v=>Math.round(v*1000),
+  doors:(gs,v)=>{gs=Array.isArray(gs)?gs:[gs];return tt.fur(v).doors.filter(x=>gs.includes(x.g.parent));},
+};`;
+
 /* ---------- run a page's inline scripts in one context, like a browser does ---------- */
 function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce = false } = {}) {
   const doc = parseHTML(html), docEl = el('html'), frames = [], clock = { t: 0 };
@@ -197,6 +214,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
   win.window = win; win.parent = { location: { hash }, ...DECOR_PARENT, ...parentWin };   // pages take the decors from the shell
   const ctx = vm.createContext(win);
   all(doc).filter((x) => x.tagName === 'SCRIPT' && !x.attrs.src).forEach((s, i) => vm.runInContext(s.text, ctx, { filename: `script#${i}` }));
+  vm.runInContext(PAGE_KIT, ctx, { filename: 'tt' });
   // n frames of ms each; a flight between views takes 0.85 s, so fly() lets it finish
   const tick = (n = 3, ms = 16) => { for (let i = 0; i < n; i++) { clock.t += ms; const q = frames.splice(0); q.forEach((f) => f()); } };
   const fly = () => tick(60);

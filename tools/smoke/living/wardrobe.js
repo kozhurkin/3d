@@ -3,10 +3,9 @@ const { runPage, PAGES, check, slide, assert } = require('../harness');
 
 check('living: угловой шкаф OZON 1364 × 964 у дивана — ножка вдоль подлокотника, дверь к стене кухни; вдоль правой стены дверь углового и доп. секции; высота 2200; три двери открываются', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  const wr = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
-    const box=g=>{const ps=[];const w=o=>{if(o.userData&&o.userData.part&&o.userData.part.x1>o.userData.part.x0)ps.push(o.userData.part);(o.children||[]).forEach(w);};w(g);
-      return [Math.min(...ps.map(q=>q.x0)),Math.max(...ps.map(q=>q.x1)),Math.min(...ps.map(q=>q.z0)),Math.max(...ps.map(q=>q.z1)),Math.min(...ps.map(q=>q.y0)),Math.max(...ps.map(q=>q.y1))];};
-    const ds=f.doors.filter(x=>gs.includes(x.g.parent));
+  const wr = () => p.run(`(f=>{const gs=tt.items("wardrobe");
+    const box=g=>tt.box(tt.parts(g,q=>q.x1>q.x0),"xzy");
+    const ds=tt.doors(gs);
     return {groups:gs.length,boxes:gs.map(box),title:infoOf(gs[0].children[0]).title,
       doors:ds.map(x=>{const q=x.g.children[0].userData.part;return [q.name,q.pivot.x,q.pivot.z,q.pivot.s,x.t];})};})(VIEWS.kitchen.furniture())`);
   let r = wr();
@@ -17,18 +16,17 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
   assert.strictEqual(r.title, 'Угловой шкаф «Уютная логика» (OZON)');
   // one card for the whole wardrobe (any of its parts): a row for the corner unit (12000) and one for the add-on (5500) with their Ozon links, the sum;
   // «next» paints it grey and back
-  const wc = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
-    const find=(g,fn)=>{let r=null;const w=o=>{if(!r&&fn(o))r=o;(o.children||[]).forEach(w);};w(g);return r;};
-    const ad=find(gs[1],o=>o.userData&&o.userData.part&&o.userData.part.name==='Дверь доп. секции');
+  const wc = () => p.run(`(f=>{const gs=tt.items("wardrobe");
+    const ad=tt.find(gs[1],o=>o.userData&&o.userData.part&&o.userData.part.name==='Дверь доп. секции');
     const ic=infoOf(gs[0].children[0]),ia=infoOf(ad);
     const cl=o=>clickOf({object:o});
     return [ic.buy.map(b=>[b.name,b.price,b.url,b.shop||ic.shop]),ia.title===ic.title,ic.variant.join('/'),
-      cl(gs[0].children[0])===cl(gs[1].children[0])&&cl(find(gs[0],o=>o.userData&&o.userData.mirror===true))!==cl(gs[0].children[0]),ic.lines[0],ic.lines[4]];})(VIEWS.kitchen.furniture())`);
+      cl(gs[0].children[0])===cl(gs[1].children[0])&&cl(tt.find(gs[0],o=>o.userData&&o.userData.mirror===true))!==cl(gs[0].children[0]),ic.lines[0],ic.lines[4]];})(VIEWS.kitchen.furniture())`);
   const w0 = wc();
   assert.deepStrictEqual(w0, [[['Угловой 96,4 × 96,4 × 220', 12000, 'https://ozon.ru/t/8LOFiwQ', 'Ozon'], ['Доп. секция 40 × 50 × 220', 5500, 'https://ozon.ru/t/BSIni7B', 'Ozon']], true, '1/4', true, 'Цвет: Белый.', 'Вместе 17\u00a0500 ₽.']);
   // its panels click alike (not the mirror on it: a thing of its own; the stub's userData answers anything, so only «not the same»); «next» paints it grey, a rebuild keeps the colour,
   // a click white again with the second add-on section (the next check), two more back to the first
-  const g0 = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true)';
+  const g0 = 'tt.item("wardrobe")';
   const col = () => { const w = wc(); return [w[2], w[4]]; };
   p.run(`infoOf(${g0}.children[0]).next()`);
   assert.deepStrictEqual(col(), ['2/4', 'Цвет: Диамант серый U963 ST9.']);
@@ -46,14 +44,14 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
     ['Дверь доп. секции', 2750, 1027, -1, 0]]);
   // the corner unit as the shop's picture: on the left (along the wall) four shelves evenly behind a partition at the inner corner; on the
   // right (the leg) a shelf at the top and two rods across it, through the corner up to the wall
-  const inside = p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
-    const ps=g=>{const o=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.x1>m.userData.part.x0)o.push(m.userData.part);(m.children||[]).forEach(w);};w(g);return o;};
+  const inside = p.run(`(f=>{const gs=tt.items("wardrobe");
+    const ps=g=>tt.parts(g,q=>q.x1>q.x0);
     const sh=(g,re)=>ps(g).filter(q=>re.test(q.name)).map(q=>[q.y0,q.x0,q.x1,q.z0,q.z1]);
     const ext=g=>ps(g).filter(q=>/^(Планка|Дверь) углового/.test(q.name)).map(q=>[q.name,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1]);
     const car=(g,re)=>ps(g).filter(q=>re.test(q.name)&&!/^(Полка|Дверь|Планка)/.test(q.name)).map(q=>[q.name,q.mat,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1]);
     return {stile:ext(gs[0]).concat(ext(gs[1])),left:sh(gs[1],/^Полка углового шкафа — слева/),addOn:sh(gs[1],/^Полка доп. секции/),right:sh(gs[0],/^Полка углового шкафа — справа/),leftInLeg:sh(gs[0],/слева/).length,
       carL:car(gs[1],/углового шкафа — слева/),carR:car(gs[0],/углового шкафа — справа/),rightInRun:sh(gs[1],/справа/).length,
-      rods:gs[0].children.filter(o=>o.userData.rod===true).map(r=>[Math.round(r.position.x*1000),Math.round(r.position.y*1000),Math.round(r.position.z*1000),+(r.geometry.args[2]*1000).toFixed(0)]),
+      rods:gs[0].children.filter(o=>o.userData.rod===true).map(r=>[tt.mm(r.position.x),tt.mm(r.position.y),tt.mm(r.position.z),+(r.geometry.args[2]*1000).toFixed(0)]),
       rodsElse:gs[1].children.filter(o=>o.userData.rod===true).length};})(VIEWS.kitchen.furniture())`);
   // the stile at the inner corner: two 50 mm strips, one in each front's plane, meeting there; the doors up to them, 2 short
   assert.deepStrictEqual(inside.stile, [
@@ -91,8 +89,8 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
   assert.deepStrictEqual(inside.rods, [[2768, 1590, 2146, 932], [2768, 860, 2146, 932]], 'two rods: side to side, in the middle of its depth behind the door');
   // on the leg's end (2286), into the room, in the middle of its width (2140): the mirror 400 × 400 from 1300 to 1700 in a black frame,
   // 20 out; under it the coat rail from 1170 — each with its own «i»
-  const end = p.run(`(f=>{const g=f.appl.children.filter(o=>o.userData.wardrobe===true)[0],by=k=>g.children.find(o=>o.userData[k]===true),mg=by('mirror'),hg=by('hanger');
-    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>Math.round(v*1000));};
+  const end = p.run(`(f=>{const g=tt.items("wardrobe")[0],by=k=>g.children.find(o=>o.userData[k]===true),mg=by('mirror'),hg=by('hanger');
+    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>tt.mm(v));};
     const ext=bs=>[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i])));
     const at=o=>[o.position.x,o.position.y,o.position.z].map(v=>Math.round(v*1e4)/10);   // to 0.1 mm: the balls may sit on a half mm
     const balls=hg.children.filter(o=>o.userData.ball===true);
@@ -118,18 +116,18 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
 
 check('living: угловой шкаф — по клику вторая доп. секция 400 на торце ножки (4 варианта: два цвета без неё и с ней), зеркало и вешалка на её торце', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  const g0 = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true)';
+  const g0 = 'tt.item("wardrobe")';
   const click = () => p.run(`clickOf({object:${g0}.children[0]})()`);
-  const wr = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
-    const ps=g=>{const o=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.x1>m.userData.part.x0)o.push(m.userData.part);(m.children||[]).forEach(w);};w(g);return o;};
-    const box=g=>{const q=ps(g);return [Math.min(...q.map(q=>q.x0)),Math.max(...q.map(q=>q.x1)),Math.min(...q.map(q=>q.z0)),Math.max(...q.map(q=>q.z1))];};
+  const wr = () => p.run(`(f=>{const gs=tt.items("wardrobe");
+    const ps=g=>tt.parts(g,q=>q.x1>q.x0);
+    const box=g=>{const q=ps(g);return tt.box(q,"xz");};
     const by=k=>gs[0].children.find(o=>o.userData[k]===true);
-    const bx=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.z-sz/2,p.z+sz/2].map(v=>Math.round(v*1000));};
+    const bx=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.z-sz/2,p.z+sz/2].map(v=>tt.mm(v));};
     const ext=bs=>[0,1,2,3].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i])));
     const ic=infoOf(gs[0].children[0]);
     return {boxes:gs.map(box),variant:ic.variant.join('/'),lines:ic.lines,buy:ic.buy.map(b=>[b.name,b.n||1,b.price]),
       end:ps(gs[0]).filter(q=>/на торце/.test(q.name)).map(q=>[q.name,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1]),inRun:ps(gs[1]).filter(q=>/на торце/.test(q.name)).length,
-      doors:f.doors.filter(x=>gs.includes(x.g.parent)).map(x=>{const q=x.g.children[0].userData.part;return [q.name,q.pivot.x,q.pivot.z,q.pivot.s];}),
+      doors:tt.doors(gs).map(x=>{const q=x.g.children[0].userData.part;return [q.name,q.pivot.x,q.pivot.z,q.pivot.s];}),
       mirror:ext(by('mirror').children.map(bx)),bar:bx(by('hanger').children.find(o=>o.userData.bar===true)),
       cards:[infoOf(by('mirror').children[0]).lines[1],infoOf(by('hanger').children[0]).lines[1]],
       foot:living.foot().filter(r=>r[1]===3250&&r[3]===2390&&r[2]===1890)};})(VIEWS.kitchen.furniture())`);
@@ -179,26 +177,26 @@ check('living: угловой шкаф — по клику вторая доп. 
 check('living: «Задняя стенка шкафа из ЛДСП» на «Планировке» — задние стенки шкафа к дивану из ЛДСП 16 в цвет корпуса, клик по ним меняет их цвет', () => {
   const storage = new Map();
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();
-  const g0 = 'VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true)';
-  const wr = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.wardrobe===true);
-    const ps=g=>{const o=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.x1>m.userData.part.x0)o.push(m);(m.children||[]).forEach(w);};w(g);return o;};
+  const g0 = 'tt.item("wardrobe")';
+  const wr = () => p.run(`(f=>{const gs=tt.items("wardrobe");
+    const ps=g=>tt.meshes(g,q=>q.x1>q.x0);
     const all=gs.flatMap(ps),pt=m=>m.userData.part,bk=all.filter(m=>/^(Лист [0-9] )?[Зз]адн(яя|ей) стенк[аи] (шкафа — у дивана|углового шкафа — справа|доп. секции — на торце)/.test(pt(m).name));
     const body=gs[0].children[0],ic=infoOf(body);
     return {backs:bk.map(m=>{const q=pt(m);return [q.name,q.mat,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1];}),
       leg:all.map(pt).filter(q=>/^(Боковина|Крыша|Дно|Полка) углового шкафа — справа/.test(q.name)).map(q=>q.z1),
       side:all.map(pt).filter(q=>/^Боковина углового шкафа — справа/.test(q.name)).map(q=>q.z1-q.z0),
-      boxes:gs.map(g=>{const q=ps(g).map(pt);return [Math.min(...q.map(q=>q.z0)),Math.max(...q.map(q=>q.z1))];}),
-      doors:f.doors.filter(x=>gs.includes(x.g.parent)).map(x=>x.g.children[0].userData.part.pivot.z),
-      rack:infoOf(f.appl.children.find(o=>o.userData.rack===true).children[0]).lines[4].match(/[0-9,]+ см/)[0],
+      boxes:gs.map(g=>{const q=ps(g).map(pt);return tt.box(q,"z");}),
+      doors:tt.doors(gs).map(x=>x.g.children[0].userData.part.pivot.z),
+      rack:infoOf(tt.item("rack").children[0]).lines[4].match(/[0-9,]+ см/)[0],
       foot:living.foot().filter(r=>r[1]===3250&&r[0]===2286),
       mirror:(m=>{const z=m.children.map(o=>[o.position.z-o.geometry.args[2]/2,o.position.z+o.geometry.args[2]/2]);return [Math.round(Math.min(...z.map(a=>a[0]))*1000),Math.round(Math.max(...z.map(a=>a[1]))*1000)];})(gs[0].children.find(o=>o.userData.mirror===true)),
-      rods:gs[0].children.filter(o=>o.userData.rod===true).map(r=>Math.round(r.position.z*1000)),
+      rods:gs[0].children.filter(o=>o.userData.rod===true).map(r=>tt.mm(r.position.z)),
       own:bk.every(m=>m.material!==body.material&&clickOf({object:m})===clickOf({object:bk[0]})&&clickOf({object:m})!==clickOf({object:body})&&infoOf(m).title==='Задняя стенка шкафа со стороны дивана'&&ic.title==='Угловой шкаф «Уютная логика» (OZON)'),
       // the wardrobe's colour, the backs' (their own card)
       lines:ic.lines.slice(0,1).concat(bk.filter(m=>pt(m).sofaBack===true).slice(0,1).map(m=>infoOf(m).lines[0])),
       card:bk.filter(m=>pt(m).sofaBack===true).slice(0,1).map(m=>(i=>[i.lines.slice(1),i.price,i.url,i.shop,i.variant.join('/')])(infoOf(m)))[0],
       ward:ic.lines.some(l=>/Задн/.test(l))};})(VIEWS.kitchen.furniture())`);
-  const backClick = () => p.run(`(g=>{const f=[];const w=m=>{if(m.userData&&m.userData.part&&m.userData.part.sofaBack===true)f.push(m);(m.children||[]).forEach(w);};w(g);clickOf({object:f[0]})();return 0;})(${g0})`);
+  const backClick = () => p.run(`(g=>{clickOf({object:tt.meshes(g,q=>q.sofaBack===true)[0]})();return 0;})(${g0})`);
   const t = p.document.getElementById('pWardBack');
   // off: the HDF backs at the sofa, two sheets of the leg's; the carcass 4 short of the sofa's end (2390)
   let r = wr();
@@ -258,13 +256,12 @@ check('living: «Задняя стенка шкафа из ЛДСП» на «П�
 
 check('living: антресоль OZON над диваном — две секции по 1000, глубина 500, от 1700 до 2200 (вровень со шкафом), от шкафа к окну; четыре двери открываются', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  const mz = () => p.run(`(f=>{const g=f.appl.children.find(o=>o.userData.mezzanine===true),ps=[];
-    const w=o=>{if(o.userData&&o.userData.part&&o.userData.part.x1>o.userData.part.x0)ps.push(o.userData.part);(o.children||[]).forEach(w);};w(g);
-    return {box:[Math.min(...ps.map(q=>q.x0)),Math.max(...ps.map(q=>q.x1)),Math.min(...ps.map(q=>q.z0)),Math.max(...ps.map(q=>q.z1)),Math.min(...ps.map(q=>q.y0)),Math.max(...ps.map(q=>q.y1))],
+  const mz = () => p.run(`(f=>{const g=tt.item("mezzanine"),ps=tt.parts(g,q=>q.x1>q.x0);
+    return {box:tt.box(ps,"xzy"),
       title:infoOf(g.children[0]).title,card:(i=>[i.buy.map(b=>[b.name,b.n,b.price,b.url,b.shop||i.shop]),i.lines[2],i.lines[4]])(infoOf(g.children[0])),
-      color:(i=>[i.variant.join('/'),i.lines[0]])(infoOf(g.children[0])),click:clickOf({object:g.children[0]})!==clickOf({object:f.appl.children.find(o=>o.userData.wardrobe===true).children[0]}),
+      color:(i=>[i.variant.join('/'),i.lines[0]])(infoOf(g.children[0])),click:clickOf({object:g.children[0]})!==clickOf({object:tt.item("wardrobe").children[0]}),
       sec1:ps.filter(q=>/секция 1$/.test(q.name)).map(q=>[q.name,q.mat,q.x0,q.x1,q.z0,q.z1,q.y0,q.y1]),
-      ward:infoOf(f.appl.children.find(o=>o.userData.wardrobe===true).children[0]).lines[0],doors:f.doors.filter(x=>x.g.parent===g).map(x=>{const q=x.g.children[0].userData.part;return [q.z0,q.z1,q.pivot.z,q.pivot.s,x.t];})};})(VIEWS.kitchen.furniture())`);
+      ward:infoOf(tt.item("wardrobe").children[0]).lines[0],doors:tt.doors(g).map(x=>{const q=x.g.children[0].userData.part;return [q.z0,q.z1,q.pivot.z,q.pivot.s,x.t];})};})(VIEWS.kitchen.furniture())`);
   let r = mz();
   // kitchen axes: on the right wall (3250), 500 deep; from the wardrobe's side at the sofa (2390) 2000 toward the window, 210 short of it
   assert.deepStrictEqual(r.box, [2750, 3250, 2390, 4390, 1700, 2200]);
@@ -282,11 +279,11 @@ check('living: антресоль OZON над диваном — две секц
   // its colour, white at first, apart from the wardrobe's: its «next» paints it grey, not the wardrobe; the wardrobe's click paints only that;
   // a click on it white again
   assert.deepStrictEqual([r.color, r.click], [['1/2', 'Цвет: Белый.'], true]);
-  p.run(`infoOf(VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.mezzanine===true).children[0]).next()`);
+  p.run(`infoOf(tt.item("mezzanine").children[0]).next()`);
   r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Белый.']);
-  p.run(`clickOf({object:VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.wardrobe===true).children[0]})()`);
+  p.run(`clickOf({object:tt.item("wardrobe").children[0]})()`);
   r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Диамант серый U963 ST9.']);
-  p.run(`clickOf({object:VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.mezzanine===true).children[0]})()`);
+  p.run(`clickOf({object:tt.item("mezzanine").children[0]})()`);
   r = mz(); assert.deepStrictEqual([r.color, r.ward], [['1/2', 'Цвет: Белый.'], 'Цвет: Диамант серый U963 ST9.']);
   // two doors a section, hinged at its ends, into the room
   assert.deepStrictEqual(r.doors, [[2391, 2889, 2391, -1, 0], [2891, 3389, 3389, 1, 0], [3391, 3889, 3391, -1, 0], [3891, 4389, 4389, 1, 0]]);

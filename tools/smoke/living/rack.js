@@ -3,8 +3,8 @@ const { runPage, PAGES, check, slide, near, assert } = require('../harness');
 
 check('living: два одинаковых металлических стеллажа на правой стене от прохода до углового шкафа — глубина 250, высота 1750, пять полок на болтах, стойки перфорированы', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  const rk = () => p.run(`(f=>{const gs=f.appl.children.filter(o=>o.userData.rack===true);
-    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>Math.round(v*1000));};
+  const rk = () => p.run(`(f=>{const gs=tt.items("rack");
+    const box=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.y-sy/2,p.y+sy/2,p.z-sz/2,p.z+sz/2].map(v=>tt.mm(v));};
     return gs.map(g=>{const bs=g.children.filter(o=>o.userData.bolt!==true).map(box),ext=[0,1,2,3,4,5].map(i=>(i%2?Math.max:Math.min)(...bs.map(q=>q[i])));
       const post=g.children.find(o=>o.userData.post===true),mats=post.material,perf=mats[4];
       return {box:[ext[0],ext[1],ext[4],ext[5],ext[2],ext[3]],posts:g.children.filter(o=>o.userData.post===true).length,
@@ -25,12 +25,12 @@ check('living: два одинаковых металлических стелл
     assert.strictEqual(q.visible, false, 'not in the kitchen tab: on the plan and in the walk');
   });
   // a bolt in a hole: the mask's holes 42 apart from the posts' feet (10), one at each shelf's bolt (its top − 15)
-  const off = p.run(`VIEWS.kitchen.furniture().appl.children.find(o=>o.userData.rack===true).children.find(o=>o.userData.post===true).material[4].alphaMap.offset.y`);
+  const off = p.run(`tt.item("rack").children.find(o=>o.userData.post===true).material[4].alphaMap.offset.y`);
   [55, 475, 1735].forEach((y) => { const v = ((y - 10) / 42 + off) % 1; assert.ok(Math.abs(v - .5) < 1e-9, 'a hole at ' + y + ': ' + v); });
   p.run('showView("plan")'); p.fly();
   assert.deepStrictEqual(rk().map((q) => q.visible), [true, true]);
   // a click on either makes both deeper: 300, 350, then 250 again — off the right wall (3250), the card and the walk's footprint with them
-  const click = (i) => p.run(`VIEWS.kitchen.furniture().appl.children.filter(o=>o.userData.rack===true)[${i}].userData.click()`);
+  const click = (i) => p.run(`tt.items("rack")[${i}].userData.click()`);
   [[0, 300], [1, 350], [0, 250]].forEach(([i, d]) => {
     click(i); p.tick(); r = rk();
     assert.deepStrictEqual(r.map((q) => q.box.slice(0, 2)), [[3250 - d, 3250], [3250 - d, 3250]], 'depth ' + d);

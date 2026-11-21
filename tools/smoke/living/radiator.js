@@ -3,7 +3,7 @@ const { runPage, PAGES, check, slide, assert } = require('../harness');
 
 check('living: радиатор под подоконником — 10 белых секций, 800 × 570 × 80, по центру окна, 100 от стены, на 100 ниже подоконника; без места под ним нет', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
-  const rad = () => p.run(`(f=>{const q=f.appl.children.find(o=>o.userData.radiator===true),mm=v=>Math.round(v*1000);
+  const rad = () => p.run(`(f=>{const q=tt.item("radiator"),mm=v=>tt.mm(v);
     const rd=living.foot().filter(r=>r[3]===A.kL&&r[2]===A.kL-100);
     if(!q)return {none:true,foot:rd};
     const bs=q.children.filter(o=>o.geometry.kind==='THREE.BoxGeometry').map(o=>{const [sx,sy,sz]=o.geometry.args,c=o.position;return [c.x-sx/2,c.x+sx/2,c.y-sy/2,c.y+sy/2,c.z-sz/2,c.z+sz/2].map(mm);});

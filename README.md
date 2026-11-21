@@ -37,7 +37,7 @@
 | `src/js/export.js` | Экспорт сцены в `.glb` (glTF 2.0) для кнопки справа от вкладок: видимые сетки без света, линий и подписей; непрозрачные текстуры — JPEG. Экспортёр three.js (r128) грузится с jsDelivr при первом нажатии. |
 | `src/decors.js` | Декоры: фото в base64 (3,4 МБ) и палитры. |
 | `tools/smoke.js` | Проверка в Node, без браузера: `npm run check`, часть — `npm run check -- kitchen`, предмет части-папки — `npm run check -- living/sofa`, список проверок — `--list`. |
-| `tools/smoke/harness.js` | Обвязка проверки: заглушка THREE, маленький DOM, `runPage`, помощники. |
+| `tools/smoke/harness.js` | Обвязка проверки: заглушка THREE, маленький DOM, `runPage`, помощники; в самой странице — `tt` для кода в `p.run(...)` (`PAGE_KIT`: предмет вида по ключу `userData`, его детали, габарит, мм, двери). |
 | `tools/smoke/*.js` | Проверки по частям: `app` (план, размеры стен, shell), `kitchen`, `bath`, `hall`, `flight`, `walk`. |
 | `tools/smoke/living/` | Проверки `living` по предметам — файлы как в `src/js/rooms/living/`; `index.js` подключает их по порядку. |
 

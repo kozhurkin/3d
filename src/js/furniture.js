@@ -1,6 +1,6 @@
 /* ---------- furniture: what every cabinet set shares ----------
    Decor textures (decors.js), panel geometry with the grain along the panel, materials and their finishes,
-   cabinet parts → meshes with fronts on holders that open. Rooms (js/rooms/*.js) call these with their own parts and finishes. */
+   cabinet parts → meshes with fronts on holders that open. Rooms (js/rooms/<room>/, js/rooms/hall.js) call these with their own parts and finishes. */
 
 /* ---------- wood texture: generic procedural oak (straight grain) or photo decor ---------- */
 function rng(seed){return function(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};}

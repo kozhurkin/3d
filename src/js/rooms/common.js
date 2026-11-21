@@ -1,5 +1,5 @@
 /* ---------- what every room view does the same way: roomKit(id, cfg) ----------
-   A room module (rooms/*.js) keeps its own: sizes P, parts (computeParts), finishes FIN, appliances, dimension lines, camera
+   A room module (rooms/<room>/, rooms/hall.js) keeps its own: sizes P, parts (computeParts), finishes FIN, appliances, dimension lines, camera
    presets, its own panel controls and texts. The kit does the rest: building the cabinets into the scene and every frame of
    them, the panel's common controls (cameras, frame slider, sizes, thickness, fronts, toggles, palette and own colour, edge
    contrast, cut list, settings to start with), the view itself (addView) and following the plan (modelHooks).

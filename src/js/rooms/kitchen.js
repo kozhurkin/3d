@@ -2,11 +2,11 @@
    Kitchen coordinates as in the kitchen tab, mm: x along the kitchen wall from the left wall, y up, z from the wall into the room;
    the kitchen's (0,0) is its origin on the plan. The wall width and the ceiling come from the plan (kW, A.H),
    how far the left wall shows is the view's frame (VS.kitchen.L). The rest of the room (the desk, the sofa, the wardrobe…) is
-   living.js's, built here with the kitchen. Own scope: the room modules share names (P, T, computeParts…). */
+   living's (rooms/living/), built here with the kitchen. Own scope: the room modules share names (P, T, computeParts…). */
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W and H are the plan's kitchen wall and ceiling, L and Rx where the window wall and the right wall are (kitchen axes): from the plan too,
-// as is DeskWall (the writing desk against the window wall: placeDining), WardBack (the wardrobe's LDSP backs at the sofa: living.js), WinS (the window sill's height: the radiator under it, living.js)
+// as is DeskWall (the writing desk against the window wall: placeDining), WardBack (the wardrobe's LDSP backs at the sofa: living/wardrobe.js), WinS (the window sill's height: the radiator under it, living/radiator.js)
 const P={W:2200,H:2600,B1:450,B2:450,B3:600,Fr:600,Fh:2000,Fd:665,Ct:900,Db:600,Pl:100,Dw:350,Gw:550,Gh:650,Ha:400,Da:600,Hx:-150,Nw:1,Ant:true,AntUp:false,Dish:true,Apron:true,OvDr:false,Hob:'built',HobAlong:false,Plinth:true,Ec:30,T:16,TF:16,Tt:38,L:4600,Rx:3250,WinS:800,DeskWall:false,WardBack:false};
 let current=null;
 // dining table by the left wall: from the kitchen wall z (placeDining), along the wall w (its short side, the end against the wall), into the room l, top t thick, h high
@@ -143,7 +143,7 @@ const overTable=r=>r[0]<TB.l&&r[1]>0;
 const runEdge=()=>Math.max(0,...current.parts.filter(q=>overTable([q.x0,q.x1])&&q.y0<1000).map(q=>q.z1));   // the kitchen's run is all by the kitchen wall
 /* the room by the dining table's long sides (kitchen mm), as its card has it: [toward the kitchen wall, toward the window].
    Toward the kitchen wall: up to the run's edge, else the wall itself;
-   toward the window: up to the nearest of the rest of the room along it (living.js: foot — the display cabinet), else the window wall */
+   toward the window: up to the nearest of the rest of the room along it (living/api.js: foot — the display cabinet), else the window wall */
 function tableRoom(){
   const z1=TB.z+TB.w,w=Math.min(P.L,...living.foot().filter(r=>overTable(r)&&r[2]>=z1).map(r=>r[2]));
   return [TB.z-runEdge(),w-z1];
@@ -335,7 +335,7 @@ function buildChairs(g,opts){
 /* the wall shelf over the dining table: on the left wall over the table's end, in the middle of its width, its bottom SPICE_Y over the floor.
    Two of them, one shown (spiceModel): a click on it (engine.js: userData.click; a click on a drawer works the drawer) or the link in its card shows the other;
    which one stays through the kitchen's rebuilds. Each in its own axes (mm): x along it from the window's side, y up from its bottom,
-   z from the wall into the room; both in one group turned onto the kitchen's as the desk (living.js): its x toward the kitchen wall (−z), its z along x.
+   z from the wall into the room; both in one group turned onto the kitchen's as the desk (living/desk.js): its x toward the kitchen wall (−z), its z along x.
    The olive one, as the shop's «полка настенная из массива дерева с ящиками»: solid pine painted olive, 600 wide, 900 high, 120 deep.
    Two sides the whole height; a back of six tongue-and-groove boards; at the bottom three drawers with white ceramic knobs under the
    first shelf, two more shelves over it (lv); at the top a board, a front rail with a scalloped bottom under it and a scalloped crest
@@ -710,7 +710,7 @@ function panelText(){
     kq('#k-gapWall').textContent=`Высота навесных ${hw} мм`+(P.Nw?` · между полками ${f(st-t)} мм`:'')+` · вытяжка ${Math.max(c.yW,P.Ct+P.Gh)-P.Ct} мм над столешницей`; }
 }
 
-// the rest of the room (living.js) is built with the kitchen: what it needs of it
+// the rest of the room (rooms/living/) is built with the kitchen: what it needs of it
 living.attach({P,applDoor,handleMat,rebuild:()=>k.build()});
 const k=roomKit('kitchen',{
   P,FIN,mats,px:'k',panel,origin:O,fromModel,setCam,panelText,
@@ -720,19 +720,19 @@ const k=roomKit('kitchen',{
   slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)
   dims:buildDims,
   // the appliances (the oven's and the fridge's doors open), the dining table, the lamp and the wall shelf over it, the dining chairs, and the rest
-  // of the room (living.js: the desk, its chair, the display cabinet, the sofa, the wardrobe…) go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
+  // of the room (rooms/living/: the desk, its chair, the display cabinet, the sofa, the wardrobe…) go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
   // leaves them (loose), and they are built as they were (prev), never opened with the fronts
   extra:{name:'appl',build:(g,{prev})=>{const o={prev},ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
     const all=ap.concat(buildSpiceShelf(g,o),buildChairs(g,o),living.build(g,o));
     all.forEach(d=>{d.loose=true;});return all;}},
   // its own view shows the cabinets and the dining table with its chairs, its lamp and the shelf over it — the table only once the frame shows the left wall past it; the rest of the room
-  // (living.js) stands in the apartment (the plan, the walk), not in the kitchen tab
+  // (rooms/living/) stands in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{
     const fits=show>=TB.z+TB.w,has=(u,ks)=>ks.some(k=>u[k]===true);
     if(extra)extra.children.forEach(o=>{const u=o.userData;if(has(u,living.keys))o.visible=!on;else if(has(u,['table','chair','pendant','spice']))o.visible=!on||fits;});
     if(dims)dims.children.forEach(o=>{if(o.userData.table===true)o.visible=fits;});
   },
-  foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w]].concat(living.foot()),   // its footprint: the fridge besides the base run, the table; the rest of the room's (living.js)
+  foot:()=>[[current.xr+10,current.xF-10,20,P.Fd-10],[0,TB.l,TB.z,TB.z+TB.w]].concat(living.foot()),   // its footprint: the fridge besides the base run, the table; the rest of the room's (living/api.js)
   syncFlags:()=>{kq('#k-tAnt').checked=P.Ant!==false;kq('#k-tAntUp').checked=!!P.AntUp;kq('#k-tAntUp').disabled=P.Ant===false;kq('#k-fAntUp').style.opacity=P.Ant===false?.45:1;kq('#k-tDish').checked=P.Dish!==false;kq('#k-tApron').checked=!!P.Apron;kq('#k-tOvDr').checked=!!P.OvDr;kq('#k-tHobAlong').checked=!!P.HobAlong;kq('#k-fHx').hidden=!!P.HobAlong;syncHob();},
   // finishes: the worktop and the apron (as the worktop unless it has its own) besides the carcass and the fronts
   groups:['carcass','front','top','apron'],

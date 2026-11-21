@@ -47,7 +47,7 @@ check('кухня: шкафы по стенам с «Планировки»', ()
   // the kitchen wall, the ceiling, the left and right walls, the desk against the window wall or not: the plan's; the module's own starting sizes are these too
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.H,f.P.L,f.P.Rx,f.P.DeskWall,f.current.parts.length])(VIEWS.kitchen.furniture())'), [2200, 2600, 4600, 3250, false, 65]);
-  assert.match(PAGES.app, /^const P=\{W:2200,H:2600,.*,L:4600,Rx:3250,DeskWall:false,WardBack:false\};$/m);
+  assert.match(PAGES.app, /^const P=\{W:2200,H:2600,.*,L:4600,Rx:3250,WinS:800,DeskWall:false,WardBack:false\};$/m);
 });
 
 check('кухня: шкафы и техника собираются, панель их меняет', () => {

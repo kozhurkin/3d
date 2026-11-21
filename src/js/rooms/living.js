@@ -2,7 +2,7 @@
    The room on the plan is one (ROOMS: kitchen). Along the kitchen wall stands the kitchen (kitchen.js: its cabinets, its appliances,
    the dining table with its chairs, its lamp and the shelf over it); the rest of the room is here: the work place by the left wall
    (the desk with its add-on unit and the shelf over it, the MacBook, the desk chair, the display cabinet or the bookcase) and the living part by the
-   right wall (the wardrobe with its mirror and coat rail, the mezzanine, the sofa and the shelf over it, the metal racks).
+   right wall (the wardrobe with its mirror and coat rail, the mezzanine, the sofa and the shelf over it, the metal racks); under the window, the radiator.
    Kitchen coordinates (kitchen.js), mm. The kitchen builds all of it with its own things (kitchen.js: extra) and gives it what it
    needs (attach): where the walls are (P: Rx, L), its appliances' doors (applDoor), their handles' grey (handleMat), its rebuild.
    None of it is in the kitchen tab: it stands in the apartment (the plan, the walk). Own scope, as the room modules'. */
@@ -807,6 +807,41 @@ function buildSofa(g,opts){
   return [applDoor(lid,{key:'sofa-lid',axis:'x',s:-1,max:LID_MAX,ease:LID_EASE,holdRate:LID_HOLD,follow,frame:chaise},opts),applDoor(fold,{key:'sofa-bed',axis:'none',rate:DMAX/BED_S,holdRate:DMAX/BED_HOLD_S,follow:lay},opts)];
 }
 
+/* ========== under the window ========== */
+
+/* the heating radiator: ten white sections of 80, 800 × 570, 80 deep, on the window wall in the middle of the window (as the window,
+   in the middle of the room), its front 100 from the wall (20 behind it for the brackets); its top RD.sill under the sill board's
+   underside (walls.js: 10 under the sill), so it goes up and down with the sill (the kitchen's P.WinS). White a little glossy: the
+   sill's own material (walls.js: winMat), so it stands out of the wall as the sill does. Each section: a front panel, 4 mm gaps between
+   them, its top and bottom face closing it back to the wall side, a vertical tube between them; behind, through all of them,
+   the two headers, plugged at both ends, an air valve in the right top plug. If the sill is too low for it (its bottom under RD.floor),
+   there is none. Own axes (mm): x along the wall from its middle, y up, z from the wall into the room; turned onto the kitchen's */
+const RD={n:10,sec:80,H:570,D:80,out:100,sill:100,floor:60,gap:4,face:8,lid:6,tube:24,hdr:30,plug:6};
+const radTop=()=>P.WinS-10-RD.sill;
+const radW=()=>RD.n*RD.sec;
+const radOn=()=>radTop()-RD.H>=RD.floor;
+const radValveMat=new THREE.MeshStandardMaterial({color:0xc9cdd1,roughness:.25,metalness:.85});
+INFO.radiator=()=>({title:'Радиатор отопления',lines:[`Секционный, ${RD.n} секций по ${cm(RD.sec)} см; белая глянцевая эмаль.`,
+  `${cm(radW())} × ${cm(RD.H)} см, глубина ${cm(RD.D)} см; от стены ${cm(RD.out)} см.`,
+  `Под подоконником, по центру окна: низ на ${cm(radTop()-RD.H)} см от пола, до подоконника ${cm(RD.sill)} см.`]});
+function buildRadiator(g){
+  if(!radOn())return [];
+  const q=new THREE.Group();q.rotation.y=Math.PI;q.position.set(P.Rx/2*MM,0,P.L*MM);q.userData.radiator=true;q.userData.info=INFO.radiator;g.add(q);
+  const b=boxIn(q),put=(x0,x1,y0,y1,z0,z1)=>b(x0*MM,x1*MM,y0*MM,y1*MM,z0*MM,z1*MM,winMat);
+  // a round piece along the wall: radius r, length len, its middle at (x, y, z)
+  const along=(r,len,x,y,z,mat=winMat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r*MM,r*MM,len*MM,24),mat);m.rotation.z=Math.PI/2;m.position.set(x*MM,y*MM,z*MM);m.castShadow=m.receiveShadow=true;q.add(m);return m;};
+  const {n,sec,H,D,out,gap,face,lid,tube,hdr,plug}=RD,y1=radTop(),y0=y1-H,z0=out-D,zf=out-face,x0=-radW()/2,x1=radW()/2;
+  for(let i=0;i<n;i++){const a=x0+i*sec+gap/2,c=a+sec-gap,m=(a+c)/2;
+    put(a,c,y0,y1,zf,out);                                          // the front panel
+    put(a,c,y1-lid,y1,z0,zf);put(a,c,y0,y0+lid,z0,zf);              // its top and bottom
+    put(m-tube/2,m+tube/2,y0+lid,y1-lid,z0+10,zf);}                // the vertical tube
+  const hy=[y1-lid-hdr,y0+lid+hdr],hz=z0+10+(zf-z0-10)/2;          // the headers' axes
+  hy.forEach(y=>{along(hdr/2,radW(),0,y,hz);[x0-plug/2,x1+plug/2].forEach(x=>along(20,plug,x,y,hz));});   // the headers, their plugs
+  // the air valve: on the top plug at the right end, seen from the room (own +x: the group is turned, the kitchen's −x)
+  along(5,12,x1+plug+6,hy[0],hz,radValveMat).userData.valve=true;
+  return [];
+}
+
 return {
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
   // the work place toward the dining table: its desk's gap from the window wall (GAP, or none), the desk and the display cabinet as deep
@@ -814,12 +849,13 @@ return {
   GAP,back:DK.W+VT.D,vitName:()=>VTC[vitPick].of,   // what stands at the desk's end, for the table's card
   setGap(g){DK.gap=g;},
   // all of it in g, in this order; their doors (the kitchen makes them loose)
-  build:(g,o)=>[].concat(buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g)),
-  // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks
+  build:(g,o)=>[].concat(buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g),buildRadiator(g)),
+  // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks, the radiator
   foot:()=>[[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],
-    [P.Rx-wardLeg(),P.Rx,wardBody()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardEnd(),wardBody()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[]),
+    [P.Rx-wardLeg(),P.Rx,wardBody()-WR.d,wardAt()],[P.Rx-WR.d,P.Rx,wardEnd(),wardBody()-WR.d]].concat(rackW()>=300?[[P.Rx-RK.D,P.Rx,rackAt(0),rackAt(1)+rackW()]]:[])
+    .concat(radOn()?[[P.Rx/2-radW()/2,P.Rx/2+radW()/2,P.L-RD.out,P.L]]:[]),
   // the userData keys its groups in g have
-  keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack']
+  keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack','radiator']
 };
 })();

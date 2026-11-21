@@ -1,7 +1,7 @@
 const living={
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
   // the work place toward the dining table: its desk's gap from the window wall (GAP, or none), the desk and the display cabinet as deep
-  // along the left wall as they stand (back); the kitchen sets the gap (kitchen.js: placeDining)
+  // along the left wall as they stand (back); the kitchen sets the gap (kitchen/dining.js: placeDining)
   GAP,back:DK.W+VT.D,vitName:()=>VTC[vitPick].of,   // what stands at the desk's end, for the table's card
   setGap(g){DK.gap=g;},
   // all of it in g, in this order; their doors (the kitchen makes them loose)

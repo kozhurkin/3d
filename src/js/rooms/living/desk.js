@@ -3,7 +3,7 @@
 /* the writing desk as IKEA HEMNES 155×65, black-brown, with its add-on unit: 1550 × 650, 740 high, 670 free under its knee rail. A top on two
    pedestals of 50 mm legs: on the left a cabinet with a frame-and-panel door and a shelf, on the right two drawers; inset
    fronts with knobs. Along the left wall of the kitchen, its end 100 mm from the window wall (DK.gap; against it when
-   the kitchen says so: kitchen.js, placeDining, DeskWall). Its own axes (mm): x along it from the window end, y up, z from the wall into the room;
+   the kitchen says so: kitchen/dining.js, placeDining, DeskWall). Its own axes (mm): x along it from the window end, y up, z from the wall into the room;
    turned onto the kitchen's: its x toward the kitchen wall (−z), its z along x */
 const DK={W:1550,D:650,H:740,top:30,leg:50,ov:20,ped:420,free:670,gap:100};   // gap: from the window wall (set by the kitchen: living.setGap)
 const GAP=DK.gap;

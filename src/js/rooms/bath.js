@@ -598,12 +598,14 @@ function mixer(g,x,y,z){
 }
 
 /* the back panel's things, as the maker's photo from behind has them (seen from the wall: u from the machine's right side x1 toward
-   its left, v up from the floor, mm; the panel's face at zp, they stand out of it toward the wall, inside the lid's overhang):
-   the drain hose Ø22 up the right, across under the lid and down the left to its hook; the inlet valve's blue fitting at the top
-   left with its hose down to the floor; the power cord in a loose loop with its plug; four transit bolts; the rating plate */
+   its left, v up from the floor, mm; the panel's face at zp, they stand out of it toward the wall, inside the lid's overhang but the
+   plug; a hose's point may give how far its axis is off the panel, else it lies on it): the drain hose Ø22 up the right, across under
+   the lid and down the left to its hook; the inlet valve's blue fitting at the top left with its hose down to the floor; the power
+   cord in a loose loop with its plug (washPlug); four transit bolts; the rating plate */
 function washBack(g,x1,zp){
   const X=u=>x1-u*MM,Y=v=>v*MM,o=new THREE.Group();o.userData.washBack=true;g.add(o);
-  const tube=(pts,r,mat)=>{const m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([u,v])=>new THREE.Vector3(X(u),Y(v),zp-r*MM))),pts.length*6,r*MM,10,false),mat);
+  const tube=(pts,r,mat)=>{const p=pts.map(([u,v,z=r])=>new THREE.Vector3(X(u),Y(v),zp-z*MM)),m=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(p),pts.length*6,r*MM,10,false),mat);
+    m.userData.end=p[p.length-1];   // where it ends (the cord's plug goes there)
     m.castShadow=true;o.add(m);return m;};
   const blk=(u0,u1,v0,v1,d,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((u1-u0)*MM,(v1-v0)*MM,d*MM),mat);m.position.set(X((u0+u1)/2),Y((v0+v1)/2),zp-d/2*MM);o.add(m);return m;};
   const disc=(r,d,u,v,z,mat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r*MM,r*MM,d*MM,24),mat);m.rotation.x=Math.PI/2;m.position.set(X(u),Y(v),zp-z*MM);o.add(m);return m;};
@@ -611,10 +613,20 @@ function washBack(g,x1,zp){
   blk(528,546,215,256,20,hoseMat);                                                  // its hook
   disc(13,20,500,698,10,valveMat).userData.valve=true;                              // the inlet valve
   tube([[500,684],[503,620],[503,539],[503,313],[500,131],[495,40]],6,hoseMat).userData.hose='inlet';
-  tube([[143,772],[73,707],[44,602],[48,494],[73,353],[122,335],[143,426],[118,530],[60,544],[22,540]],4,hoseMat).userData.hose='cord';
-  blk(2,22,520,560,15,hoseMat);                                                     // the plug
+  tube([[143,772],[73,707],[44,602],[48,494],[73,353],[122,335],[143,426],[140,500],[128,535,11],[100,542,17]],4,hoseMat).userData.hose='cord';
+  washPlug(o,X(100),Y(542),zp-17*MM);                                               // its plug: inside the loop, clear of the drain hose
   [[216,630],[483,467],[483,294],[56,285]].forEach(([u,v])=>{disc(12,6,u,v,3,chromeMat).userData.bolt=true;disc(6,4,u,v,7,darkMat);});
   blk(162,379,380,523,1,labelMat);                                                  // the rating plate
+}
+/* the cord's plug, plain: a thick short cylinder Ø34 × 20 lying on the back panel (7 past the lid's overhang, still 38 off the wall),
+   the cord going into the middle of its back, two pins Ø4.8 × 19, 19 apart, out of its face. Its own group at the middle of its back:
+   x along the pins, y across the panel, z out of it; mm */
+function washPlug(g,x,y,z){
+  const o=new THREE.Group();o.userData.plug=true;o.position.set(x,y,z);g.add(o);
+  const along=(a,b,r,v,mat)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r*MM,r*MM,(b-a)*MM,24),mat);
+    m.rotation.z=-Math.PI/2;m.position.set((a+b)/2*MM,v*MM,0);m.castShadow=true;o.add(m);return m;};
+  along(0,20,17,0,hoseMat).userData.body=true;
+  [-9.5,9.5].forEach(v=>{along(20,39,2.4,v,chromeMat).userData.pin=true;});
 }
 function buildDrum(g,cx,y,fz,hr){
   const R=.235,cuff=.04,z1=fz-cuff,z0=z1-.34;

@@ -16,13 +16,12 @@ function dim(x0,z0,x1,z1,txt){
   const a=new THREE.Vector3(x0*MM,0,z0*MM),b=new THREE.Vector3(x1*MM,0,z1*MM);
   const d=b.clone().sub(a).normalize();dimLine(dimsGroup,a,b,new THREE.Vector3(-d.z,0,d.x).multiplyScalar(.05),txt);
 }
-// the window's dimensions stand at the window itself, on the room face of its wall: width × height across its middle, beside it the sill height from the floor and right above it, on the same line, the window's height; they show with the window
+// the window's dimensions stand at the window itself, on the room face of its wall: width × height across its middle, the sill height from the floor beside it; they show with the window
 const winDims=new THREE.Group();scene.add(winDims);
 function buildWinDims(){
   const z=(zEnd-10)*MM,x0=(winX-A.winW/2)*MM,x1=(winX+A.winW/2)*MM,y=(A.winS+A.winH/2)*MM,xs=(winX-A.winW/2-150)*MM;
   dimLine(winDims,new THREE.Vector3(x0,y,z),new THREE.Vector3(x1,y,z),new THREE.Vector3(0,.05,0),`${A.winW} × ${A.winH}`);
   dimLine(winDims,new THREE.Vector3(xs,0,z),new THREE.Vector3(xs,A.winS*MM,z),new THREE.Vector3(.05,0,0),`${A.winS}`);
-  dimLine(winDims,new THREE.Vector3(xs,A.winS*MM,z),new THREE.Vector3(xs,(A.winS+A.winH)*MM,z),new THREE.Vector3(.05,0,0),`${A.winH}`);
 }
 // the bathroom doorway's height stands at the doorway too: from the floor up on the hall face of its wall, 150 past its kitchen-side edge; it shows with the lintel over it, to a camera on the hall side (else it would show through the wall)
 const doorDims=new THREE.Group();scene.add(doorDims);

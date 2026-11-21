@@ -86,14 +86,14 @@ check('«Планировка»: камера «План» — под углом
   assert.deepStrictEqual(vis, [false, false, true, true]);
 });
 
-check('«Планировка»: размеры окна у самого окна — посередине его высоты «1500 × 1200», сбоку от пола до низа окна «800» и над ним высота окна «1200»; видны вместе с окном', () => {
+check('«Планировка»: размеры окна у самого окна — посередине его высоты «1500 × 1200», от пола до низа окна «800»; видны вместе с окном', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   const dims = p.document.querySelector('#pDims'); dims.checked = true; dims.dispatch('change');
   p.document.querySelector('[data-cam="entry"]').click(); p.fly(); p.tick();
   // the stub keeps no line points: the labels stand in the middle of their lines
   const r = p.run('({vis:winDims.visible, S:winDims.children.filter(o=>labels.includes(o)).map(s=>[s.position.x,s.position.y,s.position.z].map(v=>Math.round(v/MM))), x:winX, x0:winX-A.winW/2, z:zEnd-10})');
   assert.strictEqual(r.vis, true, 'the window is on screen from the entry');
-  assert.deepStrictEqual(r.S, [[r.x, 1400, r.z], [r.x0 - 150, 400, r.z], [r.x0 - 150, 1400, r.z]], 'width across the middle of the window height, the sill height from the floor 150 left of it, the window height right above it');
+  assert.deepStrictEqual(r.S, [[r.x, 1400, r.z], [r.x0 - 150, 400, r.z]], 'width across the middle of the window height, the sill height from the floor 150 left of it');
   assert.ok(!p.run('dimsGroup.children.some(s=>s.isSprite&&Math.abs(s.position.z-(zEnd+A.bear+130)*MM)<1e-6)'), 'no window dimension on the plan');
   p.document.querySelector('[data-cam="plan"]').click(); p.fly(); p.tick();
   assert.strictEqual(p.run('winDims.visible'), false, 'the window wall is cut away: its dimensions go with it');

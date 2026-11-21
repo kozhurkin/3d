@@ -333,9 +333,10 @@ check('санузел: стиральная машина и раковина н�
   assert.strictEqual(b[3], 2055);
   // the machine 595 × 850 × 505 (Haier HWD80-BP14959A), its front flush with the sink's (550), so 45 mm off the back wall, in the middle
   // of the niche (x 1302.5…1897.5 → −697.5…−102.5 on the plan; its front panel with the opening is not in the stub's box, the dial on the
-  // control panel is: the stub leaves the panel's lean out): hollow, a drum inside (cuff, drum, front ring, back)
+  // control panel is: the stub leaves the panel's lean out; behind, the cord's plug 38 off the wall, past the lid's back edge (45)):
+  // hollow, a drum inside (cuff, drum, front ring, back)
   const mc = 'VIEWS.bath.furniture().sani.children.find(m=>m.userData.wash===true).children.find(m=>m.userData.machine===true)';
-  assert.deepStrictEqual(p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*10000)))(new THREE.Box3().setFromObject(${mc}))`), [-6975, -1025, 0, 8500, 450, 5730]);
+  assert.deepStrictEqual(p.run(`(b=>[b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z].map(v=>Math.round(v*10000)))(new THREE.Box3().setFromObject(${mc}))`), [-6975, -1025, 0, 8500, 380, 5730]);
   assert.strictEqual(p.run(`${mc}.children.filter(m=>m.userData.drum===true).length`), 4);
   // the drum Ø470 × 340 behind a 40 mm cuff, its axis through the door's centre (440 up)
   assert.deepStrictEqual(p.run(`(m=>[m.geometry.args[0]*2,m.geometry.args[2],m.position.y,m.position.z].map(v=>Math.round(v*1000)))(${mc}.children.filter(m=>m.userData.drum===true)[1])`), [470, 340, 440, 328]);
@@ -390,7 +391,13 @@ check('санузел: стиральная машина — Haier HWD80-BP14959
       hatch:m.children.filter(o=>o.userData.hatch===true).length,
       hoses:all.filter(o=>typeof o.userData.hose==='string').map(o=>[o.userData.hose,mm(o.geometry.args[2])]),
       bolts:all.filter(o=>o.userData.bolt===true).length,valve:all.filter(o=>o.userData.valve===true).length,
-      behind:Math.min(...all.filter(o=>o.geometry.kind!=='THREE.TubeGeometry').map(o=>mm(o.position.z-(o.rotation.x?o.geometry.args[2]:o.geometry.args[2])/2))),
+      behind:Math.min(...all.filter(o=>o.geometry&&o.geometry.kind!=='THREE.TubeGeometry').map(o=>mm(o.position.z-(o.rotation.x?o.geometry.args[2]:o.geometry.args[2])/2))),
+      plug:(q=>q&&{at:[q.position.x,q.position.y,q.position.z].map(mm),
+        body:q.children.filter(o=>o.userData.body===true).map(o=>[mm(o.position.x),mm(o.geometry.args[0]),mm(o.geometry.args[2])]),
+        pins:q.children.filter(o=>o.userData.pin===true).map(o=>[mm(o.position.x*10)/10,mm(o.position.y*10)/10,mm(o.geometry.args[0]*20)/10,mm(o.geometry.args[2])])})(all.find(o=>o.userData.plug===true)),
+      cordEnd:(c=>[c.x,c.y,c.z].map(mm))(all.find(o=>o.userData.hose==='cord').userData.end),
+      plugTip:(q=>{const l=boxes.find(o=>o.userData.lid===true);return mm(l.position.x+l.geometry.args[0]/2-q.position.x)-39;})(all.find(o=>o.userData.plug===true)),
+      zp:mm(boxes.find(o=>o.userData.back===true).position.z-boxes.find(o=>o.userData.back===true).geometry.args[2]/2),
       info:typeof m.userData.info==='function'?m.userData.info():null};})(${mc})`);
   // four feet 15 high, the body on them
   assert.deepStrictEqual(r.feet, [[0, 15], [0, 15], [0, 15], [0, 15]]);
@@ -408,6 +415,15 @@ check('санузел: стиральная машина — Haier HWD80-BP14959
   assert.deepStrictEqual(r.hoses, [['drain', 11], ['inlet', 6], ['cord', 4]]);
   assert.deepStrictEqual([r.bolts, r.valve], [4, 1]);
   assert.ok(r.behind >= 45, `nothing behind the lid's back edge: ${r.behind}`);
+  // the cord's plug: a cylinder Ø34 × 20 on the back panel, its axis 17 off it (7 past the 27 overhang, 38 off the wall), the cord
+  // ending in the middle of its back; two pins Ø4.8 × 19, 19 apart, out of its face
+  assert.ok(r.plug, 'the plug is a group of its own');
+  assert.deepStrictEqual(r.plug.body, [[10, 17, 20]]);
+  assert.deepStrictEqual(r.plug.pins, [[29.5, -9.5, 4.8, 19], [29.5, 9.5, 4.8, 19]]);
+  // clear of the drain hose (Ø22 up the right side, its axis 23…29 in from it): the pins' tips 61 in from that side
+  assert.strictEqual(r.plugTip, 61);
+  assert.strictEqual(r.zp - r.plug.at[2], 17);
+  assert.deepStrictEqual(r.cordEnd, r.plug.at, 'the cord goes into the plug');
   // the door: a 22 deep ring, its glass domed 8 more: 535 from the lid's back edge (580 from the wall)
   const d = p.run(`(d=>{const g=d.g.children[0].children.find(o=>o.userData.dome===true),a=g.geometry.args;return Math.round((d.g.position.z+d.g.children[0].position.z+g.position.z+a[0])*1000);})(VIEWS.bath.furniture().doors.find(d=>d.key==='washer'))`);
   assert.strictEqual(d, 580);

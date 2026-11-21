@@ -1,3 +1,4 @@
+const living=(function(){
 /* ---------- the rest of the kitchen room: what is not the kitchen ----------
    The room on the plan is one (ROOMS: kitchen). Along the kitchen wall stands the kitchen (kitchen.js: its cabinets, its appliances,
    the dining table with its chairs, its lamp and the shelf over it); the rest of the room is here: the work place by the left wall
@@ -6,8 +7,10 @@
    Kitchen coordinates (kitchen.js), mm. The kitchen builds all of it with its own things (kitchen.js: extra) and gives it what it
    needs (attach): where the walls are (P: Rx, L), its appliances' doors (applDoor), their handles' grey (handleMat), its rebuild.
    None of it is in the kitchen tab: it stands in the apartment (the plan, the walk). Own scope, as the room modules'. */
-const living=(function(){
 let P=null,applDoor=null,handleMat=null,rebuild=null;   // the kitchen's: living.attach
+
+// 0 below 0, 1 above 1, eased in and out between (what goes with a door: the laptop's screen, the desk chair's turn, the sofa's bed)
+const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
 /* what they are: the card under the «i» (engine.js), as the kitchen's INFO */
 const cm=mm=>String(mm/10).replace('.',',');   // mm as the cards' cm, a comma for the decimal
@@ -38,9 +41,15 @@ const INFO={
   sofaShelf:()=>({title:'Полка над диваном',lines:['Белый премиум W1000 ST9, как корпуса кухни; на трёх белых стальных L-образных кронштейнах.',`${cm(SS.L)} × ${cm(SS.D)} см, толщина ${cm(SS.t)} см.`,`Кронштейны из стальной полосы ${SHB.t} мм шириной ${SHB.w} мм, в ${cm(SHB.end)} см от краёв и посередине: плечо ${cm(SHB.arm)} см под полкой, стойка ${cm(SHB.leg)} см по стене вверх, крепится над полкой.`,`Низ на ${cm(SS.y0)} см от пола, в ${cm(SS.y0-SF.H)} см над спинкой дивана; до антресоли ${cm(MZ.y0-SS.y0-SS.t)} см.`]}),
   sofa:{title:'Угловой диван-кровать «Слим» (Hoff)',price:29999,url:'https://hoff.ru/catalog/gostinaya/divany/uglovye/uglovoy_divan_krovat_slim_id9558189/?articul=80593875',shop:'Hoff',lines:['Механизм «дельфин», угол универсальный (здесь оттоманка справа, у окна).','206 × 153 см, высота 91 см; сиденье на высоте 45 см.','Спальное место 142 × 195 см; в оттоманке ящик для белья 145 × 23 × 61 см.','Велюр, бежево-серый; три приспинные подушки 65 × 46 см, две декоративные 48 × 36 см.']}
 };
-
-// 0 below 0, 1 above 1, eased in and out between (what goes with a door: the laptop's screen, the desk chair's turn, the sofa's bed)
-const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
+// a card of what is bought on Ozon as products (c.buy: [{name, n, price, url}], a row each in the card): the shop, the sum under its lines
+const ozon=c=>Object.assign(c,{shop:'Ozon',lines:c.lines.concat(`Вместе ${c.buy.reduce((t,b)=>t+(b.n||1)*b.price,0).toLocaleString('ru-RU')} ₽.`)});
+// the two OZON products it is made of (its card has a row for each)
+const WARD_PRODUCTS=[
+  {name:'Угловой 96,4 × 96,4 × 220',price:12000,url:'https://ozon.ru/t/8LOFiwQ'},
+  {name:'Доп. секция 40 × 50 × 220',price:5500,url:'https://ozon.ru/t/BSIni7B'}];
+INFO.radiator=()=>({title:'Радиатор отопления',lines:[`Секционный, ${RD.n} секций по ${cm(RD.sec)} см; белая глянцевая эмаль.`,
+  `${cm(radW())} × ${cm(RD.H)} см, глубина ${cm(RD.D)} см; от стены ${cm(RD.out)} см.`,
+  `Под подоконником, по центру окна: низ на ${cm(radTop()-RD.H)} см от пола, до подоконника ${cm(RD.sill)} см.`]});
 
 /* ========== the work place: by the left wall ========== */
 
@@ -499,12 +508,6 @@ const ldspBack=()=>!!(P&&P.WardBack);
 const wardExt=()=>wardColor.form===1;   // the wardrobe with its second add-on section, on the leg's end
 const wardLeg=()=>WR.D+(wardExt()?WR.W-WR.C:0);   // how far the leg goes out from the wall: up to the section's end, if it has one
 const wardEndName=()=>wardExt()?'доп. секции, выступающей в комнату':'углового шкафа';   // whose end the mirror and the coat rail are on
-// a card of what is bought on Ozon as products (c.buy: [{name, n, price, url}], a row each in the card): the shop, the sum under its lines
-const ozon=c=>Object.assign(c,{shop:'Ozon',lines:c.lines.concat(`Вместе ${c.buy.reduce((t,b)=>t+(b.n||1)*b.price,0).toLocaleString('ru-RU')} ₽.`)});
-// the two OZON products it is made of (its card has a row for each)
-const WARD_PRODUCTS=[
-  {name:'Угловой 96,4 × 96,4 × 220',price:12000,url:'https://ozon.ru/t/8LOFiwQ'},
-  {name:'Доп. секция 40 × 50 × 220',price:5500,url:'https://ozon.ru/t/BSIni7B'}];
 const wardAt=()=>sofaAt();   // kitchen z of its side at the sofa; it goes from there toward the kitchen wall
 // its LDSP backs at the sofa grow it by what they are thicker than the HDF: the carcasses as deep, all of it that much toward the kitchen
 // wall (its back's outer face still at the sofa: wardAt), the racks' room that much less
@@ -592,21 +595,53 @@ function buildMezzanine(g,opts){
   g.add(d.model);
   return d.doors;
 }
-/* the white shelf over the sofa: a board 2000 × 250, 25 thick, white as the kitchen's carcasses, on the right wall under the mezzanine,
-   in line with it (from the wardrobe's side toward the window); its bottom at 1375, 465 over the sofa's back, 300 under the mezzanine.
-   Three white steel L-brackets, the desk shelf's (SHB, lBracket) as plain Ls, 150 from its ends and in its middle: the board on their
-   arms, their wall arms up behind it (the board as far off the wall as they are thick).
-   Its own axes as the desk shelf's: x along the wall from the wardrobe's side, z out from the wall; turned onto the kitchen's as the sofa */
-const SS={L:2000,D:250,t:25,y0:1375,name:'Полка над диваном'};
-function buildSofaShelf(g){
-  const white=SHC.find(c=>c.name==='доска белая'),[parts,add]=partList();
-  add(SS.name,'carcass',0,SS.L,SS.y0,SS.y0+SS.t,SHB.t,SHB.t+SS.D);
-  const q=buildParts({parts},white.mats).model,box=boxIn(q);
-  [SHB.end,SS.L/2,SS.L-SHB.end].forEach(c=>lBracket(box,c,SS.y0,SHB,white.br,true).forEach(o=>{o.userData.bracket=true;}));
-  q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,wardAt()*MM);q.userData.sofaShelf=true;q.userData.info=INFO.sofaShelf;
-  g.add(q);
-  return [];
+const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
+const mirrorMat=new THREE.MeshStandardMaterial({color:0xc9d1d4,roughness:.06,metalness:.35});   // the glass: light, glossy
+const wardBlackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3a3b3d').convertSRGBToLinear(),roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: dark grey (their cards say black)
+const knobWoodMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#9c7552').convertSRGBToLinear(),roughness:.7});   // its hooks' balls
+/* the coat rail under the mirror: a black bar along the face, hooks off it — each a black peg, a wooden ball on its end.
+   L along the face, h its height, t out from the face, y its bottom; the pegs' length and Ø, the balls' Ø */
+const HK={L:380,h:30,t:12,y:1170,n:4,peg:40,pegD:8,ball:26};
+/* the mirror and the coat rail on the leg's end (its face at x Rx − wardLeg(), the room on its −x side), in the middle of its width, in g;
+   each its own group with its own «i» */
+function wardrobeEnd(g){
+  const {mirror:M}=WR,x=P.Rx-wardLeg(),zc=(wardBody()-WR.d+wardAt())/2,f=M.frame,y1=M.y0+M.h,mm=v=>v*MM;
+  const group=(info,key)=>{const q=new THREE.Group();q.userData.info=info;q.userData[key]=true;g.add(q);return q;};
+  const at=(q,m,x,y,z)=>{m.position.set(mm(x),mm(y),mm(z));m.castShadow=true;q.add(m);return m;};
+  // the mirror: the frame round the glass, the glass set into it
+  const mg=group(INFO.mirror,'mirror'),mb=boxIn(mg),b=(x0,x1,y0,y1,z0,z1,mat)=>mb(mm(x0),mm(x1),mm(y0),mm(y1),mm(z0),mm(z1),mat);
+  b(x-M.d,x,y1-f,y1,zc-M.w/2,zc+M.w/2,wardBlackMat);b(x-M.d,x,M.y0,M.y0+f,zc-M.w/2,zc+M.w/2,wardBlackMat);
+  [zc-M.w/2,zc+M.w/2-f].forEach(z=>b(x-M.d,x,M.y0+f,y1-f,z,z+f,wardBlackMat));
+  b(x-M.d+4,x,M.y0+f,y1-f,zc-M.w/2+f,zc+M.w/2-f,mirrorMat).userData.glass=true;
+  // the coat rail: the bar, the hooks evenly along it
+  const hg=group(INFO.hanger,'hanger'),{L,h,t,y,n,peg,pegD,ball}=HK,yc=y+h/2;
+  boxIn(hg)(mm(x-t),mm(x),mm(y),mm(y+h),mm(zc-L/2),mm(zc+L/2),wardBlackMat).userData.bar=true;
+  for(let i=0;i<n;i++){
+    const z=zc-L/2+L*(i+.5)/n;
+    at(hg,new THREE.Mesh(new THREE.CylinderGeometry(mm(pegD/2),mm(pegD/2),mm(peg),12),wardBlackMat),x-t-peg/2,yc,z).rotation.z=Math.PI/2;
+    at(hg,new THREE.Mesh(new THREE.SphereGeometry(mm(ball/2),18,12),knobWoodMat),x-t-peg-ball/2+4,yc,z).userData.ball=true;
+  }
 }
+function buildWardrobe(g,opts){
+  if(ldspBack()&&!backWas)backColor.set(wardColor.colour());   // put on: in the carcass's colour
+  backWas=ldspBack();
+  const ps=wardrobeParts(),s=wardBody(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the left carcass's side at it goes with the run
+  return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
+    const d=buildParts({parts:parts.filter(p=>!p.sofaBack)},wardColor.mats,opts);
+    d.model.userData.wardrobe=true;d.model.userData.info=INFO.wardrobe;
+    d.model.children.forEach(o=>{o.userData.click=wardColor.click;});   // its panels (a new form: the kitchen built again), before the rods, the mirror and the coat rail join them
+    // the LDSP backs at the sofa in their own colour, in the same group: a click on any of them paints them all the next one
+    buildParts({parts:parts.filter(p=>p.sofaBack)},backColor.mats,opts).model.children.slice().forEach(o=>{o.userData.click=backColor.click;d.model.add(o);});
+    // the rods in the leg: across its opening, in the middle of its depth behind the door, from side to side
+    if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-WR.t,z=(zF+WR.ft+s-HDF.t)/2;
+      WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);
+        r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});
+      wardrobeEnd(d.model);}
+    g.add(d.model);
+    return d.doors;
+  });
+}
+
 /* the metal racks on the right wall's empty stretch: two alike side by side, from the corner by the way into the kitchen (the kitchen
    wall, z 0) up to the wardrobe's add-on section, RK.gap from both and between them; 250 deep at first — their fronts in line with the end of
    the wall right of the way in; a click on either (engine.js: userData.click) makes both 300 deep, then 350, then 250 again (RK_D; it
@@ -666,51 +701,20 @@ function buildRack(g){
   });
   return [];
 }
-const rodMat=new THREE.MeshStandardMaterial({color:0xc8c9cb,roughness:.25,metalness:.85});   // chrome
-const mirrorMat=new THREE.MeshStandardMaterial({color:0xc9d1d4,roughness:.06,metalness:.35});   // the glass: light, glossy
-const wardBlackMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#3a3b3d').convertSRGBToLinear(),roughness:.5,metalness:.2});   // the mirror's frame, the coat rail: dark grey (their cards say black)
-const knobWoodMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#9c7552').convertSRGBToLinear(),roughness:.7});   // its hooks' balls
-/* the coat rail under the mirror: a black bar along the face, hooks off it — each a black peg, a wooden ball on its end.
-   L along the face, h its height, t out from the face, y its bottom; the pegs' length and Ø, the balls' Ø */
-const HK={L:380,h:30,t:12,y:1170,n:4,peg:40,pegD:8,ball:26};
-/* the mirror and the coat rail on the leg's end (its face at x Rx − wardLeg(), the room on its −x side), in the middle of its width, in g;
-   each its own group with its own «i» */
-function wardrobeEnd(g){
-  const {mirror:M}=WR,x=P.Rx-wardLeg(),zc=(wardBody()-WR.d+wardAt())/2,f=M.frame,y1=M.y0+M.h,mm=v=>v*MM;
-  const group=(info,key)=>{const q=new THREE.Group();q.userData.info=info;q.userData[key]=true;g.add(q);return q;};
-  const at=(q,m,x,y,z)=>{m.position.set(mm(x),mm(y),mm(z));m.castShadow=true;q.add(m);return m;};
-  // the mirror: the frame round the glass, the glass set into it
-  const mg=group(INFO.mirror,'mirror'),mb=boxIn(mg),b=(x0,x1,y0,y1,z0,z1,mat)=>mb(mm(x0),mm(x1),mm(y0),mm(y1),mm(z0),mm(z1),mat);
-  b(x-M.d,x,y1-f,y1,zc-M.w/2,zc+M.w/2,wardBlackMat);b(x-M.d,x,M.y0,M.y0+f,zc-M.w/2,zc+M.w/2,wardBlackMat);
-  [zc-M.w/2,zc+M.w/2-f].forEach(z=>b(x-M.d,x,M.y0+f,y1-f,z,z+f,wardBlackMat));
-  b(x-M.d+4,x,M.y0+f,y1-f,zc-M.w/2+f,zc+M.w/2-f,mirrorMat).userData.glass=true;
-  // the coat rail: the bar, the hooks evenly along it
-  const hg=group(INFO.hanger,'hanger'),{L,h,t,y,n,peg,pegD,ball}=HK,yc=y+h/2;
-  boxIn(hg)(mm(x-t),mm(x),mm(y),mm(y+h),mm(zc-L/2),mm(zc+L/2),wardBlackMat).userData.bar=true;
-  for(let i=0;i<n;i++){
-    const z=zc-L/2+L*(i+.5)/n;
-    at(hg,new THREE.Mesh(new THREE.CylinderGeometry(mm(pegD/2),mm(pegD/2),mm(peg),12),wardBlackMat),x-t-peg/2,yc,z).rotation.z=Math.PI/2;
-    at(hg,new THREE.Mesh(new THREE.SphereGeometry(mm(ball/2),18,12),knobWoodMat),x-t-peg-ball/2+4,yc,z).userData.ball=true;
-  }
-}
-function buildWardrobe(g,opts){
-  if(ldspBack()&&!backWas)backColor.set(wardColor.colour());   // put on: in the carcass's colour
-  backWas=ldspBack();
-  const ps=wardrobeParts(),s=wardBody(),zF=s-WR.d,leg=p=>p.x0<P.Rx-WR.d||(p.z0+p.z1)/2>zF+WR.ft;   // the leg: out past the run's fronts, or behind its door; the left carcass's side at it goes with the run
-  return [ps.filter(leg),ps.filter(p=>!leg(p))].flatMap((parts,i)=>{
-    const d=buildParts({parts:parts.filter(p=>!p.sofaBack)},wardColor.mats,opts);
-    d.model.userData.wardrobe=true;d.model.userData.info=INFO.wardrobe;
-    d.model.children.forEach(o=>{o.userData.click=wardColor.click;});   // its panels (a new form: the kitchen built again), before the rods, the mirror and the coat rail join them
-    // the LDSP backs at the sofa in their own colour, in the same group: a click on any of them paints them all the next one
-    buildParts({parts:parts.filter(p=>p.sofaBack)},backColor.mats,opts).model.children.slice().forEach(o=>{o.userData.click=backColor.click;d.model.add(o);});
-    // the rods in the leg: across its opening, in the middle of its depth behind the door, from side to side
-    if(i===0){const x0=P.Rx-WR.D+WR.t,x1=P.Rx-WR.t,z=(zF+WR.ft+s-HDF.t)/2;
-      WR.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WR.rod/2*MM,WR.rod/2*MM,(x1-x0)*MM,20),rodMat);
-        r.rotation.z=Math.PI/2;r.position.set((x0+x1)/2*MM,y*MM,z*MM);r.castShadow=true;r.userData.rod=true;d.model.add(r);});
-      wardrobeEnd(d.model);}
-    g.add(d.model);
-    return d.doors;
-  });
+/* the white shelf over the sofa: a board 2000 × 250, 25 thick, white as the kitchen's carcasses, on the right wall under the mezzanine,
+   in line with it (from the wardrobe's side toward the window); its bottom at 1375, 465 over the sofa's back, 300 under the mezzanine.
+   Three white steel L-brackets, the desk shelf's (SHB, lBracket) as plain Ls, 150 from its ends and in its middle: the board on their
+   arms, their wall arms up behind it (the board as far off the wall as they are thick).
+   Its own axes as the desk shelf's: x along the wall from the wardrobe's side, z out from the wall; turned onto the kitchen's as the sofa */
+const SS={L:2000,D:250,t:25,y0:1375,name:'Полка над диваном'};
+function buildSofaShelf(g){
+  const white=SHC.find(c=>c.name==='доска белая'),[parts,add]=partList();
+  add(SS.name,'carcass',0,SS.L,SS.y0,SS.y0+SS.t,SHB.t,SHB.t+SS.D);
+  const q=buildParts({parts},white.mats).model,box=boxIn(q);
+  [SHB.end,SS.L/2,SS.L-SHB.end].forEach(c=>lBracket(box,c,SS.y0,SHB,white.br,true).forEach(o=>{o.userData.bracket=true;}));
+  q.rotation.y=-Math.PI/2;q.position.set(P.Rx*MM,0,wardAt()*MM);q.userData.sofaShelf=true;q.userData.info=INFO.sofaShelf;
+  g.add(q);
+  return [];
 }
 
 /* the corner sofa as Hoff «Слим», beige-grey velour: 2060 × 1530, 910 high with its back cushions, the seat 450 high on 55 mm black
@@ -822,9 +826,6 @@ const radTop=()=>P.WinS-10-RD.sill;
 const radW=()=>RD.n*RD.sec;
 const radOn=()=>radTop()-RD.H>=RD.floor;
 const radValveMat=new THREE.MeshStandardMaterial({color:0xc9cdd1,roughness:.25,metalness:.85});
-INFO.radiator=()=>({title:'Радиатор отопления',lines:[`Секционный, ${RD.n} секций по ${cm(RD.sec)} см; белая глянцевая эмаль.`,
-  `${cm(radW())} × ${cm(RD.H)} см, глубина ${cm(RD.D)} см; от стены ${cm(RD.out)} см.`,
-  `Под подоконником, по центру окна: низ на ${cm(radTop()-RD.H)} см от пола, до подоконника ${cm(RD.sill)} см.`]});
 function buildRadiator(g){
   if(!radOn())return [];
   const q=new THREE.Group();q.rotation.y=Math.PI;q.position.set(P.Rx/2*MM,0,P.L*MM);q.userData.radiator=true;q.userData.info=INFO.radiator;g.add(q);
@@ -845,7 +846,7 @@ function buildRadiator(g){
   return [];
 }
 
-return {
+const living={
   attach(k){({P,applDoor,handleMat,rebuild}=k);},
   // the work place toward the dining table: its desk's gap from the window wall (GAP, or none), the desk and the display cabinet as deep
   // along the left wall as they stand (back); the kitchen sets the gap (kitchen.js: placeDining)
@@ -861,4 +862,5 @@ return {
   // the userData keys its groups in g have
   keys:['desk','deskChair','vitrine','sofa','sofaShelf','wardrobe','mezzanine','rack','radiator']
 };
+return living;
 })();

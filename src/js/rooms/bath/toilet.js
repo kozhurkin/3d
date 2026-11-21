@@ -1,15 +1,11 @@
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
-   under the upper cabinet, its flush plate, the wall-hung toilet facing +x (buildToilet); returns the doors (the toilet's lid too) */
-function buildSanitary(g,opts){
+   under the upper cabinet, its flush plate, the wall-hung toilet facing +x (buildToilet); returns the toilet's lid (a door) */
+function buildInstallation(g,opts){
   const box=boxIn(g);
   const zf=current.zf*MM,di=P.Di*MM,hi=P.Hi*MM,lt=P.Lt*MM,cz=zf+lt/2;
   box(0,di,0,hi,zf,zf+lt,tileMat);
   box(di,di+.008,hi-.28,hi-.115,cz-.123,cz+.123,chromeMat);
-  const lid=buildToilet(g,di,cz,opts);
-  wash=new THREE.Group();wash.userData.wash=true;const doors=buildWash(wash,opts);g.add(wash);
-  tray=new THREE.Group();tray.userData.tray=true;tray.userData.info=INFO.tray;buildTray(tray);g.add(tray);
-  rack=buildRack(g);
-  return doors.concat(buildCurtain(g,opts),[lid]);
+  return buildToilet(g,di,cz,opts);
 }
 
 /* ---------- the toilet: wall-hung AZARIO Allegro AZ-3105B, rimless, with a hygienic shower ----------

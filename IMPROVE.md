@@ -19,8 +19,10 @@
 - [x] **4. CLAUDE.md:** правило «декомпозиция идёт по `REFACTOR.md`» — убрать; общее для нескольких предметов — только в `index.js` / `cabinets.js` (иначе ленивая зависимость, как была у `darkMat`);
   карта предметов — в одном месте (CLAUDE.md), README ссылается на неё. `REFACTOR.md` — удалить (история в git).
   Сделано: карта предметов — только в CLAUDE.md (в неё — названия товаров из README), у папок комнат в README — что в них и ссылка на неё; правило об общем — в «Где что».
-- [ ] **5. Санузел:** `buildSanitary` — из `toilet.js` в `view.js` (функции поднимаются); стойка душа `buildRack` / `rack` / `userData.rack` → `buildShowerRack` / `shower`
+- [x] **5. Санузел:** `buildSanitary` — из `toilet.js` в `view.js` (функции поднимаются); стойка душа `buildRack` / `rack` / `userData.rack` → `buildShowerRack` / `shower`
   (не путать со стеллажами `living`), проверки — вслед.
+  Сделано: в `toilet.js` осталось своё — короб инсталляции, клавиша, унитаз (`buildInstallation`); сборка `buildSanitary` — в `view.js`. Стойка: `buildShowerRack`, `showerRack`;
+  ключи `userData.rack` / `rackPart`, `RACK`, `INFO.rack` оставлены — «shower rack» внутри санузла понятен, совпадало с `living` только имя функции.
 
 ## Средние
 

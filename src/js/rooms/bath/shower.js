@@ -6,8 +6,8 @@
    its hose hanging from the thermostat's outlet. A product of its own, not in the cut list; shown with the tray. Two groups: what is on the wall stops
    the walker, the arm with the head is over the head (walkThrough), else the walk takes the whole rack for one box. Bath axes, mm */
 const RACK={y:1150,len:300,r:30,out:70,top:2100,reach:442,head:220,hand:110,holder:1550};
-let rack=null;
-function buildRack(sani){
+let showerRack=null;
+function buildShowerRack(sani){
   const wall=new THREE.Group(),over=new THREE.Group();
   [wall,over].forEach((o,i)=>{o.userData.rack=i?'over':'wall';o.userData.info=INFO.rack;sani.add(o);});over.userData.walkThrough=true;
   let g=wall;

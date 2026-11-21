@@ -24,7 +24,7 @@
 - `rooms/living/` (без `cabinets` и `view`; `index` — что берётся у кухни, `smooth`; `api.js` последним — `living.build`, `attach`, препятствия обхода):
   `desk` — письменный стол HEMNES, надстройка, полка над ней; `chair` — кресло MILLBERGET; `macbook`; `vitrine` — витрина или книжный стеллаж;
   `wardrobe` — угловой шкаф, антресоли, зеркало, вешалка; `rack` — стеллажи; `sofa` — диван и полка над ним; `radiator` — под подоконником.
-- `rooms/bath/`: `toilet` — инсталляция и унитаз, и `buildSanitary` (сборка всех предметов санузла); `tray` — поддон; `shower` — стойка (`buildRack`);
+- `rooms/bath/`: `toilet` — инсталляция и унитаз; `tray` — поддон; `shower` — стойка (`buildShowerRack`);
   `curtain` — шторка; `wash` — стиральная машина, раковина над ней, шкафчик, смеситель.
 - Общее для нескольких предметов комнаты (материалы, размеры) — только в `index.js` / `cabinets.js`, не в файле одного из них:
   иначе зависимость скрыта, и при перестановке файлов всё падает уже при запуске.
@@ -34,7 +34,7 @@
 1. Файл `src/js/rooms/<комната>/<предмет>.js`: `build<Предмет>(g, opts)` строит группу с `userData.<ключ>=true` (по ключу его находит `tt.item`)
    и `userData.info` из `info.js`; двери предмета (что открывается по клику) — массивом в ответ.
 2. Имя файла — в `data-files` комнаты в `src/app.html` (до `view` / `api`).
-3. Вызов — где комната собирает предметы: кухня — `extra.build` в `kitchen/view.js`, `living` — `build` в `living/api.js`, санузел — `buildSanitary` в `bath/toilet.js`.
+3. Вызов — где комната собирает предметы: кухня — `extra.build` в `kitchen/view.js`, `living` — `build` в `living/api.js`, санузел — `buildSanitary` в `bath/view.js`.
 4. Проверки — `tools/smoke/<комната>/<предмет>.js` (первая строка `// что (src/js/rooms/<комната>/<предмет>.js)`, `require('../harness')`), строка в её `index.js`.
 5. Строка в карте выше.
 

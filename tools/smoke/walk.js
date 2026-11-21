@@ -205,7 +205,8 @@ check('«Контур стен» — общая галочка: 50% или ни�
 
 check('обход: контуры видны и во внутренних углах — стены, полы и потолок чуть за линиями по глубине', () => {
   const p = open();
-  const r = p.run(`({walls:wallParts.every(w=>[].concat(w.m.material).filter(m=>m!==glassMat).every(m=>m.polygonOffset===true&&m.polygonOffsetFactor>0)),
+  // the walls' parts (the window has no outlines of its own: its frame and glass are not walls)
+  const r = p.run(`({walls:wallParts.filter(w=>w.id!=='window').every(w=>[].concat(w.m.material).every(m=>m.polygonOffset===true&&m.polygonOffsetFactor>0)),
     floors:roomMats.every(m=>m.polygonOffset===true&&m.polygonOffsetFactor>0), ceil:ceilMat.polygonOffset===true&&ceilMat.polygonOffsetFactor>0,
     lines:wallLines.every(l=>l.e.material===edgeMat)&&edgeMat.polygonOffset!==true, feet:footMat.polygonOffsetFactor<0})`);
   assert.deepStrictEqual(r, { walls: true, floors: true, ceil: true, lines: true, feet: true });

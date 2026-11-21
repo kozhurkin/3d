@@ -6,7 +6,7 @@ function stub(name = 'stub') {
   return new Proxy(function () {}, {
     get(t, k) {
       if (k === Symbol.toPrimitive) return () => 0;
-      if (k === 'then' || k === Symbol.iterator) return undefined;
+      if (k === 'then' || k === Symbol.iterator || k === Symbol.isConcatSpreadable) return undefined;   // not a promise, not a list: [].concat(stub) keeps it whole
       if (k in t) return t[k];
       return (t[k] = stub(name + '.' + String(k)));
     },

@@ -258,7 +258,7 @@ check('обход: мышь захвачена — щелчок переключ
 check('обход: шкафы мешают пройти', () => {
   const p = open();
   const r = p.run(`(()=>{
-    const fb=furnBoxes(),lo=STEP,hi=1.75,out={n:fb.length,free:true,inside:0,stopped:0};
+    const fb=furnBoxes(),ob=walkObstacles(),lo=STEP,hi=1.75,out={n:fb.length,free:true,inside:0,stopped:0};
     ROOMS.forEach(rm=>{
       // from the middle of the room toward the middle of each of its cabinet's parts that stands in the way, in 5 cm steps
       // (the room's name lies by the kitchen's worktop: from the middle of the floor there)
@@ -266,7 +266,7 @@ check('обход: шкафы мешают пройти', () => {
       fb.filter(b=>b[4]<hi&&b[5]>lo).forEach(b=>{let x=s0[0]*MM,z=s0[1]*MM;
         if(fb.some(c=>hits(c,x,z,lo,hi)))out.free=false;
         const cx=(b[0]+b[1])/2,cz=(b[2]+b[3])/2,n=Math.ceil(Math.hypot(cx-x,cz-z)/.05);
-        for(let i=0;i<n;i++)[x,z]=walkSlide(x,z,(cx-x)/(n-i),(cz-z)/(n-i),lo,hi);
+        for(let i=0;i<n;i++)[x,z]=walkSlide(x,z,(cx-x)/(n-i),(cz-z)/(n-i),lo,hi,ob);
         if(fb.some(c=>hits(c,x,z,lo,hi)))out.inside++;
         if(Math.hypot(cx-x,cz-z)>.05)out.stopped++;});});
     return out;})()`);

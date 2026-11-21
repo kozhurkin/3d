@@ -1,9 +1,9 @@
+(function(){
 /* ---------- «Кухня» view: the kitchen wall with its left wall, the cabinets and the appliances along it ----------
    Kitchen coordinates as in the kitchen tab, mm: x along the kitchen wall from the left wall, y up, z from the wall into the room;
    the kitchen's (0,0) is its origin on the plan. The wall width and the ceiling come from the plan (kW, A.H),
    how far the left wall shows is the view's frame (VS.kitchen.L). The rest of the room (the desk, the sofa, the wardrobe…) is
    living's (rooms/living/), built here with the kitchen. Own scope: the room modules share names (P, T, computeParts…). */
-(function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W and H are the plan's kitchen wall and ceiling, L and Rx where the window wall and the right wall are (kitchen axes): from the plan too,
 // as is DeskWall (the writing desk against the window wall: placeDining), WardBack (the wardrobe's LDSP backs at the sofa: living/wardrobe.js), WinS (the window sill's height: the radiator under it, living/radiator.js)
@@ -103,31 +103,12 @@ function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;P.WinS=A.w
   const top=current.parts.find(q=>q.name==='Столешница'),x=P.B1/2;
   if(top)top.hole=[x-SK.w/2,x+SK.w/2,SK.z-SK.d/2,SK.z+SK.d/2];
   return current;}
-/* the sink in the first base cabinet, in the middle of it (mm): its rim 400 × 440 on the worktop, 10 thick (4 of them sunk in it);
-   its bowl 340 × 380 outside, its corners rounded by 20, walls 1 thick, down to 170 under the worktop's top; a drain 70 across */
-const SK={z:300,rw:400,rd:440,w:340,d:380,r:20,wall:1,deep:170,drain:35};
 
 /* ---------- finishes and materials ---------- */
 // finish per part group: wood decor or plain colour
 const FIN={carcass:{type:'uni',color:'#F1F0EA',name:'Белый премиум W1000 ST9'},front:{type:'uni',color:'#C2B8AA',name:'Серый кашемир U702 ST9'},top:{type:'wood',decor:'C1385'},apron:null};
 const mats=makeMats();
 applyMaterials(mats,FIN,P.Ec);
-// appliances
-const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
-const blackMat=new THREE.MeshStandardMaterial({color:0x1d1e20,roughness:.35});
-const burnerMat=new THREE.MeshStandardMaterial({color:0x7a2a24,roughness:.4,emissive:0x2a0705});
-const ovenMat=new THREE.MeshStandardMaterial({color:0xb9bcbf,roughness:.3,metalness:.6});
-const steelMat=new THREE.MeshStandardMaterial({color:0xa9a7a2,roughness:.38,metalness:.75});
-const fridgeSideMat=new THREE.MeshStandardMaterial({color:0x8d8c89,roughness:.45,metalness:.55});
-const handleMat=new THREE.MeshStandardMaterial({color:0x5c5d5f,roughness:.35,metalness:.7});
-const dishMat=new THREE.MeshStandardMaterial({color:0x9fa3a6,roughness:.4,metalness:.6});
-const dishInMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
-const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metalness:.2});
-const linerMat=new THREE.MeshStandardMaterial({color:0xf1f2f0,roughness:.45});   // the fridge inside, its bins
-const binMat=new THREE.MeshStandardMaterial({color:0xdfe5e7,roughness:.3});
-const shelfMat=new THREE.MeshStandardMaterial({color:0xcfe0e2,roughness:.05,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
-const ovenGlassMat=new THREE.MeshStandardMaterial({color:0x111214,roughness:.08,metalness:.3,transparent:true,opacity:.75,depthWrite:false});   // tinted: the cavity shows through
-const cavityMat=new THREE.MeshStandardMaterial({color:0x2a2c2f,roughness:.55});   // the oven's enamel
 
 /* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js) */
 const INFO={
@@ -483,6 +464,27 @@ function buildSpiceShelf(g,opts){
   ms.forEach(d=>q.add(d.model));show();g.add(q);
   return ms.flatMap(d=>d.doors);
 }
+
+/* the sink in the first base cabinet, in the middle of it (mm): its rim 400 × 440 on the worktop, 10 thick (4 of them sunk in it);
+   its bowl 340 × 380 outside, its corners rounded by 20, walls 1 thick, down to 170 under the worktop's top; a drain 70 across */
+const SK={z:300,rw:400,rd:440,w:340,d:380,r:20,wall:1,deep:170,drain:35};
+
+// appliances
+const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
+const blackMat=new THREE.MeshStandardMaterial({color:0x1d1e20,roughness:.35});
+const burnerMat=new THREE.MeshStandardMaterial({color:0x7a2a24,roughness:.4,emissive:0x2a0705});
+const ovenMat=new THREE.MeshStandardMaterial({color:0xb9bcbf,roughness:.3,metalness:.6});
+const steelMat=new THREE.MeshStandardMaterial({color:0xa9a7a2,roughness:.38,metalness:.75});
+const fridgeSideMat=new THREE.MeshStandardMaterial({color:0x8d8c89,roughness:.45,metalness:.55});
+const handleMat=new THREE.MeshStandardMaterial({color:0x5c5d5f,roughness:.35,metalness:.7});
+const dishMat=new THREE.MeshStandardMaterial({color:0x9fa3a6,roughness:.4,metalness:.6});
+const dishInMat=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
+const glassMat=new THREE.MeshStandardMaterial({color:0x151617,roughness:.1,metalness:.2});
+const linerMat=new THREE.MeshStandardMaterial({color:0xf1f2f0,roughness:.45});   // the fridge inside, its bins
+const binMat=new THREE.MeshStandardMaterial({color:0xdfe5e7,roughness:.3});
+const shelfMat=new THREE.MeshStandardMaterial({color:0xcfe0e2,roughness:.05,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
+const ovenGlassMat=new THREE.MeshStandardMaterial({color:0x111214,roughness:.08,metalness:.3,transparent:true,opacity:.75,depthWrite:false});   // tinted: the cavity shows through
+const cavityMat=new THREE.MeshStandardMaterial({color:0x2a2c2f,roughness:.55});   // the oven's enamel
 
 /* a door of an appliance: its holder g turns or slides as a cabinet front does (furniture.js: turnDoor); by its key it keeps
    how open it was through a rebuild; it opens and closes on a click or in the walk, not with the kitchen's fronts (loose).

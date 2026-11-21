@@ -1,8 +1,8 @@
+(function(){
 /* ---------- «Санузел» view: the toilet niche — the tall cabinet against the back wall, the installation along the left wall ----------
    Bathroom coordinates as in the bath tab, mm: x along the back wall from the left wall, y up, z from the back wall into the room;
    the bathroom's (0,0) is its origin on the plan. The niche, the ceiling and the riser box come from the plan
    (A.bNiche, A.bL, A.H, A.rX, A.rZ), how far the left wall shows is the view's frame (VS.bath.L). Own scope: the room modules share names. */
-(function(){
 let T=16, TF=16; const HDF=4, G=2;
 // cabinet sizes; W, L, H, Rx, Rz are the plan's niche, ceiling and riser box
 const P={W:1250,H:2600,Rx:250,Rz:250,Hi:1200,Di:200,Gap:300,Du:200,Nu:2,Dt:300,L:1100,Lt:800,Wc:800,Dm:200,Pl:80,Sp:1500,Nb:2,Nh:3,Ec:30,T:16,TF:16,Mid:true,Feet:false};
@@ -85,6 +85,7 @@ applyMaterials(mats,FIN,P.Ec);
 const tileMat=new THREE.MeshStandardMaterial({color:0x6b6e70,roughness:.6});
 const whiteMat=new THREE.MeshStandardMaterial({color:0xf4f4f2,roughness:.25,metalness:.05});
 const chromeMat=new THREE.MeshStandardMaterial({color:0xc9c9c6,roughness:.2,metalness:.9});
+const darkMat=new THREE.MeshStandardMaterial({color:0x2b2d2f,roughness:.35,metalness:.2});
 
 /* what the things that are not cabinets are: the card under the «i» that comes up when the cursor rests on one (engine.js), as in the kitchen */
 const INFO={
@@ -484,7 +485,6 @@ const SINK_CAB={D:200,Gap:300,H:700,N:2};   // the cabinet over the sink: depth 
 let wash=null;
 const washNiche=()=>{const x0=A.bNiche+A.wt,x1=xB1-xL;return {x0,x1,cx:(x0+x1)/2,w:x1-x0};};
 const washRect=()=>{const n=washNiche(),w=Math.min(WASH.W,n.w-4)/2;return [n.cx-w,n.cx+w,WASH.back,WASH.back+WASH.D];};
-const darkMat=new THREE.MeshStandardMaterial({color:0x2b2d2f,roughness:.35,metalness:.2});
 const portMat=new THREE.MeshStandardMaterial({color:0x4a9be0,roughness:.05,metalness:.1,transparent:true,opacity:.4,depthWrite:false});   // translucent blue glass
 const blackMat=new THREE.MeshStandardMaterial({color:0x0f1011,roughness:.12,metalness:.3});   // glossy black: the control panel, the door's ring
 const screenMat=new THREE.MeshStandardMaterial({color:0x0a0c10,emissive:0x5d7f99,emissiveIntensity:.35,roughness:.1});

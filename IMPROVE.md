@@ -11,10 +11,11 @@
 
 - [x] **1. `git gc`.** `.git` — 506 МБ, из них 441 МБ — 166 версий `index.html` (3,9 МБ), все 2310 объектов лежат несжатыми. Сожмутся разницами; история та же.
   Сделано: все 2310 объектов упакованы, ни один не удалён; `.git` 506 → 24 МБ, `git fsck` чист, stash на месте.
-- [ ] **2. Заглушка THREE** (`tools/smoke/harness.js`): `Symbol.isConcatSpreadable` → `undefined`, как `Symbol.iterator`. Иначе `[].concat(заглушка)` молча даёт `[]` (так ломался `tt.doors`).
+- [x] **2. Заглушка THREE** (`tools/smoke/harness.js`): `Symbol.isConcatSpreadable` → `undefined`, как `Symbol.iterator`. Иначе `[].concat(заглушка)` молча даёт `[]` (так ломался `tt.doors`).
   Сделано. Вскрылась пустая проверка: в «обход: контуры видны и во внутренних углах» `[].concat(w.m.material)` давал `[]`, и часть «walls» не смотрела ни одной стены.
   Теперь смотрит 16 частей стен; окно из неё исключено — у его рамы своих контуров нет (`wallLines` — по стенам), `polygonOffset` ей не нужен.
-- [ ] **3. Сборка перед проверкой:** `"check": "node build.js && node tools/smoke.js"` — `harness.js` читает `index.html`, без сборки проверяется старая.
+- [x] **3. Сборка перед проверкой:** `"check": "node build.js && node tools/smoke.js"` — `harness.js` читает `index.html`, без сборки проверяется старая.
+  Сделано иначе: собирает сам `tools/smoke.js` (0,1 с, до обвязки) — так и при `node tools/smoke.js` напрямую; сборка не прошла — проверка не идёт, код 1.
 - [ ] **4. CLAUDE.md:** правило «декомпозиция идёт по `REFACTOR.md`» — убрать; общее для нескольких предметов — только в `index.js` / `cabinets.js` (иначе ленивая зависимость, как была у `darkMat`);
   карта предметов — в одном месте (CLAUDE.md), README ссылается на неё. `REFACTOR.md` — удалить (история в git).
 - [ ] **5. Санузел:** `buildSanitary` — из `toilet.js` в `view.js` (функции поднимаются); стойка душа `buildRack` / `rack` / `userData.rack` → `buildShowerRack` / `shower`

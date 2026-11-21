@@ -2,7 +2,7 @@
 
 ## Сборка
 - `index.html` — собранный файл: приложение `src/app.html` (с модулями `src/js/` и панелями `src/panels/`) вшито строкой в `src/shell.html`. Руками его не править: все правки только в `src/`.
-- После любой правки в `src/` сразу запускать `npm run build` и проверить в Node, что изменение попало в `index.html`. Пользователь смотрит результат в `index.html`.
+- После любой правки в `src/` сразу запускать `npm run build` (или `npm run check` — он сначала собирает сам) и проверить в Node, что изменение попало в `index.html`. Пользователь смотрит результат в `index.html`.
 - Проверка: `npm run check` (приложение в Node с заглушкой THREE), обвязка — `tools/smoke/harness.js`. Перед коммитом — полный прогон.
   - Части: `app`, `kitchen`, `living`, `bath`, `hall`, `flight`, `walk` — `tools/smoke/<часть>.js` или папка `tools/smoke/<часть>/` (`kitchen`, `living`, `bath`:
     файл на предмет, как в коде, `index.js` подключает их по порядку). Одна часть — `npm run check -- <часть>`, один предмет — `npm run check -- <часть>/<предмет>`.

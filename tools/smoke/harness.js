@@ -218,7 +218,13 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
   // n frames of ms each; a flight between views takes 0.85 s, so fly() lets it finish
   const tick = (n = 3, ms = 16) => { for (let i = 0; i < n; i++) { clock.t += ms; const q = frames.splice(0); q.forEach((f) => f()); } };
   const fly = () => tick(60);
-  return { ctx, doc, document, storage, tick, fly, key, run: (code) => { const s = vm.runInContext('JSON.stringify(' + code + ')', ctx); return s === undefined ? undefined : JSON.parse(s); } };
+  // run(code): an expression in the page, its value back through JSON. code — a string, or a function written as page code:
+  // it goes to the page as its text, so it sees the page (tt, VIEWS…) and nothing of the check; what it needs from the check — args (JSON)
+  const run = (code, ...args) => {
+    const src = typeof code === 'function' ? `(${code})(...${JSON.stringify(args)})` : code;
+    const s = vm.runInContext('JSON.stringify(' + src + ')', ctx); return s === undefined ? undefined : JSON.parse(s);
+  };
+  return { ctx, doc, document, storage, tick, fly, key, run };
 }
 
 /* ---------- the built file ---------- */

@@ -11,7 +11,6 @@
 const WASH={W:595,H:850,D:505,feet:15,panel:115,slope:22,hood:68,lid:28,rear:27,sinkD:550,sinkY:880,sinkT:1000};
 WASH.back=WASH.sinkD-WASH.D;   // off the back wall: the body's front is the sink's
 const SINK_CAB={D:200,Gap:300,H:700,N:2};   // the cabinet over the sink: depth with its doors, from the sink's top up to its bottom, height, shelves
-let wash=null;
 const washNiche=()=>{const x0=A.bNiche+A.wt,x1=xB1-xL;return {x0,x1,cx:(x0+x1)/2,w:x1-x0};};
 const washRect=()=>{const n=washNiche(),w=Math.min(WASH.W,n.w-4)/2;return [n.cx-w,n.cx+w,WASH.back,WASH.back+WASH.D];};
 const portMat=new THREE.MeshStandardMaterial({color:0x4a9be0,roughness:.05,metalness:.1,transparent:true,opacity:.4,depthWrite:false});   // translucent blue glass
@@ -39,7 +38,8 @@ function sinkCabParts(){
   add('Фасад шкафчика над раковиной','front',xm+G/2,x1-G/2,y0+G/2,y1-G/2,dc,S.D,{hinge:'R'});
   return parts;
 }
-function buildWash(g,opts){
+function buildWash(sani,opts){
+  const g=new THREE.Group();g.userData.wash=true;sani.add(g);
   const box=boxIn(g),n=washNiche(),[x0,x1,z0,z1]=washRect().map(v=>v*MM),cx=n.cx*MM,h=WASH.H*MM;
   // the machine (its own group): a hollow white body on four feet, the drum in it behind the loading opening; over the front the
   // control panel's housing with its face leaning back, glossy black: the powder drawer on the left, the display in the middle, the dial

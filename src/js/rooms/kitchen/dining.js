@@ -27,5 +27,6 @@ function buildTable(g){
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry),mats.edge);e.raycast=()=>{};top.add(e);g.add(top);
   const l=TB.leg*MM,i=TB.in*MM,legs=[[i,z0+i],[x1-i-l,z0+i],[i,z1-i-l],[x1-i-l,z1-i-l]].map(([x,z])=>box(x,x+l,0,y0,z,z+l,blackMat));
   [top,...legs].forEach(m=>{m.userData.info=INFO.table;m.userData.table=true;});
+  return [];
 }
 

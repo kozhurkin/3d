@@ -1,18 +1,17 @@
 /* everything of the bathroom that is not its cabinet (the view's extra, sani): the installation and the toilet, the washing machine
    with the sink, the shower tray, its rack and curtain; returns their doors (the toilet's lid too) */
 function buildSanitary(g,opts){
-  const lid=buildInstallation(g,opts);
-  wash=new THREE.Group();wash.userData.wash=true;const doors=buildWash(wash,opts);g.add(wash);
-  tray=new THREE.Group();tray.userData.tray=true;tray.userData.info=INFO.tray;buildTray(tray);g.add(tray);
-  showerRack=buildShowerRack(g);
-  return doors.concat(buildCurtain(g,opts),[lid]);
+  const lid=buildInstallation(g,opts),wash=buildWash(g,opts),tray=buildTray(g),rack=buildShowerRack(g);
+  return [].concat(wash,buildCurtain(g,opts),lid,tray,rack);   // the doors in their old order: the machine's and its cabinet's, the curtain, the lid
 }
 
 // every frame (before the room turns its doors): the bath view hides the niche, the shower tray, its rack and curtain unless its frame shows it whole
 frameHooks.push(()=>{
+  const v=VIEWS.bath,sani=v&&v.furniture?v.furniture().extra:null;if(!sani)return;   // the items by their keys (buildSanitary)
+  const one=k=>sani.children.find(o=>o.userData[k]===true),wash=one('wash'),tray=one('tray'),curtain=one('curtain');
   if(wash)wash.visible=view!=='bath';
   if(tray)tray.visible=view!=='bath'||VS.bath.L>=trayRect()[3];   // the bath view: only when its frame takes the whole tray in
-  if(showerRack)showerRack.forEach(o=>o.visible=!tray||tray.visible);   // the rack with it
+  sani.children.forEach(o=>{if(o.userData.rack)o.visible=!tray||tray.visible;});   // the rack (its two groups) with it
   // and the curtain; in the bath view's cut mode it hides with the wall at the niche end, along which it runs
   if(curtain){const w=WALLS.find(v=>v.id==='nicheEnd'),vw=VIEWS.bath;
     curtain.visible=(!tray||tray.visible)&&(view!=='bath'||VS.bath.Wm!=='auto'||sideVisible(fadeSide(w,vw),fadeWall(w,vw).r.map(v=>v*MM),camera.position));}

@@ -1,5 +1,5 @@
 /* the installation and the toilet stand in the niche (bath axes, m): the tiled installation box along the left wall
-   under the upper cabinet, its flush plate, the wall-hung toilet facing +x (buildToilet); returns the toilet's lid (a door) */
+   under the upper cabinet, its flush plate, the wall-hung toilet facing +x (buildToilet); returns its doors: the toilet's lid */
 function buildInstallation(g,opts){
   const box=boxIn(g);
   const zf=current.zf*MM,di=P.Di*MM,hi=P.Hi*MM,lt=P.Lt*MM,cz=zf+lt/2;
@@ -120,6 +120,6 @@ function buildToilet(sani,x,z,opts){
     m.position.set((M.x+dx)*MM,(M.y+M.knob/2+.3)*MM,zs+(5+M.out-5)*MM);g.add(m);});
   const prev=opts.prev.find(d=>d.key==='wc-lid'),d=Object.assign({g:lg,frame:seat,a:0,t:0,s:-1,axis:'x',max:lidMax,key:'wc-lid',loose:true},prev&&{a:prev.a,t:prev.t,last:prev.last});
   turnDoor(d);   // frame: a click on the seat works it too
-  return d;
+  return [d];
 }
 

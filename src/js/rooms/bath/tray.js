@@ -4,7 +4,6 @@
    a quarter of its length from the left wall, half way across. A product of its own, not in the cut list, no sizes in the panel.
    The bath tab shows it only while the frame takes it in whole (the left wall up to the kitchen wall). Bath axes, mm */
 const TRAY={H:150,drain:120,at:.25};   // height; the drain's side; where it is along the tray from the left wall
-let tray=null;
 const trayRect=()=>[0,xSh-xL,A.bL+A.wt,kZ0-zB0];   // x0, x1, z0, z1
 /* the top's relief as a height field (mm), lit through a normal map; its colour an even white, a shade darker down in the relief.
    The slate: value noise bent by noise of its own (domain warp) cut in thin layers, each ending in a short sharp step, as split
@@ -56,7 +55,8 @@ const trayMats=(()=>{
     g.lineWidth=2;g.beginPath();g.arc(64,64,34,0,Math.PI*2);g.stroke();g.strokeRect(5,5,118,118);},1,1,true),roughness:.2,metalness:.85});
   return {top,side,grate};
 })();
-function buildTray(g){
+function buildTray(sani){
+  const g=new THREE.Group();g.userData.tray=true;g.userData.info=INFO.tray;sani.add(g);
   const [x0,x1,z0,z1]=trayRect().map(v=>v*MM),h=TRAY.H*MM,{top,side,grate}=trayMats;
   if(!trayTex){trayTex=makeTrayTex();if(trayTex.map){top.map=trayTex.map;top.normalMap=trayTex.normalMap;top.needsUpdate=true;}}
   const body=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,h,z1-z0),[side,side,top,side,side,side]);   // the top (+y) face slate, the rest plain
@@ -64,5 +64,6 @@ function buildTray(g){
   const d=TRAY.drain*MM,cx=x0+(x1-x0)*TRAY.at,cz=(z0+z1)/2;
   const m=new THREE.Mesh(new THREE.BoxGeometry(d,.003,d),[chromeMat,chromeMat,grate,chromeMat,chromeMat,chromeMat]);
   m.position.set(cx,h+.0015,cz);m.receiveShadow=true;g.add(m);
+  return [];
 }
 

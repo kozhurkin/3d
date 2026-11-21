@@ -75,6 +75,7 @@ function buildPendant(g){
   const click=()=>{pendantModel=(pendantModel+1)%LAMPS.length;fillPendant(q);};
   Object.assign(q.userData,{pendant:true,walkThrough:true,info:card,click});
   g.add(q);fillPendant(q);
+  return [];
 }
 // the lamp hung now, in q: what was there goes (the clipping planes its materials had go to the new ones)
 function fillPendant(q){

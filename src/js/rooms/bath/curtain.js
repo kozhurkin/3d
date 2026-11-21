@@ -22,11 +22,10 @@ const CELL=4,curtainShadowMat=new THREE.MeshDepthMaterial({depthPacking:THREE.RG
   alphaMap:(t=>{t.magFilter=t.minFilter=THREE.NearestFilter;t.generateMipmaps=false;return t;})(drawnTex(64,g=>{
     for(let i=0;i<64;i++)for(let j=0;j<64;j++){let h=Math.imul(i,374761393)+Math.imul(j,668265263)|0;h=Math.imul(h^(h>>>13),1274126177);
       const v=((h^(h>>>16))>>>0)%255+1;g.fillStyle=`rgb(${v},${v},${v})`;g.fillRect(i,j,1,1);}},1,1))});
-let curtain=null;
 function buildCurtain(sani,opts){
   const C=CURT,{xb,zw,xs,x1,z}=curtRod(),zr=z*MM,yr=curtRodY()*MM,rb0=C.ball*MM,X0=xs+C.pad,y0=TRAY.H+C.gap,y1=y0+C.h,yh=y1-C.eye[1],hr=C.eye[0];
   const [ra,rb]=C.ring.map(v=>v*MM),tb=C.tube*MM,yc=yr+.01+tb-rb;   // a ring's centre: its inside resting on the rod
-  curtain=new THREE.Group();curtain.userData.curtain=true;curtain.userData.walkThrough=true;curtain.userData.info=INFO.curtain;sani.add(curtain);
+  const curtain=new THREE.Group();curtain.userData.curtain=true;curtain.userData.walkThrough=true;curtain.userData.info=INFO.curtain;sani.add(curtain);
   // the rod (stays): straight from the partition (a flange Ø30 there) into the bracket's ball, its end in the ball's blind hole (to its middle)
   const put=(geo,x,y,zz,rx,rz,part,mat=chromeMat)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,zz);m.rotation.set(rx||0,0,rz||0);m.castShadow=true;if(part)m.userData.rodPart=part;curtain.add(m);return m;};
   const r0=xb*MM,zw0=zw*MM;

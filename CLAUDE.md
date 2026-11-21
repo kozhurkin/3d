@@ -6,6 +6,7 @@
 - Проверка: `npm run check` (приложение в Node с заглушкой THREE), обвязка — `tools/smoke/harness.js`. Перед коммитом — полный прогон.
   - Части: `app`, `kitchen`, `living`, `bath`, `hall`, `flight`, `walk` — `tools/smoke/<часть>.js` или папка `tools/smoke/<часть>/` (`kitchen`, `living`, `bath`:
     файл на предмет, как в коде, `index.js` подключает их по порядку). Одна часть — `npm run check -- <часть>`, один предмет — `npm run check -- <часть>/<предмет>`.
+    Одна проверка — `--grep <часть имени>` (можно вместе с частью: `npm run check -- bath --grep крышка`), список без прогона — `--list`, время каждой — `--time`.
   - Новое поведение — новые проверки в файл своего предмета (своей части).
   - В коде для страницы (`p.run(...)`) — помощники `tt` (`harness.js`: `PAGE_KIT`): `tt.fur()` / `tt.fur("bath")` (мебель вида, а не `VIEWS.kitchen.furniture()`),
     `tt.item("sofa")` / `tt.item("wash","bath")`, `tt.parts(g, q=>…)`, `tt.box(ps,'xzy')`, `tt.mm(v)`, `tt.doors(g)`; обходы и min/max вручную не писать.

@@ -231,7 +231,14 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const pi = html.indexOf('const PAGES=');
 const PAGES = new Function(html.slice(pi, html.indexOf(';\n', pi) + 1) + 'return PAGES;')();
 const checks = [];
-const check = (name, fn) => { fn(); checks.push(name); };
+// what smoke.js asks, set before the parts load: grep — only the checks whose name has this text (any case);
+// dry — names only, nothing run (--list); time — the ms of each into times (--time)
+const run = { grep: "", dry: false, time: false }, times = [];
+const check = (name, fn) => {
+  if (run.grep && !name.toLowerCase().includes(run.grep)) return;
+  const t = process.hrtime.bigint(); if (!run.dry) fn(); checks.push(name);
+  if (run.time) times.push([name, Number(process.hrtime.bigint() - t) / 1e6]);
+};
 
 // a slider of the plan's wall sizes moved to v, as the browser does it
 const slide = (p, k, v) => { const s = p.document.querySelector(`[data-size="${k}"]`); s.value = String(v); s.dispatch('input'); };
@@ -246,4 +253,4 @@ const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ 
 const bathWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.bath)}))';
 const hallWalls = 'wallLines.map(l=>({id:l.w.id,r:l.w.r,fade:fadeSide(l.w,VIEWS.hall)}))';
 
-module.exports = { fs, stub, Vec3, Box3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, decorsCtx, DECOR_PARENT, html, pi, PAGES, checks, check, slide, kitchenWalls, vec, piece, near, bathWalls, hallWalls, path, vm, assert };
+module.exports = { fs, stub, Vec3, Box3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, decorsCtx, DECOR_PARENT, html, pi, PAGES, checks, check, run, times, slide, kitchenWalls, vec, piece, near, bathWalls, hallWalls, path, vm, assert };

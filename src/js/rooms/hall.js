@@ -122,6 +122,7 @@ function buildCase(g){
   // the latches across the joint: a black pad, the metal plate on it
   [z0+latch,z1-latch].forEach(z=>{b(x0-10,x0,lid-40,lid+55,z-pad/2,z+pad/2);b(x0-14,x0-10,lid-30,lid+45,z-plate/2,z+plate/2,latchMat,'latch');});
   b(x0-3,x0,lid+30,lid+58,zc-45,zc+45,badgeMat,'badge');
+  return [];
 }
 
 /* ---------- dimension lines of the hall (hall axes; they belong to the cabinet and move with it) ----------
@@ -189,7 +190,7 @@ const k=roomKit('hall',{
   slider:{sel:'#hFrameSd',key:'Sd',max:()=>hLen},   // how far from the bearing wall the side walls show, up to the kitchen wall
   dims:buildDims,
   // the tool box: in the hall's own view once the frame shows the right wall past it; its footprint on the plan
-  extra:{name:'things',build:g=>{buildCase(g);return [];}},
+  extra:{name:'things',items:[buildCase]},
   frame:(on,{extra,show})=>{if(extra)extra.children.forEach(o=>{if(o.userData.toolCase===true)o.visible=!on||show>=caseAt()[3];});},
   foot:()=>[caseAt()],
   // in the hall's own view «Стена и дверь» off takes away the walls, the entrance door and its swing

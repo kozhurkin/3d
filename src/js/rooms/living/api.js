@@ -4,8 +4,8 @@ const living={
   // along the left wall as they stand (back); the kitchen sets the gap (kitchen/dining.js: placeDining)
   GAP,back:DK.W+VT.D,vitName:()=>VTC[vitPick].of,   // what stands at the desk's end, for the table's card
   setGap(g){DK.gap=g;},
-  // all of it in g, in this order; their doors (the kitchen makes them loose)
-  build:(g,o)=>[].concat(buildDesk(g,o),buildDeskChair(g,o),buildVitrine(g,o),buildSofa(g,o),buildWardrobe(g,o),buildMezzanine(g,o),buildSofaShelf(g),buildRack(g),buildRadiator(g)),
+  // the builders of all of it, in this order: the kitchen builds them among its own (kitchen/view.js: extra.items), loose
+  items:[buildDesk,buildDeskChair,buildVitrine,buildSofa,buildWardrobe,buildMezzanine,buildSofaShelf,buildRack,buildRadiator],
   // what the walker cannot pass ([x0, x1, z0, z1], kitchen mm): the desk, the display cabinet, the sofa, the wardrobe, the racks, the radiator
   foot:()=>[[0,DK.D,P.L-DK.gap-DK.W,P.L-DK.gap],[0,VT.W,vitAt()-VT.D,vitAt()],
     [P.Rx-SF.D,P.Rx,sofaAt(),sofaAt()+SF.W],[P.Rx-SF.Dc,P.Rx,sofaAt()+SF.W-SF.arm-SF.chaise,sofaAt()+SF.W],

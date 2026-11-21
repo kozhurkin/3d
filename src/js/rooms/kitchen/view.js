@@ -71,9 +71,7 @@ const k=roomKit('kitchen',{
   // the appliances (the oven's and the fridge's doors open), the dining table, the lamp and the wall shelf over it, the dining chairs, and the rest
   // of the room (rooms/living/: the desk, its chair, the display cabinet, the sofa, the wardrobe…) go with the walls in the kitchen's view. None of their doors is a cabinet front: «Фасады»
   // leaves them (loose), and they are built as they were (prev), never opened with the fronts
-  extra:{name:'appl',build:(g,{prev})=>{const o={prev},ap=buildAppliances(g,o);buildTable(g);buildPendant(g);
-    const all=ap.concat(buildSpiceShelf(g,o),buildChairs(g,o),living.build(g,o));
-    all.forEach(d=>{d.loose=true;});return all;}},
+  extra:{name:'appl',loose:true,items:[buildAppliances,buildTable,buildPendant,buildSpiceShelf,buildChairs,...living.items]},
   // its own view shows the cabinets and the dining table with its chairs, its lamp and the shelf over it — the table only once the frame shows the left wall past it; the rest of the room
   // (rooms/living/) stands in the apartment (the plan, the walk), not in the kitchen tab
   frame:(on,{extra,dims,show})=>{

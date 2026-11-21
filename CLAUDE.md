@@ -21,10 +21,10 @@
 
 ## Где что (предмет → файл)
 - В папке комнаты: `index.js` (первым) — заголовок, `P`; `cabinets.js` — детали шкафов `computeParts`, `fromModel`, `clamp`, отделка `FIN`;
-  `info.js` — карточки «i» (`INFO`); `view.js` (последним) — размерные линии, ракурсы, панель, `roomKit(…)` с `extra.build` — сборкой предметов вида.
+  `info.js` — карточки «i» (`INFO`); `view.js` (последним) — размерные линии, ракурсы, панель, `roomKit(…)` с `extra.items` — списком сборщиков предметов вида.
 - `rooms/kitchen/`: `dining` — обеденный стол; `pendant` — светильник над ним; `chairs` — стулья BERGMUND; `shelves` — полка над столом (оливковая, трёхъярусная);
   `appliances` — мойка, варочная, посудомойка, духовка, вытяжка, холодильник.
-- `rooms/living/` (без `cabinets` и `view`; `index` — что берётся у кухни, `smooth`; `api.js` последним — `living.build`, `attach`, препятствия обхода):
+- `rooms/living/` (без `cabinets` и `view`; `index` — что берётся у кухни, `smooth`; `api.js` последним — `living.items`, `attach`, препятствия обхода):
   `desk` — письменный стол HEMNES, надстройка, полка над ней; `chair` — кресло MILLBERGET; `macbook`; `vitrine` — витрина или книжный стеллаж;
   `wardrobe` — угловой шкаф, антресоли, зеркало, вешалка; `rack` — стеллажи; `sofa` — диван и полка над ним; `radiator` — под подоконником.
 - `rooms/bath/`: `toilet` — инсталляция и унитаз; `tray` — поддон; `shower` — стойка (`buildShowerRack`);
@@ -38,7 +38,7 @@
    (по ключу его находят `tt.item` и код комнаты) и `userData.info` из `info.js`; возвращает массив своих дверей (что открывается по клику), нет — `[]`.
    Ссылку на предмет в переменной модуля не держать: нужен — искать по ключу в группе (как хук кадра в `bath/view.js`).
 2. Имя файла — в `data-files` комнаты в `src/app.html` (до `view` / `api`).
-3. Вызов — где комната собирает предметы: кухня — `extra.build` в `kitchen/view.js`, `living` — `build` в `living/api.js`, санузел — `buildSanitary` в `bath/view.js`.
+3. Сборщик — в список `extra.items` в `roomKit(…)` комнаты (`view.js`, у прихожей — `hall.js`); у `living` — в `living.items` в `api.js`.
 4. Проверки — `tools/smoke/<комната>/<предмет>.js` (первая строка `// что (src/js/rooms/<комната>/<предмет>.js)`, `require('../harness')`), строка в её `index.js`.
 5. Строка в карте выше.
 

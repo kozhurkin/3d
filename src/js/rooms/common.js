@@ -12,7 +12,8 @@
      ids       — the sliders [data-p], onSyncIds() before their values are set (a range that moves),
      slider    {sel, key, max(), min()?} — how far the side wall shows (the view's frame),
      setCam(v), dims(dim,gaps,group) — dimension lines through dim(a,b,txt,tick) into group, the free heights of a shelf stack through
-               gaps(boards), extra {name, build(g, {prev, open})} — appliances or sanitary ware; a cabinet of its own among
+               gaps(boards), extra {name, items, loose} — appliances or sanitary ware: items — the builders, each build(g, {prev, open}) makes its item
+               in g and returns its doors; loose — none of them is a cabinet front (built as they were, never opened with the fronts); a cabinet of its own among
                them (buildParts) returns its doors: they open and close with the room's (clicks, «Открыты/Закрыты», the walk;
                easing (by its own ease if it has one), or evenly by its rate per second if it has one; held, at its holdRate if it has one),
      foot()    — extra footprint rects, walls(on) — walls in its own view (default: «Стена» toggles them),
@@ -56,7 +57,8 @@ function roomKit(id,cfg){
     cur=cfg.fromModel(want);
     const prev=doors;disposeGroup(model);
     ({model,doors}=buildParts(cur,mats,{prev,open:VS[id].fronts==='open'}));
-    if(cfg.extra){extra=new THREE.Group();const more=cfg.extra.build(extra,{prev,open:VS[id].fronts==='open'});if(more)doors=doors.concat(more);model.add(extra);}
+    if(cfg.extra){const x=cfg.extra,o=x.loose?{prev}:{prev,open:VS[id].fronts==='open'};extra=new THREE.Group();
+      const more=[].concat(...x.items.map(f=>f(extra,o)));if(x.loose)more.forEach(d=>{d.loose=true;});doors=doors.concat(more);model.add(extra);}
     dimsGroup=new THREE.Group();dimsGroup.userData.gaps=[];cfg.dims(dim,gaps,dimsGroup);model.add(dimsGroup);
     clipToFloor(model,clip);
     // its footprint for «Следы» on the plan

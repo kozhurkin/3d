@@ -3,6 +3,7 @@
 /* wall finishes, matte paint. "white" is the wall colour of the room tabs (follows the theme);
    p: swatch colour when the scene colour does not show the paint itself (the lit white wall, not its base tone) */
 const WALLC={
+  cocoa:{n:'Обои какао',c:'#D2B9A2',r:.95,tex:true},   // wallpaper, light cocoa, a woven fabric texture (wallTex)
   white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
   greige:{n:'Greige',c:'#C7BEB1',r:.9},
   french:{n:'French Grey',c:'#B8B9A6',r:.9}
@@ -14,6 +15,79 @@ const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
    only because half of it is past the wall's edge */
 const BEHIND={polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
 const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide,...BEHIND});
+
+/* the wallpaper's fabric: a 250 mm tile, grey about 1 that multiplies the wall colour. Fine threads both ways (a plain weave, seen
+   close), slubs — short thicker streaks of the threads, lighter and darker (seen from the room), and a faint mottle. It tiles:
+   the threads run the whole tile, the slubs and the mottle wrap round its edges. Drawn once, with a fixed seed */
+const WALL_TILE=.25;   // m
+function fabricTexture(){
+  const N=512,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
+  let seed=20261123;const rnd=()=>{seed=(seed+0x6D2B79F5)|0;let t=Math.imul(seed^(seed>>>15),1|seed);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};
+  const shade=(v,a)=>`rgba(${v},${v},${v},${a})`;
+  g.fillStyle='rgb(238,238,238)';g.fillRect(0,0,N,N);
+  // the mottle: big soft spots, a shade lighter or darker
+  for(let i=0;i<70;i++){const x=rnd()*N,y=rnd()*N,r=30+rnd()*90,v=rnd()<.5?255:150,a=.05+rnd()*.05;
+    for(const dx of [-N,0,N])for(const dy of [-N,0,N]){const gr=g.createRadialGradient(x+dx,y+dy,0,x+dx,y+dy,r);
+      gr.addColorStop(0,shade(v,a));gr.addColorStop(1,shade(v,0));g.fillStyle=gr;g.fillRect(x+dx-r,y+dy-r,2*r,2*r);}}
+  // the threads: the weft along the rows, the warp along the columns, each its own shade; every other crossing the other on top
+  for(let y=0;y<N;y+=2){g.fillStyle=shade(rnd()<.5?255:120,.06+rnd()*.08);g.fillRect(0,y,N,1);}
+  for(let x=0;x<N;x+=2){g.fillStyle=shade(rnd()<.5?255:120,.05+rnd()*.06);g.fillRect(x,0,1,N);}
+  g.fillStyle=shade(90,.08);for(let y=0;y<N;y+=2)for(let x=(y/2)%2*2;x<N;x+=4)g.fillRect(x,y,1,1);
+  // the slubs: mostly along the weft, a few along the warp
+  for(let i=0;i<420;i++){const along=rnd()<.8,x=rnd()*N,y=Math.floor(rnd()*N/2)*2,l=12+rnd()*110,w=1+Math.floor(rnd()*2),v=rnd()<.55?255:110,a=.08+rnd()*.12;
+    g.fillStyle=shade(v,a);for(const d of [-N,0])along?g.fillRect(x+d,y,l,w):g.fillRect(y,x+d,w,l);}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;
+  return t;
+}
+/* the wallpaper on the walls by their place in the room, not by the pieces' own UVs: a wall is built of boxes of all sizes and cut
+   in height by scale (a flight, «Высота стен»), so a texture on them would stretch. Each face takes the two axes along it */
+const wallTexU={wallTex:{value:fabricTexture()},wallTexOn:{value:1}};
+function wallShader(m){
+  m.onBeforeCompile=sh=>{
+    Object.assign(sh.uniforms,wallTexU);
+    sh.vertexShader='varying vec3 vWallPos;\nvarying vec3 vWallN;\n'+sh.vertexShader.replace('#include <begin_vertex>',
+      '#include <begin_vertex>\nvWallPos=(modelMatrix*vec4(transformed,1.0)).xyz;vWallN=normalize(mat3(modelMatrix)*objectNormal);');
+    sh.fragmentShader='uniform sampler2D wallTex;\nuniform float wallTexOn;\nvarying vec3 vWallPos;\nvarying vec3 vWallN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+      `#include <map_fragment>
+      if(wallTexOn>.5){vec3 n=abs(vWallN);vec2 uv=n.y>max(n.x,n.z)?vWallPos.xz:n.x>n.z?vWallPos.zy:vWallPos.xy;
+        diffuseColor.rgb*=texture2D(wallTex,uv/${WALL_TILE.toFixed(3)}).rgb;}`);
+  };
+  m.customProgramCacheKey=()=>'wallpaper';
+  return m;
+}
+wallShader(wallMat);
+/* the cornice under the ceiling and the skirting board: white, profiled, along the room face of every wall */
+const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
+const CORN_D=80,PL_T=16;   // mm: the cornice out on the ceiling, the skirting board's thickness
+/* a profile (s: out from the wall into the room, v: up from its bottom; mm) run along a wall face, l mm long. The cornice: a bead at
+   its bottom, a cove (concave, its centre in the room) up to a small step and a flat band along the ceiling. The skirting board:
+   upright, its top rounded toward the wall */
+function trimProfile(kind,h){
+  const S=new THREE.Shape(),k=MM;
+  if(kind==='cornice'){
+    const f=h/110,d=CORN_D;   // drawn for 110 high, scaled to h
+    S.moveTo(0,0);S.lineTo(12*k,0);S.lineTo(12*k,8*f*k);S.lineTo(8*k,14*f*k);
+    for(let i=1;i<=12;i++){const t=i/12*Math.PI/2;S.lineTo((66-58*Math.cos(t))*k*d/80,(14+82*Math.sin(t))*f*k);}
+    S.lineTo(74*k*d/80,96*f*k);S.lineTo(74*k*d/80,102*f*k);S.lineTo(d*k,102*f*k);S.lineTo(d*k,h*k);S.lineTo(0,h*k);
+  }else{
+    S.moveTo(0,0);S.lineTo(PL_T*k,0);S.lineTo(PL_T*k,(h-14)*k);S.quadraticCurveTo(PL_T*k,h*k,4*k,h*k);S.lineTo(0,h*k);
+  }
+  return S;
+}
+// … made a mesh of the room face of wall w (face: [where, the way into the room]) from a to b along it, y0 up from the floor;
+// its geometry centred on its box, as the wall pieces are (the wall-height cut and a flight scale it about its middle)
+function trimMesh(kind,w,a,b,y0,h){
+  const g=new THREE.ExtrudeGeometry(trimProfile(kind,h),{depth:(b-a)*MM,bevelEnabled:false,curveSegments:8});
+  const [at,dir]=w.face,alongX=dir[1]==='z',sg=dir[0]==='+'?1:-1,depth=kind==='cornice'?CORN_D:PL_T;
+  // the profile's s goes into the room: +x as built; turned so it goes the face's way, the run along the wall
+  g.rotateY(alongX?-sg*Math.PI/2:(sg>0?0:Math.PI));
+  if(g.center)g.center();
+  const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,30),edgeMat);e.raycast=()=>{};m.add(e);
+  const box=alongX?[a,b,...[at,at+sg*depth].sort((p,q)=>p-q)]:[...[at,at+sg*depth].sort((p,q)=>p-q),a,b];
+  m.position.set((box[0]+box[1])/2*MM,(y0+h/2)*MM,(box[2]+box[3])/2*MM);
+  return {m,box};
+}
 // the ceiling's colour (the walk's ceiling): white whatever the walls' paint is — the palette's «Белый», as the theme has it
 const ceilColor=new THREE.Color();
 const edgeMat=new THREE.LineBasicMaterial({color:0x4a4d50,transparent:true,opacity:.35});
@@ -154,6 +228,10 @@ function buildWallSet(list,ruleOf,lines){
       if(y0===0){if(alongX)foot(id,a,b,z0,z1,fm);else foot(id,x0,x1,a,b,fm);}};
     (w.holes||[]).forEach(([a,b,h,sill=0])=>{piece(cur,a,0);piece(a,b,h);if(sill>0)piece(a,b,0,sill);cur=b;});
     piece(cur,end,0);
+    // the cornice under the ceiling and the skirting board along its room face, the part of them in the wall's clipped rect
+    if(w.face){const [r0,r1]=alongX?[x0,x1]:[z0,z1],add=(kind,a,b,y0,h)=>{a=Math.max(a,r0);b=Math.min(b,r1);if(b-a<1||h<1)return;
+        const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true});};
+      add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));}
   });
   // the window: white frame in the middle of the wall's thickness, a mullion when it is wide, glass and an inner sill board; hides with its wall
   if(holesShown.has('window:0')){ const w=WALLS.find(v=>v.id==='window'),f=ruleOf(w),FW=60,FD=70,zc=A.L+A.tW/2;
@@ -235,7 +313,7 @@ function startWallMorph(from,toId,pos){
   // every wall of the flight gets its own materials: near the floor it fades away instead of leaving a dark slab,
   // its footprint fades out or in, its outline fades with its height
   const mats=new Map();
-  list.forEach(c=>mats.set(c.id,{body:wallMat.clone(),line:edgeMat.clone(),foot:(c.h?lowFootMat:footMat).clone()}));
+  list.forEach(c=>mats.set(c.id,{body:wallShader(wallMat.clone()),line:edgeMat.clone(),foot:(c.h?lowFootMat:footMat).clone()}));
   wallParts.forEach(p=>{const m=mats.get(p.id);if(m&&p.m.material===wallMat)p.m.material=m.body;});
   wallLines.forEach(l=>{l.e.material=mats.get(l.w.id).line;});
   wallFeet.forEach(p=>{p.m.material=mats.get(p.id).foot;});
@@ -338,7 +416,7 @@ modelHooks.push(()=>{
 function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
   floorMat.color.set(css('--scene-floor'));
-  const wc=WALLC[S.wc]||WALLC.white;wallMat.color.set(wallCol(wc));
+  const wc=WALLC[S.wc]||WALLC.cocoa;wallMat.color.set(wallCol(wc));wallTexU.wallTexOn.value=wc.tex?1:0;
   ceilColor.set(wallCol(WALLC.white));
   wallMat.roughness=wc.r;
   const fl=(vs()||{}).floors!==false;
@@ -383,7 +461,7 @@ frameHooks.push((dt,ease)=>{
     wallsSeeThrough(edgesOnly?0:1);edgeMat.opacity=edgeOp(V);
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
-      w.m.visible=fits&&!feet&&(V.Wm==='auto'?w.f():true);
+      w.m.visible=fits&&!feet&&!(edgesOnly&&w.trim)&&(V.Wm==='auto'?w.f():true);
       w.m.castShadow=!edgesOnly&&!w.glass;
       if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
     });

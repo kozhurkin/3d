@@ -13,8 +13,8 @@ check('комната открывается: вкладки «Комната» 
   const p = open();
   const r = p.run(() => ({ view, n: Object.keys(VIEWS), lines: wallLines.length, parts: wallParts.length, fade: VIEWS.plan.fade,
     doors: doors.map((d) => d.g.visible), glass: wallParts.filter((w) => w.glass).length }));
-  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 16, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
-    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board');
+  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 25, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
+    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board; cornices 4, skirting boards 5');
   assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, false);
 });
 
@@ -54,7 +54,8 @@ check('ползунки: стена длиннее — дверь остаётс
   assert.deepStrictEqual(p.run(() => [A.dR, dL]), [3060, 0], 'stops where the left casing reaches the corner');
   assert.match(p.document.getElementById('pSizeMsg').textContent, /левый угол/);
   slide(p, 'winT', 3500);
-  assert.strictEqual(p.run(() => A.winT), 3010, 'the window top 50 under the ceiling');
+  assert.strictEqual(p.run(() => A.winT), 2950, 'the window top under the cornice');
+  assert.match(p.document.getElementById('pSizeMsg').textContent, /под лепнину/);
 });
 
 check('настройки в браузере — под своими ключами eng-, не под ключами квартиры', () => {
@@ -72,4 +73,25 @@ check('ракурсы: «На дверь» — камера за стеной с
   const z = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => goalPosition().z * 1000); };
   assert.ok(z('door') > 5197, 'past the window wall');
   assert.ok(z('window') < -120, 'past the door wall');
+});
+
+check('стены: обои «светлое какао» с тканью по умолчанию; у другого цвета ткани нет', () => {
+  const p = open();
+  const r = () => p.run(() => [S.wc, wallTexU.wallTexOn.value, typeof wallMat.onBeforeCompile, document.querySelector('[data-wc="cocoa"]').getAttribute('aria-pressed')]);
+  assert.deepStrictEqual(r(), ['cocoa', 1, 'function', 'true']);
+  p.document.querySelector('[data-wc="greige"]').click();
+  assert.deepStrictEqual(r(), ['greige', 0, 'function', 'false']);
+});
+
+check('лепнина 110 под потолком по всем стенам, плинтус 70 — до наличников двери', () => {
+  const p = open();
+  const r = p.run(() => wallParts.filter((w) => w.trim).map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
+  assert.deepStrictEqual(r, [
+    ['door', 2950, 3060, [0, 2710, 0, 80]], ['door', 0, 70, [0, 200, 0, 16]], ['door', 0, 70, [1140, 2710, 0, 16]],
+    ['right', 2950, 3060, [2630, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
+    ['left', 2950, 3060, [0, 80, 0, 4797]], ['left', 0, 70, [0, 16, 0, 4797]],
+    ['window', 2950, 3060, [0, 2710, 4717, 4797]], ['window', 0, 70, [0, 2710, 4781, 4797]]]);
+  // «Контуры»: the walls are see-through, the trims go with them
+  p.document.querySelector('[data-panel="plan"] [data-wm="edges"]').click(); p.tick();
+  assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
 });

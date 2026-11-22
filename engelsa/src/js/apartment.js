@@ -12,24 +12,29 @@ const APT_A={
   dW:800,                           // the door: between the casings' inner edges
   dH:2000,                          // the doorway's height (the lining's head underside)
   winW:1200, winS:900, winT:2950,   // the window, centred in the wall opposite the door: width, sill and top from the floor
-  tD:120, tS:120, tW:400            // walls: the door wall, the side walls, the window wall (outer)
+  tD:120, tS:120, tW:400,           // walls: the door wall, the side walls, the window wall (outer)
+  cornH:110, plH:70                 // the cornice under the ceiling: its drop down the wall; the skirting board: its height
 };
 const CW=70,CT=10,LT=10;   // door casings: width, thickness; the lining through the wall between them: thickness
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.
    Walls: rect r=[x0,x1,z0,z1]; ext: outer side of the wall (each wall of one room is an outer one of the model);
-   holes along the long side: [from, to, top, sill]. Room: floor rect r */
+   holes along the long side: [from, to, top, sill]; face: where its room face is and which way it looks into the room ([+-][xz]);
+   run: [from, to] along the room face; plinth: the runs of the skirting board (it stops at the door's casings). Room: floor rect r */
 function apartment(a){
   const A=Object.assign({},APT_A,a);
   const dB=A.W-A.dR-CW+LT;             // the doorway's right edge: its lining is under the casing's inner edge
   const dA=dB-A.dW-2*LT;               // … its left edge
   const dL=dA+LT-CW;                   // the left casing's outer edge from the left corner (what is left of the wall)
   const winX=A.W/2;                    // window centre
+  const xR=dB-LT+CW;                   // the right casing's outer edge
   const WALLS=[
-    {id:'door',name:'Стена с дверью',r:[-A.tS,A.W+A.tS,-A.tD,0],ext:'-z',rooms:['room'],holes:[[dA,dB,A.dH]]},
-    {id:'right',name:'Правая стена',r:[A.W,A.W+A.tS,0,A.L],ext:'+x',rooms:['room']},
-    {id:'left',name:'Левая стена',r:[-A.tS,0,0,A.L],ext:'-x',rooms:['room']},
-    {id:'window',name:'Стена с окном',r:[-A.tS,A.W+A.tS,A.L,A.L+A.tW],ext:'+z',rooms:['room'],holes:[[winX-A.winW/2,winX+A.winW/2,A.winT,A.winS]]}
+    {id:'door',name:'Стена с дверью',r:[-A.tS,A.W+A.tS,-A.tD,0],ext:'-z',rooms:['room'],holes:[[dA,dB,A.dH]],
+      face:[0,'+z'],run:[0,A.W],plinth:[[0,dL],[xR,A.W]]},
+    {id:'right',name:'Правая стена',r:[A.W,A.W+A.tS,0,A.L],ext:'+x',rooms:['room'],face:[A.W,'-x'],run:[0,A.L],plinth:[[0,A.L]]},
+    {id:'left',name:'Левая стена',r:[-A.tS,0,0,A.L],ext:'-x',rooms:['room'],face:[0,'+x'],run:[0,A.L],plinth:[[0,A.L]]},
+    {id:'window',name:'Стена с окном',r:[-A.tS,A.W+A.tS,A.L,A.L+A.tW],ext:'+z',rooms:['room'],holes:[[winX-A.winW/2,winX+A.winW/2,A.winT,A.winS]],
+      face:[A.L,'-z'],run:[0,A.W],plinth:[[0,A.W]]}
   ];
   const ROOMS=[{id:'room',name:'Комната',r:[0,A.W,0,A.L],origin:[0,0],col:'--fl-kit',at:[A.W/2,A.L/2]}];
   const BOX={x0:-A.tS,x1:A.W+A.tS,z0:-A.tD,z1:A.L+A.tW};
@@ -44,7 +49,8 @@ function aptProblems(a){
   if(A.dR<0)out.push('Правый наличник двери заходит за правый угол');
   if(A.winW>A.W-200)out.push('Окно шире стены (нужно хотя бы по 100 мм до боковых стен)');
   if(A.winT-A.winS<300)out.push('Окно ниже 300 мм');
-  if(A.dH+CW>A.H-20)out.push('Наличник над дверью упирается в потолок');
-  if(A.winT>A.H-50)out.push('Окно выше потолка (нужно хотя бы 50 мм)');
+  if(A.dH+CW>A.H-A.cornH)out.push('Наличник над дверью заходит под лепнину');
+  if(A.winT>A.H-A.cornH)out.push('Окно заходит под лепнину');
+  if(A.plH>A.winS&&A.winS>0)out.push('Плинтус выше подоконника');
   return out;
 }

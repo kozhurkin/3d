@@ -13,7 +13,9 @@ const APT_A={
   dH:2000,                          // the doorway's height (the lining's head underside)
   winW:1200, winS:900, winT:2950,   // the window, centred in the wall opposite the door: width, sill and top from the floor
   tD:120, tS:120, tW:400,           // walls: the door wall, the side walls, the window wall (outer)
-  cornH:110, plH:70                 // the cornice under the ceiling: its drop down the wall; the skirting board: its height
+  cornH:110, plH:70,                // the cornice under the ceiling: its drop down the wall; the skirting board: its height
+  muralWall:'right', muralW:5000, muralH:2700   // the photo wallpaper: on which wall ('' none; 'right' is left of the way in), its width and height,
+                                                // from the skirting board's top up, glued from the left corner as one faces the wall (the rest cut off)
 };
 const CW=70,CT=10,LT=10;   // door casings: width, thickness; the lining through the wall between them: thickness
 
@@ -52,5 +54,6 @@ function aptProblems(a){
   if(A.dH+CW>A.H-A.cornH)out.push('Наличник над дверью заходит под лепнину');
   if(A.winT>A.H-A.cornH)out.push('Окно заходит под лепнину');
   if(A.plH>A.winS&&A.winS>0)out.push('Плинтус выше подоконника');
+  if(A.muralWall&&A.plH+A.muralH>A.H-A.cornH)out.push('Фотообои заходят под лепнину');
   return out;
 }

@@ -56,6 +56,22 @@ function wallShader(m){
   return m;
 }
 wallShader(wallMat);
+/* the photo wallpaper (js/mural-photo.js: 5 strips 100 × 270 cm as one picture): one sheet on its wall's room face, 1 mm off it.
+   The part of the picture on the wall: from its left edge (the left corner as one faces the wall) as long as the wall is; when the walls
+   are cut lower, its top is cut off with them (the texture's share up shrinks with the sheet), not squashed */
+const muralTex=new THREE.TextureLoader().load(MURAL_JPG);muralTex.encoding=THREE.sRGBEncoding;muralTex.anisotropy=8;
+const muralMat=new THREE.MeshStandardMaterial({map:muralTex,roughness:.85,polygonOffset:true,polygonOffsetFactor:-1});
+function muralMesh(w,y0){
+  const [at,dir]=w.face,sg=dir[0]==='+'?1:-1,[r0,r1]=w.run,len=Math.min(A.muralW,r1-r0);
+  if(dir[1]!=='x')return null;   // the side walls only: the long ones, no openings in them
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(len*MM,A.muralH*MM),muralMat);
+  m.rotation.y=sg*Math.PI/2;m.receiveShadow=true;
+  muralTex.repeat.x=len/A.muralW;muralTex.repeat.y=1;muralTex.offset.x=muralTex.offset.y=0;
+  // facing +x (the left wall) its left is at the window end, facing -x at the door end
+  const z0=sg>0?r1-len:r0,x=at+sg,box=[Math.min(at,x),Math.max(at,x),z0,z0+len];
+  m.position.set(x*MM,(y0+A.muralH/2)*MM,(z0+len/2)*MM);
+  return {m,box};
+}
 /* the cornice under the ceiling and the skirting board: white, profiled, along the room face of every wall */
 const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
 const CORN_D=80,PL_T=16;   // mm: the cornice out on the ceiling, the skirting board's thickness
@@ -231,7 +247,9 @@ function buildWallSet(list,ruleOf,lines){
     // the cornice under the ceiling and the skirting board along its room face, the part of them in the wall's clipped rect
     if(w.face){const [r0,r1]=alongX?[x0,x1]:[z0,z1],add=(kind,a,b,y0,h)=>{a=Math.max(a,r0);b=Math.min(b,r1);if(b-a<1||h<1)return;
         const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true});};
-      add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));}
+      add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));
+      const mu=A.muralWall===id&&muralMesh(w,A.plH);
+      if(mu){wallGroup.add(mu.m);wallParts.push({m:mu.m,f,id,box:mu.box,b:A.plH*MM,t:(A.plH+A.muralH)*MM,h:A.muralH*MM,photo:true,fit:k=>{muralTex.repeat.y=k;}});}}
   });
   // the window: white frame in the middle of the wall's thickness, a mullion when it is wide, glass and an inner sill board; hides with its wall
   if(holesShown.has('window:0')){ const w=WALLS.find(v=>v.id==='window'),f=ruleOf(w),FW=60,FD=70,zc=A.L+A.tW/2;
@@ -445,8 +463,8 @@ frameHooks.push((dt,ease)=>{
       fade(m.body,op*low(id));m.line.opacity=ln*Math.min(1,n.cut/200);fade(m.foot,fF+((s.exT?1:0)-fF)*e);});
     wallParts.forEach(w=>{
       const n=at(w.id),top=Math.min(w.t,n.cut*MM),fits=fitBox(w.m,w.box,n.r,false)&&top>w.b+.001;
-      w.m.visible=fits;w.m.castShadow=op*low(w.id)>.5&&!w.glass;
-      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
+      w.m.visible=fits;w.m.castShadow=op*low(w.id)>.5&&!w.glass&&!w.photo;
+      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;if(w.fit)w.fit(w.m.scale.y);}
     });
     // outlines go with their walls
     wallLines.forEach(l=>{const n=at(l.w.id),c=n.cut>=1&&clipWall(l.w,n.r);l.e.visible=!!c;
@@ -461,9 +479,9 @@ frameHooks.push((dt,ease)=>{
     wallsSeeThrough(edgesOnly?0:1);edgeMat.opacity=edgeOp(V);
     wallParts.forEach(w=>{
       const top=Math.min(w.t,cut),fits=top>w.b+.001;
-      w.m.visible=fits&&!feet&&!(edgesOnly&&w.trim)&&(V.Wm==='auto'?w.f():true);
-      w.m.castShadow=!edgesOnly&&!w.glass;
-      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;}
+      w.m.visible=fits&&!feet&&!(edgesOnly&&(w.trim||w.photo))&&(V.Wm==='auto'?w.f():true);
+      w.m.castShadow=!edgesOnly&&!w.glass&&!w.photo;
+      if(fits){w.m.scale.y=(top-w.b)/w.h;w.m.position.y=w.b+(top-w.b)/2;if(w.fit)w.fit(w.m.scale.y);}
     });
     // wall edges are redrawn only when the cut height changes
     if(cutMm!==linesTop){linesTop=cutMm;wallLines.forEach(l=>{l.e.geometry.dispose();l.e.geometry=lineGeo(wallOutline(l.w,Math.min(H,cutMm)));});}

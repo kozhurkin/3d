@@ -1,5 +1,5 @@
 // Комната: страница, вкладка «Комната», стены, дверь с наличниками, окно, ползунки размеров, свои ключи в браузере.
-const { runPage, PAGES, check, slide, assert } = require('./harness');
+const { runPage, PAGES, check, slide, near, assert } = require('./harness');
 
 const open = (o = {}) => { const p = runPage(PAGES.app, { hash: '#plan', ...o }); p.tick(); return p; };
 
@@ -13,8 +13,8 @@ check('комната открывается: вкладки «Комната» 
   const p = open();
   const r = p.run(() => ({ view, n: Object.keys(VIEWS), lines: wallLines.length, parts: wallParts.length, fade: VIEWS.plan.fade,
     doors: doors.map((d) => d.g.visible), glass: wallParts.filter((w) => w.glass).length }));
-  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 25, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
-    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board; cornices 4, skirting boards 5');
+  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 26, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
+    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board; cornices 4, skirting boards 5; the photo wallpaper');
   assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, false);
 });
 
@@ -94,4 +94,24 @@ check('лепнина 110 под потолком по всем стенам, п
   // «Контуры»: the walls are see-through, the trims go with them
   p.document.querySelector('[data-panel="plan"] [data-wm="edges"]').click(); p.tick();
   assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
+});
+
+check('фотообои: слева от входа, от плинтуса, 2700 высотой; 5000 по ширине, на стене 4797 — от угла у двери', () => {
+  const p = open();
+  const get = () => p.run(() => wallParts.filter((w) => w.photo).map((w) => ({ id: w.id, b: tt.mm(w.b), t: tt.mm(w.t), box: w.box,
+    rot: w.m.rotation.y, rep: [muralTex.repeat.x, muralTex.repeat.y] })));
+  const r = get();
+  assert.strictEqual(r.length, 1);
+  assert.deepStrictEqual([r[0].id, r[0].b, r[0].t, r[0].box], ['right', 70, 2770, [2709, 2710, 0, 4797]]);
+  assert.ok(Math.abs(r[0].rot + Math.PI / 2) < 1e-9, 'faces into the room (-x)');
+  assert.ok(Math.abs(r[0].rep[0] - 4797 / 5000) < 1e-9 && r[0].rep[1] === 1, 'the picture cut at the window end, not squeezed');
+  // the walls cut to half: the sheet's top goes, the picture is not squashed
+  const wh = p.document.querySelector('[data-panel="plan"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
+  near(get()[0].rep[1], (1530 - 70) / 2700, 'the share of the picture left');
+  const btn = (v) => p.document.querySelector(`[data-panel="plan"] [data-mural="${v}"]`);
+  btn('left').click();
+  assert.deepStrictEqual(get().map((w) => [w.id, w.box]), [['left', [0, 1, 0, 4797]]]);
+  btn('').click();
+  assert.strictEqual(get().length, 0);
+  assert.strictEqual(btn('').getAttribute('aria-pressed'), 'true');
 });

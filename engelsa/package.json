@@ -1,0 +1,8 @@
+{
+  "name": "engelsa",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "check": "node tools/smoke.js"
+  }
+}

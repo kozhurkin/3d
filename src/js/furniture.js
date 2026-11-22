@@ -127,7 +127,7 @@ function boxGeo(sx,sy,sz,seed,axis,hole){
   return g;
 }
 
-/* materials of one cabinet set: panels by group, their end faces (торцы, darkened to read the construction), joint lines */
+/* materials of one cabinet set: panels by group, their end faces (торцы, set off to read the construction: applyContrast), joint lines */
 function makeMats(){
   const mats={
     carcass:new THREE.MeshStandardMaterial({roughness:.72,metalness:0}),
@@ -162,22 +162,30 @@ function applyMaterials(mats,FIN,ec){
   });
   applyContrast(mats,FIN,ec);
 }
-// ec: contrast of end faces and joint lines, %; light finishes darken them, dark finishes lighten them softly
+/* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*), so it reads alike on any finish. End faces EC_END·c,
+   joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show); darker than the finish, lighter on a dark one (L* < EC_DARK);
+   a little more on light finishes, less on dark: × EC_SCALE[0] at black to × EC_SCALE[1] at white */
+const EC_END=20,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3];
+const lstar=y=>y>.008856?116*Math.cbrt(y)-16:903.3*y, lumOf=l=>l>8?Math.pow((l+16)/116,3):l/903.3;   // L* ↔ relative luminance
+const colorLum=s=>.2126*s.r+.7152*s.g+.0722*s.b;   // of a linear colour
+// the luminance a step d (L*) off luminance y
+const ecStep=(y,d)=>{const l=lstar(y);d*=EC_SCALE[0]+(EC_SCALE[1]-EC_SCALE[0])*l/100;return lumOf(l<EC_DARK?l+d:Math.max(0,l-d));};
+// a plain colour of luminance y brought to yt: lighter by adding grey (so black too), darker by scaling
+const toLum=(col,y,yt)=>yt>y?col.addScalar(yt-y):col.multiplyScalar(y>0?yt/y:0);
 function applyContrast(mats,FIN,ec){
   const c=ec/100;
-  const lum=k=>{const f=finOf(FIN,k);if(f.type==='wood')return DECORS[f.decor].l/100;const s=new THREE.Color(f.color);return .3*s.r+.59*s.g+.11*s.b;};
+  const yOf=k=>{const f=finOf(FIN,k);return f.type==='wood'?lumOf(DECORS[f.decor].l):colorLum(mats[k].color);};
   ['carcass','front','top','apron'].forEach(k=>{
-    if(!finOf(FIN,k))return;
-    const m=mats[k],e=mats[k+'End'],dark=lum(k)<.42;
+    const f=finOf(FIN,k);if(!f)return;
+    const m=mats[k],e=mats[k+'End'],y=yOf(k),yt=ecStep(y,EC_END*c);
     e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
-    if(dark){e.emissive.setRGB(.13*c,.11*c,.08*c);}
-    else{e.color.multiplyScalar(1-.72*c);e.emissive.setRGB(0,0,0);}
+    if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
     e.needsUpdate=true;
   });
-  const darkFronts=lum('front')<.42;
-  mats.edge.opacity=.25+.75*c;
-  if(darkFronts)mats.edge.color.setRGB(.13+.32*c,.11+.28*c,.09+.22*c);
-  else mats.edge.color.setRGB(.13*(1-c),.09*(1-c),.06*(1-c));
+  // the lines are unlit and see-through: their colour such that over the front they show the step; on wood a warm brown
+  const o=.25+.75*c,y=yOf('front'),yc=Math.min(1,Math.max(0,y+(ecStep(y,EC_LINE0+EC_LINE*c)-y)/o)),col=mats.edge.color;
+  if(finOf(FIN,'front').type==='uni')col.copy(mats.front.color);else col.setRGB(1,.7,.47).multiplyScalar(y/colorLum(col));
+  toLum(col,y,yc);mats.edge.opacity=o;
 }
 
 /* ---------- parts → meshes ---------- */

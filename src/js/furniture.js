@@ -162,47 +162,45 @@ function applyMaterials(mats,FIN,ec){
   });
   applyContrast(mats,FIN,ec);
 }
-/* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*), so it reads alike on any finish; darker than the finish,
-   lighter on a dark one (L* < EC_DARK). End faces EC_END·c on the screen: lit by EC_LIT (the light as made: the sky's .75 on an upright
-   face ≈ .56, the sun's at a slant) through the renderer's tone curve, which squeezes the light finishes and the darkest.
-   Joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show) on the finish's colour, a little more on light finishes, less on dark:
-   × EC_SCALE[0] at black to × EC_SCALE[1] at white */
-const EC_END=20,EC_LIT=1,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3],EC_GROUPS=['carcass','front','top','apron','back'];
+/* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*) on the screen, so it reads alike on any finish: the finish lit
+   by EC_LIT (the light as made: the sky's .75 on an upright face ≈ .56, the sun's at a slant) through the renderer's tone curve, which
+   squeezes the light finishes and the darkest. Darker than the finish, lighter on a dark one (L* < EC_DARK). End faces EC_END·c;
+   joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show), unlit, EC_OP see-through */
+const EC_END=20,EC_LINE0=5,EC_LINE=17,EC_LIT=1,EC_OP=.5,EC_DARK=44,EC_GROUPS=['carcass','front','top','apron','back'];
 const lstar=y=>y>.008856?116*Math.cbrt(y)-16:903.3*y, lumOf=l=>l>8?Math.pow((l+16)/116,3):l/903.3;   // L* ↔ relative luminance
 const colorLum=s=>.2126*s.r+.7152*s.g+.0722*s.b;   // of a linear colour
 // the renderer's tone curve (three.js's ACES fit; its colour matrices keep a grey, so on the luminance) and its inverse (a quadratic's root)
 const aces=x=>(x*(x+.0245786)-.000090537)/(x*(.983729*x+.432951)+.238081);
 const acesInv=v=>{const a=1-.983729*v,b=.0245786-.432951*v,c=-(.000090537+.238081*v);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);};
-// the luminance whose lit colour shows on the screen d (L*) off luminance y's
-const screenStep=(y,d)=>{
-  const k=EC_LIT*renderer.toneMappingExposure/.6,l=lstar(aces(y*k));
-  return acesInv(Math.min(.999,lumOf(l<EC_DARK?l+d:Math.max(0,l-d))))/k;
-};
-// the luminance a step d (L*) off luminance y
-const ecStep=(y,d)=>{const l=lstar(y);d*=EC_SCALE[0]+(EC_SCALE[1]-EC_SCALE[0])*l/100;return lumOf(l<EC_DARK?l+d:Math.max(0,l-d));};
+// luminance y lit by lit ↔ its luminance on the screen; linear ↔ sRGB (the screen blends see-through colours in sRGB)
+const toScreen=(y,lit)=>aces(y*lit*renderer.toneMappingExposure/.6), fromScreen=(v,lit)=>acesInv(Math.min(.999,v))/(lit*renderer.toneMappingExposure/.6);
+const enc=v=>v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055, dec=v=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);
+// luminance y's on the screen (lit by EC_LIT) and the one d (L*) off it
+const screenPair=(y,d)=>{const v=toScreen(y,EC_LIT),l=lstar(v);return [v,lumOf(l<EC_DARK?l+d:Math.max(0,l-d))];};
+// an end face's luminance: lit, d off the finish's on the screen
+const endStep=(y,d)=>fromScreen(screenPair(y,d)[1],EC_LIT);
+// a line's luminance: unlit, over the finish (EC_OP see-through), d off it on the screen
+const lineStep=(y,d)=>{const [v,t]=screenPair(y,d);return fromScreen(dec(Math.min(1,Math.max(0,(enc(t)-(1-EC_OP)*enc(v))/EC_OP))),1);};
 // a plain colour of luminance y brought to yt: lighter by adding grey (so black too), darker by scaling
 const toLum=(col,y,yt)=>yt>y?col.addScalar(yt-y):col.multiplyScalar(y>0?yt/y:0);
 /* each group's end faces and joint lines from its own finish: carcass from the carcass, front from the front, top from the top;
    the back (HDF) a plain colour of its own, its end faces its face */
 function applyContrast(mats,FIN,ec){
-  const c=ec/100,o=.25+.75*c;
+  const c=ec/100;
   // a finish's luminance as the model shows it: its colour; on wood times the decor's (its h, s, l: an hsl colour about the picture's mean)
   const hsl=d=>colorLum(new THREE.Color().setHSL(d.h/360,d.s/100,d.l/100).convertSRGBToLinear());
   EC_GROUPS.forEach(k=>{
     const f=k==='back'?{type:'uni'}:finOf(FIN,k);if(!f)return;
     const m=mats[k],l=mats[k+'Line'],y=colorLum(m.color)*(f.type==='wood'?hsl(DECORS[f.decor]):1);
     if(k!=='back'){
-      const e=mats[k+'End'],yt=screenStep(y,EC_END*c);
+      const e=mats[k+'End'],yt=endStep(y,EC_END*c);
       e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
       if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
       e.needsUpdate=true;
     }
-    /* the lines are unlit and see-through: their colour such that over the finish they show the step; on wood a warm brown.
-       The step is reckoned on the finish's colour, not on it lit as the screen shows it; the opacity, set by eye, makes up for that:
-       the more see-through, the further the line's colour from the finish's, so it shows under any light (a steady .75 left it lost) */
-    const yc=Math.min(1,Math.max(0,y+(ecStep(y,EC_LINE0+EC_LINE*c)-y)/o));
+    // the lines: the finish's colour, on wood a warm brown, brought to the step
     if(f.type==='uni')l.color.copy(m.color);else l.color.setRGB(1,.7,.47).multiplyScalar(y/colorLum(l.color));
-    toLum(l.color,y,yc);l.opacity=o;
+    toLum(l.color,y,lineStep(y,EC_LINE0+EC_LINE*c));l.opacity=EC_OP;
   });
 }
 

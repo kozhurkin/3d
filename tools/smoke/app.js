@@ -263,14 +263,16 @@ check('шкафы: контуры деталей всегда видны, гал
   });
 });
 
-check('кромка: торцы — один шаг светлоты (L*) на экране на любой отделке, линии — шаг, не растущий к чёрному; на тёмном светлее, на светлом темнее; торцы не светятся; при 0% контуры видны; у каждой группы от своей отделки', () => {
+check('кромка: торцы и линии — один шаг светлоты (L*) на экране на любой отделке; на тёмном светлее, на светлом темнее; торцы не светятся; при 0% контуры видны; у каждой группы от своей отделки', () => {
   const p = runPage(PAGES.app); p.tick();
-  // lightness counted here, not by the page's own helpers: a linear colour's luminance, its L*, of a see-through line (opacity o) over y
+  // lightness counted here, not by the page's own helpers: a linear colour's luminance, its L*
   const Y = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b, Ls = (y) => (y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y);
-  const lineL = (e, o, f) => Ls(o * Y(e) + (1 - o) * Y(f));
-  // L* on the screen of a lit finish: its luminance × light × exposure / .6 through three.js's ACES fit (RRTAndODTFit)
-  const [k, END] = p.run(() => [EC_LIT * renderer.toneMappingExposure / 0.6, EC_END]);
+  // on the screen: luminance × light × exposure / .6 through three.js's ACES fit (RRTAndODTFit); the finish lit by EC_LIT, the lines unlit
+  const [k, k0, END, LINE0, LINE] = p.run(() => [EC_LIT * renderer.toneMappingExposure / 0.6, renderer.toneMappingExposure / 0.6, EC_END, EC_LINE0, EC_LINE]);
   const aces = (x) => (x * (x + 0.0245786) - 0.000090537) / (x * (0.983729 * x + 0.432951) + 0.238081), S = (c) => Ls(aces(Y(c) * k));
+  // a see-through line (opacity o) over finish f: the screen blends sRGB values
+  const enc = (v) => (v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055), dec = (v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+  const lineL = (e, o, f) => Ls(dec(o * enc(aces(Y(e) * k0)) + (1 - o) * enc(aces(Y(f) * k))));
   // for a plain finish c at contrast ec: L* of the finish, of its end face, of a joint line over the front; the end face's glow
   const at = (c, ec) => {
     const m = p.run((c, ec) => {
@@ -278,27 +280,26 @@ check('кромка: торцы — один шаг светлоты (L*) на �
       applyMaterials(m, { carcass: f, front: f, top: f, apron: null }, ec);
       return { front: rgb(m.front.color), end: rgb(m.carcassEnd.color), glow: rgb(m.carcassEnd.emissive), edge: rgb(m.frontLine.color), o: m.frontLine.opacity };
     }, c, ec);
-    return { l: Ls(Y(m.front)), sl: S(m.front), se: S(m.end), line: lineL(m.edge, m.o, m.front), glow: Y(m.glow) };
+    return { sl: S(m.front), se: S(m.end), line: lineL(m.edge, m.o, m.front), glow: Y(m.glow) };
   };
-  const cs = ['#000000', '#3B302A', '#3F4042', '#808080', '#C2B8AA', '#F1F0EA'], r = cs.map((c) => at(c, 30)), d = (q) => [q.se - q.sl, q.line - q.l];
+  const cs = ['#000000', '#3B302A', '#3F4042', '#808080', '#C2B8AA', '#F1F0EA'], r = cs.map((c) => at(c, 30)), d = (q) => [q.se - q.sl, q.line - q.sl];
   r.forEach((q, i) => {
     const [de, dl] = d(q), dark = q.sl < 44;
     assert.ok(dark ? de > 2 && dl > 2 : de < -2 && dl < -2, `${cs[i]}: ${dark ? 'lighter' : 'darker'} end ${de.toFixed(1)} and line ${dl.toFixed(1)}`);
     assert.strictEqual(q.glow, 0, `${cs[i]}: the end face lit, not glowing`);
   });
-  // the end faces: the same step on the screen on any finish, EC_END·c (the tone curve squeezes the light ones and the darkest)
-  r.forEach((q, i) => assert.ok(Math.abs(Math.abs(d(q)[0]) - END * 0.3) < 0.01, `${cs[i]}: end on the screen ${d(q)[0].toFixed(2)}`));
-  // the lines' step grows from black to white: black never stands out more than mid grey (it did: +37 to −9)
-  r.slice(1).forEach((q, i) => assert.ok(Math.abs(d(q)[1]) >= Math.abs(d(r[i])[1]) - 0.01, `${cs[i + 1]} ≥ ${cs[i]}`));
+  // the same step on the screen on any finish (the tone curve squeezes the light ones and the darkest): end faces EC_END·c, lines EC_LINE0 + EC_LINE·c
+  const same = (q, c, ec) => [END * ec, LINE0 + LINE * ec].forEach((s, j) => assert.ok(Math.abs(Math.abs(d(q)[j]) - s) < 0.01, `${c} at ${ec}: ${d(q)[j].toFixed(2)}`));
+  r.forEach((q, i) => same(q, cs[i], 0.3));
   // at 0 the end faces are the finish, the outlines still seen (the solid wood desk is made at 0)
-  cs.forEach((c) => { const q = at(c, 0), [de, dl] = d(q); assert.ok(Math.abs(de) < 0.01 && Math.abs(dl) > 3, `${c} at 0: end ${de.toFixed(2)}, line ${dl.toFixed(1)}`); });
+  cs.forEach((c) => same(at(c, 0), c, 0));
   // two finishes (the bathroom's: grey carcass, dark wood front): each group's end faces and lines from its own finish, not the front's
   const two = p.run(() => {
     const m = makeMats(), rgb = (c) => ({ r: c.r, g: c.g, b: c.b }), q = (k) => ({ f: rgb(m[k].color), e: rgb(m[k + 'End'].color), l: rgb(m[k + 'Line'].color), o: m[k + 'Line'].opacity });
     applyMaterials(m, { carcass: { type: 'uni', color: '#808080', name: 'grey' }, front: { type: 'uni', color: '#3B302A', name: 'brown' } }, 30);
     return { carcass: q('carcass'), front: q('front') };
   });
-  const own = (g) => [S(g.e) - S(g.f), lineL(g.l, g.o, g.f) - Ls(Y(g.f))];
+  const own = (g) => [S(g.e) - S(g.f), lineL(g.l, g.o, g.f) - S(g.f)];
   const [ge, gl] = own(two.carcass), [fe, fl] = own(two.front), grey = d(r[3]), brown = d(r[1]);
   assert.ok(Math.abs(ge - grey[0]) < 0.01 && Math.abs(gl - grey[1]) < 0.01, `carcass as all grey: end ${ge.toFixed(1)}, line ${gl.toFixed(1)}`);
   assert.ok(Math.abs(fe - brown[0]) < 0.01 && Math.abs(fl - brown[1]) < 0.01, `front as all brown: end ${fe.toFixed(1)}, line ${fl.toFixed(1)}`);
@@ -309,7 +310,7 @@ check('кромка: торцы — один шаг светлоты (L*) на �
     const rgb = (c) => ({ r: c.r, g: c.g, b: c.b });
     return { top: rgb(o.material[2].color), edge: rgb(e.color), o: e.opacity };
   });
-  const dd = lineL(desk.edge, desk.o, desk.top) - Ls(Y(desk.top));
+  const dd = lineL(desk.edge, desk.o, desk.top) - S(desk.top);
   assert.ok(Math.abs(dd) > 3, 'desk: its outlines show, ' + dd.toFixed(1));
 });
 

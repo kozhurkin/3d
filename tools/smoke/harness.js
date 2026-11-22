@@ -22,8 +22,9 @@ function stub(name = 'stub') {
       if (name === 'THREE.Sprite') Object.assign(o, { material: args[0], getWorldPosition: (v) => { v.set(0, 0, 0); for (let q = o; q && q.position instanceof Vec3; q = q.parent) v.add(q.position); return v; } });
       // a material keeps whether it hides behind what stands in front (the dimensions between the shelves do, the others do not)
       if (/Material$/.test(name) && args[0] && 'depthTest' in args[0]) o.depthTest = args[0].depthTest;
-      // and how metal it is (the sink is steel)
+      // and how metal it is (the sink is steel), how see-through (the edge lines)
       if (/Material$/.test(name) && args[0] && 'metalness' in args[0]) o.metalness = args[0].metalness;
+      if (/Material$/.test(name) && args[0] && 'opacity' in args[0]) o.opacity = args[0].opacity;
       if (/Material$/.test(name) && args[0] && args[0].polygonOffset) Object.assign(o, { polygonOffset: true, polygonOffsetFactor: args[0].polygonOffsetFactor });
       // its colours real, so checks can see them in numbers (the edge contrast: furniture.js applyContrast); white and black, as THREE's
       if (/Material$/.test(name)) Object.assign(o, { color: new Color(args[0] && args[0].color != null ? args[0].color : 0xffffff), emissive: new Color(args[0] && args[0].emissive || 0) });

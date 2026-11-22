@@ -136,7 +136,7 @@ function makeMats(){
     apron:new THREE.MeshStandardMaterial({roughness:.5,metalness:0}),
     back:new THREE.MeshStandardMaterial({color:0xd9d2c4,roughness:.9})
   };
-  EC_GROUPS.forEach(k=>mats[k+'Line']=new THREE.LineBasicMaterial({color:0x22180f,transparent:true,opacity:.55}));
+  EC_GROUPS.forEach(k=>mats[k+'Line']=new THREE.LineBasicMaterial({transparent:true,opacity:EC_OP}));
   mats.carcassEnd=new THREE.MeshStandardMaterial({roughness:.72});
   mats.frontEnd=new THREE.MeshStandardMaterial({roughness:.66});
   mats.topEnd=new THREE.MeshStandardMaterial({roughness:.55});
@@ -172,8 +172,8 @@ const colorLum=s=>.2126*s.r+.7152*s.g+.0722*s.b;   // of a linear colour
 // the renderer's tone curve (three.js's ACES fit; its colour matrices keep a grey, so on the luminance) and its inverse (a quadratic's root)
 const aces=x=>(x*(x+.0245786)-.000090537)/(x*(.983729*x+.432951)+.238081);
 const acesInv=v=>{const a=1-.983729*v,b=.0245786-.432951*v,c=-(.000090537+.238081*v);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);};
-// luminance y lit by lit ↔ its luminance on the screen; linear ↔ sRGB (the screen blends see-through colours in sRGB)
-const toScreen=(y,lit)=>aces(y*lit*renderer.toneMappingExposure/.6), fromScreen=(v,lit)=>acesInv(Math.min(.999,v))/(lit*renderer.toneMappingExposure/.6);
+// a luminance y under light lit ↔ its luminance on the screen (exposed: × exposure / .6, as three.js); linear ↔ sRGB (the screen blends in sRGB)
+const expo=lit=>lit*renderer.toneMappingExposure/.6, toScreen=(y,lit)=>aces(y*expo(lit)), fromScreen=(v,lit)=>acesInv(Math.min(.999,v))/expo(lit);
 const enc=v=>v<=.0031308?12.92*v:1.055*Math.pow(v,1/2.4)-.055, dec=v=>v<=.04045?v/12.92:Math.pow((v+.055)/1.055,2.4);
 // luminance y's on the screen (lit by EC_LIT) and the one d (L*) off it
 const screenPair=(y,d)=>{const v=toScreen(y,EC_LIT),l=lstar(v);return [v,lumOf(l<EC_DARK?l+d:Math.max(0,l-d))];};
@@ -200,7 +200,7 @@ function applyContrast(mats,FIN,ec){
     }
     // the lines: the finish's colour, on wood a warm brown, brought to the step
     if(f.type==='uni')l.color.copy(m.color);else l.color.setRGB(1,.7,.47).multiplyScalar(y/colorLum(l.color));
-    toLum(l.color,y,lineStep(y,EC_LINE0+EC_LINE*c));l.opacity=EC_OP;
+    toLum(l.color,y,lineStep(y,EC_LINE0+EC_LINE*c));
   });
 }
 

@@ -263,7 +263,7 @@ check('шкафы: контуры деталей всегда видны, гал
   });
 });
 
-check('кромка: шаг светлоты (L*) не растёт к чёрному — на тёмном торец и линии светлее, на светлом темнее; торцы не светятся; при 0% контуры видны', () => {
+check('кромка: шаг светлоты (L*) не растёт к чёрному — на тёмном торец и линии светлее, на светлом темнее; торцы не светятся; при 0% контуры видны; у каждой группы от своей отделки', () => {
   const p = runPage(PAGES.app); p.tick();
   // lightness counted here, not by the page's own helpers: a linear colour's luminance, its L*, of a see-through line (opacity o) over y
   const Y = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b, Ls = (y) => (y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y);
@@ -273,7 +273,7 @@ check('кромка: шаг светлоты (L*) не растёт к чёрн�
     const m = p.run((c, ec) => {
       const m = makeMats(), f = { type: 'uni', color: c, name: c }, rgb = (c) => ({ r: c.r, g: c.g, b: c.b });
       applyMaterials(m, { carcass: f, front: f, top: f, apron: null }, ec);
-      return { front: rgb(m.front.color), end: rgb(m.carcassEnd.color), glow: rgb(m.carcassEnd.emissive), edge: rgb(m.edge.color), o: m.edge.opacity };
+      return { front: rgb(m.front.color), end: rgb(m.carcassEnd.color), glow: rgb(m.carcassEnd.emissive), edge: rgb(m.frontLine.color), o: m.frontLine.opacity };
     }, c, ec);
     return { l: Ls(Y(m.front)), end: Ls(Y(m.end)), line: lineL(m.edge, m.o, m.front), glow: Y(m.glow) };
   };
@@ -287,6 +287,16 @@ check('кромка: шаг светлоты (L*) не растёт к чёрн�
   r.slice(1).forEach((q, i) => d(q).forEach((s, j) => assert.ok(Math.abs(s) >= Math.abs(d(r[i])[j]) - 0.01, `${cs[i + 1]} ≥ ${cs[i]}`)));
   // at 0 the end faces are the finish, the outlines still seen (the solid wood desk is made at 0)
   cs.forEach((c) => { const q = at(c, 0), [de, dl] = d(q); assert.ok(Math.abs(de) < 0.01 && Math.abs(dl) > 3, `${c} at 0: end ${de.toFixed(2)}, line ${dl.toFixed(1)}`); });
+  // two finishes (the bathroom's: grey carcass, dark wood front): each group's end faces and lines from its own finish, not the front's
+  const two = p.run(() => {
+    const m = makeMats(), rgb = (c) => ({ r: c.r, g: c.g, b: c.b }), q = (k) => ({ f: rgb(m[k].color), e: rgb(m[k + 'End'].color), l: rgb(m[k + 'Line'].color), o: m[k + 'Line'].opacity });
+    applyMaterials(m, { carcass: { type: 'uni', color: '#808080', name: 'grey' }, front: { type: 'uni', color: '#3B302A', name: 'brown' } }, 30);
+    return { carcass: q('carcass'), front: q('front') };
+  });
+  const own = (g) => [Ls(Y(g.e)) - Ls(Y(g.f)), lineL(g.l, g.o, g.f) - Ls(Y(g.f))];
+  const [ge, gl] = own(two.carcass), [fe, fl] = own(two.front), grey = d(r[3]), brown = d(r[1]);
+  assert.ok(Math.abs(ge - grey[0]) < 0.01 && Math.abs(gl - grey[1]) < 0.01, `carcass as all grey: end ${ge.toFixed(1)}, line ${gl.toFixed(1)}`);
+  assert.ok(Math.abs(fe - brown[0]) < 0.01 && Math.abs(fl - brown[1]) < 0.01, `front as all brown: end ${fe.toFixed(1)}, line ${fl.toFixed(1)}`);
   // the desk itself: its lines differ from its top
   p.run('showView("kitchen")'); p.fly();
   const desk = p.run(() => {

@@ -209,8 +209,8 @@ function wardSlats(g){
     const sh=new THREE.Shape();pts.forEach(([x,z],i)=>sh[i?'lineTo':'moveTo'](mm(x),-mm(z)));
     const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:mm(H),bevelEnabled:false}),bp.slatMat);
     m.rotation.x=-Math.PI/2;m.castShadow=m.receiveShadow=true;m.userData.profile=pts.map(p=>p.map(v=>Math.round(v*10)/10));q.add(m);
-    // its edges, as the furniture's (furniture.js: buildParts), in the backs' colour's
-    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),backMats.edge);ed.raycast=()=>{};m.add(ed);
+    // its edges, as the furniture's (furniture.js: buildParts), as the LDSP's under it
+    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),backMats.carcassLine);ed.raycast=()=>{};m.add(ed);
     // each facet darker down to the foot of its step (shade there, 1 at its crest); the back and the ends' lower part as they are
     const ps=m.geometry.attributes.position,c=[];
     for(let i=0;i<ps.count;i++){const o=-ps.getY(i)/MM-z0,k=o<.5?1:Math.max(0,Math.min(1,(o-t+drop)/drop)),v=bp.shade+(1-bp.shade)*k;c.push(v,v,v);}

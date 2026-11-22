@@ -24,7 +24,7 @@ function buildTable(g){
   const sx=x1,sy=y1-y0,sz=z1-z0,thin=1;
   const top=new THREE.Mesh(boxGeo(sx,sy,sz,77),[0,0,1,1,2,2].map(a=>a===thin?mats.top:mats.topEnd));
   top.position.set(x1/2,(y0+y1)/2,(z0+z1)/2);top.castShadow=top.receiveShadow=true;
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry),mats.edge);e.raycast=()=>{};top.add(e);g.add(top);
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry),mats.topLine);e.raycast=()=>{};top.add(e);g.add(top);
   const l=TB.leg*MM,i=TB.in*MM,legs=[[i,z0+i],[x1-i-l,z0+i],[i,z1-i-l],[x1-i-l,z1-i-l]].map(([x,z])=>box(x,x+l,0,y0,z,z+l,blackMat));
   [top,...legs].forEach(m=>{m.userData.info=INFO.table;m.userData.table=true;});
   return [];

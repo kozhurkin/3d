@@ -60,7 +60,7 @@ function shapedPiece(model,mats,sh,depth,alongX){
   const geo=new THREE.ExtrudeGeometry(sh,{depth:depth*MM,bevelEnabled:false,curveSegments:10}),uv=geo.attributes&&geo.attributes.uv;
   if(uv&&uv.setXY)for(let i=0;i<uv.count;i++){const u=uv.getX(i),v=uv.getY(i);if(alongX)uv.setXY(i,v/RU,u/RV);else uv.setXY(i,u/RU,v/RV);}
   const o=new THREE.Mesh(geo,[mats.carcass,mats.carcassEnd]);o.castShadow=o.receiveShadow=true;o.userData.shaped=true;
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo,40),mats.edge);e.raycast=()=>{};o.add(e);
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(geo,40),mats.carcassLine);e.raycast=()=>{};o.add(e);
   model.add(o);return o;
 }
 /* a board from x0 to x1 with one edge straight (at ys) and the other in n lobes reaching ye, d deep between them (a sine's hump each);

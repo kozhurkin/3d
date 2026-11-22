@@ -96,7 +96,7 @@ function showShelf(desk){
     if(hm||c.hemnes)return;
     if(o.userData.shelfBracket===true){o.material=c.br;return;}
     o.material=o.material.map(m=>is(m,'carcass')?c.mats.carcass:is(m,'carcassEnd')?c.mats.carcassEnd:m);
-    o.children.forEach(e=>{if(is(e.material,'edge'))e.material=c.mats.edge;});
+    o.children.forEach(e=>{if(is(e.material,'carcassLine'))e.material=c.mats.carcassLine;});
   });
 }
 const shelfY0=()=>DK.H+AU.H+SH.gap;

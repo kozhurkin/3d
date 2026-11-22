@@ -127,16 +127,16 @@ function boxGeo(sx,sy,sz,seed,axis,hole){
   return g;
 }
 
-/* materials of one cabinet set: panels by group, their end faces (торцы, set off to read the construction: applyContrast), joint lines */
+/* materials of one cabinet set: panels by group, their end faces (торцы, set off to read the construction) and joint lines: applyContrast */
 function makeMats(){
   const mats={
     carcass:new THREE.MeshStandardMaterial({roughness:.72,metalness:0}),
     front:new THREE.MeshStandardMaterial({roughness:.66,metalness:0}),
     top:new THREE.MeshStandardMaterial({roughness:.55,metalness:0}),
     apron:new THREE.MeshStandardMaterial({roughness:.5,metalness:0}),
-    back:new THREE.MeshStandardMaterial({color:0xd9d2c4,roughness:.9}),
-    edge:new THREE.LineBasicMaterial({color:0x22180f,transparent:true,opacity:.55})
+    back:new THREE.MeshStandardMaterial({color:0xd9d2c4,roughness:.9})
   };
+  EC_GROUPS.forEach(k=>mats[k+'Line']=new THREE.LineBasicMaterial({color:0x22180f,transparent:true,opacity:.55}));
   mats.carcassEnd=new THREE.MeshStandardMaterial({roughness:.72});
   mats.frontEnd=new THREE.MeshStandardMaterial({roughness:.66});
   mats.topEnd=new THREE.MeshStandardMaterial({roughness:.55});
@@ -165,31 +165,35 @@ function applyMaterials(mats,FIN,ec){
 /* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*), so it reads alike on any finish. End faces EC_END·c,
    joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show); darker than the finish, lighter on a dark one (L* < EC_DARK);
    a little more on light finishes, less on dark: × EC_SCALE[0] at black to × EC_SCALE[1] at white */
-const EC_END=20,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3];
+const EC_END=20,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3],EC_GROUPS=['carcass','front','top','apron','back'];
 const lstar=y=>y>.008856?116*Math.cbrt(y)-16:903.3*y, lumOf=l=>l>8?Math.pow((l+16)/116,3):l/903.3;   // L* ↔ relative luminance
 const colorLum=s=>.2126*s.r+.7152*s.g+.0722*s.b;   // of a linear colour
 // the luminance a step d (L*) off luminance y
 const ecStep=(y,d)=>{const l=lstar(y);d*=EC_SCALE[0]+(EC_SCALE[1]-EC_SCALE[0])*l/100;return lumOf(l<EC_DARK?l+d:Math.max(0,l-d));};
 // a plain colour of luminance y brought to yt: lighter by adding grey (so black too), darker by scaling
 const toLum=(col,y,yt)=>yt>y?col.addScalar(yt-y):col.multiplyScalar(y>0?yt/y:0);
+/* each group's end faces and joint lines from its own finish: carcass from the carcass, front from the front, top from the top;
+   the back (HDF) a plain colour of its own, its end faces its face */
 function applyContrast(mats,FIN,ec){
-  const c=ec/100;
+  const c=ec/100,o=.25+.75*c;
   // a finish's luminance as the model shows it: its colour; on wood times the decor's (its h, s, l: an hsl colour about the picture's mean)
   const hsl=d=>colorLum(new THREE.Color().setHSL(d.h/360,d.s/100,d.l/100).convertSRGBToLinear());
-  const yOf=k=>{const f=finOf(FIN,k);return colorLum(mats[k].color)*(f.type==='wood'?hsl(DECORS[f.decor]):1);};
-  ['carcass','front','top','apron'].forEach(k=>{
-    const f=finOf(FIN,k);if(!f)return;
-    const m=mats[k],e=mats[k+'End'],y=yOf(k),yt=ecStep(y,EC_END*c);
-    e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
-    if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
-    e.needsUpdate=true;
+  EC_GROUPS.forEach(k=>{
+    const f=k==='back'?{type:'uni'}:finOf(FIN,k);if(!f)return;
+    const m=mats[k],l=mats[k+'Line'],y=colorLum(m.color)*(f.type==='wood'?hsl(DECORS[f.decor]):1);
+    if(k!=='back'){
+      const e=mats[k+'End'],yt=ecStep(y,EC_END*c);
+      e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
+      if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
+      e.needsUpdate=true;
+    }
+    /* the lines are unlit and see-through: their colour such that over the finish they show the step; on wood a warm brown.
+       The step is reckoned on the finish's colour, not on it lit as the screen shows it; the opacity, set by eye, makes up for that:
+       the more see-through, the further the line's colour from the finish's, so it shows under any light (a steady .75 left it lost) */
+    const yc=Math.min(1,Math.max(0,y+(ecStep(y,EC_LINE0+EC_LINE*c)-y)/o));
+    if(f.type==='uni')l.color.copy(m.color);else l.color.setRGB(1,.7,.47).multiplyScalar(y/colorLum(l.color));
+    toLum(l.color,y,yc);l.opacity=o;
   });
-  /* the lines are unlit and see-through: their colour such that over the front they show the step; on wood a warm brown.
-     The step is reckoned on the front's colour, not on the front lit as the screen shows it; the opacity, set by eye, makes up for that:
-     the more see-through, the further the line's colour from the front's, so it shows under any light (a steady .75 left it lost) */
-  const o=.25+.75*c,y=yOf('front'),yc=Math.min(1,Math.max(0,y+(ecStep(y,EC_LINE0+EC_LINE*c)-y)/o)),col=mats.edge.color;
-  if(finOf(FIN,'front').type==='uni')col.copy(mats.front.color);else col.setRGB(1,.7,.47).multiplyScalar(y/colorLum(col));
-  toLum(col,y,yc);mats.edge.opacity=o;
 }
 
 /* ---------- parts → meshes ---------- */
@@ -212,7 +216,7 @@ function buildParts(c,mats,{prev=[],open=false}={}){
     const hole=p.hole&&[p.hole[0]*MM-cx,p.hole[1]*MM-cx,p.hole[2]*MM-cz,p.hole[3]*MM-cz];   // a cut-out through its top (mm, room axes)
     const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p),p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
     mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
-    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats.edge);e.raycast=()=>{};mesh.add(e);
+    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);
     if(p.mat==='front'){
       const holder=new THREE.Group(),key=p.name+'|'+doors.length;
       if(p.pivot){

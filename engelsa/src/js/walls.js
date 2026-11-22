@@ -3,7 +3,7 @@
 /* wall finishes, matte paint. "white" is the wall colour of the room tabs (follows the theme);
    p: swatch colour when the scene colour does not show the paint itself (the lit white wall, not its base tone) */
 const WALLC={
-  cocoa:{n:'Обои какао',c:'#D2B9A2',r:.95,tex:true},   // wallpaper, light cocoa, a woven fabric texture (wallTex)
+  linen:{n:'Обои',c:'#FFFFFF',r:.95,p:'#A59389',tex:true},   // the wallpaper: its colour and its linen weave are the photo's (wallTex); p: its mean colour
   white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
   greige:{n:'Greige',c:'#C7BEB1',r:.9},
   french:{n:'French Grey',c:'#B8B9A6',r:.9}
@@ -16,41 +16,27 @@ const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
 const BEHIND={polygonOffset:true,polygonOffsetFactor:1,polygonOffsetUnits:1};
 const wallMat=new THREE.MeshStandardMaterial({roughness:.95,side:THREE.DoubleSide,...BEHIND});
 
-/* the wallpaper's fabric: a 250 mm tile, grey about 1 that multiplies the wall colour. Fine threads both ways (a plain weave, seen
-   close), slubs — short thicker streaks of the threads, lighter and darker (seen from the room), and a faint mottle. It tiles:
-   the threads run the whole tile, the slubs and the mottle wrap round its edges. Drawn once, with a fixed seed */
-const WALL_TILE=.25;   // m
-function fabricTexture(){
-  const N=512,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
-  let seed=20261123;const rnd=()=>{seed=(seed+0x6D2B79F5)|0;let t=Math.imul(seed^(seed>>>15),1|seed);t=(t+Math.imul(t^(t>>>7),61|t))^t;return ((t^(t>>>14))>>>0)/4294967296;};
-  const shade=(v,a)=>`rgba(${v},${v},${v},${a})`;
-  g.fillStyle='rgb(238,238,238)';g.fillRect(0,0,N,N);
-  // the mottle: big soft spots, a shade lighter or darker
-  for(let i=0;i<70;i++){const x=rnd()*N,y=rnd()*N,r=30+rnd()*90,v=rnd()<.5?255:150,a=.05+rnd()*.05;
-    for(const dx of [-N,0,N])for(const dy of [-N,0,N]){const gr=g.createRadialGradient(x+dx,y+dy,0,x+dx,y+dy,r);
-      gr.addColorStop(0,shade(v,a));gr.addColorStop(1,shade(v,0));g.fillStyle=gr;g.fillRect(x+dx-r,y+dy-r,2*r,2*r);}}
-  // the threads: the weft along the rows, the warp along the columns, each its own shade; every other crossing the other on top
-  for(let y=0;y<N;y+=2){g.fillStyle=shade(rnd()<.5?255:120,.06+rnd()*.08);g.fillRect(0,y,N,1);}
-  for(let x=0;x<N;x+=2){g.fillStyle=shade(rnd()<.5?255:120,.05+rnd()*.06);g.fillRect(x,0,1,N);}
-  g.fillStyle=shade(90,.08);for(let y=0;y<N;y+=2)for(let x=(y/2)%2*2;x<N;x+=4)g.fillRect(x,y,1,1);
-  // the slubs: mostly along the weft, a few along the warp
-  for(let i=0;i<420;i++){const along=rnd()<.8,x=rnd()*N,y=Math.floor(rnd()*N/2)*2,l=12+rnd()*110,w=1+Math.floor(rnd()*2),v=rnd()<.55?255:110,a=.08+rnd()*.12;
-    g.fillStyle=shade(v,a);for(const d of [-N,0])along?g.fillRect(x+d,y,l,w):g.fillRect(y,x+d,w,l);}
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;
-  return t;
-}
+/* the wallpaper (js/wallpaper-photo.js): a seamless tile of the shop's photo, WALL_TILE square on the wall. Its colours are the photo's:
+   the shader takes them from sRGB to linear itself (the wall colour is white then) */
+const WALL_TILE=.35;   // m
+function wallpaperTexture(){const t=new THREE.TextureLoader().load(WALLPAPER_JPG);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=8;return t;}
 /* the wallpaper on the walls by their place in the room, not by the pieces' own UVs: a wall is built of boxes of all sizes and cut
    in height by scale (a flight, «Высота стен»), so a texture on them would stretch. Each face takes the two axes along it */
-const wallTexU={wallTex:{value:fabricTexture()},wallTexOn:{value:1}};
+// wallBandY: over it (m from the floor) the wall is painted white, the trims' white (wallBandC), up to the cornice: the rope trim and the band over it;
+// revMin, revMax: the window's opening through its wall (m): its reveals are painted the same white, not papered
+const wallTexU={wallTex:{value:wallpaperTexture()},wallTexOn:{value:1},wallBandY:{value:99},wallBandC:{value:new THREE.Color()},
+  revMin:{value:new THREE.Vector3()},revMax:{value:new THREE.Vector3()}};
 function wallShader(m){
   m.onBeforeCompile=sh=>{
     Object.assign(sh.uniforms,wallTexU);
     sh.vertexShader='varying vec3 vWallPos;\nvarying vec3 vWallN;\n'+sh.vertexShader.replace('#include <begin_vertex>',
       '#include <begin_vertex>\nvWallPos=(modelMatrix*vec4(transformed,1.0)).xyz;vWallN=normalize(mat3(modelMatrix)*objectNormal);');
-    sh.fragmentShader='uniform sampler2D wallTex;\nuniform float wallTexOn;\nvarying vec3 vWallPos;\nvarying vec3 vWallN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader='uniform sampler2D wallTex;\nuniform float wallTexOn;\nuniform float wallBandY;\nuniform vec3 wallBandC;\nuniform vec3 revMin;\nuniform vec3 revMax;\nvarying vec3 vWallPos;\nvarying vec3 vWallN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
       `#include <map_fragment>
       if(wallTexOn>.5){vec3 n=abs(vWallN);vec2 uv=n.y>max(n.x,n.z)?vWallPos.xz:n.x>n.z?vWallPos.zy:vWallPos.xy;
-        diffuseColor.rgb*=texture2D(wallTex,uv/${WALL_TILE.toFixed(3)}).rgb;}`);
+        diffuseColor.rgb*=pow(texture2D(wallTex,uv/${WALL_TILE.toFixed(3)}).rgb,vec3(2.2));}
+      bool reveal=abs(vWallN.z)<.5&&all(greaterThan(vWallPos,revMin))&&all(lessThan(vWallPos,revMax));   // a face inside the window's opening
+      if(vWallPos.y>wallBandY||reveal)diffuseColor.rgb=wallBandC;`);
   };
   m.customProgramCacheKey=()=>'wallpaper';
   return m;
@@ -72,7 +58,7 @@ function muralMesh(w,y0){
   m.position.set(x*MM,(y0+A.muralH/2)*MM,(z0+len/2)*MM);
   return {m,box};
 }
-/* the cornice under the ceiling and the skirting board: white, profiled, along the room face of every wall */
+/* the cornice under the ceiling, the rope trim over the photo wallpaper and the skirting board: white, along the room face of every wall */
 const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
 const CORN_D=30,PL_T=16;   // mm: how far the cornice's relief stands out of the wall at most, the skirting board's thickness
 /* the skirting board's profile (s: out from the wall into the room, v: up from its bottom; mm), run along a wall face: upright,
@@ -108,28 +94,41 @@ function friezeDepth(u,v){
     const q=1-((x-cx)**2+((t-ct)*.6)**2)/(cr*cr);if(q>0)d=Math.max(d,.45+.62*Math.sqrt(q));});
   return FRIEZE_BASE+FRIEZE_LEAF*Math.min(1.1,d);
 }
-// the frieze's face, len × h mm, as the skirting board's extrusion lies before it is turned: s (out of the wall) along +x, up +y,
-// the run along +z; and its underside, seen from below. A grid of about 4 mm
-function friezeGeometry(len,h){
-  const n=Math.max(1,Math.round(len/(h*.95))),nz=n*24,ny=28,pos=[],idx=[],at=(i,j)=>i*(ny+1)+j;
-  for(let i=0;i<=nz;i++)for(let j=0;j<=ny;j++){const u=(i/24)%1,v=1-j/ny;pos.push(friezeDepth(i===nz?0:u,v)*MM,j/ny*h*MM,i/nz*len*MM);}
+/* the rope trim: strands twisted, round across, the grooves between them running up at a slant; a groove to ROPE_P mm of the run.
+   ropeDepth(u, v): how far it stands out of the wall (mm) at u along a twist (0…1) and v down from its top (0…1) */
+const ROPE_D=6,ROPE_P=12;
+function ropeDepth(u,v){
+  const r=Math.sqrt(Math.max(0,1-(2*v-1)**2)),s=((u+v*.8)%1+1)%1;   // a groove a twist, slanting up across the rope
+  return ROPE_D*r*(.62+.38*Math.pow(Math.sin(Math.PI*s),.5));
+}
+/* a relief board's face, len × h mm, as the skirting board's extrusion lies before it is turned: s (out of the wall) along +x, up +y,
+   the run along +z; with under, its underside too (the frieze's plain bottom), seen from below. A whole number of periods about p mm
+   long, seg columns to each, ny rows; depth(u, v): its face out of the wall at u along a period and v down from the top */
+function reliefGeometry(len,h,{p,seg,ny,depth,under=0}){
+  const n=Math.max(1,Math.round(len/p)),nz=n*seg,pos=[],idx=[],at=(i,j)=>i*(ny+1)+j;
+  for(let i=0;i<=nz;i++)for(let j=0;j<=ny;j++){const u=(i/seg)%1,v=1-j/ny;pos.push(depth(i===nz?0:u,v)*MM,j/ny*h*MM,i/nz*len*MM);}
   for(let i=0;i<nz;i++)for(let j=0;j<ny;j++)idx.push(at(i,j),at(i,j+1),at(i+1,j),at(i,j+1),at(i+1,j+1),at(i+1,j));   // facing +x
-  const o=pos.length/3;   // the underside: from the wall to the face along the bottom, facing down
-  for(let i=0;i<=nz;i++)pos.push(0,0,i/nz*len*MM,FRIEZE_BASE*MM,0,i/nz*len*MM);
-  for(let i=0;i<nz;i++){const a=o+2*i;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+  if(under){const o=pos.length/3;   // the underside: from the wall to the face along the bottom, facing down
+    for(let i=0;i<=nz;i++)pos.push(0,0,i/nz*len*MM,under*MM,0,i/nz*len*MM);
+    for(let i=0;i<nz;i++){const a=o+2*i;idx.push(a,a+1,a+2,a+1,a+3,a+2);}}
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
   return g;
 }
+const TRIM={   // the trims along the walls: how far each stands out at most (mm), its geometry len × h mm
+  cornice:{d:CORN_D,geo:(l,h)=>reliefGeometry(l,h,{p:h*.95,seg:24,ny:28,depth:friezeDepth,under:FRIEZE_BASE}),lines:70},
+  rope:{d:ROPE_D,geo:(l,h)=>reliefGeometry(l,h,{p:ROPE_P,seg:8,ny:6,depth:ropeDepth}),lines:89},
+  plinth:{d:PL_T,geo:(l,h)=>new THREE.ExtrudeGeometry(trimProfile(h),{depth:l*MM,bevelEnabled:false,curveSegments:8}),lines:30}
+};
 // … made a mesh of the room face of wall w (face: [where, the way into the room]) from a to b along it, y0 up from the floor;
 // its geometry centred on its box, as the wall pieces are (the wall-height cut and a flight scale it about its middle)
 function trimMesh(kind,w,a,b,y0,h){
-  const g=kind==='cornice'?friezeGeometry(b-a,h):new THREE.ExtrudeGeometry(trimProfile(h),{depth:(b-a)*MM,bevelEnabled:false,curveSegments:8});
-  const [at,dir]=w.face,alongX=dir[1]==='z',sg=dir[0]==='+'?1:-1,depth=kind==='cornice'?CORN_D:PL_T;
+  const T=TRIM[kind],g=T.geo(b-a,h);
+  const [at,dir]=w.face,alongX=dir[1]==='z',sg=dir[0]==='+'?1:-1,depth=T.d;
   // the profile's s goes into the room: +x as built; turned so it goes the face's way, the run along the wall
   g.rotateY(alongX?-sg*Math.PI/2:(sg>0?0:Math.PI));
   if(g.center)g.center();
   const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,kind==='cornice'?70:30),edgeMat);e.raycast=()=>{};m.add(e);   // the relief: its outline, not every leaf
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,T.lines),edgeMat);e.raycast=()=>{};m.add(e);   // a relief: its outline, not every leaf and twist
   const box=alongX?[a,b,...[at,at+sg*depth].sort((p,q)=>p-q)]:[...[at,at+sg*depth].sort((p,q)=>p-q),a,b];
   m.position.set((box[0]+box[1])/2*MM,(y0+h/2)*MM,(box[2]+box[3])/2*MM);
   return {m,box};
@@ -276,8 +275,9 @@ function buildWallSet(list,ruleOf,lines){
     piece(cur,end,0);
     // the cornice under the ceiling and the skirting board along its room face, the part of them in the wall's clipped rect
     if(w.face){const [r0,r1]=alongX?[x0,x1]:[z0,z1],add=(kind,a,b,y0,h)=>{a=Math.max(a,r0);b=Math.min(b,r1);if(b-a<1||h<1)return;
-        const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true});};
+        const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true,kind});};
       add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));
+      w.rope.forEach(([a,b])=>add('rope',a,b,A.plH+A.muralH,A.ropeH));
       const mu=A.muralWall===id&&muralMesh(w,A.plH);
       if(mu){wallGroup.add(mu.m);wallParts.push({m:mu.m,f,id,box:mu.box,b:A.plH*MM,t:(A.plH+A.muralH)*MM,h:A.muralH*MM,photo:true,fit:k=>{muralTex.repeat.y=k;}});}}
   });
@@ -464,7 +464,10 @@ modelHooks.push(()=>{
 function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
   floorMat.color.set(css('--scene-floor'));
-  const wc=WALLC[S.wc]||WALLC.cocoa;wallMat.color.set(wallCol(wc));wallTexU.wallTexOn.value=wc.tex?1:0;
+  const wc=WALLC[S.wc]||WALLC.linen;wallMat.color.set(wallCol(wc));wallTexU.wallTexOn.value=wc.tex?1:0;
+  // the white from the rope's bottom: the wallpaper ends under it, as the photo one does
+  wallTexU.wallBandY.value=(A.plH+A.muralH)*MM;wallTexU.wallBandC.value.copy(trimMat.color);
+  const e=.002;wallTexU.revMin.value.set((winX-A.winW/2)*MM-e,A.winS*MM-e,A.L*MM-e);wallTexU.revMax.value.set((winX+A.winW/2)*MM+e,A.winT*MM+e,(A.L+A.tW)*MM+e);
   ceilColor.set(wallCol(WALLC.white));
   wallMat.roughness=wc.r;
   const fl=(vs()||{}).floors!==false;

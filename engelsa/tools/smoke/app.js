@@ -13,8 +13,8 @@ check('комната открывается: вкладки «Комната» 
   const p = open();
   const r = p.run(() => ({ view, n: Object.keys(VIEWS), lines: wallLines.length, parts: wallParts.length, fade: VIEWS.plan.fade,
     doors: doors.map((d) => d.g.visible), glass: wallParts.filter((w) => w.glass).length }));
-  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 26, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
-    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board; cornices 4, skirting boards 5; the photo wallpaper');
+  assert.deepStrictEqual(r, { view: 'plan', n: ['plan', 'walk'], lines: 4, parts: 31, fade: { door: '-z', right: '+x', left: '-x', window: '+z' },
+    doors: [true], glass: 1 }, 'pieces: door wall 3, sides 1 + 1, window wall 4; window: 4 frame bars and a mullion (1200 wide), glass, sill board; cornices 4, skirting boards 5, rope trims 5; the photo wallpaper');
   assert.strictEqual(p.document.querySelector('[data-panel="plan"]').hidden, false);
 });
 
@@ -75,17 +75,17 @@ check('ракурсы: «На дверь» — камера за стеной с
   assert.ok(z('window') < -120, 'past the door wall');
 });
 
-check('стены: обои «светлое какао» с тканью по умолчанию; у другого цвета ткани нет', () => {
+check('стены: обои из фото по умолчанию; у другого цвета текстуры нет', () => {
   const p = open();
-  const r = () => p.run(() => [S.wc, wallTexU.wallTexOn.value, typeof wallMat.onBeforeCompile, document.querySelector('[data-wc="cocoa"]').getAttribute('aria-pressed')]);
-  assert.deepStrictEqual(r(), ['cocoa', 1, 'function', 'true']);
+  const r = () => p.run(() => [S.wc, wallTexU.wallTexOn.value, typeof wallMat.onBeforeCompile, document.querySelector('[data-wc="linen"]').getAttribute('aria-pressed')]);
+  assert.deepStrictEqual(r(), ['linen', 1, 'function', 'true']);
   p.document.querySelector('[data-wc="greige"]').click();
   assert.deepStrictEqual(r(), ['greige', 0, 'function', 'false']);
 });
 
 check('лепнина 110 под потолком по всем стенам, плинтус 70 — до наличников двери', () => {
   const p = open();
-  const r = p.run(() => wallParts.filter((w) => w.trim).map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
+  const r = p.run(() => wallParts.filter((w) => w.trim && w.kind !== 'rope').map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
   assert.deepStrictEqual(r, [
     ['door', 2950, 3060, [0, 2710, 0, 30]], ['door', 0, 70, [0, 200, 0, 16]], ['door', 0, 70, [1140, 2710, 0, 16]],
     ['right', 2950, 3060, [2680, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
@@ -127,4 +127,24 @@ check('лепнина — фриз с листьями: полка сверху,
   assert.ok(r.band.every((d) => d === 18), 'the plain band on top');
   assert.ok(r.bottom.every((d) => d === 8), 'the board plain under the tips');
   assert.ok(Math.max(...r.mid) - Math.min(...r.mid) > 10, 'the leaves stand out in the middle of the board');
+});
+
+check('плетёнка 11 × 6 по периметру сразу над фотообоями, у окна прервана; обои до её низа, выше до лепнины стена белая, как она', () => {
+  const p = open();
+  const r = p.run(() => ({ rope: wallParts.filter((w) => w.kind === 'rope').map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]),
+    band: tt.mm(wallTexU.wallBandY.value), white: wallTexU.wallBandC.value === trimMat.color || JSON.stringify(wallTexU.wallBandC.value) === JSON.stringify(trimMat.color),
+    d: [...Array(40)].map((_, i) => ropeDepth(i / 40, .5)), edge: ropeDepth(.3, 0) }));
+  assert.deepStrictEqual(r.rope, [
+    ['door', 2770, 2781, [0, 2710, 0, 6]], ['right', 2770, 2781, [2704, 2710, 0, 4797]], ['left', 2770, 2781, [0, 6, 0, 4797]],
+    ['window', 2770, 2781, [0, 755, 4791, 4797]], ['window', 2770, 2781, [1955, 2710, 4791, 4797]]]);
+  assert.deepStrictEqual([r.band, r.white], [2770, true], 'the wallpaper up to the rope\'s bottom, as the photo wallpaper');
+  assert.ok(Math.max(...r.d) <= 6 && Math.max(...r.d) - Math.min(...r.d) > 1.5 && r.edge === 0, 'round across, the strands twisted along');
+  slide(p, 'muralH', 2500);
+  assert.deepStrictEqual(p.run(() => [tt.mm(wallParts.find((w) => w.kind === 'rope').b), tt.mm(wallTexU.wallBandY.value)]), [2570, 2570], 'the rope and the band go with the wallpaper');
+});
+
+check('откосы окна не оклеены: проём окна в мировых координатах для шейдера — белый, как полоса над плетёнкой', () => {
+  const p = open();
+  const r = p.run(() => [wallTexU.revMin.value, wallTexU.revMax.value].map((v) => [v.x, v.y, v.z].map((x) => tt.mm(x))));
+  assert.deepStrictEqual(r, [[753, 898, 4795], [1957, 2952, 5199]], 'the opening 755…1955, 900…2950, through the wall 4797…5197, 2 mm over');
 });

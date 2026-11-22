@@ -16,7 +16,7 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='eng-shared-v1';
-const S={wc:'cocoa',light:{...LIGHT0},edge:true,fly:true};   // edge: the walls' and doors' outlines; fly: the animated flight between tabs
+const S={wc:'linen',light:{...LIGHT0},edge:true,fly:true};   // edge: the walls' and doors' outlines; fly: the animated flight between tabs
 { const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');

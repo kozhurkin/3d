@@ -255,8 +255,10 @@ check('шкафы: контуры деталей всегда видны, гал
     assert.strictEqual(p.document.querySelector(`#${l}-tEdges`), null, k);
     p.run(`showView("${k}")`); p.fly();
     // every part has its joint lines, none hidden (but a glass pane: its frame shows where it is)
-    const r = p.run(`(()=>{const ps=[];const walk=o=>{if(o.userData&&typeof o.userData.part.x0==="number"&&!o.userData.part.glass)ps.push(o);(o.children||[]).forEach(walk);};walk(VIEWS.${k}.furniture().model);
-      return [ps.length, ps.filter(m=>m.children.some(e=>e.raycast&&e.visible!==false)).length];})()`);
+    const r = p.run((k) => {
+      const ps = tt.meshes(VIEWS[k].furniture().model, (q) => typeof q.x0 === 'number' && !q.glass);
+      return [ps.length, ps.filter((m) => m.children.some((e) => e.raycast && e.visible !== false)).length];
+    }, k);
     assert.ok(r[0] > 0, k); assert.strictEqual(r[1], r[0], k);
   });
 });

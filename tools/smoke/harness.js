@@ -30,10 +30,11 @@ function stub(name = 'stub') {
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;
       // an extruded one has its vertices (none here), so code walking them runs (the wardrobe's faceted panels shade theirs)
       if (name === 'THREE.ExtrudeGeometry') o.attributes = { position: { count: 0, getY: () => 0 } };
-      if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group'].includes(name)) {
-        Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [] });
+      if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group', 'THREE.Scene'].includes(name)) {
+        // userData plain and no parent till added, as THREE's: what is not put there is not there, and a walk up the parents ends
+        Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [], userData: {}, parent: null });
         o.add = (...c) => { c.forEach((x) => { x.parent = o; o.children.push(x); }); return o; };
-        o.remove = (...c) => { o.children = o.children.filter((x) => !c.includes(x)); return o; };
+        o.remove = (...c) => { o.children = o.children.filter((x) => !c.includes(x)); c.forEach((x) => { if (x.parent === o) x.parent = null; }); return o; };
       }
       return o;
     },
@@ -75,7 +76,7 @@ class Box3 {
         if (h && o.rotation && Math.abs(Math.sin(+o.rotation.x || 0)) > 0.5) [h[1], h[2]] = [h[2], h[1]];
         if (h) {
           const c = [0, 0, 0], s = [1, 1, 1];
-          // up the real parents only (the scene itself is a plain stub)
+          // up the real parents only (the scene's: none)
           for (let p = o; p && p.position instanceof Vec3; p = p.parent) { ['x', 'y', 'z'].forEach((k, i) => { c[i] = c[i] * p.scale[k] + p.position[k]; s[i] *= p.scale[k]; }); }
           ['x', 'y', 'z'].forEach((k, i) => { this.min[k] = Math.min(this.min[k], c[i] - h[i] * s[i]); this.max[k] = Math.max(this.max[k], c[i] + h[i] * s[i]); });
         }
@@ -168,7 +169,7 @@ function matches(e, sel) {
 
 /* ---------- helpers in the page for checks' p.run code: tt ----------
    tt.fur(v): the furniture of view v (the kitchen by default); tt.item(k, v) / tt.items(k, v): its extra groups (kitchen appl, bath sani) with userData[k] true;
-   tt.meshes(g, fn) / tt.parts(g, fn): the meshes in g's subtree whose part q passes fn(q, o) / their parts (the stub answers any key: fn decides);
+   tt.meshes(g, fn) / tt.parts(g, fn): the meshes in g's subtree that have a part q passing fn(q, o) / their parts;
    tt.find(g, fn): the first object in g's subtree that passes fn; tt.box(ps, 'xzy'): [min, max] of the parts on those axes in that order;
    tt.mm(v): metres → whole mm; tt.doors(g or [g…]): the furniture's doors on those groups */
 const PAGE_KIT = `var tt={

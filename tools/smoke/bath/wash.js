@@ -127,10 +127,13 @@ check('санузел: шкафчик над раковиной — отдель
   assert.ok(!p.run(`${W}.current.parts.some(q=>/раковин/.test(q.name))`), 'not in the bathroom cut list');
   assert.ok(!/раковин/.test(p.document.querySelector('[data-panel="bath"]').querySelector('#b-csv').value));
   // a mirror on each door, in front of its face, edge to edge; the doors are the room's: a click opens them
-  const doors = `${W}.doors.filter(d=>d.g.children[0].userData.part.name==='Фасад шкафчика над раковиной')`;
-  assert.deepStrictEqual(p.run(`${doors}.map(d=>{const m=d.g.children.find(c=>c.userData.mirror===true);return [m.geometry.args,m.position.z+d.g.position.z].flat().map(v=>tt.mm(v));})`), [[298, 698, 4, 202], [298, 698, 4, 202]]);
-  p.run(`${doors}.forEach(d=>{d.t=d.max;})`); for (let i = 0; i < 60; i++) p.tick();
-  assert.ok(p.run(`${doors}.every(d=>d.a>1)`), 'they swing open with the room\'s doors');
+  // (its doors: the room's on its group, the last of the wash's)
+  assert.deepStrictEqual(p.run(() => tt.doors(tt.item('wash', 'bath').children.slice(-1)[0], 'bath')
+    .map((d) => { const m = d.g.children.find((c) => c.userData.mirror === true); return [m.geometry.args, m.position.z + d.g.position.z].flat().map((v) => tt.mm(v)); })),
+  [[298, 698, 4, 202], [298, 698, 4, 202]]);
+  p.run(() => { tt.doors(tt.item('wash', 'bath').children.slice(-1)[0], 'bath').forEach((d) => { d.t = d.max; }); return 0; });
+  for (let i = 0; i < 60; i++) p.tick();
+  assert.ok(p.run(() => tt.doors(tt.item('wash', 'bath').children.slice(-1)[0], 'bath').every((d) => d.a > 1)), 'they swing open with the room\'s doors');
   // a lamp on its top (2000): a bracket, the bar 450 × 25 × 25 mm 45 mm past the mirrors and 30 mm over the top, its glowing underside
   const lamp = p.run(`${W}.sani.children.find(m=>m.userData.wash===true).children.filter(m=>['body','glow'].includes(m.userData.lamp)).map(m=>[m.geometry.args,m.position.y-m.geometry.args[1]/2,m.position.z-m.geometry.args[2]/2,m.userData.lamp==='glow'].flat().map(v=>typeof v==='boolean'?v:tt.mm(v)))`);
   assert.deepStrictEqual(lamp.map((m) => m[5]), [false, false, true]);
@@ -143,7 +146,8 @@ check('санузел: шкафчик над раковиной — отдель
   assert.strictEqual(ci[1], '60 × 20 см, высота 70 см: во всю ширину ниши.');
   assert.strictEqual(ci[2], 'Корпус — ЛДСП Диамант серый U963 ST9, фасады — Базовый коричневый декор; на дверях зеркало 4 мм.');
   assert.match(ci[4], /^Низ в 130 см от пола, на 30 см выше раковины/);
-  assert.strictEqual(info(`${doors}[0].g.children.find(c=>c.userData.mirror===true)`)[0], 'Зеркальный шкафчик над раковиной');
+  assert.strictEqual(p.run(() => infoOf(tt.doors(tt.item('wash', 'bath').children.slice(-1)[0], 'bath')[0].g.children.find((c) => c.userData.mirror === true)).title),
+    'Зеркальный шкафчик над раковиной');
 });
 
 check('санузел: смеситель раковины — высокий хромированный корпус, плоский носик над чашей, рычаг-пластина сверху, под шкафчиком', () => {

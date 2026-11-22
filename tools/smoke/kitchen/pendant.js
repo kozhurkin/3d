@@ -19,7 +19,7 @@ check('кухня: светильник над серединой обеденн
   p.run(`infoOf(${q}.children[0]).next()`);
   assert.strictEqual(st()[0], 'BLÅSVERK');
   // a click on any piece of it changes it (engine.js: clickOf); the next one, then the third, then the first again
-  assert.strictEqual(p.run(`(q=>{const o=q.children[2];o.userData={};return clickOf({object:o})===q.userData.click;})(${q})`), true);   // its userData plain, as THREE's (the stub's answers anything)
+  assert.strictEqual(p.run(() => { const q = tt.item('pendant'); return clickOf({ object: q.children[2] }) === q.userData.click; }), true);
   const click = () => p.run(`${q}.userData.click()`);
   // BUNKEFLO, 800 over the tabletop too: its cord from the top of its birch (187) up to the canopy (2600 − 48)
   click(); assert.deepStrictEqual(st(), ['BUNKEFLO', 650, 1550, 1690, 815, 187, 2552, true, 'Подвесной светильник BUNKEFLO (IKEA)']);

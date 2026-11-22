@@ -63,10 +63,12 @@ check('санузел: крышка унитаза откидывается то
   p.run(`(d=>{d.t=d.t!==0?0:d.max;})(${D})`); run(120);
   r = st(); assert.deepStrictEqual([r.a, r.rot], [0, 0]);
   assert.ok(p.run(`tt.item("toilet","bath").userData.info().lines.includes('Нажатие на крышку или сиденье поднимает и опускает крышку.')`));
-  // a click picks it on the lid or the seat, nothing on the bowl (pickDoor's rule: up the parents, a door's g or frame; up to the
-  // toilet's group here, the stub's parents go on for ever)
-  const pick = (k) => p.run(`(t=>{const all=[],w=o=>{all.push(o);o.children.forEach(w);};w(t);const ds=tt.fur("bath").doors;
-    for(let o=all.find(q=>q.userData.wc==='${k}');o&&o!==t.parent;o=o.parent){const d=ds.find(d=>d.g===o||d.frame===o);if(d)return d.key;}return null;})(tt.item("toilet","bath"))`);
+  // a click picks it on the lid or the seat, nothing on the bowl (pickDoor's rule: up the parents, a door's g or frame)
+  const pick = (k) => p.run((k) => {
+    const ds = tt.fur('bath').doors;
+    for (let o = tt.find(tt.item('toilet', 'bath'), (q) => q.userData.wc === k); o; o = o.parent) { const d = ds.find((d) => d.g === o || d.frame === o); if (d) return d.key; }
+    return null;
+  }, k);
   assert.deepStrictEqual(['lid', 'seat', 'bowl', 'bar'].map(pick), ['wc-lid', 'wc-lid', null, null]);
   // no front: «Открыты» and «Закрыты» in the panel leave it as it is, down or up
   const bq = (q) => p.document.querySelector('[data-panel="bath"]').querySelector(q);

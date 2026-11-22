@@ -21,11 +21,11 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
     const ic=infoOf(gs[0].children[0]),ia=infoOf(ad);
     const cl=o=>clickOf({object:o});
     return [ic.buy.map(b=>[b.name,b.price,b.url,b.shop||ic.shop]),ia.title===ic.title,ic.variant.join('/'),
-      cl(gs[0].children[0])===cl(gs[1].children[0])&&cl(tt.find(gs[0],o=>o.userData&&o.userData.mirror===true))!==cl(gs[0].children[0]),ic.lines[0],ic.lines.length];})(tt.fur())`);
+      cl(gs[0].children[0])===cl(gs[1].children[0])&&cl(tt.find(gs[0],o=>o.userData&&o.userData.mirror===true))===null,ic.lines[0],ic.lines.length];})(tt.fur())`);
   const w0 = wc();
   assert.deepStrictEqual(w0, [[['Угловой 96,4 × 96,4 × 220', 12000, 'https://ozon.ru/t/8LOFiwQ', 'Ozon'], ['Доп. секция 40 × 50 × 220', 5500, 'https://ozon.ru/t/BSIni7B', 'Ozon']],
     true, '1/4', true, 'Цвет: Белый.', 4]);
-  // its panels click alike (not the mirror on it: a thing of its own; the stub's userData answers anything, so only «not the same»); «next» paints it grey, a rebuild keeps the colour,
+  // its panels click alike (not the mirror on it: a thing of its own, no click); «next» paints it grey, a rebuild keeps the colour,
   // a click white again with the second add-on section (the next check), two more back to the first
   const g0 = 'tt.item("wardrobe")';
   const col = () => { const w = wc(); return [w[2], w[4]]; };
@@ -199,9 +199,8 @@ check('living: задняя стенка шкафа к дивану — клик
       card:(i=>[i.lines.slice(1),i.price,i.url,i.shop,i.variant.join('/')])(infoOf(bk[0])),
       buy:(i=>i.buy&&i.buy.map(b=>[b.name,b.n||1,b.price,b.url]))(infoOf(bk[0])),
       // the slatted panels: their backing pieces [x0, x1, z0, z1, y0, y1], the slats' count, first and last [x0, x1, z0, z1]; their click and card the backs'
-      // (their group's click: the stub's meshes have no plain userData, so clickOf from a slat would stop at a stub)
       sv:(q=>{if(!q)return null;const bx=o=>{const [sx,sy,sz]=o.geometry.args,p=o.position;return [p.x-sx/2,p.x+sx/2,p.z-sz/2,p.z+sz/2,p.y-sy/2,p.y+sy/2].map(v=>Math.round(tt.mm(v)*10)/10);};
-        const ms=q.children,own=q.userData.click===clickOf({object:bk[0]})&&ms.every(m=>m.parent===q&&infoOf(m).title===infoOf(bk[0]).title);
+        const ms=q.children,own=ms.every(m=>clickOf({object:m})===clickOf({object:bk[0]})&&infoOf(m).title===infoOf(bk[0]).title);
         // ГРАНЬ: the strips [which, profile], the modules' profiles (kitchen x, z) — the first one's, the last one's
         const strips=ms.filter(m=>m.userData.strip==='start'||m.userData.strip==='finish'),pr=ms.filter(m=>m.userData.module===true).map(m=>m.userData.profile);
         if(pr.length)return {strips:strips.map(m=>[m.userData.strip,m.userData.profile]),n:pr.length,first:pr[0],last:pr[pr.length-1],own};

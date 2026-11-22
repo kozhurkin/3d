@@ -25,6 +25,8 @@ function stub(name = 'stub') {
       // and how metal it is (the sink is steel)
       if (/Material$/.test(name) && args[0] && 'metalness' in args[0]) o.metalness = args[0].metalness;
       if (/Material$/.test(name) && args[0] && args[0].polygonOffset) Object.assign(o, { polygonOffset: true, polygonOffsetFactor: args[0].polygonOffsetFactor });
+      // its colours real, so checks can see them in numbers (the edge contrast: furniture.js applyContrast); white and black, as THREE's
+      if (/Material$/.test(name)) Object.assign(o, { color: new Color(args[0] && args[0].color != null ? args[0].color : 0xffffff), emissive: new Color(args[0] && args[0].emissive || 0) });
       // objects of the scene have a real place and real children, so checks can see where things stand
       // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;
@@ -57,6 +59,23 @@ class Vec3 {
   normalize() { return this.multiplyScalar(1 / (this.length() || 1)); }
   distanceTo(v) { return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z); }
   setFromMatrixColumn() { return this; } applyMatrix4() { return this; } applyQuaternion() { return this; } project() { return this; }
+}
+// a real colour, linear r, g, b as THREE's: made of a number 0xrrggbb, a '#rrggbb' string (any other string: black), a colour or r, g, b
+class Color {
+  constructor(r, g, b) { this.r = this.g = this.b = 0; if (r != null) this.set(r, g, b); }
+  set(r, g, b) {
+    if (g != null) return this.setRGB(r, g, b);
+    if (r instanceof Color) return this.copy(r);
+    const n = typeof r === 'number' ? r : /^#[0-9a-f]{6}$/i.test(String(r).trim()) ? parseInt(String(r).trim().slice(1), 16) : 0;
+    return this.setRGB((n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255);
+  }
+  setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; return this; }
+  setScalar(s) { return this.setRGB(s, s, s); }
+  copy(c) { return this.setRGB(c.r, c.g, c.b); }
+  clone() { return new Color().copy(this); }
+  multiplyScalar(s) { return this.setRGB(this.r * s, this.g * s, this.b * s); }
+  addScalar(s) { return this.setRGB(this.r + s, this.g + s, this.b + s); }
+  convertSRGBToLinear() { const f = (v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return this.setRGB(f(this.r), f(this.g), f(this.b)); }
 }
 // a real box: the mini view's part of the apartment
 class Box3 {
@@ -200,7 +219,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
     getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
   };
-  const THREE = stub('THREE'); THREE.Vector3 = Vec3; THREE.Box3 = Box3;
+  const THREE = stub('THREE'); THREE.Vector3 = Vec3; THREE.Box3 = Box3; THREE.Color = Color;
   const win = {
     THREE, document, localStorage, console, setTimeout, clearTimeout, Math, JSON,
     performance: { now: () => clock.t },   // page time moves only with tick(): 16 ms a frame

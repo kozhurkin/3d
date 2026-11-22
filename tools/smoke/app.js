@@ -263,6 +263,41 @@ check('шкафы: контуры деталей всегда видны, гал
   });
 });
 
+check('кромка: шаг светлоты (L*) не растёт к чёрному — на тёмном торец и линии светлее, на светлом темнее; торцы не светятся; при 0% контуры видны', () => {
+  const p = runPage(PAGES.app); p.tick();
+  // lightness counted here, not by the page's own helpers: a linear colour's luminance, its L*, of a see-through line (opacity o) over y
+  const Y = (c) => 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b, Ls = (y) => (y > 0.008856 ? 116 * Math.cbrt(y) - 16 : 903.3 * y);
+  const lineL = (e, o, f) => Ls(o * Y(e) + (1 - o) * Y(f));
+  // for a plain finish c at contrast ec: L* of the finish, of its end face, of a joint line over the front; the end face's glow
+  const at = (c, ec) => {
+    const m = p.run((c, ec) => {
+      const m = makeMats(), f = { type: 'uni', color: c, name: c }, rgb = (c) => ({ r: c.r, g: c.g, b: c.b });
+      applyMaterials(m, { carcass: f, front: f, top: f, apron: null }, ec);
+      return { front: rgb(m.front.color), end: rgb(m.carcassEnd.color), glow: rgb(m.carcassEnd.emissive), edge: rgb(m.edge.color), o: m.edge.opacity };
+    }, c, ec);
+    return { l: Ls(Y(m.front)), end: Ls(Y(m.end)), line: lineL(m.edge, m.o, m.front), glow: Y(m.glow) };
+  };
+  const cs = ['#000000', '#3B302A', '#3F4042', '#808080', '#C2B8AA', '#F1F0EA'], r = cs.map((c) => at(c, 30)), d = (q) => [q.end - q.l, q.line - q.l];
+  r.forEach((q, i) => {
+    const [de, dl] = d(q), dark = q.l < 44;
+    assert.ok(dark ? de > 2 && dl > 2 : de < -2 && dl < -2, `${cs[i]}: ${dark ? 'lighter' : 'darker'} end ${de.toFixed(1)} and line ${dl.toFixed(1)}`);
+    assert.strictEqual(q.glow, 0, `${cs[i]}: the end face lit, not glowing`);
+  });
+  // the step grows from black to white: black never stands out more than mid grey (it did: +21 and +37 to −5 and −9)
+  r.slice(1).forEach((q, i) => d(q).forEach((s, j) => assert.ok(Math.abs(s) >= Math.abs(d(r[i])[j]) - 0.01, `${cs[i + 1]} ≥ ${cs[i]}`)));
+  // at 0 the end faces are the finish, the outlines still seen (the solid wood desk is made at 0)
+  cs.forEach((c) => { const q = at(c, 0), [de, dl] = d(q); assert.ok(Math.abs(de) < 0.01 && Math.abs(dl) > 3, `${c} at 0: end ${de.toFixed(2)}, line ${dl.toFixed(1)}`); });
+  // the desk itself: its lines differ from its top
+  p.run('showView("kitchen")'); p.fly();
+  const desk = p.run(() => {
+    const o = tt.meshes(tt.item('desk'), (q) => q.mat === 'top')[0], e = o.children.find((x) => x.material && x.material.opacity != null).material;
+    const rgb = (c) => ({ r: c.r, g: c.g, b: c.b });
+    return { top: rgb(o.material[2].color), edge: rgb(e.color), o: e.opacity };
+  });
+  const dd = lineL(desk.edge, desk.o, desk.top) - Ls(Y(desk.top));
+  assert.ok(Math.abs(dd) > 3, 'desk: its outlines show, ' + dd.toFixed(1));
+});
+
 check('«Планировка»: шкафы всех комнат по галочке «Шкафы», строятся, только когда видны', () => {
   const storage = new Map([['apt-view-plan-v1', JSON.stringify({ furn: false })]]);
   const p = runPage(PAGES.app, { storage, parentWin: { appView: 'plan' } }); p.tick();

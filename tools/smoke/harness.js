@@ -71,6 +71,11 @@ class Color {
   }
   setRGB(r, g, b) { this.r = r; this.g = g; this.b = b; return this; }
   setScalar(s) { return this.setRGB(s, s, s); }
+  setHSL(h, s, l) {
+    const q = l <= 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+    const f = (t) => { t = ((t % 1) + 1) % 1; return t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * 6 * (2 / 3 - t) : p; };
+    return this.setRGB(f(h + 1 / 3), f(h), f(h - 1 / 3));
+  }
   copy(c) { return this.setRGB(c.r, c.g, c.b); }
   clone() { return new Color().copy(this); }
   multiplyScalar(s) { return this.setRGB(this.r * s, this.g * s, this.b * s); }

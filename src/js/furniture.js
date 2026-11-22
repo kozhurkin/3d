@@ -174,7 +174,9 @@ const ecStep=(y,d)=>{const l=lstar(y);d*=EC_SCALE[0]+(EC_SCALE[1]-EC_SCALE[0])*l
 const toLum=(col,y,yt)=>yt>y?col.addScalar(yt-y):col.multiplyScalar(y>0?yt/y:0);
 function applyContrast(mats,FIN,ec){
   const c=ec/100;
-  const yOf=k=>{const f=finOf(FIN,k);return f.type==='wood'?lumOf(DECORS[f.decor].l):colorLum(mats[k].color);};
+  // a finish's luminance as the model shows it: its colour; on wood times the decor's (its h, s, l: an hsl colour about the picture's mean)
+  const hsl=d=>colorLum(new THREE.Color().setHSL(d.h/360,d.s/100,d.l/100).convertSRGBToLinear());
+  const yOf=k=>{const f=finOf(FIN,k);return colorLum(mats[k].color)*(f.type==='wood'?hsl(DECORS[f.decor]):1);};
   ['carcass','front','top','apron'].forEach(k=>{
     const f=finOf(FIN,k);if(!f)return;
     const m=mats[k],e=mats[k+'End'],y=yOf(k),yt=ecStep(y,EC_END*c);

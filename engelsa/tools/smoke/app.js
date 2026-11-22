@@ -87,10 +87,10 @@ check('лепнина 110 под потолком по всем стенам, п
   const p = open();
   const r = p.run(() => wallParts.filter((w) => w.trim).map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
   assert.deepStrictEqual(r, [
-    ['door', 2950, 3060, [0, 2710, 0, 80]], ['door', 0, 70, [0, 200, 0, 16]], ['door', 0, 70, [1140, 2710, 0, 16]],
-    ['right', 2950, 3060, [2630, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
-    ['left', 2950, 3060, [0, 80, 0, 4797]], ['left', 0, 70, [0, 16, 0, 4797]],
-    ['window', 2950, 3060, [0, 2710, 4717, 4797]], ['window', 0, 70, [0, 2710, 4781, 4797]]]);
+    ['door', 2950, 3060, [0, 2710, 0, 30]], ['door', 0, 70, [0, 200, 0, 16]], ['door', 0, 70, [1140, 2710, 0, 16]],
+    ['right', 2950, 3060, [2680, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
+    ['left', 2950, 3060, [0, 30, 0, 4797]], ['left', 0, 70, [0, 16, 0, 4797]],
+    ['window', 2950, 3060, [0, 2710, 4767, 4797]], ['window', 0, 70, [0, 2710, 4781, 4797]]]);
   // «Контуры»: the walls are see-through, the trims go with them
   p.document.querySelector('[data-panel="plan"] [data-wm="edges"]').click(); p.tick();
   assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
@@ -114,4 +114,17 @@ check('фотообои: слева от входа, от плинтуса, 2700
   btn('').click();
   assert.strictEqual(get().length, 0);
   assert.strictEqual(btn('').getAttribute('aria-pressed'), 'true');
+});
+
+check('лепнина — фриз с листьями: полка сверху, рельеф до 30 мм, низ доски гладкий', () => {
+  const p = open();
+  const r = p.run(() => {
+    const vs = []; for (let i = 0; i < 200; i++) for (let j = 0; j <= 50; j++) vs.push(friezeDepth(i / 200, j / 50));
+    const row = (v) => [...Array(100)].map((_, i) => friezeDepth(i / 100, v));
+    return { min: Math.min(...vs), max: Math.max(...vs), band: row(.05), bottom: row(.99), mid: row(.5) };
+  });
+  assert.ok(r.min >= 8 && r.max <= 30, `${r.min}…${r.max}`);
+  assert.ok(r.band.every((d) => d === 18), 'the plain band on top');
+  assert.ok(r.bottom.every((d) => d === 8), 'the board plain under the tips');
+  assert.ok(Math.max(...r.mid) - Math.min(...r.mid) > 10, 'the leaves stand out in the middle of the board');
 });

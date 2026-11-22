@@ -74,32 +74,62 @@ function muralMesh(w,y0){
 }
 /* the cornice under the ceiling and the skirting board: white, profiled, along the room face of every wall */
 const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
-const CORN_D=80,PL_T=16;   // mm: the cornice out on the ceiling, the skirting board's thickness
-/* a profile (s: out from the wall into the room, v: up from its bottom; mm) run along a wall face, l mm long. The cornice: a bead at
-   its bottom, a cove (concave, its centre in the room) up to a small step and a flat band along the ceiling. The skirting board:
-   upright, its top rounded toward the wall */
-function trimProfile(kind,h){
+const CORN_D=30,PL_T=16;   // mm: how far the cornice's relief stands out of the wall at most, the skirting board's thickness
+/* the skirting board's profile (s: out from the wall into the room, v: up from its bottom; mm), run along a wall face: upright,
+   its top rounded toward the wall */
+function trimProfile(h){
   const S=new THREE.Shape(),k=MM;
-  if(kind==='cornice'){
-    const f=h/110,d=CORN_D;   // drawn for 110 high, scaled to h
-    S.moveTo(0,0);S.lineTo(12*k,0);S.lineTo(12*k,8*f*k);S.lineTo(8*k,14*f*k);
-    for(let i=1;i<=12;i++){const t=i/12*Math.PI/2;S.lineTo((66-58*Math.cos(t))*k*d/80,(14+82*Math.sin(t))*f*k);}
-    S.lineTo(74*k*d/80,96*f*k);S.lineTo(74*k*d/80,102*f*k);S.lineTo(d*k,102*f*k);S.lineTo(d*k,h*k);S.lineTo(0,h*k);
-  }else{
-    S.moveTo(0,0);S.lineTo(PL_T*k,0);S.lineTo(PL_T*k,(h-14)*k);S.quadraticCurveTo(PL_T*k,h*k,4*k,h*k);S.lineTo(0,h*k);
-  }
+  S.moveTo(0,0);S.lineTo(PL_T*k,0);S.lineTo(PL_T*k,(h-14)*k);S.quadraticCurveTo(PL_T*k,h*k,4*k,h*k);S.lineTo(0,h*k);
   return S;
+}
+/* the cornice: a frieze, a board on the wall under the ceiling. Along its top a plain band, under it a groove, then a row of the same
+   acanthus leaf over and over, each symmetric about its own upright axis: at its top two curls rolled out to the sides and a knob
+   between them, under them a second pair, then the leaf narrowing down with lobed edges, a rib down its middle and veins fanning
+   out from it, to a rounded tip; the tips make a row of scallops over the board's plain bottom. A leaf to about each board height
+   of the run, a whole number of them on a wall.
+   friezeDepth(u, v): how far the face stands out of the wall (mm) at u along a leaf's period (0…1) and v down from the top (0…1) */
+const FRIEZE_BASE=8,FRIEZE_BAND=18,FRIEZE_LEAF=20;
+function friezeDepth(u,v){
+  if(v<.13)return FRIEZE_BAND-Math.max(0,(v-.1)/.03)*3;   // the band, its lower edge rounded off
+  if(v<.17)return FRIEZE_BASE+1;                          // the groove under it
+  const t=(v-.17)/.79;if(t>=1)return FRIEZE_BASE;         // down the leaf 0…1; the board's plain bottom under the tips
+  const x=Math.abs(u-.5);   // from the leaf's axis: both halves the same
+  // the leaf: round at its top, widest a third of the way down, narrowing to a round tip; its edges lobed alike on both sides
+  const w=.47*Math.sqrt(Math.max(0,1-((t-.34)/(t<.34?.37:.66))**2))*(1+.1*Math.sin(2*Math.PI*3.5*t+.8));
+  let d=0;
+  if(x<w){
+    const r=x/w;d=Math.sqrt(1-r*r)*(.55+.45*Math.cos(Math.PI*Math.max(0,t-.25)/1.6));
+    const fan=Math.atan2(x,t+.12);                          // the veins fanning out from the top of the rib
+    d*=.84+.16*Math.cos(fan*16);
+    d+=.2*Math.exp(-Math.pow(x/.028,2))*Math.sqrt(1-r*r);   // the rib down the middle
+  }
+  // the curls at the top: rolled out to the sides, a knob between them, a smaller pair under them; round knobs, each a dome
+  [[.3,.1,.15],[0,.07,.13],[.17,.27,.11],[.36,.3,.09]].forEach(([cx,ct,cr])=>{
+    const q=1-((x-cx)**2+((t-ct)*.6)**2)/(cr*cr);if(q>0)d=Math.max(d,.45+.62*Math.sqrt(q));});
+  return FRIEZE_BASE+FRIEZE_LEAF*Math.min(1.1,d);
+}
+// the frieze's face, len × h mm, as the skirting board's extrusion lies before it is turned: s (out of the wall) along +x, up +y,
+// the run along +z; and its underside, seen from below. A grid of about 4 mm
+function friezeGeometry(len,h){
+  const n=Math.max(1,Math.round(len/(h*.95))),nz=n*24,ny=28,pos=[],idx=[],at=(i,j)=>i*(ny+1)+j;
+  for(let i=0;i<=nz;i++)for(let j=0;j<=ny;j++){const u=(i/24)%1,v=1-j/ny;pos.push(friezeDepth(i===nz?0:u,v)*MM,j/ny*h*MM,i/nz*len*MM);}
+  for(let i=0;i<nz;i++)for(let j=0;j<ny;j++)idx.push(at(i,j),at(i,j+1),at(i+1,j),at(i,j+1),at(i+1,j+1),at(i+1,j));   // facing +x
+  const o=pos.length/3;   // the underside: from the wall to the face along the bottom, facing down
+  for(let i=0;i<=nz;i++)pos.push(0,0,i/nz*len*MM,FRIEZE_BASE*MM,0,i/nz*len*MM);
+  for(let i=0;i<nz;i++){const a=o+2*i;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  return g;
 }
 // … made a mesh of the room face of wall w (face: [where, the way into the room]) from a to b along it, y0 up from the floor;
 // its geometry centred on its box, as the wall pieces are (the wall-height cut and a flight scale it about its middle)
 function trimMesh(kind,w,a,b,y0,h){
-  const g=new THREE.ExtrudeGeometry(trimProfile(kind,h),{depth:(b-a)*MM,bevelEnabled:false,curveSegments:8});
+  const g=kind==='cornice'?friezeGeometry(b-a,h):new THREE.ExtrudeGeometry(trimProfile(h),{depth:(b-a)*MM,bevelEnabled:false,curveSegments:8});
   const [at,dir]=w.face,alongX=dir[1]==='z',sg=dir[0]==='+'?1:-1,depth=kind==='cornice'?CORN_D:PL_T;
   // the profile's s goes into the room: +x as built; turned so it goes the face's way, the run along the wall
   g.rotateY(alongX?-sg*Math.PI/2:(sg>0?0:Math.PI));
   if(g.center)g.center();
   const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,30),edgeMat);e.raycast=()=>{};m.add(e);
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,kind==='cornice'?70:30),edgeMat);e.raycast=()=>{};m.add(e);   // the relief: its outline, not every leaf
   const box=alongX?[a,b,...[at,at+sg*depth].sort((p,q)=>p-q)]:[...[at,at+sg*depth].sort((p,q)=>p-q),a,b];
   m.position.set((box[0]+box[1])/2*MM,(y0+h/2)*MM,(box[2]+box[3])/2*MM);
   return {m,box};

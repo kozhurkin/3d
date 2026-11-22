@@ -63,7 +63,7 @@ function panelText(){
 living.attach({P,applDoor,handleMat,rebuild:()=>k.build()});
 const k=roomKit('kitchen',{
   P,FIN,mats,px:'k',panel,origin:O,fromModel,setCam,panelText,
-  fromPlan:['W','H','L','Rx','WinS','DeskWall','WardBack'],
+  fromPlan:['W','H','L','Rx','WinS','DeskWall'],
   ids:['B1','B2','B3','Hx','Ct','Db','Pl','Fr','Fh','Fd','Dw','Gw','Gh','Ha','Da','Nw'],
   wish:['Hx'],
   slider:{sel:'#kFrameL',key:'L',max:()=>Math.min(A.kL,2650)},   // how far from the kitchen wall the left wall shows: up to 2650 (the window wall if nearer)

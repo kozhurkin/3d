@@ -84,7 +84,7 @@ const O=()=>ROOMS.find(r=>r.id==='kitchen').origin;   // the kitchen's (0,0) on 
 // the hob (300 mm wide) stays inside its cabinet, 20 mm clear of the right edge (fridge side); not used when it is turned along
 function clamp(w){const hm=Math.max(0,(P.B3-300)/2);P.Hx=Math.max(-hm,Math.min(hm-20,w.Hx));}
 // sizes that belong to the walls come from the plan; a run longer than the wall is left as it is, the panel says so
-function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;P.WinS=A.winS;P.DeskWall=!!A.deskWall;P.WardBack=!!A.wardBack;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);placeDining();
+function fromModel(w){P.W=kW;P.H=A.H;P.L=A.kL;P.Rx=A.hallW-A.kOver+kW;P.WinS=A.winS;P.DeskWall=!!A.deskWall;clamp(w);T=P.T||16;TF=P.TF||16;current=computeParts(P);placeDining();
   // the worktop's cut-out for the sink's bowl, under its rim (not in the cut list's parts: they stay as the old kitchen's)
   const top=current.parts.find(q=>q.name==='Столешница'),x=P.B1/2;
   if(top)top.hole=[x-SK.w/2,x+SK.w/2,SK.z-SK.d/2,SK.z+SK.d/2];

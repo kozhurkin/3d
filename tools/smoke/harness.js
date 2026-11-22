@@ -28,6 +28,8 @@ function stub(name = 'stub') {
       // objects of the scene have a real place and real children, so checks can see where things stand
       // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;
+      // an extruded one has its vertices (none here), so code walking them runs (the wardrobe's faceted panels shade theirs)
+      if (name === 'THREE.ExtrudeGeometry') o.attributes = { position: { count: 0, getY: () => 0 } };
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group'].includes(name)) {
         Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [] });
         o.add = (...c) => { c.forEach((x) => { x.parent = o; o.children.push(x); }); return o; };

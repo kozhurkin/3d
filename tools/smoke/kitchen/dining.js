@@ -62,9 +62,16 @@ check('кухня: «i» у обеденного стола — его стол�
   p.key('keydown', 'Escape'); assert.strictEqual(card.hidden, true);
   // a thing on sale: its price and a link to the shop (in a new tab) under its lines
   p.run('showItemDot({title:"Полка",lines:["a"],price:16000,url:"https://ozon.ru/t/x",shop:"Ozon"},100,200)'); dot.click();
-  const buy = card.children[card.children.length - 1];
+  // (the rows in one block under the lines: buys)
+  const buys = () => card.children[card.children.length - 1], buy = buys().children[0];
+  assert.deepStrictEqual([buys().className, buys().children.length], ['buys', 1], 'one thing: no total');
   assert.deepStrictEqual([buy.className, buy.children.map((c) => c.textContent), buy.children[1].href, buy.children[1].target], ['buy', ['16\u00a0000 ₽', 'Ozon'], 'https://ozon.ru/t/x', '_blank']);
   assert.strictEqual(card.children.some((c) => c.className === 'next'), false, 'no variants: no link to the next one');
+  p.key('keydown', 'Escape');
+  // several things bought: a row each, the total under them (no link: the block's grid keeps its price under theirs)
+  p.run('showItemDot({title:"Шкаф",lines:["a"],shop:"Ozon",buy:[{name:"A",price:5500,url:"https://ozon.ru/t/a"},{name:"B",n:9,price:750,url:"https://ozon.ru/t/b"}]},100,200)'); dot.click();
+  assert.deepStrictEqual(buys().children.map((c) => [c.className, c.children.map((x) => x.textContent)]), [
+    ['buy', ['A', '5\u00a0500 ₽', 'Ozon']], ['buy more', ['B', '9 × 750 ₽', 'Ozon']], ['buy total', ['Итого', '12\u00a0250 ₽']]]);
   p.key('keydown', 'Escape');
   // a thing with variants: a line under the others — which of how many, a link to the next one; it turns the card to it
   p.run('showItemDot({title:"A",lines:["a"],variant:[1,2],next:()=>({title:"B",lines:["b"],variant:[2,2],next:()=>({title:"A"})})},100,200)'); dot.click();

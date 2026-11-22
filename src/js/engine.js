@@ -282,13 +282,18 @@ function openItemCard(info){
     const b=document.createElement('button');b.className='lnk';b.textContent='Следующий вариант →';b.addEventListener('click',()=>openItemCard(info.next()));
     p.appendChild(b);itemCard.appendChild(p);}
   // its price (₽) and where to buy it (url), if it has them: a row under the lines, the link in a new tab; a thing made of several
-  // products has a row each (info.buy: [{name, price, url, shop, n — how many of it}]), the first row with the line over it
+  // products has a row each (info.buy: [{name, price, url, shop, n — how many of it}]); more than one thing (rows, or n of one): the total under
+  // them. All in one block (buys), its columns one grid — names, prices, links — so the prices stand under each other
   const rows=info.buy||(info.price||info.url?[info]:[]);
-  rows.forEach((it,i)=>{const r=document.createElement('div');r.className='buy'+(i?' more':'');
-    if(it.name){const n=document.createElement('span');n.className='nm';n.textContent=it.name;r.appendChild(n);}
-    if(it.price){const b=document.createElement('b');b.textContent=(it.n>1?it.n+' × ':'')+it.price.toLocaleString('ru-RU')+' ₽';r.appendChild(b);}
-    if(it.url){const l=document.createElement('a');l.href=it.url;l.target='_blank';l.rel='noopener';l.textContent=it.shop||info.shop||'Купить';r.appendChild(l);}
-    itemCard.appendChild(r);});
+  if(rows.length){const buys=document.createElement('div');buys.className='buys';
+    const row=(it,cls)=>{const r=document.createElement('div');r.className=cls;
+      if(it.name){const n=document.createElement('span');n.className='nm';n.textContent=it.name;r.appendChild(n);}
+      if(it.price){const b=document.createElement('b');b.textContent=(it.n>1?it.n+' × ':'')+it.price.toLocaleString('ru-RU')+' ₽';r.appendChild(b);}
+      if(it.url){const l=document.createElement('a');l.href=it.url;l.target='_blank';l.rel='noopener';l.textContent=it.shop||info.shop||'Купить';r.appendChild(l);}
+      buys.appendChild(r);};
+    rows.forEach((it,i)=>row(it,'buy'+(i?' more':'')));
+    if(rows.length>1||rows.some(it=>it.n>1))row({name:'Итого',price:rows.reduce((t,it)=>t+(it.n||1)*(it.price||0),0)},'buy total');
+    itemCard.appendChild(buys);}
   itemCard.hidden=false;
   const dx=parseFloat(itemDot.style.left)||0,dy=parseFloat(itemDot.style.top)||0,w=itemCard.offsetWidth||280,hh=itemCard.offsetHeight||120;
   itemCard.style.left=Math.max(8,Math.min(viewer.clientWidth-w-8,dx))+'px';

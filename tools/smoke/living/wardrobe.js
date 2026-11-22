@@ -215,7 +215,7 @@ check('living: задняя стенка шкафа к дивану — клик
   assert.deepStrictEqual(r.backs.map((q) => q.slice(0, 2)), [['Лист 1 задней стенки углового шкафа — справа', 'back'], ['Лист 2 задней стенки углового шкафа — справа', 'back']]);
   assert.deepStrictEqual([new Set(r.leg), r.side, r.rods, r.own, r.ward], [new Set([2386]), [480, 480], [2146, 2146], true, false]);
   assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1890, 2390], [1026, 1906]], [1890, 1427, 1027], '102,6 см', [[2286, 3250, 1890, 2390]], [1940, 2340]]);
-  assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ХДФ 4 мм, из комплекта шкафа.'], [[k], null, null, null, '1/5']]);
+  assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ХДФ 4 мм, из комплекта шкафа.'], [[k], null, null, null, '1/6']]);
   assert.strictEqual(r.sv, null);
   // a click: LDSP 16 white over the leg's rear, floor to top, in two sheets of 480 (an add-on section's sides) edge to edge from its end, 4 short of the wall;
   // the carcasses as deep (480), so the wardrobe 12 more: its back's outer face still at the sofa (2390), all the rest 12 toward the kitchen wall — its doors,
@@ -226,14 +226,14 @@ check('living: задняя стенка шкафа к дивану — клик
     ['Лист 1 задней стенки шкафа — у дивана', 'carcass', 2286, 2766, 2374, 2390, 0, 2200],
     ['Лист 2 задней стенки шкафа — у дивана', 'carcass', 2766, 3246, 2374, 2390, 0, 2200]]);
   // their «i»: cut from one more add-on section — its sides; it in a row with its Ozon link and price; the wardrobe's card says nothing of them
-  assert.deepStrictEqual([r.lines, r.card, r.buy, r.ward], [['Цвет: Белый.', 'ЛДСП 16 мм, Белый — из боковин ещё одной доп. секции.'], [[k], null, null, 'Ozon', '2/5'],
+  assert.deepStrictEqual([r.lines, r.card, r.buy, r.ward], [['Цвет: Белый.', 'ЛДСП 16 мм, Белый — из боковин ещё одной доп. секции.'], [[k], null, null, 'Ozon', '2/6'],
     [['Доп. секция 40 × 50 × 220', 1, 5500, 'https://ozon.ru/t/BSIni7B']], false]);
   assert.deepStrictEqual([new Set(r.leg), r.side, r.rods, r.own], [new Set([2374]), [480, 480], [2134, 2134], true]);
   assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1878, 2390], [1014, 1894]], [1878, 1415, 1015], '101,4 см', [[2286, 3250, 1878, 2390]], [1934, 2334]]);
   // again: grey, the carcass stays white; through a rebuild
   backClick();
   r = wr();
-  assert.deepStrictEqual([r.lines, r.card[4], r.sv], [['Цвет: Белый.', 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.'], '3/5', null]);
+  assert.deepStrictEqual([r.lines, r.card[4], r.sv], [['Цвет: Белый.', 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.'], '3/6', null]);
   const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick(); slide(p, 'bW', bW); p.tick();
   assert.deepStrictEqual(wr().lines[1], 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.', 'through a rebuild');
   // the card's «next»: the slatted panels over the grey LDSP, 9 thick, their outer face at the sofa (2390): the wardrobe 9 more toward the kitchen wall
@@ -250,7 +250,7 @@ check('living: задняя стенка шкафа к дивану — клик
   assert.deepStrictEqual([new Set(r.leg), r.side, r.rods], [new Set([2365]), [480, 480], [2125, 2125]]);
   assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1869, 2381], [1005, 1885]], [1869, 1406, 1006], '100,5 см', [[2286, 3250, 1869, 2390]], [1930, 2330]]);
   assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.'], [[
-    'Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '4/5']]);
+    'Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '4/6']]);
   assert.deepStrictEqual(r.buy, [['Доп. секция 40 × 50 × 220', 1, 5500, 'https://ozon.ru/t/BSIni7B'], ['Панель САВАШ «Графит» 2780 × 600 × 9', 2, 2600, 'https://ozon.ru/t/bmatRZn']]);
   // «next»: white LDSP with the modular panels ГРАНЬ, 16 thick, their outer face at the sofa: the wardrobe 16 more toward the kitchen wall (28 in all),
   // the racks' room 16 less. One run of whole facets 26.5 wide, each from 16 down to 10 at the step up to the next one, high on the wall's side: from the
@@ -269,13 +269,38 @@ check('living: задняя стенка шкафа к дивану — клик
   assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1862, 2374], [998, 1878]], [1862, 1399, 999], '99,8 см', [[2286, 3250, 1862, 2390]], [1926, 2326]]);
   // its card: what is bought in its rows, not in the lines
   assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ЛДСП 16 мм, Белый — из боковин ещё одной доп. секции.'],
-    [['Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '5/5']]);
+    [['Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '5/6']]);
   assert.deepStrictEqual(r.buy, [['Доп. секция 40 × 50 × 220', 1, 5500, 'https://ozon.ru/t/BSIni7B'], ['Панель ГРАНЬ САВАШ «Белый» 2800 × 116 × 16', 9, 750, 'https://ozon.ru/t/QGoXSss'],
     ['Стартовая планка ГРАНЬ САВАШ «Белый» 2800 × 26,5 × 16', 1, 150, 'https://ozon.ru/t/sZYUjbm'], ['Финишная планка ГРАНЬ САВАШ «Белый» 2800 × 36,5 × 16', 1, 150, 'https://ozon.ru/t/JHTewdc']]);
+  // «next»: white LDSP with the fluted modules РИФ «Кашемир Светлый», 16 thick as ГРАНЬ (the wardrobe as with it): from the leg's end the finishing strip
+  // (27.5 of its 37.5 show: a flat 1 at its full thickness, one flute), whole modules (106 of their 116 show), the last one cut to three flutes (79.5), no
+  // starter strip — 955: 5 short of the LDSP's end; each flute 26.5 wide, a concave arc 6 deep between crests at its full thickness
+  next();
+  r = wr();
+  const fs = r.sv.strips[0][1];
+  assert.deepStrictEqual([r.sv.strips.length, r.sv.strips[0][0], fs.slice(0, 4), fs[fs.length - 1], fs.length], [1, 'finish',
+    [[2313.5, 2374], [2286, 2374], [2286, 2390], [2287, 2390]], [2313.5, 2390], 3 + 12 + 1]);
+  assert.deepStrictEqual([r.sv.n, r.sv.first.slice(0, 3), r.sv.first[r.sv.first.length - 1], r.sv.last.slice(0, 2), r.sv.own],
+    [9, [[2419.5, 2374], [2313.5, 2374], [2313.5, 2390]], [2419.5, 2390], [[3241, 2374], [3161.5, 2374]], true]);
+  const fl = r.sv.first.slice(2), bottom = (x) => fl.find((q) => q[0] === x)[1];
+  assert.deepStrictEqual([fl.length, bottom(2326.8), bottom(2340), bottom(2353.3)], [4 * 12 + 1, 2384, 2390, 2384]);
+  assert.deepStrictEqual([new Set(r.leg), r.boxes, r.card], [new Set([2358]), [[1862, 2374], [998, 1878]],
+    [['Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '6/6']]);
+  // its LDSP the wardrobe's colour: white, and grey after a click on the wardrobe — back to white (three more: its forms)
+  assert.strictEqual(r.lines[1], 'ЛДСП 16 мм, Белый (в цвет шкафа) — из боковин ещё одной доп. секции.');
+  p.run(`clickOf({object:${g0}.children[0]})()`);
+  r = wr();
+  assert.deepStrictEqual(r.lines, ['Цвет: Серый.', 'ЛДСП 16 мм, Серый (в цвет шкафа) — из боковин ещё одной доп. секции.']);
+  for (let j = 0; j < 3; j++) p.run(`clickOf({object:${g0}.children[0]})()`);
+  r = wr();
+  assert.deepStrictEqual([r.lines, r.sv.n], [['Цвет: Белый.', 'ЛДСП 16 мм, Белый (в цвет шкафа) — из боковин ещё одной доп. секции.'], 9]);
+  assert.deepStrictEqual(r.buy, [['Доп. секция 40 × 50 × 220', 1, 5500, 'https://ozon.ru/t/BSIni7B'],
+    ['Реечная панель САВАШ РИФ «Кашемир Светлый» 2800 × 116 × 16', 9, 650, 'https://ozon.ru/t/7EiTlVS'],
+    ['Финишная планка САВАШ РИФ «Кашемир Светлый» 2800 × 37,5 × 16', 1, 150, 'https://ozon.ru/t/ykncNDs']]);
   // HDF again, the wardrobe as it was; and white LDSP
   next();
   r = wr();
-  assert.deepStrictEqual([r.backs.map((q) => q[1]), r.boxes, r.card[4], r.sv], [['back', 'back'], [[1890, 2390], [1026, 1906]], '1/5', null]);
+  assert.deepStrictEqual([r.backs.map((q) => q[1]), r.boxes, r.card[4], r.sv], [['back', 'back'], [[1890, 2390], [1026, 1906]], '1/6', null]);
   next();
   assert.deepStrictEqual(wr().lines[1], 'ЛДСП 16 мм, Белый — из боковин ещё одной доп. секции.');
   // the carcass grey with the add-on section on the leg's end: the backs' row over its rear too; the carcass's click leaves them white
@@ -301,6 +326,12 @@ check('living: задняя стенка шкафа к дивану — клик
     [['finish', [[1912.5, 2374], [1886, 2374], [1886, 2384], [1912.5, 2390]]], ['start', [[3237.5, 2374], [3211, 2374], [3211, 2384], [3237.5, 2390]]]], 13,
     [[3211, 2374], [3184.5, 2374], [3184.5, 2384], [3211, 2390]],
     'Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', 3, 13]);
+  // one more: РИФ over the same (1360: the strip, 50 flutes — twelve modules, the last cut to two, 53; 7.5 short of the LDSP's end) — thirteen of them
+  backClick();
+  r = wr();
+  assert.deepStrictEqual([r.sv.n, r.sv.last.slice(0, 2), r.sv.last[r.sv.last.length - 1], r.card[0][1], r.buy[1][1]],
+    [13, [[3238.5, 2374], [3185.5, 2374]], [3238.5, 2390], 'Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', 13]);
+  assert.strictEqual(r.lines[1], 'ЛДСП 16 мм, Серый (в цвет шкафа) — из боковин и фасада ещё одной доп. секции.');
   // and one more: HDF — the leg's two sheets and the end section's, all theirs
   backClick();
   r = wr();

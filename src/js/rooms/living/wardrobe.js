@@ -26,16 +26,16 @@ const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelve
 // ⌊i / colours⌋ (form); a new form builds the kitchen again
 const WARD_COLORS=[{type:'uni',color:'#F1F0EA',name:'Белый'},{type:'uni',color:'#676A6C',name:'Серый'}];
 const paintIn=(mats,f)=>applyMaterials(mats,{carcass:f,front:f,top:f,apron:null},30);   // mats in one finish f all over
-function colorSwitch(forms=1){
+function colorSwitch(forms=1,then=()=>{}){   // then: after a click's new colour
   const k=WARD_COLORS.length;
   const o={i:0,form:0,mats:makeMats(),
     paint(){paintIn(o.mats,WARD_COLORS[o.i%k]);},
-    click(){o.i=(o.i+1)%(k*forms);o.paint();const f=Math.floor(o.i/k);if(f!==o.form){o.form=f;rebuild();}},
+    click(){o.i=(o.i+1)%(k*forms);o.paint();then();const f=Math.floor(o.i/k);if(f!==o.form){o.form=f;rebuild();}},
     // its card c (card() gives it again): its colour first, which variant of how many and a link to the next one (paged)
     card:(card,c)=>paged(Object.assign(c,{lines:[`Цвет: ${finName(WARD_COLORS[o.i%k])}.`].concat(c.lines)}),o.i,k*forms,o.click,card)};
   o.paint();return o;
 }
-const wardColor=colorSwitch(2),mzColor=colorSwitch();
+const wardColor=colorSwitch(2,()=>wardBack.paint()),mzColor=colorSwitch();   // the wardrobe's next colour: the backs' too, if theirs is its
 /* the backs at the sofa (the leg's, the add-on's on its end): HDF as bought, or LDSP as thick as the carcass in place of it, white or grey,
    or LDSP with slatted panels glued over it (WARD_BACKS, BACK_PANELS) — the next by a click on any of them or by their card's «Следующий вариант →»;
    a new thickness or other panels build the kitchen again; it stays through the rebuilds. The LDSP: one row over the leg's whole rear (the end
@@ -54,6 +54,10 @@ const wardColor=colorSwitch(2),mzColor=colorSwitch();
    САВАШ «Графит» (acoustic, as the maker's drawing) — 600 wide, a dark backing (base) and n slats over it, slat wide, evenly (W / n apart): the
    first one flush with the panel's edge, the backing a gap past the last one at the other. Laid with that flush edge at the leg's end: the row
    starts with a slat, and over the joints the gap stays the same; the last panel cut at the wall, its slat there too if it falls on the cut.
+   РИФ «Кашемир Светлый» (MDF, as the maker's drawing): a module 116 wide as ГРАНЬ's (a tongue 10 under the piece before it, 106 shows), its face four
+   flutes fw wide, each a concave arc sag deep between crests at its full thickness. Its finishing strip (head: 37.5 wide, a tongue 10 under the module
+   next to it, at the leg's end a flat at its full thickness, flat wide, one flute) at the leg's end, whole modules from it, the last one cut by whole
+   flutes; no starter strip: the row short of the LDSP's end by what is left (< fw). Each flute darker toward its bottom (shade).
    name: the product; a strip's: which it is */
 const pmat=(c,vc)=>new THREE.MeshStandardMaterial({color:new THREE.Color(c).convertSRGBToLinear(),roughness:.7,vertexColors:!!vc});
 const BACK_PANELS={
@@ -62,19 +66,24 @@ const BACK_PANELS={
     head:{W:36.5,vis:26.5,price:150,url:'https://ozon.ru/t/JHTewdc',name:'Финишная планка ГРАНЬ САВАШ «Белый»',strip:'finish'},
     tail:{W:26.5,vis:26.5,price:150,url:'https://ozon.ru/t/sZYUjbm',name:'Стартовая планка ГРАНЬ САВАШ «Белый»',strip:'start'}},
   graphite:{W:600,L:2780,t:9,base:3,n:16,slat:25,price:2600,url:'https://ozon.ru/t/bmatRZn',baseMat:pmat('#2F3033'),slatMat:pmat('#505256'),
-    name:'Панель САВАШ «Графит»'}};
-// c: the LDSP's colour (WARD_COLORS); over: the panels over it (BACK_PANELS)
-const WARD_BACKS=[{hdf:true},{c:0},{c:1},{c:1,over:'graphite'},{c:0,over:'gran'}];
+    name:'Панель САВАШ «Графит»'},
+  rif:{W:116,vis:106,L:2800,t:16,fw:26.5,sag:6,shade:.8,price:650,url:'https://ozon.ru/t/7EiTlVS',slatMat:pmat('#CFC9BF',true),
+    name:'Реечная панель САВАШ РИФ «Кашемир Светлый»',
+    head:{W:37.5,vis:27.5,flat:1,price:150,url:'https://ozon.ru/t/ykncNDs',name:'Финишная планка САВАШ РИФ «Кашемир Светлый»',strip:'finish'}}};
+// c: the LDSP's colour (WARD_COLORS), or ward: the wardrobe's (wardColor: it follows its clicks); over: the panels over it (BACK_PANELS)
+const WARD_BACKS=[{hdf:true},{c:0},{c:1},{c:1,over:'graphite'},{c:0,over:'gran'},{ward:true,over:'rif'}];
 const backMats=makeMats();paintIn(backMats,WARD_COLORS[0]);   // the backs' own: the LDSP's colour, the HDF's 'back' as made
 const wardBack={i:0,at:()=>WARD_BACKS[wardBack.i],
-  click(){const g0=wardGrow(),o0=wardBack.at().over;wardBack.i=(wardBack.i+1)%WARD_BACKS.length;if(ldspBack())paintIn(backMats,WARD_COLORS[wardBack.at().c]);
+  click(){const g0=wardGrow(),o0=wardBack.at().over;wardBack.i=(wardBack.i+1)%WARD_BACKS.length;wardBack.paint();
     if(wardGrow()!==g0||wardBack.at().over!==o0)rebuild();}};
 const ldspBack=()=>!wardBack.at().hdf;
+const backColor=()=>WARD_COLORS[wardBack.at().ward?wardColor.i%WARD_COLORS.length:wardBack.at().c];   // the LDSP's
+wardBack.paint=()=>{if(ldspBack())paintIn(backMats,backColor());};
 const backPanels=()=>BACK_PANELS[wardBack.at().over]||null;   // the panels over the LDSP, if any
 /* where they show (kitchen x [from, to]), from the leg's end u0 toward the wall: the strip at the leg's end (head), the panels (the last one cut),
-   the strip at the wall's (tail); faceted, the row whole facets (L), short of the LDSP's end by what is left. vis: how wide one shows */
+   the strip at the wall's (tail); faceted, the row whole facets (L) after the head, short of the LDSP's end by what is left. vis: how wide one shows */
 const panelLay=()=>{const bp=backPanels(),vis=bp.vis||bp.W,u0=P.Rx-wardLeg(),u1=P.Rx-HDF.t,ps=[];
-  const L=bp.fw?Math.floor((u1-u0)/bp.fw+1e-9)*bp.fw:u1-u0,{head:h,tail:t}=bp,r0=h?h.vis:0,f=L-(t?t.vis:0);
+  const {head:h,tail:t}=bp,r0=h?h.vis:0,L=bp.fw?r0+Math.floor((u1-u0-r0)/bp.fw+1e-9)*bp.fw:u1-u0,f=L-(t?t.vis:0);
   for(let r=r0;r<f-1e-9;r+=vis)ps.push([u0+r,u0+Math.min(r+vis,f)]);
   return {head:h&&[u0,u0+r0],tail:t&&[u0+f,u0+L],pieces:ps,cut:ps[ps.length-1][1]-ps[ps.length-1][0]<vis};};
 const wardExt=()=>wardColor.form===1;   // the wardrobe with its second add-on section, on the leg's end
@@ -202,25 +211,39 @@ function wardSlats(g){
   const b=boxIn(q),box=(x0,x1,za,zb,mat)=>b(mm(x0),mm(x1),0,mm(H),mm(za),mm(zb),mat);
   // a faceted piece over a–e: its profile (kitchen x, z) round from the back, the facets from the e end back to a, each high on the wall's side
   // (e), down to the foot of its step at the next one's (a cut piece's last one as far as it goes)
+  // a piece of its profile pts (kitchen x, z; round from the back), floor to top: its edges as the furniture's (furniture.js: buildParts), as the LDSP's
+  // under it — only where its face turns more than thr°; its face darker the deeper (shade at deep under its full thickness, 1 at it), the back and
+  // the ends' lower part as they are
+  const piece=(pts,deep,thr=1)=>{
+    const sh=new THREE.Shape();pts.forEach(([x,z],i)=>sh[i?'lineTo':'moveTo'](mm(x),-mm(z)));
+    const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:mm(H),bevelEnabled:false}),bp.slatMat);
+    m.rotation.x=-Math.PI/2;m.castShadow=m.receiveShadow=true;m.userData.profile=pts.map(p=>p.map(v=>Math.round(v*10)/10));q.add(m);
+    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,thr),backMats.carcassLine);ed.raycast=()=>{};m.add(ed);
+    const ps=m.geometry.attributes.position,c=[];
+    for(let i=0;i<ps.count;i++){const o=-ps.getY(i)/MM-z0,k=o<.5?1:Math.max(0,Math.min(1,(o-bp.t+deep)/deep)),v=bp.shade+(1-bp.shade)*k;c.push(v,v,v);}
+    m.geometry.setAttribute('color',new THREE.Float32BufferAttribute(c,3));
+    return m;
+  };
+  // a faceted piece over a–e: the facets from the e end back to a, each high on the wall's side (e), down to the foot of its step at the next one's
+  // (a cut piece's last one as far as it goes)
   const saw=([a,e])=>{
     const w=e-a,{fw,t,drop}=bp,j1=Math.ceil(w/fw)-1,pts=[[e,z0],[a,z0],[a,z0+t-drop*(w-j1*fw)/fw]];
     for(let j=j1;j>0;j--)pts.push([e-j*fw,z0+t],[e-j*fw,z0+t-drop]);
     pts.push([e,z0+t]);
-    const sh=new THREE.Shape();pts.forEach(([x,z],i)=>sh[i?'lineTo':'moveTo'](mm(x),-mm(z)));
-    const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:mm(H),bevelEnabled:false}),bp.slatMat);
-    m.rotation.x=-Math.PI/2;m.castShadow=m.receiveShadow=true;m.userData.profile=pts.map(p=>p.map(v=>Math.round(v*10)/10));q.add(m);
-    // its edges, as the furniture's (furniture.js: buildParts), as the LDSP's under it
-    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),backMats.carcassLine);ed.raycast=()=>{};m.add(ed);
-    // each facet darker down to the foot of its step (shade there, 1 at its crest); the back and the ends' lower part as they are
-    const ps=m.geometry.attributes.position,c=[];
-    for(let i=0;i<ps.count;i++){const o=-ps.getY(i)/MM-z0,k=o<.5?1:Math.max(0,Math.min(1,(o-t+drop)/drop)),v=bp.shade+(1-bp.shade)*k;c.push(v,v,v);}
-    m.geometry.setAttribute('color',new THREE.Float32BufferAttribute(c,3));
-    return m;
+    return piece(pts,drop);
   };
-  if(head)saw(head).userData.strip=bp.head.strip;
+  // a fluted piece over a–e: its face from a, the flutes, each an arc (seg straight pieces) between crests at its full thickness (a strip's: after its
+  // flat f), a cut one as far as it goes; its edges only at the crests and its outline (the arcs' own pieces turn less than 30°)
+  const flute=([a,e],f=0)=>{
+    const {fw,t,sag}=bp,h=fw/2,R=(h*h+sag*sag)/(2*sag),seg=12,dep=u=>sag-R+Math.sqrt(R*R-(u-h)*(u-h)),pts=[[e,z0],[a,z0]].concat(f?[[a,z0+t]]:[]);
+    for(let x0=a+f;x0<e-1e-9;x0+=fw)for(let k=0;k<=seg;k++){const x=Math.min(x0+fw*k/seg,e);
+      if(!k&&x0>a+f)continue;pts.push([x,z0+t-dep(x-x0)]);if(x>=e)break;}
+    return piece(pts,sag,30);
+  };
+  if(head)(bp.sag?flute(head,bp.head.flat):saw(head)).userData.strip=bp.head.strip;
   if(tail)saw(tail).userData.strip=bp.tail.strip;
   pieces.forEach(([a,e])=>{
-    if(bp.fw){saw([a,e]).userData.module=true;return;}
+    if(bp.fw){(bp.sag?flute:saw)([a,e]).userData.module=true;return;}
     // the slats from its edge at a, as far as it goes (one on the cut as much as is left of it)
     const pitch=bp.W/bp.n,zb=z0+bp.base;box(a,e,z0,zb,bp.baseMat);
     for(let j=0,x=a;j<bp.n&&x<e;j++,x+=pitch)box(x,Math.min(x+bp.slat,e),zb,z1,bp.slatMat);

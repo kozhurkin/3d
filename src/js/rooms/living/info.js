@@ -23,7 +23,8 @@ const INFO={
     const page=c=>paged(c,wardBack.i,WARD_BACKS.length,wardBack.click,INFO.wardBack);
     if(!ldspBack())return page({title:t,lines:[`ХДФ ${HDF.t} мм, из комплекта шкафа.`,k]});
     const bp=backPanels(),lay=bp&&panelLay(),row=(p,W,n)=>({name:`${p.name} ${bp.L} × ${dec(W)} × ${bp.t}`,n,price:p.price,url:p.url});
-    const lines=[`ЛДСП 16 мм, ${finName(WARD_COLORS[at.c])} — из ${wardExt()?'боковин и фасада':'боковин'} ещё одной доп. секции.`]
+    const ldsp=`ЛДСП 16 мм, ${finName(backColor())}${at.ward?' (в цвет шкафа)':''}`;
+    const lines=[`${ldsp} — из ${wardExt()?'боковин и фасада':'боковин'} ещё одной доп. секции.`]
       .concat(wardExt()?['Фасад — у стены, он ниже боковин: недостача внизу за диваном.']:[],
         bp?[`Поверх — реечные панели на всю высоту шкафа${lay.cut?', последняя обрезана по ширине':''}.`]:[],k);
     const buy=[WARD_PRODUCTS[1]].concat(bp?[row(bp,bp.W,lay.pieces.length)].concat([bp.tail,bp.head].filter(Boolean).map(s=>row(s,s.W))):[]);   // the starter strip's row first

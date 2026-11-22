@@ -54,24 +54,26 @@ const wardColor=colorSwitch(2,()=>wardBack.paint()),mzColor=colorSwitch();   // 
    САВАШ «Графит» (acoustic, as the maker's drawing) — 600 wide, a dark backing (base) and n slats over it, slat wide, evenly (W / n apart): the
    first one flush with the panel's edge, the backing a gap past the last one at the other. Laid with that flush edge at the leg's end: the row
    starts with a slat, and over the joints the gap stays the same; the last panel cut at the wall, its slat there too if it falls on the cut.
-   РИФ «Кашемир Светлый» (MDF, as the maker's drawing): a module 116 wide as ГРАНЬ's (a tongue 10 under the piece before it, 106 shows), its face four
+   РИФ «Графит» (MDF, as the maker's drawing): a module 116 wide as ГРАНЬ's (a tongue 10 under the piece before it, 106 shows), its face four
    flutes fw wide, each a concave arc sag deep between crests at its full thickness. Its finishing strip (head: 37.5 wide, a tongue 10 under the module
    next to it, at the leg's end a flat at its full thickness, flat wide, one flute) at the leg's end, whole modules from it, the last one cut by whole
    flutes; no starter strip: the row short of the LDSP's end by what is left (< fw). Each flute darker toward its bottom (shade).
    name: the product; a strip's: which it is */
 const pmat=(c,vc)=>new THREE.MeshStandardMaterial({color:new THREE.Color(c).convertSRGBToLinear(),roughness:.7,vertexColors:!!vc});
+// a profiled panel's edge lines: from its own colour c, as the furniture's from its finish
+const plines=c=>{const m=makeMats();paintIn(m,{type:'uni',color:c});return m.carcassLine;};
 const BACK_PANELS={
   gran:{W:116,vis:106,L:2800,t:16,fw:26.5,drop:6,shade:.78,price:750,url:'https://ozon.ru/t/QGoXSss',slatMat:pmat(WARD_COLORS[0].color,true),
-    name:'Панель ГРАНЬ САВАШ «Белый»',
+    lineMat:plines(WARD_COLORS[0].color),name:'Панель ГРАНЬ САВАШ «Белый»',
     head:{W:36.5,vis:26.5,price:150,url:'https://ozon.ru/t/JHTewdc',name:'Финишная планка ГРАНЬ САВАШ «Белый»',strip:'finish'},
     tail:{W:26.5,vis:26.5,price:150,url:'https://ozon.ru/t/sZYUjbm',name:'Стартовая планка ГРАНЬ САВАШ «Белый»',strip:'start'}},
   graphite:{W:600,L:2780,t:9,base:3,n:16,slat:25,price:2600,url:'https://ozon.ru/t/bmatRZn',baseMat:pmat('#2F3033'),slatMat:pmat('#505256'),
     name:'Панель САВАШ «Графит»'},
-  rif:{W:116,vis:106,L:2800,t:16,fw:26.5,sag:6,shade:.8,price:650,url:'https://ozon.ru/t/7EiTlVS',slatMat:pmat('#CFC9BF',true),
-    name:'Реечная панель САВАШ РИФ «Кашемир Светлый»',
-    head:{W:37.5,vis:27.5,flat:1,price:150,url:'https://ozon.ru/t/ykncNDs',name:'Финишная планка САВАШ РИФ «Кашемир Светлый»',strip:'finish'}}};
+  rif:{W:116,vis:106,L:2800,t:16,fw:26.5,sag:6,shade:.8,price:700,url:'https://ozon.ru/t/mDz7lvE',slatMat:pmat('#4E5053',true),lineMat:plines('#4E5053'),
+    name:'Реечная панель САВАШ РИФ «Графит»',
+    head:{W:37.5,vis:27.5,flat:1,price:150,url:'https://ozon.ru/t/icfzz7l',name:'Финишная планка САВАШ РИФ «Графит»',strip:'finish'}}};
 // c: the LDSP's colour (WARD_COLORS), or ward: the wardrobe's (wardColor: it follows its clicks); over: the panels over it (BACK_PANELS)
-const WARD_BACKS=[{hdf:true},{c:0},{c:1},{c:1,over:'graphite'},{c:0,over:'gran'},{ward:true,over:'rif'}];
+const WARD_BACKS=[{hdf:true},{c:0},{c:1},{c:1,over:'graphite'},{ward:true,over:'rif'},{c:0,over:'gran'}];
 const backMats=makeMats();paintIn(backMats,WARD_COLORS[0]);   // the backs' own: the LDSP's colour, the HDF's 'back' as made
 const wardBack={i:0,at:()=>WARD_BACKS[wardBack.i],
   click(){const g0=wardGrow(),o0=wardBack.at().over;wardBack.i=(wardBack.i+1)%WARD_BACKS.length;wardBack.paint();
@@ -209,16 +211,14 @@ function wardSlats(g){
   const bp=backPanels(),{head,tail,pieces}=panelLay(),z0=wardAt()-bp.t,z1=wardAt(),H=WR.H;
   const q=new THREE.Group();q.userData.slats=true;q.userData.info=INFO.wardBack;q.userData.click=wardBack.click;g.add(q);
   const b=boxIn(q),box=(x0,x1,za,zb,mat)=>b(mm(x0),mm(x1),0,mm(H),mm(za),mm(zb),mat);
-  // a faceted piece over a–e: its profile (kitchen x, z) round from the back, the facets from the e end back to a, each high on the wall's side
-  // (e), down to the foot of its step at the next one's (a cut piece's last one as far as it goes)
-  // a piece of its profile pts (kitchen x, z; round from the back), floor to top: its edges as the furniture's (furniture.js: buildParts), as the LDSP's
-  // under it — only where its face turns more than thr°; its face darker the deeper (shade at deep under its full thickness, 1 at it), the back and
+  // a piece of its profile pts (kitchen x, z; round from the back), floor to top: its edges as the furniture's (furniture.js: buildParts), from its
+  // colour (lineMat) — only where its face turns more than thr°; its face darker the deeper (shade at deep under its full thickness, 1 at it), the back and
   // the ends' lower part as they are
   const piece=(pts,deep,thr=1)=>{
     const sh=new THREE.Shape();pts.forEach(([x,z],i)=>sh[i?'lineTo':'moveTo'](mm(x),-mm(z)));
     const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth:mm(H),bevelEnabled:false}),bp.slatMat);
     m.rotation.x=-Math.PI/2;m.castShadow=m.receiveShadow=true;m.userData.profile=pts.map(p=>p.map(v=>Math.round(v*10)/10));q.add(m);
-    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,thr),backMats.carcassLine);ed.raycast=()=>{};m.add(ed);
+    const ed=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry,thr),bp.lineMat);ed.raycast=()=>{};m.add(ed);
     const ps=m.geometry.attributes.position,c=[];
     for(let i=0;i<ps.count;i++){const o=-ps.getY(i)/MM-z0,k=o<.5?1:Math.max(0,Math.min(1,(o-bp.t+deep)/deep)),v=bp.shade+(1-bp.shade)*k;c.push(v,v,v);}
     m.geometry.setAttribute('color',new THREE.Float32BufferAttribute(c,3));

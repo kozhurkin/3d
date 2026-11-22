@@ -10,7 +10,7 @@ const SPICE_Y=1150;   // both shelves' bottom over the floor
 const OL={W:600,H:900,D:120,t:18,back:10,lv:{bottom:40,drawers:176,shelves:[400,630],top:842},rail:60,crest:40,wave:25,travel:80};
 let spiceModel=0;   // 0 the tiered one (SQ), shown at first; 1 the olive one
 const oliveFIN={carcass:{type:'uni',color:'#6B7A5C',name:'Оливковый'},front:{type:'uni',color:'#6B7A5C',name:'Оливковый'},top:{type:'uni',color:'#6B7A5C',name:'Оливковый'},apron:null};
-const oliveMats=makeMats();applyMaterials(oliveMats,oliveFIN,0);
+const oliveMats=makeMats();applyMaterials(oliveMats,oliveFIN,10);   // edge contrast as the tiered one
 const knobMat=new THREE.MeshStandardMaterial({color:0xf4f2ec,roughness:.25});
 // the drawers' openings between the sides and the two dividers
 const oliveBays=()=>{const {W,t}=OL,b=(W-4*t)/3;return [0,1,2].map(i=>[t+i*(b+t),t+i*(b+t)+b]);};

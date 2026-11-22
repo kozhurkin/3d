@@ -184,7 +184,9 @@ function applyContrast(mats,FIN,ec){
     if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
     e.needsUpdate=true;
   });
-  // the lines are unlit and see-through: their colour such that over the front they show the step; on wood a warm brown
+  /* the lines are unlit and see-through: their colour such that over the front they show the step; on wood a warm brown.
+     The step is reckoned on the front's colour, not on the front lit as the screen shows it; the opacity, set by eye, makes up for that:
+     the more see-through, the further the line's colour from the front's, so it shows under any light (a steady .75 left it lost) */
   const o=.25+.75*c,y=yOf('front'),yc=Math.min(1,Math.max(0,y+(ecStep(y,EC_LINE0+EC_LINE*c)-y)/o)),col=mats.edge.color;
   if(finOf(FIN,'front').type==='uni')col.copy(mats.front.color);else col.setRGB(1,.7,.47).multiplyScalar(y/colorLum(col));
   toLum(col,y,yc);mats.edge.opacity=o;

@@ -19,11 +19,12 @@ const WR={W:1364,D:964,C:964,d:500,H:2200,pl:70,t:16,ft:16,gap:2,strip:50,shelve
   mirror:{w:400,h:400,y0:1300,frame:10,d:20}};   // W along the wall, D out from it; C the corner unit's legs, d the depth;
    // the left part's shelves (evenly), the right part's top shelf and its rods (their axes), the rods' Ø; on the leg's end the mirror
    // (its frame, its bottom); the coat rail under it: HK
-// the wardrobe and the mezzanine, each in one finish all over, each its own: white or Диамант серый U963 ST9 (furniture.js: UNI, as the
-// bathroom's carcass) — the next one by a click on its panels (a door's click opens it) or by its card's «Следующий вариант →»; it stays through the kitchen's rebuilds.
+// the wardrobe and the mezzanine, each in one finish all over, each its own: white or grey (L* 45, a shade
+// darker than the bathroom's carcass U963) — the next one by a click on its panels (a door's click opens it) or by its card's
+// «Следующий вариант →»; it stays through the kitchen's rebuilds.
 // Of forms (the wardrobe: without and with the section on the leg's end) each in both colours: variant i — colour i % colours, form
 // ⌊i / colours⌋ (form); a new form builds the kitchen again
-const WARD_COLORS=[{type:'uni',color:'#F1F0EA',name:'Белый'},UNI.U963];
+const WARD_COLORS=[{type:'uni',color:'#F1F0EA',name:'Белый'},{type:'uni',color:'#676A6C',name:'Серый'}];
 const paintIn=(mats,f)=>applyMaterials(mats,{carcass:f,front:f,top:f,apron:null},30);   // mats in one finish f all over
 function colorSwitch(forms=1){
   const k=WARD_COLORS.length;
@@ -60,7 +61,7 @@ const BACK_PANELS={
     name:'Панель ГРАНЬ САВАШ «Белый»',
     head:{W:36.5,vis:26.5,price:150,url:'https://ozon.ru/t/JHTewdc',name:'Финишная планка ГРАНЬ САВАШ «Белый»',strip:'finish'},
     tail:{W:26.5,vis:26.5,price:150,url:'https://ozon.ru/t/sZYUjbm',name:'Стартовая планка ГРАНЬ САВАШ «Белый»',strip:'start'}},
-  graphite:{W:600,L:2780,t:9,base:3,n:16,slat:25,price:2600,url:'https://ozon.ru/t/bmatRZn',baseMat:pmat('#232427'),slatMat:pmat('#45474b'),
+  graphite:{W:600,L:2780,t:9,base:3,n:16,slat:25,price:2600,url:'https://ozon.ru/t/bmatRZn',baseMat:pmat('#2F3033'),slatMat:pmat('#505256'),
     name:'Панель САВАШ «Графит»'}};
 // c: the LDSP's colour (WARD_COLORS); over: the panels over it (BACK_PANELS)
 const WARD_BACKS=[{hdf:true},{c:0},{c:1},{c:1,over:'graphite'},{c:0,over:'gran'}];

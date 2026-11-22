@@ -30,9 +30,9 @@ check('living: угловой шкаф OZON 1364 × 964 у дивана — но
   const g0 = 'tt.item("wardrobe")';
   const col = () => { const w = wc(); return [w[2], w[4]]; };
   p.run(`infoOf(${g0}.children[0]).next()`);
-  assert.deepStrictEqual(col(), ['2/4', 'Цвет: Диамант серый U963 ST9.']);
+  assert.deepStrictEqual(col(), ['2/4', 'Цвет: Серый.']);
   const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick();
-  assert.deepStrictEqual(col(), ['2/4', 'Цвет: Диамант серый U963 ST9.'], 'through a rebuild');
+  assert.deepStrictEqual(col(), ['2/4', 'Цвет: Серый.'], 'through a rebuild');
   slide(p, 'bW', bW); p.tick();
   p.run(`clickOf({object:${g0}.children[0]})()`);
   assert.deepStrictEqual(col(), ['3/4', 'Цвет: Белый.'], 'a click: white again');
@@ -168,9 +168,9 @@ check('living: угловой шкаф — по клику вторая доп. 
   assert.deepStrictEqual(r.buy, [['Угловой 96,4 × 96,4 × 220', 1, 12000], ['Доп. секция 40 × 50 × 220', 2, 5500]]);
   // «next»: grey with it; through a rebuild; a click: back to white without it
   p.run(`infoOf(${g0}.children[0]).next()`);
-  r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0]], ['4/4', 'Цвет: Диамант серый U963 ST9.', [1886, 3250, 1890, 2390]]);
+  r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0]], ['4/4', 'Цвет: Серый.', [1886, 3250, 1890, 2390]]);
   const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick();
-  r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0][1] - r.boxes[0][0]], ['4/4', 'Цвет: Диамант серый U963 ST9.', 1364], 'through a rebuild (the right wall 200 further)');
+  r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0][1] - r.boxes[0][0]], ['4/4', 'Цвет: Серый.', 1364], 'through a rebuild (the right wall 200 further)');
   slide(p, 'bW', bW); p.tick();
   click();
   r = wr(); assert.deepStrictEqual([r.variant, r.lines[0], r.boxes[0], r.end.length, r.mirror], ['1/4', 'Цвет: Белый.', [2286, 3250, 1890, 2390], 0, [2266, 2286, 1940, 2340]]);
@@ -233,9 +233,9 @@ check('living: задняя стенка шкафа к дивану — клик
   // again: grey, the carcass stays white; through a rebuild
   backClick();
   r = wr();
-  assert.deepStrictEqual([r.lines, r.card[4], r.sv], [['Цвет: Белый.', 'ЛДСП 16 мм, Диамант серый U963 ST9 — из боковин ещё одной доп. секции.'], '3/5', null]);
+  assert.deepStrictEqual([r.lines, r.card[4], r.sv], [['Цвет: Белый.', 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.'], '3/5', null]);
   const bW = p.run('A.bW'); slide(p, 'bW', bW + 200); p.tick(); slide(p, 'bW', bW); p.tick();
-  assert.deepStrictEqual(wr().lines[1], 'ЛДСП 16 мм, Диамант серый U963 ST9 — из боковин ещё одной доп. секции.', 'through a rebuild');
+  assert.deepStrictEqual(wr().lines[1], 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.', 'through a rebuild');
   // the card's «next»: the slatted panels over the grey LDSP, 9 thick, their outer face at the sofa (2390): the wardrobe 9 more toward the kitchen wall
   // (21 in all), the racks' room 9 less. In a row from the leg's end, 600 wide, the last cut (360), 4 short of the wall, floor to top: a backing 3, 16 slats
   // 25 wide, 12.5 apart over it — the first flush with the panel's edge at the leg's end, the backing 12.5 past the last; 16 + 10 (the last one cut to 22.5).
@@ -249,7 +249,7 @@ check('living: задняя стенка шкафа к дивану — клик
     ends: [[2286, 2311, 2384, 2390], [3224, 3246, 2384, 2390]], own: true});
   assert.deepStrictEqual([new Set(r.leg), r.side, r.rods], [new Set([2365]), [480, 480], [2125, 2125]]);
   assert.deepStrictEqual([r.boxes, r.doors, r.rack, r.foot, r.mirror], [[[1869, 2381], [1005, 1885]], [1869, 1406, 1006], '100,5 см', [[2286, 3250, 1869, 2390]], [1930, 2330]]);
-  assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ЛДСП 16 мм, Диамант серый U963 ST9 — из боковин ещё одной доп. секции.'], [[
+  assert.deepStrictEqual([r.lines, r.card], [['Цвет: Белый.', 'ЛДСП 16 мм, Серый — из боковин ещё одной доп. секции.'], [[
     'Поверх — реечные панели на всю высоту шкафа, последняя обрезана по ширине.', k], null, null, 'Ozon', '4/5']]);
   assert.deepStrictEqual(r.buy, [['Доп. секция 40 × 50 × 220', 1, 5500, 'https://ozon.ru/t/BSIni7B'], ['Панель САВАШ «Графит» 2780 × 600 × 9', 2, 2600, 'https://ozon.ru/t/bmatRZn']]);
   // «next»: white LDSP with the modular panels ГРАНЬ, 16 thick, their outer face at the sofa: the wardrobe 16 more toward the kitchen wall (28 in all),
@@ -288,7 +288,7 @@ check('living: задняя стенка шкафа к дивану — клик
     ['Лист 2 задней стенки шкафа — у дивана', 'carcass', 2366, 2846, 2374, 2390, 0, 2200],
     ['Лист 3 задней стенки шкафа — у дивана', 'carcass', 2846, 3246, 2374, 2390, 74, 2200]]);
   assert.deepStrictEqual(r.card[0], ['Фасад — у стены, он ниже боковин: недостача внизу за диваном.', k]);
-  assert.deepStrictEqual([r.own, r.lines], [true, ['Цвет: Диамант серый U963 ST9.', 'ЛДСП 16 мм, Белый — из боковин и фасада ещё одной доп. секции.']]);
+  assert.deepStrictEqual([r.own, r.lines], [true, ['Цвет: Серый.', 'ЛДСП 16 мм, Белый — из боковин и фасада ещё одной доп. секции.']]);
   // two clicks more: «Графит» over the leg's whole rear, the end section's too (1360: 600, 600, the last cut to 160; 16 + 16 + 5 slats) — three of them
   backClick(); backClick();
   r = wr();
@@ -304,7 +304,7 @@ check('living: задняя стенка шкафа к дивану — клик
   // and one more: HDF — the leg's two sheets and the end section's, all theirs
   backClick();
   r = wr();
-  assert.deepStrictEqual([r.backs.map((q) => q[1]), r.own, r.lines], [['back', 'back', 'back'], true, ['Цвет: Диамант серый U963 ST9.', 'ХДФ 4 мм, из комплекта шкафа.']]);
+  assert.deepStrictEqual([r.backs.map((q) => q[1]), r.own, r.lines], [['back', 'back', 'back'], true, ['Цвет: Серый.', 'ХДФ 4 мм, из комплекта шкафа.']]);
   assert.strictEqual(r.sv, null);
 });
 
@@ -334,11 +334,11 @@ check('living: антресоль OZON над диваном — две секц
   // a click on it white again
   assert.deepStrictEqual([r.color, r.click], [['1/2', 'Цвет: Белый.'], true]);
   p.run(`infoOf(tt.item("mezzanine").children[0]).next()`);
-  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Белый.']);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Серый.'], 'Цвет: Белый.']);
   p.run(`clickOf({object:tt.item("wardrobe").children[0]})()`);
-  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Диамант серый U963 ST9.'], 'Цвет: Диамант серый U963 ST9.']);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['2/2', 'Цвет: Серый.'], 'Цвет: Серый.']);
   p.run(`clickOf({object:tt.item("mezzanine").children[0]})()`);
-  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['1/2', 'Цвет: Белый.'], 'Цвет: Диамант серый U963 ST9.']);
+  r = mz(); assert.deepStrictEqual([r.color, r.ward], [['1/2', 'Цвет: Белый.'], 'Цвет: Серый.']);
   // two doors a section, hinged at its ends, into the room
   assert.deepStrictEqual(r.doors, [[2391, 2889, 2391, -1, 0], [2891, 3389, 3389, 1, 0], [3391, 3889, 3391, -1, 0], [3891, 4389, 4389, 1, 0]]);
   p.document.querySelector('[data-panel="kitchen"] [data-door="open"]').click();

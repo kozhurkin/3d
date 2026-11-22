@@ -162,12 +162,22 @@ function applyMaterials(mats,FIN,ec){
   });
   applyContrast(mats,FIN,ec);
 }
-/* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*), so it reads alike on any finish. End faces EC_END·c,
-   joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show); darker than the finish, lighter on a dark one (L* < EC_DARK);
-   a little more on light finishes, less on dark: × EC_SCALE[0] at black to × EC_SCALE[1] at white */
-const EC_END=20,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3],EC_GROUPS=['carcass','front','top','apron','back'];
+/* ec: contrast of end faces and joint lines, %: a step in lightness (CIE L*), so it reads alike on any finish; darker than the finish,
+   lighter on a dark one (L* < EC_DARK). End faces EC_END·c on the screen: lit by EC_LIT (the light as made: the sky's .75 on an upright
+   face ≈ .56, the sun's at a slant) through the renderer's tone curve, which squeezes the light finishes and the darkest.
+   Joint lines EC_LINE0 + EC_LINE·c (at 0 too the outlines show) on the finish's colour, a little more on light finishes, less on dark:
+   × EC_SCALE[0] at black to × EC_SCALE[1] at white */
+const EC_END=20,EC_LIT=1,EC_LINE0=5,EC_LINE=17,EC_DARK=44,EC_SCALE=[.7,1.3],EC_GROUPS=['carcass','front','top','apron','back'];
 const lstar=y=>y>.008856?116*Math.cbrt(y)-16:903.3*y, lumOf=l=>l>8?Math.pow((l+16)/116,3):l/903.3;   // L* ↔ relative luminance
 const colorLum=s=>.2126*s.r+.7152*s.g+.0722*s.b;   // of a linear colour
+// the renderer's tone curve (three.js's ACES fit; its colour matrices keep a grey, so on the luminance) and its inverse (a quadratic's root)
+const aces=x=>(x*(x+.0245786)-.000090537)/(x*(.983729*x+.432951)+.238081);
+const acesInv=v=>{const a=1-.983729*v,b=.0245786-.432951*v,c=-(.000090537+.238081*v);return (-b+Math.sqrt(b*b-4*a*c))/(2*a);};
+// the luminance whose lit colour shows on the screen d (L*) off luminance y's
+const screenStep=(y,d)=>{
+  const k=EC_LIT*renderer.toneMappingExposure/.6,l=lstar(aces(y*k));
+  return acesInv(Math.min(.999,lumOf(l<EC_DARK?l+d:Math.max(0,l-d))))/k;
+};
 // the luminance a step d (L*) off luminance y
 const ecStep=(y,d)=>{const l=lstar(y);d*=EC_SCALE[0]+(EC_SCALE[1]-EC_SCALE[0])*l/100;return lumOf(l<EC_DARK?l+d:Math.max(0,l-d));};
 // a plain colour of luminance y brought to yt: lighter by adding grey (so black too), darker by scaling
@@ -182,7 +192,7 @@ function applyContrast(mats,FIN,ec){
     const f=k==='back'?{type:'uni'}:finOf(FIN,k);if(!f)return;
     const m=mats[k],l=mats[k+'Line'],y=colorLum(m.color)*(f.type==='wood'?hsl(DECORS[f.decor]):1);
     if(k!=='back'){
-      const e=mats[k+'End'],yt=ecStep(y,EC_END*c);
+      const e=mats[k+'End'],yt=screenStep(y,EC_END*c);
       e.map=m.map;e.roughness=m.roughness;e.color.copy(m.color);
       if(f.type==='uni')toLum(e.color,y,yt);else e.color.multiplyScalar(yt/y);   // wood: its picture scaled
       e.needsUpdate=true;

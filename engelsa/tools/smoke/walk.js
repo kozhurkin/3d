@@ -18,10 +18,10 @@ check('обход: в комнате у двери, в середине проё
   assert.deepStrictEqual(p.run(() => ({ view, ceil: ceiling.visible, doors: doorGroup.visible })), { view: 'walk', ceil: true, doors: true });
 });
 
-check('обход: диван не пускает; закрытая дверь не пускает, открытая — пускает', () => {
+check('обход: диван пускает (проходишь сквозь него до окна); закрытая дверь не пускает, открытая — пускает', () => {
   const p = open();
   hold(p, 'KeyW', 150);
-  near(eye(p)[2], 2.297 - 0.15, 'stopped at the sofa (by the left wall, 100 off the window)');
+  near(eye(p)[2], 4.797 - 0.15, 'through the sofa (by the left wall, from 2297), stopped at the window wall');
   drag(p, Math.PI / 0.0025); p.tick();
   hold(p, 'KeyW', 150);
   near(eye(p)[2], 0.15, 'stopped at the closed door');

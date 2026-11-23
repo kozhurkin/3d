@@ -1,7 +1,7 @@
 /* ---------- the sofa: IKEA MANSTAD, a corner sofa-bed, in green velour ----------
    2400 long, 1560 deep at its chaise, 900 high (as the shop gives it); the main part 950 deep, the chaise 900 wide; seat 450 high,
-   the armrest and the back frame 660. Its back against a side wall (A.sofaWall: 'left', right of the way in, or 'right', mirrored), the chaise at the window wall's end,
-   the armrest at the other end. Every part upholstered, its edges rounded (the cushions softer); on short dark legs.
+   the armrests and the back frame 660. Its back against a side wall (A.sofaWall: 'left', right of the way in, or 'right', mirrored), the chaise at the window wall's end,
+   an armrest at each end: the far one across the main part, the chaise's along its outer side, the whole 1560. Every part upholstered, its edges rounded (the cushions softer); on short dark legs.
    Built in its own frame (x along the wall from its left end as one faces the wall, y up, z out into the room; mm), stood against the
    wall by standAgainst (walls.js) */
 const SF={L:SOFA_L_,D:950,DC:1560,WC:900,H:900,ARM:200,ARMH:660,SEAT:450,LEG:40,BASE:330,BACK:200};
@@ -52,19 +52,20 @@ function buildSofa(){
     const m=new THREE.Mesh(new THREE.BoxGeometry(.04,LEG*MM,.04),sofaLeg);m.position.set(X(x)*MM,LEG/2*MM,z*MM);m.castShadow=true;g.add(m);});
   box(0,L,LEG,BASE,0,D,25);                     // the base along the back
   box(L-WC,L,LEG,BASE,D-60,DC,25);               // the chaise's base (into the main one)
-  box(0,ARM,LEG,ARMH,0,D,30);                    // the armrest
-  box(ARM,L,BASE-10,ARMH,0,BACK,30);             // the back frame
+  box(0,ARM,LEG,ARMH,0,D,30).userData.armrest=true;          // the armrest at the far end
+  box(L-ARM,L,LEG,ARMH,0,DC,30).userData.armrest=true;      // the chaise's, along its outer side
+  box(ARM,L-ARM,BASE-10,ARMH,0,BACK,30);        // the back frame
   box(ARM+5,L-WC,BASE,SEAT,BACK+10,D-5,45);      // the seat cushion
-  box(L-WC,L-5,BASE,SEAT,BACK+10,DC-5,45);       // the chaise's cushion
+  box(L-WC,L-ARM-5,BASE,SEAT,BACK+10,DC-5,45);   // the chaise's cushion
   // three back cushions on the seat against the back frame, leaning back a little
-  const cw=(L-ARM-10)/3;
+  const cw=(L-2*ARM-10)/3;
   [0,1,2].forEach(i=>{const m=box(ARM+5+i*cw,ARM+5+(i+1)*cw-6,SEAT-10,H-20,BACK-20,BACK+210,70);
     // the lean: turned about its lower front edge, its top back toward the wall
     const py=(SEAT-10)*MM,pz=(BACK+210)*MM;m.geometry.translate(0,-py,-pz);m.geometry.rotateX(-.12);m.geometry.translate(0,py,pz);});
   standAgainst(g,w,toWin==='right'?r1-r0-A.sofaGap-L:A.sofaGap);   // its back at the skirting board, its chaise's end sofaGap off the window wall
 }
 buildSofa();modelHooks.push(buildSofa);
-// where it stands (m), for the walk: the main part and the chaise
+// where it stands (m): the main part and the chaise (not an obstacle in the walk)
 function sofaBoxes(){
   const g=sofaGroup.children[0];if(!g)return [];
   const w=WALLS.find(v=>v.id===A.sofaWall),dir=w.face[1],right=!(dir[1]==='x'&&dir[0]==='+'),X=x=>right?x:SF.L-x;

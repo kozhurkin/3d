@@ -330,12 +330,13 @@ check('дверь: раскладка в стекле — стойка и две
   r.forEach((y) => assert.ok(y > 1050 && y < 1865, 'a bar at ' + y));
 });
 
-check('диван MANSTAD: у стены справа от входа спинкой к плинтусу, кушеткой к окну в 100 от его стены; кнопкой — зеркально у стены слева', () => {
+check('диван MANSTAD: у стены справа от входа спинкой к плинтусу, кушеткой к окну в 100 от его стены, подлокотники с обоих концов; кнопкой — зеркально у стены слева', () => {
   const p = open();
   const r = () => p.run(() => sofaBoxes().map((b) => b.map((v) => tt.mm(v))));
   assert.deepStrictEqual(r(), [[16, 966, 2297, 4697, 0, 900], [16, 1576, 3797, 4697, 0, 450]],
     'its back at the skirting board, its end 100 off the window wall; the main part 950 deep; the chaise 900 wide, 1560 out');
   assert.strictEqual(p.run(() => velour.map === undefined ? 'none' : 'map'), 'map');
+  assert.strictEqual(p.run(() => sofaGroup.children[0].children.filter((m) => m.userData.armrest).length), 2, 'an armrest at each end: the chaise\'s too');
   assert.deepStrictEqual(p.run(() => { const t = velourTexture(); return [t.repeat.x, t.repeat.y]; }), [1 / 1.2, 1 / 1.2], 'the velour\'s tile 1200: its repeats far apart');
   const btn = (v) => p.document.querySelector(`[data-sofa="${v}"]`);
   assert.strictEqual(btn('left').getAttribute('aria-pressed'), 'true');

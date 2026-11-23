@@ -467,3 +467,34 @@ check('«i» на сенсорном экране — по тапу у пред�
   const t0 = p.run(() => doors[0].t);
   tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== t0], [true, true]);
 });
+
+check('люстра «Диски» (MyLight, Ozon): по центру потолка, Ø 600, низ в 530 от потолка; видна, пока стены целые; кнопка «Нет» убирает', () => {
+  const p = open();
+  const r = p.run(() => {
+    const g = lampGroup.children[0], discs = [];
+    g.children.forEach((pv) => pv.children.forEach((q) => q.children.forEach((m) => { if (m.userData.disc) discs.push([pv, q, m]); })));
+    // each disc's lowest point and how far out it reaches (mm): its hanging point, the lean, its Ø along the tangent
+    const ext = DISC_TIERS.map(({ r, d, t, b }) => [Math.round(t + d * Math.cos(b)), Math.round(Math.hypot(r, d / 2))]);
+    return { at: [tt.mm(g.position.x), tt.mm(g.position.y), tt.mm(g.position.z)], kind: g.userData.lamp, n: discs.length,
+      low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), vis: lampGroup.visible,
+      on: document.querySelector('[data-lamp="discs"]').getAttribute('aria-pressed') };
+  });
+  assert.deepStrictEqual(r, { at: [1355, 3060, 2399], kind: 'discs', n: 52, low: 530, out: 297, vis: true, on: 'true' }, 'Ø 594 + glass ≈ 600');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 530, низ в 2530 от пола/);
+  p.document.querySelector('[data-lamp="none"]').click();
+  assert.deepStrictEqual(p.run(() => [A.lamp, lampGroup.children.length, document.querySelector('[data-lamp="none"]').getAttribute('aria-pressed')]), ['none', 0, 'true']);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /<dt>Люстра<\/dt><dd>нет<\/dd>/);
+  const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
+  w.run(() => setModel({ ...A, lamp: 'discs' }));
+  assert.strictEqual(w.run(() => lampGroup.visible), true, 'in the walk');
+  const wh = w.document.querySelector('[data-panel="walk"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); w.tick();
+  assert.strictEqual(w.run(() => lampGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
+});
+
+check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; размер, материал, лампы, место', () => {
+  const p = open();
+  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]); return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, next: !!c.next }; });
+  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', next: false,
+    lines: [['Размер', 'Ø 60, высота 53 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
+      ['Место', 'по центру потолка, низ в 2530 от пола']] });
+});

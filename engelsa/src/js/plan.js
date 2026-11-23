@@ -98,6 +98,7 @@ function renderFacts(){
         :`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены слева от входа, от угла у двери'}`)+
       row('Диван',`IKEA MANSTAD угловой, зелёный велюр: 2400 × 1560 × 900, у стены ${A.sofaWall==='left'?'справа':'слева'} от входа, спинкой к плинтусу, кушеткой к окну в ${A.sofaGap} от его стены`)+
       row('Потолок',`розетка-овал ${A.rosW} × ${A.rosD} по центру, длинной стороной вдоль боковых стен, листья как у лепнины`)+
+      row('Люстра',LAMPS[A.lamp]?`${LAMPS[A.lamp].info.title.replace(/ \(.*\)$/,'')}: Ø ${LAMPS[A.lamp].D}, высота ${LAMPS[A.lamp].H}, низ в ${H-LAMPS[A.lamp].H} от пола`:'нет')+
       row('Фотообои',`${A.muralW} × ${A.muralH} от плинтуса, ${({right:'слева от входа',left:'справа от входа',both:'на обеих длинных стенах'})[A.muralWall]}; на стене ${Math.min(A.muralW,A.L)}`)+
       row('Толщина стен',`с дверью ${A.tD}, боковые ${A.tS}, с окном ${A.tW}`,true)}</dl>`;
   pq('#pSub').textContent=`${A.W} × ${A.L} мм · ${area()} м² · потолок ${H}`;
@@ -148,11 +149,12 @@ function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f
   planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
   planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));
   planPanel.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));
+  planPanel.querySelectorAll('[data-lamp]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lamp===A.lamp));
   planPanel.querySelectorAll('[data-decor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.decor===A.decor));
   planPanel.querySelectorAll('[data-plcol]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.plcol===A.plColor));}
-// the wardrobe's and the sofa's walls, the false decor, the skirting board's colour: kept with the sizes (A.wardWall, A.sofaWall, A.decor,
-// A.plColor); not where they would not fit
-[['ward','wardWall'],['sofa','sofaWall'],['decor','decor'],['plcol','plColor']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
+// the wardrobe's and the sofa's walls, the chandelier, the false decor, the skirting board's colour: kept with the sizes (A.wardWall, A.sofaWall,
+// A.lamp, A.decor, A.plColor); not where they would not fit
+[['ward','wardWall'],['sofa','sofaWall'],['lamp','lamp'],['decor','decor'],['plcol','plColor']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
   const a={...A,[k]:b.dataset[d]},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}sizeMsg.textContent='';setModel(a);})));
 // the photo wallpaper's wall: kept with the sizes (A.muralWall)
 planPanel.querySelectorAll('[data-mural]').forEach(b=>b.addEventListener('click',()=>{

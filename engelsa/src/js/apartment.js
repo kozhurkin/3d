@@ -22,6 +22,7 @@ const APT_A={
                                                           // right corner); its width, depth, height
   sofaWall:'left', sofaGap:100,     // the sofa (IKEA MANSTAD): its back to this side wall ('left': right of the way in), its chaise toward the window;
                                     // its back at the skirting board, the chaise's end this far off the window wall
+  lamp:'discs',                     // the chandelier at the ceiling's middle: which one (lamp.js: LAMPS), 'none' without
   rosW:550, rosD:450,               // the ceiling rose, an oval in the middle of the ceiling: along the side walls, across them
   ropeH:11,                         // the twisted rope trim round the room right over the photo wallpaper's top: its height (6 deep);
                                     // the wallpaper up to its bottom, the wall over it up to the cornice white

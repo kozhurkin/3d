@@ -294,13 +294,44 @@ check('шкаф: кнопкой в панели — к стене с дверь�
   assert.match(p.document.getElementById('pSizeMsg').textContent, /Шкаф/);
 });
 
+check('плинтус: ползунок в панели под «Фальш-декор», 70–150 (70 по умолчанию); выше плинтус — выше фотообои и молдинг над ними', () => {
+  const p = open(), sl = p.document.querySelector('#pPlinth [data-size="plH"]');
+  assert.deepStrictEqual([...['min', 'max', 'step'].map((k) => sl.getAttribute(k)), String(sl.value)], ['70', '150', '10', '70']);
+  assert.strictEqual(p.document.querySelector('#pSizes [data-size="plH"]'), null, 'not in «Размеры стен» too');
+  const at = () => p.run(() => { const y = (q) => [...new Set(wallParts.filter(q).map((w) => [tt.mm(w.b), tt.mm(w.t)].join('–')))];
+    return { pl: y((w) => w.kind === 'plinth'), mural: y((w) => w.photo), mold: y((w) => w.kind === 'mold') }; });
+  assert.deepStrictEqual(at(), { pl: ['0–70'], mural: ['70–2770'], mold: ['2770–2805'] });
+  slide(p, 'plH', 150);
+  assert.deepStrictEqual([p.run(() => A.plH), at()], [150, { pl: ['0–150'], mural: ['150–2850'], mold: ['2850–2885'] }], 'the moulding still under the cornice (2950)');
+});
+
+check('плинтус: под «Диваном»; цвет плашками, как у стен — дерево (по умолчанию, как дверь), белый, бежевый, тауп', () => {
+  const p = open(), hs = [...PAGES.app.matchAll(/<h3>([^<$]+)<\/h3>/g)].map((m) => m[1]);
+  assert.strictEqual(hs.indexOf('Плинтус'), hs.indexOf('Диван') + 1, hs.join(', '));
+  const mat = () => p.run(() => { const m = wallParts.filter((w) => w.kind === 'plinth').map((w) => w.m.material);
+    return [A.plColor, new Set(m).size, m[0] === woodMat ? 'wood' : Object.keys(plinthPaint).find((k) => plinthPaint[k] === m[0]),
+      document.querySelector(`[data-plcol="${A.plColor}"]`).getAttribute('aria-pressed')]; });
+  assert.deepStrictEqual(mat(), ['wood', 1, 'wood', 'true']);
+  p.document.querySelector('[data-plcol="white"]').click();
+  assert.deepStrictEqual(mat(), ['white', 1, 'white', 'true']);
+  p.document.querySelector('[data-plcol="beige"]').click();
+  assert.deepStrictEqual(mat(), ['beige', 1, 'beige', 'true']);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /плинтус 70 бежевый/);
+  const sw = p.run(() => [...document.querySelectorAll('#pPlCol [data-plcol]')].map((b) => [b.className, b.dataset.plcol]));
+  assert.deepStrictEqual(sw, [['wc', 'wood'], ['wc', 'white'], ['wc', 'beige'], ['wc', 'taupe']], 'the walls\' swatch buttons');
+  p.document.querySelector('[data-plcol="taupe"]').click();
+  assert.deepStrictEqual(mat(), ['taupe', 1, 'taupe', 'true']);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /плинтус 70 тауп/);
+  assert.strictEqual(p.run(() => doors[0].g.children.some((m) => m.material === woodMat)), true, 'the door stays wood');
+});
+
 check('шкаф: карточка «i» — «Сеул» с Wildberries, угловой — «Уютная логика» с Ozon (угловой и две доп. секции)', () => {
   const p = open();
   const card = () => p.run(() => { const i = infoOf(wardGroup.children[0].children[0]);
     return { t: i.title, shop: i.shop, price: i.price || 0, buy: (i.buy || []).map((b) => [b.name, b.n || 1, b.price]), lines: i.lines.length }; });
-  assert.deepStrictEqual(card(), { t: 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', shop: 'Wildberries', price: 27655, buy: [], lines: 6 });
+  assert.deepStrictEqual(card(), { t: 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', shop: 'Wildberries', price: 27655, buy: [], lines: 5 });
   p.document.querySelector('[data-ward="corner"]').click();
-  assert.deepStrictEqual(card(), { t: 'Угловой шкаф «Уютная логика» (Ozon)', shop: 'Ozon', price: 0, lines: 6,
+  assert.deepStrictEqual(card(), { t: 'Угловой шкаф «Уютная логика» (Ozon)', shop: 'Ozon', price: 0, lines: 5,
     buy: [['Угловой 96,4 × 96,4 × 260', 1, 24845], ['Доп. секция 40 × 50 × 260', 2, 9577]] });
   p.run(() => openItemCard(infoOf(wardGroup.children[0])));
   const el = p.document.getElementById('itemCard'), buys = el.children[el.children.length - 1];
@@ -309,26 +340,42 @@ check('шкаф: карточка «i» — «Сеул» с Wildberries, угл�
     '24 845 + 2 × 9 577');
 });
 
-check('шкаф: в карточке ссылка на следующий вариант — «Слева», «У двери», «Угловой» по кругу, как кнопки панели', () => {
+check('шкаф: в карточке ссылка на следующий вариант — «Слева», «У двери», «Угловой 1», «Угловой 2» по кругу, как кнопки панели', () => {
   const p = open(), el = p.document.getElementById('itemCard');
   const next = () => el.children.find((c) => c.className === 'next');
   const at = () => [p.run(() => A.wardWall), next().children[0].textContent, el.children[1].textContent,
     p.document.querySelector(`[data-ward="${p.run(() => A.wardWall)}"]`).getAttribute('aria-pressed')];
   p.run(() => openItemCard(infoOf(wardGroup.children[0])));
-  assert.deepStrictEqual(at(), ['right', '1/3', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
+  assert.deepStrictEqual(at(), ['right', '1/4', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
   const go = () => next().children[1].click();
-  go(); assert.deepStrictEqual(at(), ['door', '2/3', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
-  assert.strictEqual(el.children[4].textContent, 'У стены с дверью, в правом углу.');
-  go(); assert.deepStrictEqual(at(), ['corner', '3/3', 'Угловой шкаф «Уютная логика» (Ozon)', 'true']);
+  go(); assert.deepStrictEqual(at(), ['door', '2/4', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
+  assert.deepStrictEqual(el.children[2].children.slice(-2).map((c) => c.textContent), ['Место', 'у стены с дверью']);
+  go(); assert.deepStrictEqual(at(), ['corner1', '3/4', 'Угловой шкаф «Уютная логика» (Ozon)', 'true']);
+  go(); assert.deepStrictEqual(at(), ['corner', '4/4', 'Угловой шкаф «Уютная логика» (Ozon)', 'true']);
   assert.deepStrictEqual(p.run(() => wardrobeBoxes().length), 2, 'the corner one built');
   go(); assert.deepStrictEqual(at()[0], 'right');
 });
 
-check('шкаф: в карточке объём — «Сеул» ≈ 1842 л внутри (2106 снаружи), угловой с секциями ≈ 2505 (2896)', () => {
-  const p = open(), vol = () => p.run(() => infoOf(wardGroup.children[0]).lines.find((t) => t.startsWith('Объём')));
-  assert.strictEqual(vol(), 'Объём внутри ≈ 1842 л (снаружи 2106 л).');
+check('шкаф: в карточке объём жирным — «Сеул» ≈ 1842 л внутри (2106 снаружи), угловой с секциями ≈ 2505 (2896); строки «название — значение»', () => {
+  const p = open(), vol = () => p.run(() => [infoOf(wardGroup.children[0]).lines.find((t) => t[0] === 'Объём'), wardVolume()]);
+  assert.deepStrictEqual(vol(), [['Объём', '≈ 1842 л', true], { in: 1842, out: 2106 }]);
   p.document.querySelector('[data-ward="corner"]').click();
-  assert.strictEqual(vol(), 'Объём внутри ≈ 2505 л (снаружи 2896 л).', 'the L footprint 1,114 m² by 2600');
+  assert.deepStrictEqual(vol(), [['Объём', '≈ 2505 л', true], { in: 2505, out: 2896 }], 'the L footprint 1,114 m² by 2600');
+  p.run(() => openItemCard(infoOf(wardGroup.children[0])));
+  const props = p.document.getElementById('itemCard').children[2];
+  assert.deepStrictEqual([props.className, props.children.map((c) => c.tagName + ':' + c.textContent).slice(6, 8)], ['props', ['SPAN:Объём', 'B:≈ 2505 л']]);
+});
+
+check('шкаф «Угловой 1»: без доп. секции у стены с фотообоями — 964 вдоль неё, 1364 вдоль стены с дверью; 6 дверей; одна секция в карточке', () => {
+  const p = open();
+  p.document.querySelector('[data-ward="corner1"]').click();
+  const r = p.run(() => ({ w: A.wardWall, boxes: wardrobeBoxes().map((b) => b.map((v) => tt.mm(v))), doors: furnDoors.length, bad: aptProblems(A),
+    on: document.querySelector('[data-ward="corner1"]').getAttribute('aria-pressed'), v: wardVolume() }));
+  assert.deepStrictEqual(r, { w: 'corner1', boxes: [[1330, 2694, 16, 516, 0, 2600], [2194, 2694, 516, 980, 0, 2600]], doors: 6, bad: [], on: 'true',
+    v: { in: 2069, out: 2376 } }, 'the door wall\'s run as the 2-section one; the left wall\'s ends at 16 + 964');
+  const i = p.run(() => { const c = infoOf(wardGroup.children[0]); return [c.lines[1][1], c.buy.map((b) => [b.n || 1, b.price])]; });
+  assert.deepStrictEqual(i, ['угловой 96,4 × 96,4 и секция 40 × 50, высота 260 см', [[1, 24845], [1, 9577]]]);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /964 вдоль стены слева/);
 });
 
 check('шкаф угловой в углу у двери, как в основном проекте: модуль 964 × 964 и доп. секции по 400 с обеих сторон (1364 вдоль стен), штанги у стены слева, сверху антресоль 400', () => {

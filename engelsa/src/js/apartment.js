@@ -14,9 +14,10 @@ const APT_A={
   winW:1200, winS:900, winT:2950,   // the window, centred in the wall opposite the door: width, sill and top from the floor
   tD:120, tS:120, tW:400,           // walls: the door wall, the side walls, the window wall (outer)
   cornH:110, plH:70,                // the cornice under the ceiling: its drop down the wall; the skirting board: its height
+  plColor:'wood',                   // the skirting board's colour: 'wood' (as the door), 'white', 'beige', 'taupe' (walls.js: PLINTH_C)
   muralWall:'right', muralW:5000, muralH:2700,  // the photo wallpaper: on which wall ('right' is left of the way in; 'both': both side walls), its width and height,
                                                 // from the skirting board's top up, glued from the left corner as one faces the wall (the rest cut off)
-  wardC:964, wardAdd:400,           // the corner wardrobe ('corner'): its corner unit's legs, the add-on section on each side (wardrobe.js: WC)
+  wardC:964, wardAdd:400,           // the corner wardrobe ('corner', 'corner1'): its corner unit's legs, an add-on section (wardrobe.js: WC)
   wardWall:'right', wardW:1601, wardD:506, wardH:2600,   // the wardrobe: at the photo wallpaper's wall at its left end ('door': the door wall's
                                                           // right corner); its width, depth, height
   sofaWall:'left', sofaGap:100,     // the sofa (IKEA MANSTAD): its back to this side wall ('left': right of the way in), its chaise toward the window;
@@ -30,6 +31,9 @@ const APT_A={
                                     // as its sky (walls.js: MURAL_TOP)
 };
 // the false decor's height (mm): the rope's, the moulding's or none
+/* the corner wardrobe: 'corner' with an add-on section along the door wall and one along the left wall (the photo wallpaper's),
+   'corner1' without that one (wardrobe.js: wardCorner) */
+const wardIsCorner=a=>a.wardWall==='corner'||a.wardWall==='corner1',wardAddLeft=a=>a.wardWall==='corner'?a.wardAdd:0;
 const decorH=A=>A.decor==='thin'?A.ropeH:A.decor==='plain'?A.moldH:0;
 const CW=70,CT=10,LT=10,PL_T_=16,SOFA_L_=2400;   // … ; PL_T_: the skirting board's thickness (walls.js: PL_T); SOFA_L_: the sofa's length (sofa.js: SF.L)   // door casings: width, thickness; the lining through the wall between them: thickness
 
@@ -71,9 +75,9 @@ function aptProblems(a){
   if(A.winT>A.H-A.cornH)out.push('Окно заходит под лепнину');
   if(A.plH>A.winS&&A.winS>0)out.push('Плинтус выше подоконника');
   if(A.wardWall==='door'&&A.W-PL_T_-A.wardW<dB)out.push('Шкаф у стены с дверью заходит на проём');
-  if(A.wardWall==='corner'&&A.W-PL_T_-A.wardC-A.wardAdd<dB)out.push('Угловой шкаф заходит на проём');
+  if(wardIsCorner(A)&&A.W-PL_T_-A.wardC-A.wardAdd<dB)out.push('Угловой шкаф заходит на проём');
   // the wardrobe from the door's end of the left wall, the sofa from its window end
-  const wardOnLeft=A.wardWall==='right'?A.wardW:A.wardWall==='corner'?A.wardC+A.wardAdd:0;   // how far the wardrobe runs along the left wall
+  const wardOnLeft=A.wardWall==='right'?A.wardW:wardIsCorner(A)?A.wardC+wardAddLeft(A):0;   // how far the wardrobe runs along the left wall
   if(wardOnLeft&&A.sofaWall==='right'&&PL_T_+wardOnLeft>A.L-A.sofaGap-SOFA_L_)out.push('Шкаф и диван у одной стены не помещаются');
   if(A.plH+A.muralH+decorH(A)>A.H-A.cornH)out.push(decorH(A)?'Фотообои с декором над ними заходят под лепнину':'Фотообои заходят под лепнину');
   return out;

@@ -206,7 +206,13 @@ function openItemCard(info){
   itemCard.innerHTML='';
   const x=document.createElement('button');x.className='x';x.setAttribute('aria-label','Закрыть');x.textContent='×';x.addEventListener('click',closeItemCard);
   const h=document.createElement('h3');h.textContent=info.title;itemCard.appendChild(x);itemCard.appendChild(h);
-  (info.lines||[]).forEach(t=>{const p=document.createElement('p');p.textContent=t;itemCard.appendChild(p);});
+  // a line: a paragraph, or [name, value, bold] — a row of a two-column block (props: the names under each other), the value bold if asked
+  let props=null;
+  (info.lines||[]).forEach(t=>{
+    if(!Array.isArray(t)){props=null;const p=document.createElement('p');p.textContent=t;itemCard.appendChild(p);return;}
+    if(!props){props=document.createElement('div');props.className='props';itemCard.appendChild(props);}
+    const k=document.createElement('span');k.className='k';k.textContent=t[0];
+    const v=document.createElement(t[2]?'b':'span');v.textContent=t[1];props.appendChild(k);props.appendChild(v);});
   // a thing with variants (info.next: hangs the next one, gives its card; info.variant: [which, how many]): a line under the others,
   // which of how many and a link to the next one; the card turns to it
   if(typeof info.next==='function'){const p=document.createElement('p');p.className='next';

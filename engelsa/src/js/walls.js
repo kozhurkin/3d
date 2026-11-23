@@ -97,6 +97,12 @@ const WOOD_TILE=[1.3,2.3];
 const woodTex=new THREE.TextureLoader().load(WOOD_JPG);woodTex.wrapS=woodTex.wrapT=THREE.RepeatWrapping;woodTex.encoding=THREE.sRGBEncoding;woodTex.anisotropy=8;
 woodTex.repeat.x=1/WOOD_TILE[0];woodTex.repeat.y=1/WOOD_TILE[1];
 const woodMat=new THREE.MeshStandardMaterial({map:woodTex,roughness:.55});
+/* the skirting board: wood as the door, or painted white (as the cornice), beige or taupe (A.plColor; swatches in the plan's panel:
+   n its name, p its swatch and its paint, sRGB) */
+const PLINTH_C={wood:{n:'Дерево'},white:{n:'Белый',p:'#f3f1ec'},beige:{n:'Бежевый',p:'#d9c9ae'},taupe:{n:'Тауп',p:'#9e9484'}};
+const plinthPaint={white:trimMat,...Object.fromEntries(['beige','taupe'].map(k=>
+  [k,new THREE.MeshStandardMaterial({color:new THREE.Color(PLINTH_C[k].p).convertSRGBToLinear(),roughness:.55})]))};
+const plinthMat=()=>plinthPaint[A.plColor]||woodMat;
 // a box w × h × d (m), its UVs in metres on every face, v along the face's longer side (the grain along the plank)
 function woodBoxUV(g,w,h,d){
   const uv=g.attributes&&g.attributes.uv;if(!uv||typeof uv.getX!=='function')return g;
@@ -216,7 +222,7 @@ function trimMesh(kind,w,a,b,y0,h){
   // the profile's s goes into the room: +x as built; turned so it goes the face's way, the run along the wall
   g.rotateY(alongX?-sg*Math.PI/2:(sg>0?0:Math.PI));
   if(g.center)g.center();
-  const m=new THREE.Mesh(g,kind==='plinth'?woodMat:trimMat);m.castShadow=m.receiveShadow=true;
+  const m=new THREE.Mesh(g,kind==='plinth'?plinthMat():trimMat);m.castShadow=m.receiveShadow=true;
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,T.lines),edgeMat);e.raycast=()=>{};m.add(e);   // a relief: its outline, not every leaf and twist
   const box=alongX?[a,b,...[at,at+sg*depth].sort((p,q)=>p-q)]:[...[at,at+sg*depth].sort((p,q)=>p-q),a,b];
   m.position.set((box[0]+box[1])/2*MM,(y0+h/2)*MM,(box[2]+box[3])/2*MM);

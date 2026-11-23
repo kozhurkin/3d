@@ -1,5 +1,6 @@
 /* ---------- the wardrobe: 1601 × 2600 × 506, against the left wall (as one comes in) at its door end, or against the door wall in its
-   right corner; or a corner one in that same corner, 1364 along each wall (A.wardWall: 'right', 'door', 'corner'; set in the plan's panel) ----------
+   right corner; or a corner one in that same corner, 1364 along each wall, or 964 along the left one without its add-on section there
+   (A.wardWall: 'right', 'door', 'corner', 'corner1'; set in the plan's panel) ----------
    The straight one: taupe outside, cream inside. Below a plinth; the main case on four hinged doors (the left door hinged on the left,
    the middle pair from the middle out, the right door on the right) and three black edge handles where they meet, one at each meeting:
    the middle one on the left door of the pair, the right one of it opens by a push; on top a cupboard on four doors without handles.
@@ -70,11 +71,11 @@ function wardCase(w,W,off){
    the back) between them, all as deep; the HDF back over their rear edges, in from them. The stile: a strip WC.strip wide in each front's
    plane. The doors over the plinth: the corner unit's two hinged at their outer ends, up to the strips; each section's at its far end.
    A black edge handle on each at its free end (as the shop's picture). The mezzanine the same over it, no plinth, its doors without
-   handles. World axes (mm), no turn */
+   handles. 'corner1': without the add-on section along the left wall (the photo wallpaper's). World axes (mm), no turn */
 const WC={d:500,mz:400,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[1590,860],rod:25,hdf:4,hdfIn:2};
 function wardCorner(){
   const {d,mz,pl,t,ft,gap,strip:sw,hdf,hdfIn}=WC,C=A.wardC,Ad=A.wardAdd,Hh=A.wardH,Hl=Hh-mz,cd=d-ft;   // Hl: the lower part's top; cd: a carcass's depth behind its doors
-  const X=A.W-PL_T,Z=PL_T;   // the left wall's face and the door wall's, the skirting boards kept
+  const X=A.W-PL_T,Z=PL_T,AdL=wardAddLeft(A);   // the left wall's face and the door wall's, the skirting boards kept; the section along the left wall
   const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;g.userData.info=wardInfo;
   const box=(x0,x1,y0,y1,z0,z1,mat,lines=true,par=g)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1-x0)*MM,(y1-y0)*MM,Math.abs(z1-z0)*MM),mat);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
@@ -95,7 +96,7 @@ function wardCorner(){
   const part=(y0,y1,lower)=>{
     const n=WC.shelves,st=(y1-pl-2*t-n*t)/(n+1),shelfY=lower?[...Array(n)].map((_,i)=>Math.round(pl+t+(i+1)*st+i*t)):[];
     carcass(Z,Z+C,y0,y1,false,lower?[WC.top]:[],lower);carcass(X-C,X-cd,y0,y1,true,shelfY,lower);   // the corner unit: the leg, the other one
-    carcass(X-C-Ad,X-C,y0,y1,true,shelfY,lower);carcass(Z+C,Z+C+Ad,y0,y1,false,shelfY,lower);      // the add-on sections
+    carcass(X-C-Ad,X-C,y0,y1,true,shelfY,lower);if(AdL)carcass(Z+C,Z+C+Ad,y0,y1,false,shelfY,lower);   // the add-on sections
     const fy0=(lower?pl:y0)+gap,fy1=y1-gap,[hw,ht,hb]=WD.HANDLE;
     box(xF,xF+ft,fy0,fy1,zF,zF+sw,wardOut);box(xF-sw,xF+ft,fy0,fy1,zF-ft,zF,wardOut);   // the stile: the leg's strip, the other's over the corner
     // a door a0…a1 along the door wall (dw) or the left wall, hinged at h (one of its ends); its handle at the other
@@ -109,7 +110,7 @@ function wardCorner(){
       furnDoors.push({g:p,h:(fy1-fy0)*MM,t:0,a:0,max:1.6,s:hx?-1:1,wardrobe:true});
     };
     door(X-C+gap/2,xF-sw-gap,true,X-C+gap/2);door(zF+sw+gap,Z+C-gap/2,false,Z+C-gap/2);   // the corner unit's
-    door(X-C-Ad+gap/2,X-C-gap/2,true,X-C-Ad+gap/2);door(Z+C+gap/2,Z+C+Ad-gap/2,false,Z+C+Ad-gap/2);   // the sections'
+    door(X-C-Ad+gap/2,X-C-gap/2,true,X-C-Ad+gap/2);if(AdL)door(Z+C+gap/2,Z+C+Ad-gap/2,false,Z+C+Ad-gap/2);   // the sections'
   };
   part(0,Hl,true);part(Hl,Hh,false);
   // the rods in the leg: from side to side (along z), in the middle of its depth behind the door
@@ -117,44 +118,45 @@ function wardCorner(){
   WC.rods.forEach(y=>{const r=new THREE.Mesh(new THREE.CylinderGeometry(WC.rod/2*MM,WC.rod/2*MM,(C-2*t)*MM,20),wardRail);
     r.rotation.x=Math.PI/2;r.position.set(x*MM,y*MM,(Z+C/2)*MM);r.castShadow=true;r.userData.rod=true;g.add(r);});
   // where it stands: along the door wall and along the left wall, [x0,x1,z0,z1,y0,y1] (m)
-  g.userData.boxes=()=>[[X-C-Ad,X,Z,zF,0,Hh],[xF,X,zF,Z+C+Ad,0,Hh]].map(b=>b.map(v=>v*MM));
+  g.userData.boxes=()=>[[X-C-Ad,X,Z,zF,0,Hh],[xF,X,zF,Z+C+AdL,0,Hh]].map(b=>b.map(v=>v*MM));
 }
-/* its card («i»): the straight one is «Сеул» (Wildberries), the corner one «Уютная логика» (Ozon): the corner unit and two add-on sections.
+/* its card («i»): the straight one is «Сеул» (Wildberries), the corner one «Уютная логика» (Ozon): the corner unit and two add-on sections
+   (one in 'corner1').
    Its variants are the plan panel's (WARD_WALLS, in the buttons' order): the card's link puts the next one that fits and turns to its card */
 const wardCm=v=>String(v/10).replace('.',',');
-const WARD_WALLS=['right','door','corner'];
+const WARD_WALLS=['right','door','corner1','corner'];
 function nextWard(){
   const i=WARD_WALLS.indexOf(A.wardWall);
   for(let k=1;k<WARD_WALLS.length;k++){const a={...A,wardWall:WARD_WALLS[(i+k)%WARD_WALLS.length]};if(!aptProblems(a).length){setModel(a);break;}}
   return wardInfo();
 }
-/* its volume (l): outside its footprint by its height; inside its carcasses' insides (no sides, partitions, plinth, doors, back), shelves kept in */
+/* its volume (l): out — its footprint by its height; in — its carcasses' insides (no sides, partitions, plinth, doors, back), shelves kept in */
 function wardVolume(){
   const H=A.wardH,l=v=>Math.round(v/1e6);
-  if(A.wardWall==='corner'){const {d,mz,pl,t,ft,hdf}=WC,C=A.wardC,Ad=A.wardAdd,cd=d-ft,Hl=H-mz;
-    return {out:l(((C+Ad)*d+(C+Ad-d)*d)*H),in:l(((C-2*t)+(C-cd-2*t)+2*(Ad-2*t))*(cd-hdf)*((Hl-pl-2*t)+(mz-2*t)))};}
+  if(wardIsCorner(A)){const {d,mz,pl,t,ft,hdf}=WC,C=A.wardC,Ad=A.wardAdd,AdL=wardAddLeft(A),n=AdL?2:1,cd=d-ft,Hl=H-mz;
+    return {out:l(((C+Ad)*d+(C+AdL-d)*d)*H),in:l(((C-2*t)+(C-cd-2*t)+n*(Ad-2*t))*(cd-hdf)*((Hl-pl-2*t)+(mz-2*t)))};}
   const {T,BACK,FRONT,PLINTH,TOP}=WD,W=A.wardW,D=A.wardD;
   return {out:l(W*D*H),in:l((W-4*T)*(D-FRONT-BACK)*((H-TOP-PLINTH-2*T)+(TOP-2*T)))};
 }
+// its lines as [name, value] (a row each, engine.js: openItemCard), the volume in bold
 function wardInfo(){
-  const v=wardVolume(),vol=`Объём внутри ≈ ${v.in} л (снаружи ${v.out} л).`;
-  const H=wardCm(A.wardH),push='Двери открываются нажатием.',page={next:nextWard,variant:[WARD_WALLS.indexOf(A.wardWall)+1,WARD_WALLS.length]};
-  if(A.wardWall==='corner')return {...page,title:'Угловой шкаф «Уютная логика» (Ozon)',shop:'Ozon',lines:['ЛДСП 16 мм, задние стенки — ХДФ.',
-    `Угловой ${wardCm(A.wardC)} × ${wardCm(A.wardC)} см и доп. секция ${wardCm(A.wardAdd)} × ${wardCm(WC.d)} см с каждой стороны; высота ${H} см, антресоль ${wardCm(WC.mz)} см.`,
-    'В углу у двери, вдоль двух стен.','В угловом — две штанги для вешалок с полкой над ними и четыре полки; в доп. секциях по четыре полки.',vol,push],
+  const H=wardCm(A.wardH),vol=['Объём',`≈ ${wardVolume().in} л`,true],page={next:nextWard,variant:[WARD_WALLS.indexOf(A.wardWall)+1,WARD_WALLS.length]};
+  if(wardIsCorner(A)){const n=wardAddLeft(A)?2:1;
+    return {...page,title:'Угловой шкаф «Уютная логика» (Ozon)',shop:'Ozon',lines:[['Материал','ЛДСП 16 мм, задник ХДФ'],
+    ['Размер',`угловой ${wardCm(A.wardC)} × ${wardCm(A.wardC)} и ${n===2?'2 секции':'секция'} ${wardCm(A.wardAdd)} × ${wardCm(WC.d)}, высота ${H} см`],
+    ['Внутри','2 штанги, полки'],vol,['Место',n===2?'в углу у двери':'в углу у двери, секция у стены с дверью']],
     buy:[{name:`Угловой 96,4 × 96,4 × ${H}`,price:24845,url:'https://ozon.ru/t/8LDmimL'},
-      {name:`Доп. секция 40 × 50 × ${H}`,n:2,price:9577,url:'https://ozon.ru/t/N0IGKwe'}]};
+      {name:`Доп. секция 40 × 50 × ${H}`,n,price:9577,url:'https://ozon.ru/t/N0IGKwe'}]};}
   return {...page,title:'Шкаф для одежды «Сеул» с антресолью (Wildberries)',price:27655,shop:'Wildberries',
-    url:'https://www.wildberries.ru/catalog/530234305/detail.aspx',lines:['ЛДСП 16 мм, цвет «Меланж».',
-      `${wardCm(A.wardW)} × ${wardCm(A.wardD)} см, высота ${H} см; антресоль ${wardCm(WD.TOP)} см.`,
-      A.wardWall==='door'?'У стены с дверью, в правом углу.':'У стены слева от входа, от угла у двери.',
-      'Внутри: по краям по пять полок, посередине штанга, полки и два ящика.',vol,push]};
+    url:'https://www.wildberries.ru/catalog/530234305/detail.aspx',lines:[['Материал','ЛДСП 16 мм, «Меланж»'],
+      ['Размер',`${wardCm(A.wardW)} × ${wardCm(A.wardD)}, высота ${H} см`],['Внутри','полки, штанга, 2 ящика'],vol,
+      ['Место',A.wardWall==='door'?'у стены с дверью':'у стены слева от входа']]};
 }
 // where on a wall the straight one stands: from the left end as one faces the wall, or in the right corner
 const WARD_AT={right:'left',left:'left',door:'right',window:'left'};
 function buildWardrobe(){
   emptyGroup(wardGroup,false);furnDoors.length=0;
-  if(A.wardWall==='corner')return wardCorner();
+  if(wardIsCorner(A))return wardCorner();
   const w=wallById(A.wardWall);if(!w)return;
   const [r0,r1]=w.run;wardCase(w,A.wardW,WARD_AT[w.id]==='right'?r1-r0-PL_T-A.wardW:PL_T);   // the skirting board at the corner kept
 }

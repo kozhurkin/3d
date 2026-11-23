@@ -52,6 +52,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14
 .item-card{position:absolute;z-index:5;width:min(280px,calc(100% - 16px));box-sizing:border-box;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font:400 12px/1.45 var(--f-body);color:var(--fg);box-shadow:0 4px 16px rgba(0,0,0,.2)}
 .item-card h3{margin:0 22px 4px 0;font:600 13px/1.3 var(--f-body)}
 .item-card p{margin:2px 0 0;color:var(--muted)}
+.item-card .props{display:grid;grid-template-columns:auto 1fr;column-gap:10px;row-gap:2px;margin-top:2px}
+.item-card .props .k{color:var(--muted)}
+.item-card .props b{font-weight:600}
 .item-card .x{position:absolute;right:4px;top:3px;width:22px;height:22px;padding:0;border:0;background:none;color:var(--muted);font:400 18px/1 var(--f-body);cursor:pointer}
 .item-card .x:hover{color:var(--accent)}
 .item-card p.next{display:flex;gap:6px;align-items:baseline;margin-top:4px}
@@ -84,6 +87,8 @@ h2+h3{margin-top:0}   /* a block's first switch titled right under the block's t
 .seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel)}
 .views{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .views.v4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.pl-h{margin-top:8px}
+.wcs.pl-cols{grid-template-columns:repeat(4,minmax(0,1fr))}
 .toggles{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .toggles label{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
 .toggles input{accent-color:var(--accent);margin:0}

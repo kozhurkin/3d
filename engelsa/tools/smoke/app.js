@@ -68,11 +68,15 @@ check('настройки в браузере — под своими ключа
   assert.deepStrictEqual(keys, ['eng-model-v1', 'eng-shared-v1', 'eng-view-plan-v1']);
 });
 
-check('ракурсы: «На дверь» — камера за стеной с окном, «На окно» — за стеной с дверью', () => {
+check('ракурсы: «На дверь» — камера за стеной с окном, «За диваном» — за стеной у его спинки (и зеркально)', () => {
   const p = open();
-  const z = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => goalPosition().z * 1000); };
-  assert.ok(z('door') > 5197, 'past the window wall');
-  assert.ok(z('window') < -120, 'past the door wall');
+  const at = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => [goalPosition().x, goalPosition().z, goalT.z].map((v) => v * 1000)); };
+  assert.ok(at('door')[1] > 5197, 'past the window wall');
+  const s = at('sofa'); assert.ok(s[0] < -120, 'past the wall at the sofa\'s back: ' + s[0]); near(s[2], p.run(() => CZ * 1000), 'at the room\'s middle');
+  near(p.run(() => (goalPosition().y - goalT.y) / goal.r), Math.cos(Math.atan2(2 * Math.sin(1), Math.cos(1))), 'low: half as high as at 1 rad');
+  p.document.querySelector('[data-sofa="right"]').click();
+  assert.ok(at('sofa')[0] > 2830, 'mirrored');
+  assert.strictEqual(p.document.querySelector('[data-cam="window"]'), null);
 });
 
 check('сцена: без мини-вида; «i» — подсказка под устройство (мышь или палец) и под вкладку', () => {

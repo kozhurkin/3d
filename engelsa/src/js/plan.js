@@ -52,6 +52,8 @@ function fitR(wmm=BOX.x1-BOX.x0,dmm=BOX.z1-BOX.z0){
   const t=Math.tan(camera.fov*Math.PI/360),w=wmm*MM,d=dmm*MM;
   return Math.max(d/2/t,w/2/(t*(camera.aspect||1)))*1.12+H*MM;   // + wall height: the wall tops are that much closer to the camera
 }
+// «За диваном»: the camera this far out from the target and this high over it, as shares of the room's fit distance
+const sofaCam={d:.85*Math.sin(1),h:.85*Math.cos(1)/2};
 // camera presets of the plan (buttons «Камера»)
 function setCam(v){
   const f=fitR();
@@ -59,7 +61,8 @@ function setCam(v){
     plan:[-.6,.62,f*1.05,CX,.3,CZ],                     // from the corner of the window and the left walls: the door wall and the right wall
     top:[0,.0005,f,CX,0,CZ],
     door:[-.25,1.0,f*.95,CX,.6,CZ],                     // over the window wall, looking at the door
-    window:[Math.PI-.35,.95,f*.95,CX,.6,CZ]             // over the door wall, looking at the window
+    // from behind the sofa: past the wall at its back, low over it into the room, at the room's middle
+    sofa:[A.sofaWall==='right'?Math.PI/2:-Math.PI/2,Math.atan2(sofaCam.d*f,sofaCam.h*f),Math.hypot(sofaCam.d,sofaCam.h)*f,CX,.6,CZ]
   };
   const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];goalT.set(s[3],s[4],s[5]);
   shortWay();

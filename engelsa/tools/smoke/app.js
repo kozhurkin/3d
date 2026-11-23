@@ -116,7 +116,7 @@ check('стены: «Средний беж» по умолчанию; обои �
 
 check('лепнина 110 под потолком по всем стенам, плинтус 70 — до наличников двери', () => {
   const p = open();
-  const r = p.run(() => wallParts.filter((w) => w.trim && w.kind !== 'rope').map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
+  const r = p.run(() => wallParts.filter((w) => w.trim && (w.kind === 'cornice' || w.kind === 'plinth')).map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]));
   assert.deepStrictEqual(r, [
     ['door', 2950, 3060, [0, 2710, 0, 30]], ['door', 0, 70, [0, 200, 0, 16]], ['door', 0, 70, [1140, 2710, 0, 16]],
     ['right', 2950, 3060, [2680, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
@@ -148,6 +148,25 @@ check('фотообои: слева от входа, от плинтуса, 2700
   assert.strictEqual(p.document.querySelector('[data-panel="plan"] [data-mural=""]'), null, 'no «Нет»');
 });
 
+check('фальш-декор: тонкий (плетёнка 11), обычный (гладкий молдинг 35, по умолчанию), нет — обои до лепнины, над фотообоями цвет их неба', () => {
+  const p = open();
+  const r = () => p.run(() => ({ decor: wallParts.filter((w) => w.kind === 'rope' || w.kind === 'mold').map((w) => w.kind + ':' + tt.mm(w.t - w.b)),
+    band: tt.mm(wallTexU.wallBandY.value), top: wallParts.filter((w) => w.top).map((w) => [w.id, w.box, tt.mm(w.b), tt.mm(w.t), w.m.material === muralTopMat]),
+    on: [...document.querySelectorAll('[data-decor]')].filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset.decor) }));
+  const btn = (v) => p.document.querySelector(`[data-decor="${v}"]`);
+  assert.deepStrictEqual(r(), { decor: Array(5).fill('mold:35'), band: 2770, top: [], on: ['plain'] });
+  btn('thin').click();
+  assert.deepStrictEqual(r(), { decor: Array(5).fill('rope:11'), band: 2770, top: [], on: ['thin'] });
+  btn('none').click();
+  assert.deepStrictEqual(r(), { decor: [], band: 99000, top: [['right', [2709, 2710, 0, 4797], 2770, 3060, true]], on: ['none'] });
+  assert.deepStrictEqual(p.run(() => [A.decor, MURAL_TOP]), ['none', '#DCD8CC']);
+  p.document.querySelector('[data-panel="plan"] [data-mural="both"]').click();
+  assert.deepStrictEqual(r().top.map((t) => t[0]), ['right', 'left']);
+  btn('thin').click();
+  assert.deepStrictEqual(r(), { decor: Array(5).fill('rope:11'), band: 2770, top: [], on: ['thin'] });
+  assert.deepStrictEqual(p.run(() => [apartment({ decor: true }).A.decor, apartment({ decor: false }).A.decor]), ['thin', 'none'], 'a yes / no remembered before');
+});
+
 check('лепнина — фриз с листьями: полка сверху, рельеф до 30 мм, низ доски гладкий', () => {
   const p = open();
   const r = p.run(() => {
@@ -161,8 +180,9 @@ check('лепнина — фриз с листьями: полка сверху,
   assert.ok(Math.max(...r.mid) - Math.min(...r.mid) > 10, 'the leaves stand out in the middle of the board');
 });
 
-check('плетёнка 11 × 6 по периметру сразу над фотообоями, у окна прервана; обои до её низа, выше до лепнины стена белая, как она', () => {
+check('плетёнка 11 × 6 («Тонкий») по периметру сразу над фотообоями, у окна прервана; обои до её низа, выше до лепнины стена белая, как она', () => {
   const p = open();
+  p.document.querySelector('[data-decor="thin"]').click();
   const r = p.run(() => ({ rope: wallParts.filter((w) => w.kind === 'rope').map((w) => [w.id, tt.mm(w.b), tt.mm(w.t), w.box]),
     band: tt.mm(wallTexU.wallBandY.value), white: wallTexU.wallBandC.value === trimMat.color || JSON.stringify(wallTexU.wallBandC.value) === JSON.stringify(trimMat.color),
     d: [...Array(40)].map((_, i) => ropeDepth(i / 40, .5)), edge: ropeDepth(.3, 0) }));
@@ -261,6 +281,25 @@ check('шкаф: кнопкой в панели — к стене с дверь�
   slide(p, 'dR', 1500);   // the door to the right: the doorway's edge (2650 − dR) reaches the wardrobe's side (1093) at dR 1557
   assert.strictEqual(p.run(() => A.dR), 1560);
   assert.match(p.document.getElementById('pSizeMsg').textContent, /Шкаф/);
+});
+
+check('шкаф угловой в углу у двери, как в основном проекте: модуль 964 × 964 и доп. секции по 400 с обеих сторон (1364 вдоль стен), штанги у стены слева, сверху антресоль 400', () => {
+  const p = open();
+  p.document.querySelector('[data-ward="corner"]').click();
+  const r = p.run(() => ({ w: A.wardWall, boxes: wardrobeBoxes().map((b) => b.map((v) => tt.mm(v))), doors: furnDoors.length, s: furnDoors.map((d) => d.s),
+    on: document.querySelector('[data-ward="corner"]').getAttribute('aria-pressed'), bad: aptProblems(A) }));
+  assert.deepStrictEqual(r, { w: 'corner', boxes: [[1330, 2694, 16, 516, 0, 2600], [2194, 2694, 516, 1380, 0, 2600]], doors: 8,
+    s: [-1, 1, -1, 1, -1, 1, -1, 1], on: 'true', bad: [] });
+  const g = p.run(() => ({ h: furnDoors.map((d) => tt.mm(d.h)), rods: wardGroup.children[0].children.filter((m) => m.userData.rod).map((m) => tt.mm(m.position.y)),
+    rodAt: wardGroup.children[0].children.filter((m) => m.userData.rod).map((m) => [tt.mm(m.position.x), tt.mm(m.position.z)]) }));
+  assert.deepStrictEqual(g, { h: [2126, 2126, 2126, 2126, 396, 396, 396, 396], rods: [1590, 860], rodAt: [[2450, 498], [2450, 498]] }, 'the doors over the plinth up to 2200, the mezzanine\'s 400; two rods in the leg');
+  const w = p.run(() => furnDoors.slice(0, 4).map((d) => tt.mm(Math.abs(d.g.children[0].geometry.args[d.g.children[0].geometry.args[0] > d.g.children[0].geometry.args[2] ? 0 : 2]))));
+  w.forEach((v) => assert.ok(v > 380 && v < 420, 'a door about 400 wide, not a giant: ' + v));
+  p.document.querySelector('[data-sofa="right"]').click();
+  assert.deepStrictEqual(p.run(() => [A.sofaWall, aptProblems(A)]), ['right', []], 'the sofa still fits at the left wall');
+  slide(p, 'dR', 1300);   // the door to the right: the doorway's edge (2650 − dR) reaches the wardrobe (1330) at dR 1320
+  assert.strictEqual(p.run(() => A.dR), 1320);
+  assert.match(p.document.getElementById('pSizeMsg').textContent, /Угловой шкаф/);
 });
 
 check('дверь «Классика»: полотно с вырезом под стекло, филёнка, стекло, раскладка на 6 стёкол; всё режется по высоте стен', () => {

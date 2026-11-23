@@ -60,12 +60,22 @@ function muralMesh(w,y0){
   // facing +x (the left wall) its left is at the window end, facing -x at the door end
   const z0=sg>0?r1-len:r0,x=at+sg,box=[Math.min(at,x),Math.max(at,x),z0,z0+len];
   m.position.set(x*MM,(y0+A.muralH/2)*MM,(z0+len/2)*MM);
-  return {m,box};
+  return {m,box,len};
 }
 /* a piece of furniture against a wall: its group g built in its own frame (x along the wall from its left end as one faces the wall,
    y up, z out into the room; mm), its back on the skirting board, its left side off from the wall's left end (as one faces the wall).
    The wall's left end and the way along it: facing -x (the right wall) from the door end up z, facing +x from the window end down z,
    facing -z (the door wall) from x 0 up x, facing +z from the far end down x */
+// without the false decor (A.decor 'none'): over the photo wallpaper up to the ceiling (behind the cornice) the wall painted as the
+// picture's sky at its top, a sheet 1 mm off the wall as the picture's own, as long as it
+const MURAL_TOP='#DCD8CC';
+const muralTopMat=new THREE.MeshStandardMaterial({color:new THREE.Color(MURAL_TOP).convertSRGBToLinear(),roughness:.9,polygonOffset:true,polygonOffsetFactor:-1});
+function muralTopMesh(w,y0){
+  const mu=muralMesh(w,y0);if(!mu)return null;
+  const h=H-y0,m=new THREE.Mesh(new THREE.PlaneGeometry(mu.len*MM,h*MM),muralTopMat);
+  m.rotation.y=mu.m.rotation.y;m.receiveShadow=true;m.position.set(mu.m.position.x,(y0+h/2)*MM,mu.m.position.z);
+  mu.m.geometry.dispose();return {m,box:mu.box,h};
+}
 function standAgainst(g,w,off,gap=PL_T){   // gap: its back off the wall (the skirting board's by default)
   const [at,dir]=w.face,sg=dir[0]==='+'?1:-1,back=at+sg*gap,[r0,r1]=w.run;
   if(dir[1]==='x'){g.rotation.y=sg<0?-Math.PI/2:Math.PI/2;g.position.set(back*MM,0,(sg<0?r0+off:r1-off)*MM);}
@@ -135,6 +145,14 @@ function friezeDepth(u,v){
 /* the rope trim: strands twisted, round across, the grooves between them running up at a slant; a groove to ROPE_P mm of the run.
    ropeDepth(u, v): how far it stands out of the wall (mm) at u along a twist (0…1) and v down from its top (0…1) */
 const ROPE_D=6,ROPE_P=12;
+/* the plain moulding (the false decor 'plain'), h high, MOLD_D deep: a step 4 high off the wall at top and bottom, between them its face
+   bulging round to MOLD_D; across (s out of the wall, y up), extruded along the wall as the skirting board */
+const MOLD_D=10;
+function moldProfile(h){
+  const S=new THREE.Shape(),k=MM,e=5;
+  S.moveTo(0,0);S.lineTo(e*k,0);S.lineTo(e*k,4*k);S.quadraticCurveTo((2*MOLD_D-e)*k,h/2*k,e*k,(h-4)*k);S.lineTo(e*k,h*k);S.lineTo(0,h*k);
+  return S;
+}
 function ropeDepth(u,v){
   const r=Math.sqrt(Math.max(0,1-(2*v-1)**2)),s=((u+v*.8)%1+1)%1;   // a groove a twist, slanting up across the rope
   return ROPE_D*r*(.62+.38*Math.pow(Math.sin(Math.PI*s),.5));
@@ -155,6 +173,7 @@ function reliefGeometry(len,h,{p,seg,ny,depth,under=0}){
 const TRIM={   // the trims along the walls: how far each stands out at most (mm), its geometry len × h mm
   cornice:{d:CORN_D,geo:(l,h)=>reliefGeometry(l,h,{p:h*.95,seg:24,ny:28,depth:friezeDepth,under:FRIEZE_BASE}),lines:70},
   rope:{d:ROPE_D,geo:(l,h)=>reliefGeometry(l,h,{p:ROPE_P,seg:8,ny:6,depth:ropeDepth}),lines:89},
+  mold:{d:MOLD_D,geo:(l,h)=>new THREE.ExtrudeGeometry(moldProfile(h),{depth:l*MM,bevelEnabled:false,curveSegments:12}),lines:30},
   plinth:{d:PL_T,geo:(l,h)=>new THREE.ExtrudeGeometry(trimProfile(h),{depth:l*MM,bevelEnabled:false,curveSegments:8}),lines:30}
 };
 /* the ceiling rose: an oval of the cornice's style, A.rosW × A.rosD in the middle of the ceiling, its long side along the side walls.
@@ -382,9 +401,11 @@ function buildWallSet(list,ruleOf,lines){
     if(w.face){const [r0,r1]=alongX?[x0,x1]:[z0,z1],add=(kind,a,b,y0,h)=>{a=Math.max(a,r0);b=Math.min(b,r1);if(b-a<1||h<1)return;
         const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true,kind});};
       add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));
-      w.rope.forEach(([a,b])=>add('rope',a,b,A.plH+A.muralH,A.ropeH));
-      const mu=(A.muralWall===id||A.muralWall==='both')&&muralMesh(w,A.plH);
-      if(mu){wallGroup.add(mu.m);wallParts.push({m:mu.m,f,id,box:mu.box,b:A.plH*MM,t:(A.plH+A.muralH)*MM,h:A.muralH*MM,photo:true,fit:k=>{muralTex.repeat.y=k;}});}}
+      if(decorH(A))w.rope.forEach(([a,b])=>add(A.decor==='thin'?'rope':'mold',a,b,A.plH+A.muralH,decorH(A)));   // the false decor
+      const on=A.muralWall===id||A.muralWall==='both',mu=on&&muralMesh(w,A.plH);
+      if(mu){wallGroup.add(mu.m);wallParts.push({m:mu.m,f,id,box:mu.box,b:A.plH*MM,t:(A.plH+A.muralH)*MM,h:A.muralH*MM,photo:true,fit:k=>{muralTex.repeat.y=k;}});}
+      const y1=A.plH+A.muralH,tp=on&&!decorH(A)&&muralTopMesh(w,y1);   // over it, without the decor: the sky's colour
+      if(tp){wallGroup.add(tp.m);wallParts.push({m:tp.m,f,id,box:tp.box,b:y1*MM,t:H*MM,h:tp.h*MM,photo:true,top:true});}}
   });
   // the window: white frame in the middle of the wall's thickness, a mullion when it is wide, glass and an inner sill board; hides with its wall
   if(holesShown.has('window:0')){ const w=WALLS.find(v=>v.id==='window'),f=ruleOf(w),FW=60,FD=70,zc=A.L+A.tW/2;
@@ -603,8 +624,8 @@ function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
   floorMat.color.set(css('--scene-floor'));
   const wc=WALLC[S.wc]||WALLC.linen;wallMat.color.set(wallCol(wc));if(wc.lin)wallMat.color.convertSRGBToLinear();wallTexU.wallTexOn.value=wc.tex?1:0;
-  // the white from the rope's bottom: the wallpaper ends under it, as the photo one does
-  wallTexU.wallBandY.value=(A.plH+A.muralH)*MM;wallTexU.wallBandC.value.copy(trimMat.color);
+  // the white from the rope's bottom: the wallpaper ends under it, as the photo one does; without the decor no white, the wallpaper to the cornice
+  wallTexU.wallBandY.value=decorH(A)?(A.plH+A.muralH)*MM:99;wallTexU.wallBandC.value.copy(trimMat.color);
   const e=.002;wallTexU.revMin.value.set((winX-A.winW/2)*MM-e,A.winS*MM-e,A.L*MM-e);wallTexU.revMax.value.set((winX+A.winW/2)*MM+e,A.winT*MM+e,(A.L+A.tW)*MM+e);
   ceilColor.set(wallCol(WALLC.white));
   wallMat.roughness=wc.r;

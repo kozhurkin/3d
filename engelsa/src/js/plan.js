@@ -84,8 +84,11 @@ function renderFacts(){
       row('Окно',`${A.winW}, от пола ${A.winS} до ${A.winT}, по центру стены`)+
       row('Стена с окном',`${winX-A.winW/2} + ${A.winW} + ${A.W-winX-A.winW/2}`)+
       row('Стены',`обои под лён (по образцу), откосы окна окрашены; лепнина ${A.cornH}, плинтус ${A.plH}`)+
-      row('Над фотообоями',`плетёнка ${A.ropeH} × 6 по периметру (у окна прервана) на ${A.plH+A.muralH}; обои до её низа, выше до лепнины стена белая`)+
-      row('Шкаф',`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены слева от входа, от угла у двери'}`)+
+      row('Над фотообоями',decorH(A)?`${A.decor==='thin'?`плетёнка ${A.ropeH} × 6`:`гладкий молдинг ${A.moldH} × 10`} по периметру (у окна прерван) на ${A.plH+A.muralH}; `+
+        'обои до его низа, выше до лепнины стена белая':`без фальш-декора: обои до лепнины, над фотообоями стена в цвет их неба (${MURAL_TOP})`)+
+      row('Шкаф',A.wardWall==='corner'?`угловой в углу у двери: модуль ${A.wardC} × ${A.wardC} и доп. секция ${A.wardAdd} с каждой стороны — по ${A.wardC+A.wardAdd} `+
+        `вдоль стен, глубина ${WC.d}, высота ${A.wardH} (сверху антресоль ${WC.mz}); в модуле у стены слева штанги, у стены с дверью и в секциях полки`
+        :`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены слева от входа, от угла у двери'}`)+
       row('Диван',`IKEA MANSTAD угловой, зелёный велюр: 2400 × 1560 × 900, у стены ${A.sofaWall==='left'?'справа':'слева'} от входа, спинкой к плинтусу, кушеткой к окну в ${A.sofaGap} от его стены`)+
       row('Потолок',`розетка-овал ${A.rosW} × ${A.rosD} по центру, длинной стороной вдоль боковых стен, листья как у лепнины`)+
       row('Фотообои',`${A.muralW} × ${A.muralH} от плинтуса, ${({right:'слева от входа',left:'справа от входа',both:'на обеих длинных стенах'})[A.muralWall]}; на стене ${Math.min(A.muralW,A.L)}`)+
@@ -135,9 +138,10 @@ const sizeMsg=pq('#pSizeMsg');
 function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});
   planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
   planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));
-  planPanel.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));}
-// the wardrobe's and the sofa's walls: kept with the sizes (A.wardWall, A.sofaWall); not where they would not fit
-[['ward','wardWall'],['sofa','sofaWall']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
+  planPanel.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));
+  planPanel.querySelectorAll('[data-decor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.decor===A.decor));}
+// the wardrobe's and the sofa's walls, the false decor: kept with the sizes (A.wardWall, A.sofaWall, A.decor); not where they would not fit
+[['ward','wardWall'],['sofa','sofaWall'],['decor','decor']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
   const a={...A,[k]:b.dataset[d]},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}sizeMsg.textContent='';setModel(a);})));
 // the photo wallpaper's wall: kept with the sizes (A.muralWall)
 planPanel.querySelectorAll('[data-mural]').forEach(b=>b.addEventListener('click',()=>{

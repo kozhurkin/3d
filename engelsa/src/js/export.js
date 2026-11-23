@@ -1,6 +1,6 @@
 /* ---------- export: the scene as it is on screen → one .glb (glTF 2.0, binary) ----------
    The shell's button calls exportGLB() and saves what it returns. The exporter is loaded on the first call only.
-   Only the meshes on screen go: no light, lines (dimensions, outlines, door swings), texts of the dimensions, camera debug
+   Only the meshes on screen go: no light, lines (dimensions, outlines, door swings), texts of the dimensions
    or parts made see-through. Opaque textures go as JPEG (the decor photos), those with transparency as PNG. */
 const GLTF_EXPORTER='https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js';
 let exporterLoad=null;

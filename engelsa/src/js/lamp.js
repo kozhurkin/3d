@@ -69,7 +69,7 @@ function lampDiscs(g,tiers=DISC_TIERS,metal=lampBrass){
   });
 }
 /* branches with strands of discs: «Aine Light», crystal, 6 bulbs (Wildberries), 500 × 450 on a rod of 200; a bigger one like it
-   (Ozon), Ø 800, on three steel cables of 400 (they go to 1 m) and the cord between them, 730 from the cup's top; the small one 530:
+   (Ozon), Ø 800, on three steel cables of 300 (they go to 1 m) and the cord between them, 630 from the cup's top; the small one 530:
    the cup, 200 of the rod, the rest (about 305) the chandelier itself, as the big one's. A gold cup on the ceiling (Ø 120 × 25), the
    rod or the cables to the hub, gold branches out from it every way, knobbly twigs up off them; from the branches on thin wires strands of small discs —
    white hammered glass and clear faceted crystal at random — down to a rounded bottom, lowest in the middle. Inside, on a stem under
@@ -78,7 +78,7 @@ function lampDiscs(g,tiers=DISC_TIERS,metal=lampBrass){
    level; how many branches N, bulbs n; the seed; cable: hung on cables, not a rod. The discs are as big in both, and the heights in it
    (the branches' rise, the bulbs, the bottom's curve); across, the rest grows with it */
 const BR={disc:{white:17,crystal:14},jit:5,   // the discs' radii; a strand's sway
-  aine:{W:500,D:450,H:530,hub:280,N:12,n:6,seed:5},big:{W:800,D:800,H:730,hub:480,N:16,n:8,seed:9,cable:true}};
+  aine:{W:500,D:450,H:530,hub:280,N:12,n:6,seed:5},big:{W:800,D:800,H:630,hub:380,N:16,n:8,seed:9,cable:true}};
 const lampWhite=new THREE.MeshStandardMaterial({color:new THREE.Color('#f3efe8').convertSRGBToLinear(),roughness:.45,side:THREE.DoubleSide,
   emissive:new THREE.Color('#2a251c'),bumpMap:dimpleTexture(),bumpScale:.0015});
 const lampCrystal=new THREE.MeshStandardMaterial({color:new THREE.Color('#dce5ea').convertSRGBToLinear(),roughness:.08,metalness:.25,
@@ -191,7 +191,7 @@ const LAMPS={
       ['Площадь','до 35 м²']]}},
   branches80:{n:'Ветви 80',build:g=>lampBranches(g,BR.big),H:BR.big.H,size:`Ø ${BR.big.W}`,
     info:{title:'Люстра хрустальная с висюльками (Ozon)',
-    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 73 см'],['Подвес','3 троса и провод, 40 см (до 1 м)']]}},
+    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 63 см'],['Подвес','3 троса и провод, 30 см (до 1 м)']]}},
   ervilen:{n:'Шары',build:lampGlobes,H:ERV.hub+ERV.half,size:`${ERV.W} × ${ERV.W}`,info:{title:'Люстра ERVILEN, G9, 84 Вт (Ozon)',price:7547,shop:'Ozon',
     url:'https://ozon.ru/t/1NEcBba',lines:[['Размер','90 × 90, высота 30 см'],['Штанга','30 см'],['Лампы','G9, 84 Вт']]}}
 };

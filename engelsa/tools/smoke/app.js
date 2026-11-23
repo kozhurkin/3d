@@ -58,7 +58,7 @@ check('ползунки: стена длиннее — дверь остаётс
   assert.match(p.document.getElementById('pSizeMsg').textContent, /под лепнину/);
 });
 
-check('«Размеры, название и площадь» — одна галка, по умолчанию выключена: ни размеров, ни названия; включена — оба', () => {
+check('«Размеры и площадь» — одна галка, по умолчанию выключена: ни размеров, ни названия; включена — оба', () => {
   const p = open();
   const shown = () => { p.tick(); return p.run(() => [dimsGroup.visible, namesGroup.visible]); };
   assert.strictEqual(p.document.getElementById('pMarks').checked, false);

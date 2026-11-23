@@ -63,7 +63,7 @@ function sofaCam(){
 function setCam(v){
   const f=fitR();
   const views={
-    plan:[-.6,.62,f*1.05,CX,.3,CZ],                     // from the corner of the window and the left walls: the door wall and the right wall
+    plan:[-.6,.85,f*.9,CX,1,CZ],                        // from the corner of the window and the left walls, lowish: the door wall and the right wall
     top:[0,.0005,f,CX,0,CZ],
     door:[-.25,1.0,f*.95,CX,.6,CZ],                     // over the window wall, looking at the door
     // from behind the sofa: past the wall at its back, at eye level into the room, at the room's middle

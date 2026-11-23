@@ -77,10 +77,11 @@ check('настройки в браузере — под своими ключа
   assert.deepStrictEqual(keys, ['eng-model-v1', 'eng-shared-v1', 'eng-view-plan-v1']);
 });
 
-check('ракурсы: «На дверь» — камера за стеной с окном, «За диваном» — за стеной у его спинки, на уровне глаз (и зеркально)', () => {
+check('ракурсы: «План» — из угла, пониже, «На дверь» — камера за стеной с окном, «За диваном» — за стеной у его спинки, на уровне глаз (и зеркально)', () => {
   const p = open();
   const at = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => [goalPosition().x, goalPosition().z, goalT.z].map((v) => v * 1000)); };
   assert.ok(at('door')[1] > 5197, 'past the window wall');
+  at('plan'); near(p.run(() => goal.phi), 0.85, 'the plan from the corner, lowish'); near(p.run(() => goalT.y * 1000), 1000, 'at the room\'s middle, 1000 up');
   const s = at('sofa'); assert.ok(s[0] < -120, 'past the wall at the sofa\'s back: ' + s[0]); near(s[2], p.run(() => CZ * 1000), 'at the room\'s middle');
   near(p.run(() => goalPosition().y * 1000), 1600, 'eyes at 1600'); near(p.run(() => goalT.y * 1000), 1200, 'a little down');
   assert.ok(s[0] > -7600, 'nearer than the old view (−7588 at 4:3, more on a wide screen): ' + s[0]);

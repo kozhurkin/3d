@@ -52,8 +52,13 @@ function fitR(wmm=BOX.x1-BOX.x0,dmm=BOX.z1-BOX.z0){
   const t=Math.tan(camera.fov*Math.PI/360),w=wmm*MM,d=dmm*MM;
   return Math.max(d/2/t,w/2/(t*(camera.aspect||1)))*1.12+H*MM;   // + wall height: the wall tops are that much closer to the camera
 }
-// «За диваном»: the camera this far out from the target and this high over it, as shares of the room's fit distance
-const sofaCam={d:.85*Math.sin(1),h:.85*Math.cos(1)/2};
+// «За диваном»: eyes at 1600 over the floor looking a little down, at 1200; as far out as the cut wall's opening
+// (the room's whole length and height) just fills the frame. Returns [theta, phi, r]
+function sofaCam(){
+  const t=Math.tan(camera.fov*Math.PI/360),eye=1.6,at=1.2;
+  const out=Math.max((BOX.z1-BOX.z0)/2*MM/(t*(camera.aspect||1)),H*MM/2/t)*1.08+(BOX.x1-BOX.x0)/2*MM;   // from the room's middle
+  return [A.sofaWall==='right'?Math.PI/2:-Math.PI/2,Math.atan2(out,eye-at),Math.hypot(out,eye-at)];
+}
 // camera presets of the plan (buttons «Камера»)
 function setCam(v){
   const f=fitR();
@@ -61,8 +66,8 @@ function setCam(v){
     plan:[-.6,.62,f*1.05,CX,.3,CZ],                     // from the corner of the window and the left walls: the door wall and the right wall
     top:[0,.0005,f,CX,0,CZ],
     door:[-.25,1.0,f*.95,CX,.6,CZ],                     // over the window wall, looking at the door
-    // from behind the sofa: past the wall at its back, low over it into the room, at the room's middle
-    sofa:[A.sofaWall==='right'?Math.PI/2:-Math.PI/2,Math.atan2(sofaCam.d*f,sofaCam.h*f),Math.hypot(sofaCam.d,sofaCam.h)*f,CX,.6,CZ]
+    // from behind the sofa: past the wall at its back, at eye level into the room, at the room's middle
+    sofa:[...sofaCam(),CX,1.2,CZ]
   };
   const s=views[v];goal.theta=s[0];goal.phi=s[1];goal.r=s[2];goalT.set(s[3],s[4],s[5]);
   shortWay();
@@ -97,13 +102,9 @@ function renderFacts(){
 }
 renderFacts();
 
-/* the plan's own settings: dimensions, the room's name */
-function syncPlan(){
-  const V=VS.plan;
-  pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;
-}
-pq('#pDims').addEventListener('change',e=>{VS.plan.dims=e.target.checked;saveView('plan');});
-pq('#pNames').addEventListener('change',e=>{VS.plan.names=e.target.checked;saveView('plan');});
+/* the plan's own setting: dimensions with the room's name and area, one checkbox */
+function syncPlan(){pq('#pMarks').checked=VS.plan.marks;}
+pq('#pMarks').addEventListener('change',e=>{VS.plan.marks=e.target.checked;saveView('plan');});
 
 /* ---------- wall sizes: edited only here, the walk takes them as they are ----------
    A slider stops at the last value where everything still fits and says what is in the way */
@@ -180,7 +181,7 @@ modelHooks.push(()=>{dimsDirty=true;renderFacts();syncSizes();});
 frameHooks.push(()=>{
   // dimensions come when the plan is reached; the room's name halfway; the floor stays in every view
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
-  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=true;   // the floor (laminate) in every view
+  dimsGroup.visible=on&&VS.plan.marks;namesGroup.visible=half&&VS.plan.marks;roomGroup.visible=true;   // the floor (laminate) in every view
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
   winDims.visible=dimsGroup.visible&&wallParts.some(w=>w.glass&&w.m.visible);   // the window's glass is on screen
@@ -241,7 +242,7 @@ addView('plan',{
   rooms:'all',
   // the cut mode hides a wall while the camera looks at it from outside the room
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
-  defaults:{Wm:'auto',Wh:100,dm:'closed',dims:true,names:true},
+  defaults:{Wm:'auto',Wh:100,dm:'closed',marks:false},   // marks: a new key, so an old saved dims/names doesn't turn them on
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole room from any direction
   panel:planPanel,
   home:()=>setCam('plan'),

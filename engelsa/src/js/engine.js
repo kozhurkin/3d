@@ -119,10 +119,8 @@ function pickDoor(e,hit){
   for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o||d.frame===o);if(d)return d;}
   return null;
 }
-// an item that does something of its own on a click, not a door (userData.click: the kitchen's pendant lamp changes its model), under a hit
-function clickOf(h){for(let o=h&&h.object;o;o=o.parent){const c=o.userData&&o.userData.click;if(typeof c==='function')return c;}return null;}
-// a click at a point of the canvas: the door there opens or closes, or the item there does what it does
-function clickAt(e){const h=hitAt(e),d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();return;}const c=clickOf(h);if(c)c();}
+// a click at a point of the canvas: the door there (or a cabinet door) opens or closes
+function clickAt(e){const h=hitAt(e),d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();}}
 canvas.addEventListener('pointerup',e=>{
   if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
   clearTimeout(holdTimer);
@@ -132,7 +130,7 @@ canvas.addEventListener('pointerup',e=>{
   }
   downAt=null;lost(e);
 });
-canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)||clickOf(h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
 canvas.addEventListener('pointerleave',()=>itemHover(null));canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -158,85 +156,19 @@ canvas.addEventListener('wheel',e=>{
 function resize(){const w=viewer.clientWidth,h=viewer.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(viewer);
 
-/* ---------- camera debug: pivot gizmo + overview inset (as in the room tabs) ---------- */
-let showDebug=false;
-const noRay=o=>{o.traverse(c=>{c.raycast=()=>{};});return o;};
-const dbg=new THREE.Group();dbg.visible=false;scene.add(dbg);
-// pivot gizmo (visible in the main view): XYZ axes + sphere, always on top
-const pivot=new THREE.Group();
-[[0xd9483b,[1,0,0]],[0x3f9b4f,[0,1,0]],[0x3b6fd9,[0,0,1]]].forEach(([c,v])=>{
-  const g=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(...v).multiplyScalar(.25)]);
-  const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:c,depthTest:false}));l.renderOrder=30;pivot.add(l);
-});
-const pivDot=new THREE.Mesh(new THREE.SphereGeometry(.022,16,12),new THREE.MeshBasicMaterial({color:0xffb300,depthTest:false}));pivDot.renderOrder=31;pivot.add(pivDot);
-dbg.add(noRay(pivot));
-// camera body, view frustum and view vector (only in the inset, layer 1)
-const DBG_COL=0xff6a00;
-const camBody=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),new THREE.MeshBasicMaterial({color:DBG_COL}));
-camBody.geometry.rotateX(-Math.PI/2);
-const viewLine=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,10),new THREE.MeshBasicMaterial({color:DBG_COL,depthTest:false}));viewLine.renderOrder=40;
-const frus=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(16*3).fill(0),3)),new THREE.LineBasicMaterial({color:DBG_COL,depthTest:false}));frus.renderOrder=41;
-const frusFill=new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(12*3).fill(0),3)),new THREE.MeshBasicMaterial({color:DBG_COL,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));frusFill.renderOrder=39;
-[camBody,viewLine,frus,frusFill].forEach(o=>{o.layers.set(1);o.frustumCulled=false;dbg.add(noRay(o));});
-const ovCam=new THREE.PerspectiveCamera(36,1.4,.05,200);ovCam.layers.enableAll();
-// the overview looks at the apartment from above, from the window side (like the «Весь план» view)
-const _oc=new THREE.Vector3(),_od=new THREE.Vector3(.25,1.5,1).normalize(),_ov=new THREE.Vector3(),_oup=new THREE.Vector3(0,1,0),_oq=new THREE.Quaternion();
-const apt=new THREE.Box3(new THREE.Vector3(BOX.x0*MM,0,BOX.z0*MM),new THREE.Vector3(BOX.x1*MM,H*MM,BOX.z1*MM)),_osz=new THREE.Vector3();
-function updateDebug(){
-  pivot.position.copy(cam.target);
-  const ps=Math.max(.4,cam.r*.25);pivot.children.forEach(c=>c.scale.setScalar(ps));
-  // mini view frames the apartment itself, not the camera
-  apt.getCenter(_oc);apt.getSize(_osz);
-  let rad=Math.max(.6,_osz.length()/2);
-  // include the main camera when it is reasonably close; if it is far, keep the plan large and show an arrow instead
-  _ov.subVectors(camera.position,_oc);const cd=_ov.length(),reach=Math.min(cd,rad*2.2);
-  if(reach>rad){_oc.addScaledVector(_ov.normalize(),(reach-rad)/2);rad=(reach+rad)/2+.15;}
-  const dist=rad/Math.sin(ovCam.fov*Math.PI/360)*1.02;
-  ovCam.position.copy(_oc).addScaledVector(_od,dist);ovCam.lookAt(_oc);
-  // camera body sized to the plan, so it is always readable
-  const k=rad*.32;
-  camBody.position.copy(camera.position);camBody.lookAt(cam.target);camBody.scale.setScalar(k);
-  // thick view vector: a thin cylinder from the camera to the pivot
-  _ov.subVectors(cam.target,camera.position);const len=_ov.length();
-  viewLine.position.copy(camera.position).addScaledVector(_ov,.5);
-  _oq.setFromUnitVectors(_oup,_ov.clone().normalize());viewLine.quaternion.copy(_oq);
-  viewLine.scale.set(rad*.012,len,rad*.012);
-  // view frustum: what the main camera sees, drawn out to the pivot distance
-  const fd=Math.min(len,rad*.5),hh=Math.tan(camera.fov*Math.PI/360)*fd,hw=hh*camera.aspect;
-  const corn=[[-1,-1],[1,-1],[1,1],[-1,1]].map(([x,y])=>new THREE.Vector3(x*hw,y*hh,-fd).applyMatrix4(camera.matrixWorld));
-  const o=camera.position,fp=frus.geometry.attributes.position;let i=0;
-  const put=v=>{fp.setXYZ(i++,v.x,v.y,v.z);};
-  corn.forEach(c=>{put(o);put(c);});corn.forEach((c,j)=>{put(c);put(corn[(j+1)%4]);});fp.needsUpdate=true;
-  const ff=frusFill.geometry.attributes.position;i=0;
-  corn.forEach((c,j)=>{const n=corn[(j+1)%4];[o,c,n].forEach(v=>{ff.setXYZ(i++,v.x,v.y,v.z);});});ff.needsUpdate=true;
-  // arrow at the edge of the mini view when the camera is outside its frame
-  ovCam.updateMatrixWorld();_ov.copy(camera.position).project(ovCam);
-  const behind=_ov.z>1,out=behind||Math.abs(_ov.x)>.92||Math.abs(_ov.y)>.92;
-  camArrow.hidden=!out;
-  if(out){let x=_ov.x,y=_ov.y;if(behind){x=-x;y=-y;}const m=Math.max(Math.abs(x),Math.abs(y))||1;x/=m;y/=m;
-    camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(8,50-y*44))+'%';
-    camArrow.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad)`;}
-  const f=v=>v.toFixed(2).replace('.',',')+' м';
-  const t=`<i>До точки</i><em>${f(cam.r)}</em><i>· Высота</i><em>${f(camera.position.y)}</em>`;
-  if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
-}
-const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);
-const camArrow=inset.querySelector('.cam-arrow');
-const insetCv=inset.querySelector('.inset-cv');
-const insetR=new THREE.WebGLRenderer({canvas:insetCv,antialias:true});
-insetR.setPixelRatio(Math.min(devicePixelRatio,2));insetR.outputEncoding=renderer.outputEncoding;insetR.toneMapping=renderer.toneMapping;insetR.toneMappingExposure=renderer.toneMappingExposure;insetR.shadowMap.enabled=true;
-const distEl=inset.querySelector('.dist');let distTxt='';
-// the sun and the mini view follow the view on screen (views.js: aimView)
+// the sun follows the view on screen (views.js: aimView)
 let sunHalf=4.6;   // half the side of the square the shadows cover, m
 function aimSun(x,y,z,half){
   sun.target.position.set(x,y,z);sunHalf=half;
   Object.assign(sun.shadow.camera,{left:-half,right:half,top:half,bottom:-half});sun.shadow.camera.updateProjectionMatrix();
   placeSun();
 }
-const camBtn=document.getElementById('camBtn');
-camBtn.addEventListener('click',()=>{showDebug=!showDebug;camBtn.setAttribute('aria-expanded',showDebug);dbg.visible=showDebug;inset.hidden=!showDebug;viewer.classList.toggle('dbg-on',showDebug);});
-
 const infoBtn=document.getElementById('infoBtn');
+// the «i» hint for the device in hand: a touch screen (no hover, a coarse pointer; or the last press a finger) or a mouse; for the view on screen
+let touchDev=!!(window.matchMedia&&matchMedia('(hover: none) and (pointer: coarse)').matches);
+function syncInfo(){const iv=view&&VIEWS[view].info||'orbit',dev=touchDev?'touch':'mouse';
+  infoBtn.querySelectorAll('[data-info]').forEach(t=>{t.hidden=t.dataset.info!==iv||t.dataset.dev!==dev;});}
+addEventListener('pointerdown',e=>{const t=e.pointerType==='touch'?true:e.pointerType==='mouse'?false:touchDev;if(t!==touchDev){touchDev=t;syncInfo();}},true);
 infoBtn.addEventListener('click',()=>infoBtn.setAttribute('aria-expanded',infoBtn.getAttribute('aria-expanded')!=='true'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')infoBtn.setAttribute('aria-expanded','false');});
 
@@ -315,7 +247,6 @@ frameHooks.push(()=>{
   if(view!==itemView){itemView=view;hideItemDot();closeItemCard();}
 });
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
-const insetHide=[];    // objects kept out of the mini view (dimension labels are sized for the main camera)
 
 /* ---------- dimension labels, the plan's and the rooms': a white plate with the text over everything (or, depth, hidden behind
    what stands in front). A label is h tall in the scene (m), but on screen no taller than LABEL_PX, and smaller than it can be
@@ -353,16 +284,6 @@ function loop(){
   _d.set(sp*Math.sin(cam.theta),Math.cos(cam.phi),sp*Math.cos(cam.theta));
   camera.position.copy(cam.target).addScaledVector(_d,cam.r);camera.lookAt(cam.target);camera.updateMatrixWorld();
   frameHooks.forEach(f=>f(dt,ease));
-  if(showDebug)updateDebug();
   renderer.render(scene,camera);
-  if(showDebug){
-    // the mini view has its own small canvas, so the frame can have properly rounded, clipped corners
-    const w=insetCv.clientWidth,h=insetCv.clientHeight;
-    if(w&&h){if(insetCv.width!==Math.round(w*insetR.getPixelRatio()))insetR.setSize(w,h,false);
-      ovCam.aspect=w/h;ovCam.updateProjectionMatrix();
-      const was=insetHide.map(o=>o.visible);insetHide.forEach(o=>o.visible=false);
-      insetR.render(scene,ovCam);
-      insetHide.forEach((o,i)=>o.visible=was[i]);}
-  }
   requestAnimationFrame(loop);
 }

@@ -86,19 +86,13 @@ function addView(id,def){
 function doorsChanged(){Object.keys(VIEWS).forEach(id=>{const v=VIEWS[id],seg=!!v.panel.querySelector('[data-dm]');
   if(seg)syncDoorCtl(id);if(v.onDoors)v.onDoors();if(seg||v.onDoors)saveView(id);});}
 
-/* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows);
-   the camera mini view frames the view's frame, or the whole apartment */
-function aimView(){const vw=VIEWS[view],s=vw.sun();aimSun(s.x,s.y,s.z,s.half);frameInset(insetFrame(vw));}
-// the part of the apartment the mini view keeps in its shot: the view's frame or the whole apartment (mm: x0 x1 z0 z1)
-const insetFrame=vw=>vw.frame?vw.frame():[BOX.x0,BOX.x1,BOX.z0,BOX.z1];
-const insetNow=()=>[apt.min.x,apt.max.x,apt.min.z,apt.max.z].map(v=>v/MM);
-function frameInset(f){apt.min.set(f[0]*MM,0,f[2]*MM);apt.max.set(f[1]*MM,H*MM,f[3]*MM);}
+/* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows) */
+function aimView(){const s=VIEWS[view].sun();aimSun(s.x,s.y,s.z,s.half);}
 modelHooks.push(()=>{if(tr){tr=null;camDrive=null;}if(view)aimView();});   // the walls were just built anew for the view: a flight is over
 
 /* ---------- a flight between views ----------
    One progress p (eased: e) moves everything together: the camera from where it was to the new view's goal,
-   the walls (walls.js: morph), the sun and its shadows,
-   the part of the apartment the mini view shows.
+   the walls (walls.js: morph), the sun and its shadows.
    A click on another tab in the middle starts a new flight from what is on screen. Orbiting, panning or zooming
    takes the camera back from the flight; the rest finishes */
 const FLY=.85;   // seconds
@@ -119,7 +113,6 @@ preHooks.push(dt=>{
   if(morph)morph.e=e;
   const a=tr.sun0,b=tr.sunT,l=(u,v)=>u+(v-u)*e;
   aimSun(l(a.x,b.x),l(a.y,b.y),l(a.z,b.z),l(a.half,b.half));
-  frameInset(tr.box0.map((v,i)=>l(v,tr.boxT[i])));
   if(tr.p>=1)endTransition();
 });
 
@@ -136,18 +129,18 @@ function showView(id,animate=true){
   const fly=animate&&!reduce&&S.fly&&view!==null;
   let start=null;
   if(fly){const pres0={};Object.keys(VIEWS).forEach(k=>{pres0[k]=presence(k);});const s=sun.target.position;
-    start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf},box0:insetNow()};}
+    start={walls:wallsNow(),pres0,cam0:{theta:cam.theta,phi:cam.phi,r:cam.r,t:cam.target.clone()},sun0:{x:s.x,y:s.y,z:s.z,half:sunHalf}};}
   if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
   // light and wall colour in its panel, if it has a place for them; the hint under «i» of the view
   const slot=vw.panel.querySelector('[data-shared-slot]');if(slot)slot.appendChild(sharedEl);sharedEl.hidden=!slot;
-  document.querySelectorAll('#infoBtn [data-info]').forEach(t=>{t.hidden=t.dataset.info!==(vw.info||'orbit');});
+  syncInfo();
   const m=camMem[id];
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
   if(fly){
     startWallMorph(start.walls,id,goalPosition());
-    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),box0:start.box0,boxT:insetFrame(vw),pres0:start.pres0};camDrive=driveCam;
+    tr={p:0,e:0,cam0:start.cam0,sun0:start.sun0,sunT:vw.sun(),pres0:start.pres0};camDrive=driveCam;
   }else{
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();
     if(!animate||reduce){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}

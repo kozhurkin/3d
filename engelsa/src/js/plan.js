@@ -170,9 +170,8 @@ pq('#pCopyA').addEventListener('click',()=>{
 modelHooks.push(()=>{dimsDirty=true;renderFacts();syncSizes();});
 
 /* every frame: dimensions and the room's name belong to the plan; dimension lines lie on the cut walls, the window's and the doorway height stand at them */
-insetHide.push(dimsGroup,winDims,doorDims);
 frameHooks.push(()=>{
-  // dimensions come when the plan is reached; room floors and names change halfway (room views have the plain floor, as before)
+  // dimensions come when the plan is reached; the room's name halfway; the floor stays in every view
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
   dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=true;   // the floor (laminate) in every view
   if(dimsGroup.visible&&dimsDirty)buildDims();
@@ -241,4 +240,6 @@ addView('plan',{
   home:()=>setCam('plan'),
   sync:syncPlan
 });
-if(VS.plan.dm!=='none')doors.forEach(d=>d.t=VS.plan.dm==='open'?d.max:0);
+// no walls' or doors' controls in its panel: the walls always cut where the camera is outside, the door closed (a click opens it)
+Object.assign(VS.plan,{Wm:'auto',Wh:100,dm:'closed'});
+doors.forEach(d=>d.t=0);

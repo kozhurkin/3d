@@ -241,8 +241,8 @@ frameHooks.push(()=>{
   // the hint: how to take the mouse, or on a touch screen how to walk, till the stick has once walked
   const hf=touchUI?'touch':'mouse';if(hf!==hintFor){hintFor=hf;hintEl.textContent=HINT[hf];}
   aimEl.hidden=!on;hintEl.hidden=!on||lk||touchUI&&stickUsed;showStick(on);
-  // the walk on a touch screen: no «i» (its hint is the keys' and the mouse's; the stick has its place) and no mini view
-  const bare=view==='walk'&&touchUI;infoBtn.hidden=camBtn.hidden=bare;if(bare&&showDebug)camBtn.click();
+  // the walk on a touch screen: no «i» (its hint is the keys' and the mouse's; the stick has its place)
+  const bare=view==='walk'&&touchUI;infoBtn.hidden=bare;
   if(!on&&lk&&document.exitPointerLock)document.exitPointerLock();
   if(on){canvas.style.cursor=lk?'none':'crosshair';ownCursor=true;}else if(ownCursor){canvas.style.cursor='';ownCursor=false;}
   const fov=FOV0+(FOV_WALK-FOV0)*presence('walk');

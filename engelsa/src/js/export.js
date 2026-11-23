@@ -14,7 +14,7 @@ function loadExporter(){
   }));
 }
 // what is left out of the file: hidden for the time of the export, then shown again
-const exportSkip=o=>o===dbg||o.isLight||o.isSprite||o.isLine||(o.isMesh&&seeThrough(o.material));
+const exportSkip=o=>o.isLight||o.isSprite||o.isLine||(o.isMesh&&seeThrough(o.material));
 function exportHide(){
   const hidden=[];
   scene.traverse(o=>{if(o.visible&&exportSkip(o)){o.visible=false;hidden.push(o);}});

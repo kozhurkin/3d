@@ -80,6 +80,20 @@ function standBox(g,x0,x1,z0,z1,h){
 }
 /* the cornice under the ceiling, the rope trim over the photo wallpaper and the skirting board: white, along the room face of every wall */
 const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
+/* the door (leaf, casings, lining) and the skirting board: the shop's wood laminate (js/wood-photo.js), its grain up the tile's v,
+   the tile WOOD_TILE (m, across × along the grain): the whole sheet of the photo, 1300 × 2300. Every wooden part has its UVs in metres with v along its length: the extruded
+   ones have them so (the leaf's faces: x, y; the skirting board's: along it), the boxes get them from woodBoxUV */
+const WOOD_TILE=[1.3,2.3];
+const woodTex=new THREE.TextureLoader().load(WOOD_JPG);woodTex.wrapS=woodTex.wrapT=THREE.RepeatWrapping;woodTex.encoding=THREE.sRGBEncoding;woodTex.anisotropy=8;
+woodTex.repeat.x=1/WOOD_TILE[0];woodTex.repeat.y=1/WOOD_TILE[1];
+const woodMat=new THREE.MeshStandardMaterial({map:woodTex,roughness:.55});
+// a box w × h × d (m), its UVs in metres on every face, v along the face's longer side (the grain along the plank)
+function woodBoxUV(g,w,h,d){
+  const uv=g.attributes&&g.attributes.uv;if(!uv||typeof uv.getX!=='function')return g;
+  [[d,h],[d,h],[w,d],[w,d],[w,h],[w,h]].forEach(([du,dv],f)=>{for(let i=f*4;i<f*4+4;i++){const u=uv.getX(i),v=uv.getY(i);
+    if(du>dv)uv.setXY(i,v*dv,u*du);else uv.setXY(i,u*du,v*dv);}});
+  uv.needsUpdate=true;return g;
+}
 const CORN_D=30,PL_T=16;   // mm: how far the cornice's relief stands out of the wall at most, the skirting board's thickness
 /* the skirting board's profile (s: out from the wall into the room, v: up from its bottom; mm), run along a wall face: upright,
    its top rounded toward the wall */
@@ -183,7 +197,7 @@ function trimMesh(kind,w,a,b,y0,h){
   // the profile's s goes into the room: +x as built; turned so it goes the face's way, the run along the wall
   g.rotateY(alongX?-sg*Math.PI/2:(sg>0?0:Math.PI));
   if(g.center)g.center();
-  const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;
+  const m=new THREE.Mesh(g,kind==='plinth'?woodMat:trimMat);m.castShadow=m.receiveShadow=true;
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(g,T.lines),edgeMat);e.raycast=()=>{};m.add(e);   // a relief: its outline, not every leaf and twist
   const box=alongX?[a,b,...[at,at+sg*depth].sort((p,q)=>p-q)]:[...[at,at+sg*depth].sort((p,q)=>p-q),a,b];
   m.position.set((box[0]+box[1])/2*MM,(y0+h/2)*MM,(box[2]+box[3])/2*MM);
@@ -198,9 +212,16 @@ const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
 const lowFootMat=new THREE.MeshBasicMaterial({color:0x5a5d60,polygonOffset:true,polygonOffsetFactor:-2});   // a low wall's footprint: a shade lighter, not quite a wall
-const FLOOR_Y=-.01;   // 10 mm under the room's floor: closer, the two fought for the depth far off and the floor flickered
-const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorMat);
-floor.rotation.x=-Math.PI/2;floor.position.set(CX,FLOOR_Y,CZ);floor.receiveShadow=true;scene.add(floor);   // the walls cast their shadows outside the room
+/* the ground round the room, 30 m square: with a hole where the room's own floor is (two floors one over the other fought for the depth
+   far off and flickered); 10 mm under it */
+const FLOOR_Y=-.01;
+function groundGeometry(){
+  const v=(x,z)=>new THREE.Vector2(x,-z),r=ROOMS[0].r.map(q=>q*MM),S=new THREE.Shape([v(CX-15,CZ-15),v(CX+15,CZ-15),v(CX+15,CZ+15),v(CX-15,CZ+15)]);
+  S.holes.push(new THREE.Path([v(r[0],r[2]),v(r[0],r[3]),v(r[1],r[3]),v(r[1],r[2])]));
+  return new THREE.ShapeGeometry(S).rotateX(-Math.PI/2);
+}
+const floor=new THREE.Mesh(groundGeometry(),floorMat);
+floor.position.y=FLOOR_Y;floor.receiveShadow=true;scene.add(floor);   // the walls cast their shadows outside the room
 
 
 // take everything out of a group; its own materials and textures go too, shared ones stay (own=false)
@@ -478,10 +499,10 @@ function fadeRule(w,vw){const r=fadeWall(w,vw).r.map(v=>v*MM),side=fadeSide(w,vw
 
 /* the door: a 10 mm lining through the wall round the opening (two jambs, the head between them), the leaf in it, its corridor face
    flush with the wall's; hinged at the right jamb (seen from the room), it opens out into the corridor. Casings CW on both faces of the wall
-   over the lining's ends (flush with its inner faces), jambs to the head, the head over them (white, as the leaf);
-   a white square lever handle on each face. CW, CT, LT: apartment.js */
-const leafMat=new THREE.MeshStandardMaterial({color:0xf1efea,roughness:.6});
-const doorHandleMat=new THREE.MeshStandardMaterial({color:0xf7f7f5,roughness:.3});   // the door's handles: white
+   over the lining's ends (flush with its inner faces), jambs to the head, the head over them (wood, as the leaf);
+   a brass square lever handle on each face. CW, CT, LT: apartment.js */
+const leafMat=woodMat;   // the leaf, its casings and lining: wood, as the skirting board
+const doorHandleMat=new THREE.MeshStandardMaterial({color:new THREE.Color('#D9B56A').convertSRGBToLinear(),roughness:.3,metalness:.8});   // the door's handles: brass
 const doorGroup=new THREE.Group();scene.add(doorGroup);
 // a door: its hinge pivot at px, pz; a box leaf of size at pos in it, or none (size null: the caller makes the leaf)
 function door(px,pz,size,pos,mat,max){
@@ -516,7 +537,7 @@ function glazedLeaf(g,bw,bh){
   // the glass in the middle of the leaf, the bars across it
   part(new THREE.ShapeGeometry(bell(new THREE.Shape(),x0,x1,glass0,yG)),doorGlassMat,glass0,yG,null,LEAF_T/2*k);
   // a bar: a box is made centred on 0, so first it goes where it stands in the leaf, as the shapes are drawn (part centres them all)
-  const bx=(a,b,y0,y1)=>{const geo=new THREE.BoxGeometry((b-a)*k,(y1-y0)*k,bar*k);geo.translate((a+b)/2*k,(y0+y1)/2*k,LEAF_T/2*k);part(geo,leafMat,y0,y1,20);};
+  const bx=(a,b,y0,y1)=>{const geo=woodBoxUV(new THREE.BoxGeometry((b-a)*k,(y1-y0)*k,bar*k),(b-a)*k,(y1-y0)*k,bar*k);geo.translate((a+b)/2*k,(y0+y1)/2*k,LEAF_T/2*k);part(geo,leafMat,y0,y1,20);};
   const xm=(x0+x1)/2,h3=(yG-arch-glass0)/3;
   bx(xm-bar/2,xm+bar/2,glass0,yG);
   [1,2].forEach(i=>{const y=glass0+i*h3;bx(x0,x1,y-bar/2,y+bar/2);});
@@ -547,7 +568,7 @@ function buildDoors(){
     [[LEAF_T,1],[0,-1]].forEach(([fz,s])=>leverHandle(d.g,doorHandleMat,hy,hy+25,(o0,o1,u0,u1)=>[ux+u0,ux+u1,...(s>0?[fz+o0,fz+o1]:[fz-o1,fz-o0])])); }
   const cs=new THREE.Group();doorGroup.add(cs);d.frame=cs;   // the casings and the lining: a click on them works the door, they hide with it
   const yt=A.dH;
-  const plank=(x0,x1,za,zb,ya,yb,role)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(yb-ya)*MM,(zb-za)*MM),leafMat);
+  const plank=(x0,x1,za,zb,ya,yb,role)=>{const s=[(x1-x0)*MM,(yb-ya)*MM,(zb-za)*MM],m=new THREE.Mesh(woodBoxUV(new THREE.BoxGeometry(...s),...s),leafMat);
     m.position.set((x0+x1)/2*MM,(ya+yb)/2*MM,(za+zb)/2*MM);m.castShadow=m.receiveShadow=true;
     m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));m.userData[role]=true;cs.add(m);};
   // the casings: the room face, the other face; their inner edges flush with the lining's faces, so they cover its ends
@@ -572,7 +593,7 @@ buildDoors();
 
 // the sizes changed: everything of the room is built again for the view on screen
 modelHooks.push(()=>{
-  floor.position.set(CX,FLOOR_Y,CZ);
+  floor.geometry.dispose();floor.geometry=groundGeometry();
   buildRooms();buildDoors();buildWalls(VIEWS[view]);applyTheme();
 });
 

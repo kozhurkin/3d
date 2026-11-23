@@ -61,7 +61,7 @@ check('ползунки: стена длиннее — дверь остаётс
 check('настройки в браузере — под своими ключами eng-, не под ключами квартиры', () => {
   const storage = new Map();
   const p = open({ storage });
-  p.document.querySelector('[data-panel="plan"] [data-wm="edges"]').click();
+  p.document.getElementById('pDims').checked = false; p.document.getElementById('pDims').dispatch('change');
   p.document.querySelector('[data-wc="greige"]').click();
   p.document.getElementById('pSaveA').click();
   const keys = [...storage.keys()].sort();
@@ -73,6 +73,32 @@ check('ракурсы: «На дверь» — камера за стеной с
   const z = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => goalPosition().z * 1000); };
   assert.ok(z('door') > 5197, 'past the window wall');
   assert.ok(z('window') < -120, 'past the door wall');
+});
+
+check('сцена: без мини-вида; «i» — подсказка под устройство (мышь или палец) и под вкладку', () => {
+  const p = open();
+  assert.deepStrictEqual([p.document.getElementById('camBtn'), p.run(() => typeof showDebug)], [null, 'undefined']);
+  const shown = () => p.run(() => [...infoBtn.querySelectorAll('[data-info]')].filter((t) => !t.hidden).map((t) => t.dataset.info + ':' + t.dataset.dev));
+  assert.deepStrictEqual(shown(), ['orbit:mouse']);
+  p.run(() => { touchDev = true; syncInfo(); });
+  assert.deepStrictEqual(shown(), ['orbit:touch']);
+});
+
+check('дверь и плинтус — в текстуре дерева из фото (волокна вдоль деталей), ручки латунные; лепнина и плетёнка белые', () => {
+  const p = open();
+  const r = p.run(() => { const pl = wallParts.filter((w) => w.trim && w.kind === 'plinth').map((w) => w.m.material === woodMat);
+    return [leafMat === woodMat, pl.length > 0 && pl.every(Boolean), wallParts.filter((w) => w.trim && w.kind !== 'plinth').every((w) => w.m.material === trimMat)]; });
+  assert.deepStrictEqual(r, [true, true, true]);
+  assert.deepStrictEqual(p.run(() => [woodTex.repeat.x, woodTex.repeat.y]), [1 / 1.3, 1 / 2.3], 'the sheet: 1300 across the grain, 2300 along it');
+  assert.match(PAGES.app, /woodMat=new THREE\.MeshStandardMaterial\(\{map:woodTex,/);
+  assert.match(PAGES.app, /const WOOD_JPG='data:image\/jpeg;base64,/);
+});
+
+check('панель «Комнаты»: нет стен и двери — стены всегда «Разрез», дверь закрыта', () => {
+  const storage = new Map([['eng-view-plan-v1', JSON.stringify({ Wm: 'edges', Wh: 40, dm: 'open' })]]);
+  const p = open({ storage });
+  assert.deepStrictEqual(['[data-wm]', '[data-wh]', '[data-dm]'].map((q) => p.document.querySelector(`[data-panel="plan"] ${q}`)), [null, null, null]);
+  assert.deepStrictEqual(p.run(() => [VS.plan.Wm, VS.plan.Wh, VS.plan.dm, doors.every((d) => d.t === 0)]), ['auto', 100, 'closed', true]);
 });
 
 check('стены: «Средний беж» по умолчанию; обои — из фото, у другого цвета текстуры нет', () => {
@@ -93,7 +119,7 @@ check('лепнина 110 под потолком по всем стенам, п
     ['left', 2950, 3060, [0, 30, 0, 4797]], ['left', 0, 70, [0, 16, 0, 4797]],
     ['window', 2950, 3060, [0, 2710, 4767, 4797]], ['window', 0, 70, [0, 2710, 4781, 4797]]]);
   // «Контуры»: the walls are see-through, the trims go with them
-  p.document.querySelector('[data-panel="plan"] [data-wm="edges"]').click(); p.tick();
+  p.run(() => { VS.plan.Wm = 'edges'; }); p.tick();
   assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
 });
 
@@ -107,7 +133,7 @@ check('фотообои: слева от входа, от плинтуса, 2700
   assert.ok(Math.abs(r[0].rot + Math.PI / 2) < 1e-9, 'faces into the room (-x)');
   assert.ok(Math.abs(r[0].rep[0] - 4797 / 5000) < 1e-9 && r[0].rep[1] === 1, 'the picture cut at the window end, not squeezed');
   // the walls cut to half: the sheet's top goes, the picture is not squashed
-  const wh = p.document.querySelector('[data-panel="plan"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
+  p.run(() => { VS.plan.Wh = 50; }); p.tick();
   near(get()[0].rep[1], (1530 - 70) / 2700, 'the share of the picture left');
   const btn = (v) => p.document.querySelector(`[data-panel="plan"] [data-mural="${v}"]`);
   btn('left').click();
@@ -218,10 +244,9 @@ check('розетка не отбрасывает тень', () => {
   assert.deepStrictEqual(p.run(() => [roseGroup.children[0].castShadow, roseGroup.children[0].receiveShadow]), [false, true]);
 });
 
-check('шкаф: кнопкой в панели — к стене с дверью, в правый угол, и обратно; клик по нему самому его не двигает', () => {
+check('шкаф: кнопкой в панели — к стене с дверью, в правый угол, и обратно', () => {
   const p = open();
   const at = () => p.run(() => [A.wardWall, wardrobeBoxes()[0].map((v) => tt.mm(v)), document.querySelector('[data-ward="door"]').getAttribute('aria-pressed')]);
-  assert.strictEqual(p.run(() => wardGroup.children[0].userData.click), undefined, 'no click of its own');
   p.document.querySelector('[data-ward="door"]').click();
   assert.deepStrictEqual(at(), ['door', [1093, 2694, 16, 522, 0, 2600], 'true'], 'in the right corner, on the skirting boards; clear of the doorway (1080)');
   assert.deepStrictEqual(p.run(() => aptProblems(A)), []);

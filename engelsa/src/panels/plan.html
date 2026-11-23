@@ -4,22 +4,6 @@
     </div>
 
     <div>
-      <h2>Вид</h2>
-      <h3>Стены</h3>
-      <div class="seg" role="group" aria-label="Стены">
-        <button data-wm="show" aria-pressed="false">Монолит</button>
-        <button data-wm="row" aria-pressed="false" title="Монолитные стены высотой 10%">Ряд</button>
-        <button data-wm="auto" aria-pressed="true" title="Стена убирается, когда камера за ней">Разрез</button>
-        <button data-wm="edges" aria-pressed="false">Контуры</button>
-        <button data-wm="feet" aria-pressed="false">Следы</button>
-      </div>
-      <div class="field" style="margin-top:10px"><label for="pWh">Высота стен</label><output data-wh-out></output><input type="range" id="pWh" data-wh min="5" max="100" step="5"></div>
-      <h3>Дверь</h3>
-      <div class="seg" role="group" aria-label="Дверь">
-        <button data-dm="closed" aria-pressed="true">Закрыта</button>
-        <button data-dm="open" aria-pressed="false">Открыта</button>
-        <button data-dm="none" aria-pressed="false">Без двери</button>
-      </div>
       <div class="toggles">
         <label><input type="checkbox" id="pDims" checked> Размеры</label>
         <label><input type="checkbox" id="pNames" checked> Название и площадь</label>
@@ -84,7 +68,7 @@
       <ol class="qs">
         <li>Боковые стены 4797 — из площади 13 м² при короткой стене 2710. Точная длина?</li>
         <li>Ширина двери 800 — между наличниками (видимый проём); проём в стене на 20 больше (коробка по 10 под наличниками). Высота проёма не задана — взято 2000.</li>
-        <li>Петли и сторона открывания не заданы: дверь на петлях справа (если смотреть из комнаты), открывается в комнату.</li>
+        <li>Петли и сторона открывания не заданы: дверь на петлях справа (если смотреть из комнаты), открывается наружу, в коридор.</li>
         <li>Толщина стен не задана: со стороны двери и боковые — 120, с окном — 400.</li>
       </ol>
     </div>

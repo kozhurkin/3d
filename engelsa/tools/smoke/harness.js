@@ -30,7 +30,7 @@ function stub(name = 'stub') {
       // its colours real, so checks can see them in numbers (the edge contrast: furniture.js applyContrast); white and black, as THREE's
       if (/Material$/.test(name)) Object.assign(o, { color: new Color(args[0] && args[0].color != null ? args[0].color : 0xffffff), emissive: new Color(args[0] && args[0].emissive || 0) });
       // objects of the scene have a real place and real children, so checks can see where things stand
-      // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
+      // a geometry keeps its sizes
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;
       // and where it was moved to (translate, as THREE's: returns itself), so a part's place in the scene can be told
       if (/Geometry$/.test(name)) { o.off = [0, 0, 0]; o.translate = (x, y, z) => { o.off[0] += x; o.off[1] += y; o.off[2] += z; return o; }; }
@@ -85,34 +85,6 @@ class Color {
   multiplyScalar(s) { return this.setRGB(this.r * s, this.g * s, this.b * s); }
   addScalar(s) { return this.setRGB(this.r + s, this.g + s, this.b + s); }
   convertSRGBToLinear() { const f = (v) => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return this.setRGB(f(this.r), f(this.g), f(this.b)); }
-}
-// a real box: the mini view's part of the apartment
-class Box3 {
-  constructor(min = new Vec3(), max = new Vec3()) { this.min = min; this.max = max; }
-  getCenter(v) { return v.copy(this.min).lerp(this.max, 0.5); }
-  getSize(v) { return v.copy(this.max).sub(this.min); }
-  isEmpty() { return !(this.max.x >= this.min.x && this.max.y >= this.min.y && this.max.z >= this.min.z); }
-  /* the box of an object in the scene: its box and cylinder meshes, with their places and scales up the parents
-     (rotations are left out, but a mesh turned a quarter about x — the washing machine's door — swaps its height and depth) */
-  setFromObject(obj) {
-    this.min.set(Infinity, Infinity, Infinity); this.max.set(-Infinity, -Infinity, -Infinity);
-    const walk = (o) => {
-      const g = o.geometry;
-      if (g && Array.isArray(g.args)) {
-        const a = g.args, h = g.kind === 'THREE.BoxGeometry' ? [a[0] / 2, a[1] / 2, a[2] / 2]
-          : g.kind === 'THREE.CylinderGeometry' ? [Math.max(a[0], a[1]), a[2] / 2, Math.max(a[0], a[1])] : null;
-        if (h && o.rotation && Math.abs(Math.sin(+o.rotation.x || 0)) > 0.5) [h[1], h[2]] = [h[2], h[1]];
-        if (h) {
-          const c = [0, 0, 0], s = [1, 1, 1];
-          // up the real parents only (the scene's: none)
-          for (let p = o; p && p.position instanceof Vec3; p = p.parent) { ['x', 'y', 'z'].forEach((k, i) => { c[i] = c[i] * p.scale[k] + p.position[k]; s[i] *= p.scale[k]; }); }
-          ['x', 'y', 'z'].forEach((k, i) => { this.min[k] = Math.min(this.min[k], c[i] - h[i] * s[i]); this.max[k] = Math.max(this.max[k], c[i] + h[i] * s[i]); });
-        }
-      }
-      if (Array.isArray(o.children)) o.children.forEach(walk);
-    };
-    walk(obj); return this;
-  }
 }
 const round = (v, d = 4) => +(+v).toFixed(d);
 
@@ -218,7 +190,7 @@ function runPage(html, { hash = '', storage = new Map(), parentWin = {}, reduce 
     getItem: (k) => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)),
     removeItem: (k) => storage.delete(k),
   };
-  const THREE = stub('THREE'); THREE.Vector3 = Vec3; THREE.Box3 = Box3; THREE.Color = Color;
+  const THREE = stub('THREE'); THREE.Vector3 = Vec3; THREE.Color = Color;
   const win = {
     THREE, document, localStorage, console, setTimeout, clearTimeout, Math, JSON,
     performance: { now: () => clock.t },   // page time moves only with tick(): 16 ms a frame
@@ -272,4 +244,4 @@ const vec = (p, v) => p.run(`[${v}.x,${v}.y,${v}.z]`).map((x) => round(x));
 const piece = (p, id) => p.run(`(w=>({sx:w.m.scale.x, sy:w.m.scale.y, sz:w.m.scale.z, z:w.m.position.z, visible:w.m.visible}))(wallParts.find(w=>w.id==="${id}"&&w.b===0))`);
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-3, `${msg}: ${a} ≠ ${b}`);
 
-module.exports = { fs, stub, Vec3, Box3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, html, pi, PAGES, checks, check, run, times, slide, vec, piece, near, assert };
+module.exports = { fs, stub, Vec3, round, VOID, kebab, parseAttrs, el, parseHTML, all, matchesOne, matches, runPage, root, html, pi, PAGES, checks, check, run, times, slide, vec, piece, near, assert };

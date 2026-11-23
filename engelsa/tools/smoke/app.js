@@ -495,20 +495,23 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   const p = open();
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]);
     return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, v: c.variant }; });
-  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 4],
+  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 5],
     lines: [['Размер', 'Ø 60, высота 53,5 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
       ['Место', 'по центру потолка, низ в 2508 от пола'], 'Нажатие на люстру — следующий вариант.'] });
   const el = p.document.getElementById('itemCard'), next = () => el.children.find((c) => c.className === 'next');
   p.run(() => openItemCard(infoOf(lampGroup.children[0])));
   next().children[1].click();
   assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent,
+    p.document.querySelector('[data-lamp="discs75"]').getAttribute('aria-pressed')], ['discs75', 'Люстра стеклянная, 12 плафонов (Ozon)', '2/5', 'true']);
+  next().children[1].click();
+  assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent,
     p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')],
-  ['branches', 'Люстра хрустальная Aine Light, 6 рожков (Wildberries)', '2/4', 'true']);
+  ['branches', 'Люстра хрустальная Aine Light, 6 рожков (Wildberries)', '3/5', 'true']);
   next().children[1].click();
   assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent],
-    ['branches80', 'Люстра хрустальная с висюльками (Ozon)', '3/4']);
+    ['branches80', 'Люстра хрустальная с висюльками (Ozon)', '4/5']);
   next().children[1].click();
-  assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent], ['ervilen', 'Люстра ERVILEN, G9, 84 Вт (Ozon)', '4/4']);
+  assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent], ['ervilen', 'Люстра ERVILEN, G9, 84 Вт (Ozon)', '5/5']);
   next().children[1].click();
   assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
 });
@@ -532,12 +535,13 @@ check('люстра «Ветви 50» (Aine Light, Wildberries): как «Вет
 check('люстра: клик по ней — следующий вариант (по кругу, без «Нет»), курсор над ней — рука; тени люстры не отбрасывают', () => {
   const p = open();
   const click = () => p.run(() => clickAt({}, { object: lampGroup.children[0].children[3] }));
-  assert.deepStrictEqual([click(), p.run(() => A.lamp), p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')], [true, 'branches', 'true']);
+  assert.deepStrictEqual([click(), p.run(() => A.lamp), p.document.querySelector('[data-lamp="discs75"]').getAttribute('aria-pressed')], [true, 'discs75', 'true']);
+  assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'branches']);
   assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'branches80']);
   assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'ervilen']);
   assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'discs']);
   assert.strictEqual(p.run(() => typeof clickOf({ object: lampGroup.children[0].children[3] })), 'function');
-  ['discs', 'branches', 'branches80', 'ervilen'].forEach((k) => {
+  ['discs', 'discs75', 'branches', 'branches80', 'ervilen'].forEach((k) => {
     p.run((k) => setModel({ ...A, lamp: k }), k);
     const sh = p.run(() => { const all = []; const walk = (o) => { if (o.castShadow === true) all.push(o); (o.children || []).forEach(walk); }; walk(lampGroup); return all.length; });
     assert.strictEqual(sh, 0, k + ': nothing of it casts a shadow');
@@ -592,9 +596,27 @@ check('люстра «Шары» (ERVILEN, Ozon): 900 × 900, тело 300 на 
 
 check('люстры висят у розетки: чашка на 17 ниже потолка — наполовину в куполе розетки (32), а не утоплена в её рельефе', () => {
   const p = open();
-  ['discs', 'branches', 'branches80', 'ervilen'].forEach((k) => {
+  ['discs', 'discs75', 'branches', 'branches80', 'ervilen'].forEach((k) => {
     p.run((k) => setModel({ ...A, lamp: k }), k);
     assert.deepStrictEqual(p.run(() => [tt.mm(lampGroup.children[0].position.y), roseDepth(0, 0), LAMP_TOP]), [3043, 32, 17], k);
   });
+});
+
+check('люстра «Диски 75» (Ozon, 12 плафонов): увеличенная копия «Дисков 60» — Ø 750, та же высота 535 и стекло с 214 (40 / 60), 12 рожков, никель', () => {
+  const p = open();
+  p.document.querySelector('[data-lamp="discs75"]').click();
+  const r = p.run(() => {
+    const g = lampGroup.children[0], discs = [];
+    g.children.forEach((pv) => pv.children.forEach((q) => q.children.forEach((m) => { if (m.userData.disc) discs.push(m); })));
+    const ext = DISC_TIERS_75.map(({ r, d, t, b }) => [Math.round(t + d * Math.cos(b)), Math.round(Math.hypot(r, d / 2))]);
+    return { kind: g.userData.lamp, n: discs.length, arms: DISC_TIERS_75[0].n, top: Math.min(...DISC_TIERS_75.map((T) => T.t)),
+      low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), nickel: g.children.filter((m) => m.material === lampNickel).length > 10,
+      brass: g.children.some((m) => m.material === lampBrass), on: document.querySelector('[data-lamp="discs75"]').getAttribute('aria-pressed') };
+  });
+  assert.deepStrictEqual(r, { kind: 'discs75', n: 67, arms: 12, top: 214, low: 535, out: 375, nickel: true, brass: false, on: 'true' }, 'Ø 750');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра стеклянная, 12 плафонов: Ø 750, высота 535, низ в 2508 от пола/);
+  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]); return [c.price, c.shop, c.url, c.lines.slice(0, 4)]; });
+  assert.deepStrictEqual(i, [11327, 'Ozon', 'https://ozon.ru/t/7EWNSq6', [['Размер', 'Ø 75, высота 53,5 см'], ['Материал', 'стекло, металл'],
+    ['Лампы', '12 × до 60 Вт (720 Вт)'], ['Место', 'по центру потолка, низ в 2508 от пола']]]);
 });
 

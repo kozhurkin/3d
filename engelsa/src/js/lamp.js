@@ -36,25 +36,32 @@ function lampCyl(g,r,y0,y1,mat){const m=new THREE.Mesh(new THREE.CylinderGeometr
    its 10 arms out from a collar and a little up, a ring at each end; textured glass discs in tiers from 214 (the rod 40 % of the height,
    the glass 60 %), each hanging by its top edge, its face out: the top tier's 10 from the arms' rings, under it rings ever smaller and
    the discs leaning out at the top more and more, so together they make a bowl down to 535. A tier: its ring's radius r, how many n,
-   turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad) */
+   turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad).
+   A bigger one like it (Ozon, 12 bulbs), Ø 750, as high, in nickel (DISC_TIERS_75): its rings 1.25 times wider, 12 arms, the discs
+   1.15 times bigger and more of them round, the tiers' tops a little closer so it still ends at 535 */
 const DISC_TIERS=[
   {r:292,n:10,ph:0,d:138,t:214,b:0},{r:268,n:10,ph:.5,d:128,t:232,b:-.1},{r:215,n:10,ph:.25,d:124,t:285,b:-.2},
   {r:165,n:9,ph:0,d:115,t:336,b:-.3},{r:112,n:8,ph:.5,d:105,t:382,b:-.4},{r:62,n:6,ph:0,d:96,t:420,b:-.45},{r:22,n:3,ph:.2,d:92,t:447,b:-.3}
 ];
+const DISC_TIERS_75=[
+  {r:366,n:12,ph:0,d:159,t:214,b:0},{r:336,n:12,ph:.5,d:147,t:231,b:-.1},{r:270,n:12,ph:.25,d:143,t:281,b:-.2},
+  {r:207,n:11,ph:0,d:132,t:329,b:-.3},{r:141,n:10,ph:.5,d:121,t:373,b:-.4},{r:78,n:7,ph:0,d:110,t:408,b:-.45},{r:28,n:3,ph:.2,d:106,t:434,b:-.3}
+];
+const lampNickel=new THREE.MeshStandardMaterial({color:new THREE.Color('#b9bab7').convertSRGBToLinear(),roughness:.3,metalness:.85});   // satin nickel
 const DISC_T=4;   // the glass's thickness
-function lampDiscs(g){
+function lampDiscs(g,tiers=DISC_TIERS,metal=lampBrass){
   // the cup on the ceiling, the rod, the hub with its collar under it
-  const cyl=(r,y0,y1)=>lampCyl(g,r,y0,y1,lampBrass);
+  const cyl=(r,y0,y1)=>lampCyl(g,r,y0,y1,metal);
   cyl(50,0,26);cyl(7,26,201);cyl(22,197,247);cyl(30,213,227);
   // the arms: from the collar out to the top tier's ring, rising 20 toward their ends, a cap and a ring there the disc hangs from;
   // the bulbs on them hid by the glass
-  const T0=DISC_TIERS[0];
-  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[26*c,-220,26*s],[(T0.r+8)*c,-200,(T0.r+8)*s],6,lampBrass);
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(6*MM,1.5*MM,6,16),lampBrass);ring.position.set(T0.r*c*MM,-(T0.t-5)*MM,T0.r*s*MM);
+  const T0=tiers[0];
+  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[26*c,-220,26*s],[(T0.r+8)*c,-200,(T0.r+8)*s],6,metal);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(6*MM,1.5*MM,6,16),metal);ring.position.set(T0.r*c*MM,-(T0.t-5)*MM,T0.r*s*MM);
     ring.rotation.y=-a;g.add(ring);}
   // the discs: each in a pivot at its hanging point, x out from the axis, turned about its tangent by the lean
   const geo={};
-  DISC_TIERS.forEach(({r,n,ph,d,t,b})=>{
+  tiers.forEach(({r,n,ph,d,t,b})=>{
     const G=geo[d]||(geo[d]=new THREE.CylinderGeometry(d/2*MM,d/2*MM,DISC_T*MM,40).rotateZ(Math.PI/2));   // its faces along x: out and in
     for(let i=0;i<n;i++){const a=2*Math.PI*(i+ph)/n,p=new THREE.Group();
       p.position.set(r*Math.cos(a)*MM,-t*MM,r*Math.sin(a)*MM);p.rotation.y=-a;g.add(p);
@@ -176,6 +183,9 @@ function lampGlobes(g){
 const LAMPS={
   discs:{n:'Диски',build:lampDiscs,H:535,size:'Ø 600',info:{title:'Люстра MyLight, 8 плафонов (Ozon)',price:8232,shop:'Ozon',url:'https://ozon.ru/t/sZSVo8F',
     lines:[['Размер','Ø 60, высота 53,5 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
+  discs75:{n:'Диски 75',build:g=>lampDiscs(g,DISC_TIERS_75,lampNickel),H:535,size:'Ø 750',info:{title:'Люстра стеклянная, 12 плафонов (Ozon)',
+    price:11327,shop:'Ozon',url:'https://ozon.ru/t/7EWNSq6',lines:[['Размер','Ø 75, высота 53,5 см'],['Материал','стекло, металл'],
+      ['Лампы','12 × до 60 Вт (720 Вт)']]}},
   branches:{n:'Ветви 50',build:g=>lampBranches(g,BR.aine),H:BR.aine.H,size:`${BR.aine.W} × ${BR.aine.D}`,info:{title:'Люстра хрустальная Aine Light, 6 рожков (Wildberries)',
     price:8051,shop:'Wildberries',url:'https://www.wildberries.ru/catalog/1605669544/detail.aspx',
     lines:[['Размер','50 × 45, высота 53 см'],['Штанга','20 см'],['Материал','алюминий, стекло К9'],['Лампы','6 × E14 до 60 Вт (360 Вт)'],

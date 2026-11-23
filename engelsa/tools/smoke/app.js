@@ -211,3 +211,23 @@ check('шкаф: ручки на стыках дверей — 1|2, 2|3, 3|4', (
   const dw = (1601 - 15) / 4, edge = (i) => 3 + i * (dw + 3) - 1.5;   // the middle of the gap left of door i
   assert.deepStrictEqual(u.map((x, i) => Math.abs(x - edge(i + 1)) < 10), [true, true, true], u.join(' '));
 });
+
+check('розетка не отбрасывает тень', () => {
+  const p = open();
+  assert.deepStrictEqual(p.run(() => [roseGroup.children[0].castShadow, roseGroup.children[0].receiveShadow]), [false, true]);
+});
+
+check('шкаф: клик по нему (не по двери) — к стене с дверью, в правый угол; ещё клик — обратно; так же кнопками в панели', () => {
+  const p = open();
+  const at = () => p.run(() => [A.wardWall, wardrobeBoxes()[0].map((v) => tt.mm(v)), document.querySelector('[data-ward="door"]').getAttribute('aria-pressed')]);
+  p.run(() => wardGroup.children[0].userData.click());
+  assert.deepStrictEqual(at(), ['door', [1093, 2694, 16, 522, 0, 2600], 'true'], 'in the right corner, on the skirting boards; clear of the doorway (1080)');
+  assert.deepStrictEqual(p.run(() => aptProblems(A)), []);
+  p.run(() => wardGroup.children[0].userData.click());
+  assert.deepStrictEqual(at()[0], 'right');
+  p.document.querySelector('[data-ward="door"]').click();
+  assert.deepStrictEqual(at()[0], 'door');
+  slide(p, 'dR', 1500);   // the door to the right: the doorway's edge (2650 − dR) reaches the wardrobe's side (1093) at dR 1557
+  assert.strictEqual(p.run(() => A.dR), 1560);
+  assert.match(p.document.getElementById('pSizeMsg').textContent, /Шкаф/);
+});

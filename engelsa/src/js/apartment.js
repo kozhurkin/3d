@@ -16,12 +16,13 @@ const APT_A={
   cornH:110, plH:70,                // the cornice under the ceiling: its drop down the wall; the skirting board: its height
   muralWall:'right', muralW:5000, muralH:2700,  // the photo wallpaper: on which wall ('' none; 'right' is left of the way in), its width and height,
                                                 // from the skirting board's top up, glued from the left corner as one faces the wall (the rest cut off)
-  wardWall:'right', wardW:1601, wardD:506, wardH:2600,   // the wardrobe: at the photo wallpaper's wall, at its left end; its width, depth, height
+  wardWall:'right', wardW:1601, wardD:506, wardH:2600,   // the wardrobe: at the photo wallpaper's wall at its left end ('door': the door wall's
+                                                          // right corner); its width, depth, height
   rosW:550, rosD:450,               // the ceiling rose, an oval in the middle of the ceiling: along the side walls, across them
   ropeH:11                          // the twisted rope trim round the room right over the photo wallpaper's top: its height (6 deep);
                                     // the wallpaper up to its bottom, the wall over it up to the cornice white
 };
-const CW=70,CT=10,LT=10;   // door casings: width, thickness; the lining through the wall between them: thickness
+const CW=70,CT=10,LT=10,PL_T_=16;   // … ; PL_T_: the skirting board's thickness (walls.js: PL_T)   // door casings: width, thickness; the lining through the wall between them: thickness
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.
    Walls: rect r=[x0,x1,z0,z1]; ext: outer side of the wall (each wall of one room is an outer one of the model);
@@ -50,7 +51,7 @@ function apartment(a){
 
 /* What does not fit with these sizes: [] when everything does. The plan's size sliders stop at the last value that fits */
 function aptProblems(a){
-  const m=apartment(a),A=m.A,out=[];
+  const m=apartment(a),A=m.A,dB=m.dB,out=[];
   m.WALLS.forEach(w=>{if(w.r[1]<w.r[0]||w.r[3]<w.r[2])out.push(`«${w.name}» не помещается`);});
   if(m.dL<0)out.push('Левый наличник двери заходит за левый угол');
   if(A.dR<0)out.push('Правый наличник двери заходит за правый угол');
@@ -59,6 +60,7 @@ function aptProblems(a){
   if(A.dH+CW>A.H-A.cornH)out.push('Наличник над дверью заходит под лепнину');
   if(A.winT>A.H-A.cornH)out.push('Окно заходит под лепнину');
   if(A.plH>A.winS&&A.winS>0)out.push('Плинтус выше подоконника');
+  if(A.wardWall==='door'&&A.W-PL_T_-A.wardW<dB)out.push('Шкаф у стены с дверью заходит на проём');
   if(A.plH+A.muralH+A.ropeH>A.H-A.cornH)out.push('Фотообои с плетёнкой над ними заходят под лепнину');
   return out;
 }

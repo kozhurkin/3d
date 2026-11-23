@@ -152,7 +152,7 @@ function buildRose(){
   for(let i=0;i<=na;i++){const th=i/na*2*Math.PI;pos.push((A.W/2+rb*Math.cos(th))*MM,H*MM,(A.L/2+ra*Math.sin(th))*MM);}
   for(let i=0;i<na;i++)idx.push(o,o+2+i,o+1+i);
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
-  const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;m.userData.rose=true;roseGroup.add(m);
+  const m=new THREE.Mesh(g,trimMat);m.castShadow=false;m.receiveShadow=true;m.userData.rose=true;roseGroup.add(m);   // it casts no shadow
 }
 buildRose();
 // it hangs under the ceiling: seen while the walls stand whole up to it, not on the «Комната» tab (the plan: it would hang over the room)

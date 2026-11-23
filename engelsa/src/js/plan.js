@@ -82,7 +82,7 @@ function renderFacts(){
       row('Стена с окном',`${winX-A.winW/2} + ${A.winW} + ${A.W-winX-A.winW/2}`)+
       row('Стены',`обои под лён (по образцу), откосы окна окрашены; лепнина ${A.cornH}, плинтус ${A.plH}`)+
       row('Над фотообоями',`плетёнка ${A.ropeH} × 6 по периметру (у окна прервана) на ${A.plH+A.muralH}; обои до её низа, выше до лепнины стена белая`)+
-      row('Шкаф',`${A.wardW} × ${A.wardH} × ${A.wardD} у стены с фотообоями, от угла у двери; 4 двери и антресоль`)+
+      row('Шкаф',`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены с фотообоями, от угла у двери'}; клик по нему — к другой стене`)+
       row('Потолок',`розетка-овал ${A.rosW} × ${A.rosD} по центру, длинной стороной вдоль боковых стен, листья как у лепнины`)+
       row('Фотообои',A.muralWall?`${A.muralW} × ${A.muralH} от плинтуса, ${A.muralWall==='right'?'слева':'справа'} от входа; на стене ${Math.min(A.muralW,A.L)}`:'нет')+
       row('Толщина стен',`с дверью ${A.tD}, боковые ${A.tS}, с окном ${A.tW}`,true)}</dl>`;
@@ -130,7 +130,10 @@ pq('#pSizes').innerHTML=SIZES.map(([g,fs])=>`<div><h3>${g}, мм</h3>${fs.map(f=
   `<div class="field"><label for="pS-${f.k}">${f.n}</label><output data-size-out="${f.k}"></output><input type="range" id="pS-${f.k}" data-size="${f.k}" min="${f.min}" max="${f.max}" step="${f.step}"></div>`).join('')}</div>`).join('');
 const sizeMsg=pq('#pSizeMsg');
 function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});
-  planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));}
+  planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
+  planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));}
+// the wardrobe's wall (as a click on it does): kept with the sizes (A.wardWall)
+planPanel.querySelectorAll('[data-ward]').forEach(b=>b.addEventListener('click',()=>setModel({...A,wardWall:b.dataset.ward})));
 // the photo wallpaper's wall: kept with the sizes (A.muralWall)
 planPanel.querySelectorAll('[data-mural]').forEach(b=>b.addEventListener('click',()=>{
   const a={...A,muralWall:b.dataset.mural},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}setModel(a);}));

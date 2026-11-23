@@ -294,6 +294,43 @@ check('шкаф: кнопкой в панели — к стене с дверь�
   assert.match(p.document.getElementById('pSizeMsg').textContent, /Шкаф/);
 });
 
+check('шкаф: карточка «i» — «Сеул» с Wildberries, угловой — «Уютная логика» с Ozon (угловой и две доп. секции)', () => {
+  const p = open();
+  const card = () => p.run(() => { const i = infoOf(wardGroup.children[0].children[0]);
+    return { t: i.title, shop: i.shop, price: i.price || 0, buy: (i.buy || []).map((b) => [b.name, b.n || 1, b.price]), lines: i.lines.length }; });
+  assert.deepStrictEqual(card(), { t: 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', shop: 'Wildberries', price: 27655, buy: [], lines: 6 });
+  p.document.querySelector('[data-ward="corner"]').click();
+  assert.deepStrictEqual(card(), { t: 'Угловой шкаф «Уютная логика» (Ozon)', shop: 'Ozon', price: 0, lines: 6,
+    buy: [['Угловой 96,4 × 96,4 × 260', 1, 24845], ['Доп. секция 40 × 50 × 260', 2, 9577]] });
+  p.run(() => openItemCard(infoOf(wardGroup.children[0])));
+  const el = p.document.getElementById('itemCard'), buys = el.children[el.children.length - 1];
+  assert.deepStrictEqual(buys.children.map((r) => r.children.map((c) => c.textContent)),
+    [['Угловой 96,4 × 96,4 × 260', '24 845 ₽', 'Ozon'], ['Доп. секция 40 × 50 × 260', '2 × 9 577 ₽', 'Ozon'], ['Итого', '43 999 ₽']],
+    '24 845 + 2 × 9 577');
+});
+
+check('шкаф: в карточке ссылка на следующий вариант — «Слева», «У двери», «Угловой» по кругу, как кнопки панели', () => {
+  const p = open(), el = p.document.getElementById('itemCard');
+  const next = () => el.children.find((c) => c.className === 'next');
+  const at = () => [p.run(() => A.wardWall), next().children[0].textContent, el.children[1].textContent,
+    p.document.querySelector(`[data-ward="${p.run(() => A.wardWall)}"]`).getAttribute('aria-pressed')];
+  p.run(() => openItemCard(infoOf(wardGroup.children[0])));
+  assert.deepStrictEqual(at(), ['right', '1/3', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
+  const go = () => next().children[1].click();
+  go(); assert.deepStrictEqual(at(), ['door', '2/3', 'Шкаф для одежды «Сеул» с антресолью (Wildberries)', 'true']);
+  assert.strictEqual(el.children[4].textContent, 'У стены с дверью, в правом углу.');
+  go(); assert.deepStrictEqual(at(), ['corner', '3/3', 'Угловой шкаф «Уютная логика» (Ozon)', 'true']);
+  assert.deepStrictEqual(p.run(() => wardrobeBoxes().length), 2, 'the corner one built');
+  go(); assert.deepStrictEqual(at()[0], 'right');
+});
+
+check('шкаф: в карточке объём — «Сеул» ≈ 1842 л внутри (2106 снаружи), угловой с секциями ≈ 2505 (2896)', () => {
+  const p = open(), vol = () => p.run(() => infoOf(wardGroup.children[0]).lines.find((t) => t.startsWith('Объём')));
+  assert.strictEqual(vol(), 'Объём внутри ≈ 1842 л (снаружи 2106 л).');
+  p.document.querySelector('[data-ward="corner"]').click();
+  assert.strictEqual(vol(), 'Объём внутри ≈ 2505 л (снаружи 2896 л).', 'the L footprint 1,114 m² by 2600');
+});
+
 check('шкаф угловой в углу у двери, как в основном проекте: модуль 964 × 964 и доп. секции по 400 с обеих сторон (1364 вдоль стен), штанги у стены слева, сверху антресоль 400', () => {
   const p = open();
   p.document.querySelector('[data-ward="corner"]').click();

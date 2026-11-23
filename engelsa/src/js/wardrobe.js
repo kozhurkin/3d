@@ -18,7 +18,7 @@ const wallById=id=>WALLS.find(w=>w.id===id);
 // the straight one, W wide on wall w, its left side off from the wall's left end as one faces it
 function wardCase(w,W,off){
   const {T,BACK,FRONT,PLINTH,TOP,GAP}=WD,D=A.wardD,Hh=A.wardH,dC=D-FRONT,yM=Hh-TOP;   // the case's front; the main case's top
-  const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;
+  const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;g.userData.info=wardInfo;
   const box=(par,x0,x1,y0,y1,z0,z1,mat,lines=true)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM),mat);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     if(lines)m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));par.add(m);return m;};
@@ -75,7 +75,7 @@ const WC={d:500,mz:400,pl:70,t:16,ft:16,gap:2,strip:50,shelves:4,top:1650,rods:[
 function wardCorner(){
   const {d,mz,pl,t,ft,gap,strip:sw,hdf,hdfIn}=WC,C=A.wardC,Ad=A.wardAdd,Hh=A.wardH,Hl=Hh-mz,cd=d-ft;   // Hl: the lower part's top; cd: a carcass's depth behind its doors
   const X=A.W-PL_T,Z=PL_T;   // the left wall's face and the door wall's, the skirting boards kept
-  const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;
+  const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;g.userData.info=wardInfo;
   const box=(x0,x1,y0,y1,z0,z1,mat,lines=true,par=g)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1-x0)*MM,(y1-y0)*MM,Math.abs(z1-z0)*MM),mat);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     if(lines)m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));par.add(m);return m;};
@@ -118,6 +118,37 @@ function wardCorner(){
     r.rotation.x=Math.PI/2;r.position.set(x*MM,y*MM,(Z+C/2)*MM);r.castShadow=true;r.userData.rod=true;g.add(r);});
   // where it stands: along the door wall and along the left wall, [x0,x1,z0,z1,y0,y1] (m)
   g.userData.boxes=()=>[[X-C-Ad,X,Z,zF,0,Hh],[xF,X,zF,Z+C+Ad,0,Hh]].map(b=>b.map(v=>v*MM));
+}
+/* its card («i»): the straight one is «Сеул» (Wildberries), the corner one «Уютная логика» (Ozon): the corner unit and two add-on sections.
+   Its variants are the plan panel's (WARD_WALLS, in the buttons' order): the card's link puts the next one that fits and turns to its card */
+const wardCm=v=>String(v/10).replace('.',',');
+const WARD_WALLS=['right','door','corner'];
+function nextWard(){
+  const i=WARD_WALLS.indexOf(A.wardWall);
+  for(let k=1;k<WARD_WALLS.length;k++){const a={...A,wardWall:WARD_WALLS[(i+k)%WARD_WALLS.length]};if(!aptProblems(a).length){setModel(a);break;}}
+  return wardInfo();
+}
+/* its volume (l): outside its footprint by its height; inside its carcasses' insides (no sides, partitions, plinth, doors, back), shelves kept in */
+function wardVolume(){
+  const H=A.wardH,l=v=>Math.round(v/1e6);
+  if(A.wardWall==='corner'){const {d,mz,pl,t,ft,hdf}=WC,C=A.wardC,Ad=A.wardAdd,cd=d-ft,Hl=H-mz;
+    return {out:l(((C+Ad)*d+(C+Ad-d)*d)*H),in:l(((C-2*t)+(C-cd-2*t)+2*(Ad-2*t))*(cd-hdf)*((Hl-pl-2*t)+(mz-2*t)))};}
+  const {T,BACK,FRONT,PLINTH,TOP}=WD,W=A.wardW,D=A.wardD;
+  return {out:l(W*D*H),in:l((W-4*T)*(D-FRONT-BACK)*((H-TOP-PLINTH-2*T)+(TOP-2*T)))};
+}
+function wardInfo(){
+  const v=wardVolume(),vol=`Объём внутри ≈ ${v.in} л (снаружи ${v.out} л).`;
+  const H=wardCm(A.wardH),push='Двери открываются нажатием.',page={next:nextWard,variant:[WARD_WALLS.indexOf(A.wardWall)+1,WARD_WALLS.length]};
+  if(A.wardWall==='corner')return {...page,title:'Угловой шкаф «Уютная логика» (Ozon)',shop:'Ozon',lines:['ЛДСП 16 мм, задние стенки — ХДФ.',
+    `Угловой ${wardCm(A.wardC)} × ${wardCm(A.wardC)} см и доп. секция ${wardCm(A.wardAdd)} × ${wardCm(WC.d)} см с каждой стороны; высота ${H} см, антресоль ${wardCm(WC.mz)} см.`,
+    'В углу у двери, вдоль двух стен.','В угловом — две штанги для вешалок с полкой над ними и четыре полки; в доп. секциях по четыре полки.',vol,push],
+    buy:[{name:`Угловой 96,4 × 96,4 × ${H}`,price:24845,url:'https://ozon.ru/t/8LDmimL'},
+      {name:`Доп. секция 40 × 50 × ${H}`,n:2,price:9577,url:'https://ozon.ru/t/N0IGKwe'}]};
+  return {...page,title:'Шкаф для одежды «Сеул» с антресолью (Wildberries)',price:27655,shop:'Wildberries',
+    url:'https://www.wildberries.ru/catalog/530234305/detail.aspx',lines:['ЛДСП 16 мм, цвет «Меланж».',
+      `${wardCm(A.wardW)} × ${wardCm(A.wardD)} см, высота ${H} см; антресоль ${wardCm(WD.TOP)} см.`,
+      A.wardWall==='door'?'У стены с дверью, в правом углу.':'У стены слева от входа, от угла у двери.',
+      'Внутри: по краям по пять полок, посередине штанга, полки и два ящика.',vol,push]};
 }
 // where on a wall the straight one stands: from the left end as one faces the wall, or in the right corner
 const WARD_AT={right:'left',left:'left',door:'right',window:'left'};

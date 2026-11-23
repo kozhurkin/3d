@@ -16,7 +16,8 @@ const APT_A={
   cornH:110, plH:70,                // the cornice under the ceiling: its drop down the wall; the skirting board: its height
   muralWall:'right', muralW:5000, muralH:2700,  // the photo wallpaper: on which wall ('' none; 'right' is left of the way in), its width and height,
                                                 // from the skirting board's top up, glued from the left corner as one faces the wall (the rest cut off)
-  rosW:500, rosD:350,               // the ceiling rose, an oval in the middle of the ceiling: along the side walls, across them
+  wardWall:'right', wardW:1601, wardD:506, wardH:2600,   // the wardrobe: at the photo wallpaper's wall, at its left end; its width, depth, height
+  rosW:550, rosD:450,               // the ceiling rose, an oval in the middle of the ceiling: along the side walls, across them
   ropeH:11                          // the twisted rope trim round the room right over the photo wallpaper's top: its height (6 deep);
                                     // the wallpaper up to its bottom, the wall over it up to the cornice white
 };

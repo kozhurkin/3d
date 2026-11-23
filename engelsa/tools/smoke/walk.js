@@ -29,3 +29,10 @@ check('обход: стена с окном не пускает; закрыта�
   hold(p, 'KeyW', 30);
   assert.ok(eye(p)[2] < -0.2, 'through the open doorway: ' + eye(p)[2]);
 });
+
+check('обход: шкаф не пускает', () => {
+  const p = open();
+  drag(p, -Math.PI / 2 / 0.0025); p.tick();   // a quarter turn to the left: facing +x, toward the wardrobe
+  hold(p, 'KeyW', 120);
+  near(eye(p)[0], 2.188 - 0.15, 'stopped at its doors');
+});

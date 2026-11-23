@@ -103,6 +103,7 @@ canvas.addEventListener('pointermove',e=>{
   }
 });
 const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;};
+const furnDoors=[];   // the cabinet doors (js/wardrobe.js): a click or a hold works them as the room's door; they swing by themselves
 // a click (no drag) on a door leaf opens or closes that door; on an item with a click of its own, it does that
 // what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at)
 function hitAt(e){
@@ -113,9 +114,8 @@ function hitAt(e){
 function pickDoor(e,hit){
   const h=hit===undefined?hitAt(e):hit;
   if(!h)return null;
-  // a door of the apartment (the leaf, its handles or the entrance frame) or a cabinet front of any room in the scene
-  // (the plan shows them all; a hidden room is never hit); a door's frame (d.frame: what it is set in) works it too
-  const fd=Object.values(VIEWS).flatMap(v=>v.furniture?v.furniture().doors:[]);
+  // the room's door (the leaf, its handles; its frame d.frame works it too) or a cabinet door
+  const fd=furnDoors;
   for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o||d.frame===o);if(d)return d;}
   return null;
 }

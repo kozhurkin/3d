@@ -150,19 +150,19 @@ check('откосы окна не оклеены: проём окна в мир�
   assert.deepStrictEqual(r, [[753, 898, 4795], [1957, 2952, 5199]], 'the opening 755…1955, 900…2950, through the wall 4797…5197, 2 mm over');
 });
 
-check('розетка на потолке: овал 500 × 350 по центру, вдоль боковых стен, листья как у лепнины; видна и сверху — гладкой спинкой, пока стены целые', () => {
+check('розетка на потолке: овал 550 × 450 по центру, вдоль боковых стен, листья как у лепнины; на «Комнате» скрыта, в обходе — пока стены целые', () => {
   const p = open();
   const r = p.run(() => {
     const m = roseGroup.children[0];
-    const ring = [...Array(64)].map((_, i) => roseDepth((i % 4) / 4, .5));
     return { n: roseGroup.children.length, rose: m.userData.rose, boss: roseDepth(0, 0), rim: roseDepth(.3, .95), edge: roseDepth(.3, 1),
       same: leafDepth(.2, .5) === leafDepth(Math.abs(.3 - .5), .5), frieze: friezeDepth(.5, .5) === FRIEZE_BASE + FRIEZE_LEAF * Math.min(1.1, leafDepth(0, (.5 - .17) / .79)),
       vis: roseGroup.visible, A: [A.rosW, A.rosD] };
   });
-  assert.deepStrictEqual(r, { n: 1, rose: true, boss: 32, rim: 6, edge: 1, same: true, frieze: true, vis: true, A: [500, 350] }, 'on the plan from above too');
-  assert.deepStrictEqual(p.run(() => [roseGroup.scale.y, roseGroup.position.y]), [1, 0], 'not turned: from above its smooth back shows');
-  const wh = p.document.querySelector('[data-panel="plan"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
-  assert.strictEqual(p.run(() => roseGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
+  assert.deepStrictEqual(r, { n: 1, rose: true, boss: 32, rim: 6, edge: 1, same: true, frieze: true, vis: false, A: [550, 450] }, 'not on the «Комната» tab');
+  const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
+  assert.strictEqual(w.run(() => roseGroup.visible), true, 'in the walk');
+  const wh = w.document.querySelector('[data-panel="walk"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); w.tick();
+  assert.strictEqual(w.run(() => roseGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
 });
 
 check('цвет стен: «Средний беж» между Greige и обоями; «Свой» — из палитры браузера, запоминается', () => {
@@ -182,4 +182,32 @@ check('цвет стен: «Средний беж» между Greige и обо�
   assert.deepStrictEqual(JSON.parse(storage.get('eng-shared-v1')).wcc, '#336699');
   const q = open({ storage });
   assert.deepStrictEqual(q.run(() => [S.wc, WALLC.custom.c]), ['custom', '#336699'], 'remembered');
+});
+
+check('шкаф 1601 × 2600 × 506 у стены с фотообоями, от угла у двери, к плинтусу; 8 дверей открываются наружу', () => {
+  const p = open();
+  const r = p.run(() => ({ box: wardrobeBoxes()[0].map((v) => tt.mm(v)), doors: furnDoors.length,
+    s: furnDoors.map((d) => d.s), wall: tt.wall(A.wardWall).name }));
+  assert.deepStrictEqual(r.box, [2188, 2694, 16, 1617, 0, 2600], 'back on the skirting board (2710 − 16), its left at the door wall\'s skirting');
+  assert.deepStrictEqual([r.doors, r.s, r.wall], [8, [-1, -1, -1, -1, 1, 1, 1, 1], 'Правая стена']);
+  // a door opens on a click as the room's: sent open, it swings there
+  p.run(() => { furnDoors[0].t = furnDoors[0].max; }); p.tick(120);
+  assert.ok(p.run(() => furnDoors[0].a) > 1.5);
+});
+
+check('шкаф: три ручки, по одной на стыке дверей; не в одной плоскости с дверью (не мерцают)', () => {
+  const p = open();
+  const r = p.run(() => furnDoors.filter((d) => d.g.children.length > 1).map((d) => {
+    const ext = (m) => ['x', 'z'].flatMap((k, i) => { const a = m.geometry.args[i === 0 ? 0 : 2] / 2; return [tt.mm(m.position[k] - a), tt.mm(m.position[k] + a)]; });
+    return [ext(d.g.children[0]), ext(d.g.children[1])];
+  }));
+  assert.strictEqual(r.length, 3, 'three handles: one at each meeting of two doors');
+  r.forEach(([leaf, h]) => { leaf.forEach((v) => assert.ok(!h.includes(v), `a face of the handle in the leaf's plane: ${leaf} / ${h}`)); });
+});
+
+check('шкаф: ручки на стыках дверей — 1|2, 2|3, 3|4', () => {
+  const p = open();
+  const u = p.run(() => furnDoors.filter((d) => d.g.children.length > 1).map((d) => tt.mm(d.g.position.x + d.g.children[1].position.x)));
+  const dw = (1601 - 15) / 4, edge = (i) => 3 + i * (dw + 3) - 1.5;   // the middle of the gap left of door i
+  assert.deepStrictEqual(u.map((x, i) => Math.abs(x - edge(i + 1)) < 10), [true, true, true], u.join(' '));
 });

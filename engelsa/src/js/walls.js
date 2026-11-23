@@ -62,6 +62,22 @@ function muralMesh(w,y0){
   m.position.set(x*MM,(y0+A.muralH/2)*MM,(z0+len/2)*MM);
   return {m,box};
 }
+/* a piece of furniture against a wall: its group g built in its own frame (x along the wall from its left end as one faces the wall,
+   y up, z out into the room; mm), its back on the skirting board, its left side off from the wall's left end (as one faces the wall).
+   The wall's left end and the way along it: facing -x (the right wall) from the door end up z, facing +x from the window end down z,
+   facing -z (the door wall) from x 0 up x, facing +z from the far end down x */
+function standAgainst(g,w,off,gap=PL_T){   // gap: its back off the wall (the skirting board's by default)
+  const [at,dir]=w.face,sg=dir[0]==='+'?1:-1,back=at+sg*gap,[r0,r1]=w.run;
+  if(dir[1]==='x'){g.rotation.y=sg<0?-Math.PI/2:Math.PI/2;g.position.set(back*MM,0,(sg<0?r0+off:r1-off)*MM);}
+  else{g.rotation.y=sg>0?0:Math.PI;g.position.set((sg>0?r0+off:r1-off)*MM,0,back*MM);}
+}
+// the room's box (m) of a rect x0…x1 × z0…z1 (mm) of such a group's frame, h mm high: [x0,x1,z0,z1,y0,y1], for the walk
+function standBox(g,x0,x1,z0,z1,h){
+  const c=Math.cos(g.rotation.y),s=Math.sin(g.rotation.y),P=g.position;
+  const pts=[[x0,z0],[x1,z0],[x0,z1],[x1,z1]].map(([x,z])=>[P.x+(x*c+z*s)*MM,P.z+(-x*s+z*c)*MM]);
+  const xs=pts.map(p=>p[0]),zs=pts.map(p=>p[1]);
+  return [Math.min(...xs),Math.max(...xs),Math.min(...zs),Math.max(...zs),0,h*MM];
+}
 /* the cornice under the ceiling, the rope trim over the photo wallpaper and the skirting board: white, along the room face of every wall */
 const trimMat=new THREE.MeshStandardMaterial({color:0xf3f1ec,roughness:.55});
 const CORN_D=30,PL_T=16;   // mm: how far the cornice's relief stands out of the wall at most, the skirting board's thickness
@@ -182,8 +198,9 @@ const winMat=new THREE.MeshStandardMaterial({color:0xf4f4f1,roughness:.5});
 const glassMat=new THREE.MeshStandardMaterial({color:0x9fc3d4,roughness:.1,metalness:.1,transparent:true,opacity:.35,depthWrite:false});
 const footMat=new THREE.MeshBasicMaterial({color:0x3b3d3f,polygonOffset:true,polygonOffsetFactor:-2});
 const lowFootMat=new THREE.MeshBasicMaterial({color:0x5a5d60,polygonOffset:true,polygonOffsetFactor:-2});   // a low wall's footprint: a shade lighter, not quite a wall
+const FLOOR_Y=-.01;   // 10 mm under the room's floor: closer, the two fought for the depth far off and the floor flickered
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),floorMat);
-floor.rotation.x=-Math.PI/2;floor.position.set(CX,-.002,CZ);floor.receiveShadow=true;scene.add(floor);   // the walls cast their shadows outside the room
+floor.rotation.x=-Math.PI/2;floor.position.set(CX,FLOOR_Y,CZ);floor.receiveShadow=true;scene.add(floor);   // the walls cast their shadows outside the room
 
 
 // take everything out of a group; its own materials and textures go too, shared ones stay (own=false)
@@ -195,6 +212,33 @@ function emptyGroup(g,own=true){
 /* room floors and the names on them: rebuilt when the sizes change */
 const roomGroup=new THREE.Group();scene.add(roomGroup);
 let roomMats=[];
+/* the floor: laminate in light oak, its colour calm (a pale greyish beige, not yellow). Boards 1380 × 193 along the side walls (the room's length), their ends staggered row by row; each board
+   its own shade, the grain's streaks along it, a fine dark joint round it. A tile of 8 rows across (1544) and 2 boards along (2760): each row's
+   joints fall the same 2760 apart, so it tiles. The floor's UVs are its plan in metres (x, -z): the tile's v along z */
+const LAM={len:1380,w:193,rows:8};
+function laminateTexture(){
+  const W=1024,Hh=2048,c=document.createElement('canvas');c.width=W;c.height=Hh;const g=c.getContext('2d');
+  let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const rw=W/LAM.rows,bl=Hh/2;   // px a row, a board
+  for(let r=0;r<LAM.rows;r++){
+    const off=Math.floor(rnd()*bl),x0=r*rw;   // (shades, grain and joints kept faint: the floor calm, the boards barely told apart)
+    for(let b=-1;b<2;b++){const y0=off+b*bl,l=216+Math.floor(rnd()*12),sh=Math.floor(rnd()*6)-3;   // the board's shade
+      const base=`rgb(${l+sh},${Math.round(l*.95)+sh},${Math.round(l*.87)+sh})`;
+      for(const d of [-Hh,0,Hh]){const y=y0+d;if(y>Hh||y+bl<0)continue;
+        g.fillStyle=base;g.fillRect(x0,y,rw,bl);
+        // the grain: long streaks along the board, lighter and darker, a few knots
+        for(let i=0;i<26;i++){const gx=x0+2+rnd()*(rw-4),gw=.6+rnd()*1.8,dark=rnd()<.6;g.fillStyle=dark?'rgba(120,108,92,.06)':'rgba(250,247,240,.07)';
+          g.fillRect(gx,y,gw,bl);}
+        if(rnd()<.3){const kx=x0+rw*(.2+rnd()*.6),ky=y+bl*rnd();g.fillStyle='rgba(115,102,85,.09)';g.beginPath();g.ellipse(kx,ky,3,9,0,0,2*Math.PI);g.fill();}
+        g.fillStyle='rgba(100,90,76,.18)';g.fillRect(x0,y,rw,1);   // the board's end joint
+      }}
+    g.fillStyle='rgba(100,90,76,.16)';g.fillRect(x0,0,1,Hh);   // the long joint between rows
+  }
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
+  t.repeat.x=1/(LAM.w*LAM.rows*MM);t.repeat.y=1/(2*LAM.len*MM);
+  return t;
+}
+const laminateTex=laminateTexture();
 const roomPoly=r=>r.poly||[[r.r[0],r.r[2]],[r.r[1],r.r[2]],[r.r[1],r.r[3]],[r.r[0],r.r[3]]];   // the floor's outline [x,z]…
 const polySigned=q=>q.reduce((s,a,i)=>{const b=q[(i+1)%q.length];return s+a[0]*b[1]-b[0]*a[1];},0)/2;   // mm², > 0 counter-clockwise in x,z
 const polyArea=q=>Math.abs(polySigned(q));
@@ -318,7 +362,7 @@ function buildWallSet(list,ruleOf,lines){
         const t=trimMesh(kind,w,a,b,y0,h);wallGroup.add(t.m);wallParts.push({m:t.m,f,id,box:t.box,b:y0*MM,t:(y0+h)*MM,h:h*MM,trim:true,kind});};
       add('cornice',w.run[0],w.run[1],H-A.cornH,A.cornH);w.plinth.forEach(([a,b])=>add('plinth',a,b,0,A.plH));
       w.rope.forEach(([a,b])=>add('rope',a,b,A.plH+A.muralH,A.ropeH));
-      const mu=A.muralWall===id&&muralMesh(w,A.plH);
+      const mu=(A.muralWall===id||A.muralWall==='both')&&muralMesh(w,A.plH);
       if(mu){wallGroup.add(mu.m);wallParts.push({m:mu.m,f,id,box:mu.box,b:A.plH*MM,t:(A.plH+A.muralH)*MM,h:A.muralH*MM,photo:true,fit:k=>{muralTex.repeat.y=k;}});}}
   });
   // the window: white frame in the middle of the wall's thickness, a mullion when it is wide, glass and an inner sill board; hides with its wall
@@ -432,18 +476,50 @@ function fadeSide(w,vw){
 function fadeRule(w,vw){const r=fadeWall(w,vw).r.map(v=>v*MM),side=fadeSide(w,vw);return side?()=>sideVisible(side,r,camera.position):()=>true;}
 
 
-/* the door: a 10 mm lining through the wall round the opening (two jambs, the head between them), the leaf in it, its room face
-   flush with the wall's; hinged at the right jamb (seen from the room), it opens into the room. Casings CW on both faces of the wall
+/* the door: a 10 mm lining through the wall round the opening (two jambs, the head between them), the leaf in it, its corridor face
+   flush with the wall's; hinged at the right jamb (seen from the room), it opens out into the corridor. Casings CW on both faces of the wall
    over the lining's ends (flush with its inner faces), jambs to the head, the head over them (white, as the leaf);
    a white square lever handle on each face. CW, CT, LT: apartment.js */
 const leafMat=new THREE.MeshStandardMaterial({color:0xf1efea,roughness:.6});
 const doorHandleMat=new THREE.MeshStandardMaterial({color:0xf7f7f5,roughness:.3});   // the door's handles: white
 const doorGroup=new THREE.Group();scene.add(doorGroup);
+// a door: its hinge pivot at px, pz; a box leaf of size at pos in it, or none (size null: the caller makes the leaf)
 function door(px,pz,size,pos,mat,max){
   const g=new THREE.Group();g.position.set(px*MM,0,pz*MM);
-  const m=new THREE.Mesh(new THREE.BoxGeometry(...size.map(v=>v*MM)),mat);m.position.set(...pos.map(v=>v*MM));m.castShadow=m.receiveShadow=true;
-  m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));
-  g.add(m);doorGroup.add(g);const d={g,h:size[1]*MM,t:0,a:0,max,s:1};doors.push(d);return d;
+  if(size){const m=new THREE.Mesh(new THREE.BoxGeometry(...size.map(v=>v*MM)),mat);m.position.set(...pos.map(v=>v*MM));m.castShadow=m.receiveShadow=true;
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));g.add(m);}
+  doorGroup.add(g);const d={g,h:size?size[1]*MM:0,t:0,a:0,max,s:1};doors.push(d);return d;
+}
+/* the leaf, as the shop's «Классика»: stiles and rails round a glazed top and a raised panel under it, both with the same arched top —
+   a bell: low at the sides, rising in an S to its middle. The glass frosted, in six panes (a bar up the middle, two across); the panel
+   stands 5 out of both faces, its edges bevelled; the middle rail between them carries the handle. In the pivot g: x from -bw (the free
+   edge) to 0 (the hinge), y from 5 up, z from 0 (the corridor face) to LEAF_T (the room face); mm */
+const doorGlassMat=new THREE.MeshStandardMaterial({color:0xe9eef0,roughness:.3,metalness:0,transparent:true,opacity:.6,side:THREE.DoubleSide,depthWrite:false});
+const LEAF={stile:110,top:120,arch:70,glass0:1050,panel1:960,panel0:205,bar:24,bevel:12};   // the glass from glass0 up to the arch's top top under the leaf's;
+                                                                                             // the panel from panel0 up to its arch's top panel1
+function glazedLeaf(g,bw,bh){
+  const {stile,top,arch,glass0,panel1,panel0,bar,bevel}=LEAF,k=MM,x0=-bw+stile,x1=-stile,yG=5+bh-top;   // the openings across; the glass's top
+  // an outline with the bell on top: from (a, y0) up to the sides' top y1-arch, the bell to its top y1 in the middle; inset by i all round
+  const bell=(P,a,b,y0,y1,i=0)=>{a+=i;b-=i;y0+=i;y1-=i;P.moveTo(a*k,y0*k);P.lineTo(b*k,y0*k);
+    for(let j=0;j<=24;j++){const t=1-j/24;P.lineTo((a+(b-a)*t)*k,(y1-arch+arch*(1-Math.cos(2*Math.PI*t))/2)*k);}P.lineTo(a*k,y0*k);return P;};
+  // a mesh centred up and down on its span y0…y1 (the wall-height cut scales the door's parts about their middles: doorParts)
+  // (dz, dx: moved first, as the geometry is made; the calls not chained, so a stub THREE in the checks keeps the geometry)
+  const part=(geo,mat,y0,y1,lines,dz=0,dx=0)=>{geo.translate(dx,-(y0+y1)/2*k,dz);const m=new THREE.Mesh(geo,mat);m.position.y=(y0+y1)/2*k;m.userData.h=(y1-y0)*k;
+    m.castShadow=mat!==doorGlassMat;m.receiveShadow=true;if(lines)m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo,lines),edgeMat));g.add(m);return m;};
+  // the leaf with the glazed opening through it
+  const S=new THREE.Shape();S.moveTo(-bw*k,5*k);S.lineTo(0,5*k);S.lineTo(0,(5+bh)*k);S.lineTo(-bw*k,(5+bh)*k);S.lineTo(-bw*k,5*k);
+  S.holes.push(bell(new THREE.Path(),x0,x1,glass0,yG));
+  part(new THREE.ExtrudeGeometry(S,{depth:LEAF_T*k,bevelEnabled:false,curveSegments:4}),leafMat,5,5+bh,20);
+  // the panel: its outline inset by the bevel, the bevel making it whole again; 5 out of each face
+  part(new THREE.ExtrudeGeometry(bell(new THREE.Shape(),x0,x1,panel0,panel1,bevel),{depth:LEAF_T*k,bevelEnabled:true,bevelThickness:5*k,bevelSize:bevel*k,bevelSegments:2,curveSegments:4}),
+    leafMat,panel0,panel1,30);
+  // the glass in the middle of the leaf, the bars across it
+  part(new THREE.ShapeGeometry(bell(new THREE.Shape(),x0,x1,glass0,yG)),doorGlassMat,glass0,yG,null,LEAF_T/2*k);
+  // a bar: a box is made centred on 0, so first it goes where it stands in the leaf, as the shapes are drawn (part centres them all)
+  const bx=(a,b,y0,y1)=>{const geo=new THREE.BoxGeometry((b-a)*k,(y1-y0)*k,bar*k);geo.translate((a+b)/2*k,(y0+y1)/2*k,LEAF_T/2*k);part(geo,leafMat,y0,y1,20);};
+  const xm=(x0+x1)/2,h3=(yG-arch-glass0)/3;
+  bx(xm-bar/2,xm+bar/2,glass0,yG);
+  [1,2].forEach(i=>{const y=glass0+i*h3;bx(x0,x1,y-bar/2,y+bar/2);});
 }
 const doorParts=[];          // every door box (leaves, handles, casings) is cut at the wall height like the walls, never squashed;
                              // a part marked whole (userData.whole: its top, m) shows only while the wall reaches it
@@ -463,11 +539,12 @@ function buildDoors(){
   emptyGroup(doorGroup,false);doors.length=0;held=null;
   if(arcs){scene.remove(arcs);emptyGroup(arcs);}
   const bw=dB-dA-2*LT-6,bh=A.dH-LT-10,hx=dB-LT-3;   // the leaf in the lining: 3 to either jamb, 5 under the head and over the floor; its hinge
-  // the leaf runs from the hinge toward -x; turning it (s = 1) takes its free edge into the room (+z)
-  const d=door(hx,0,[bw,bh,LEAF_T],[-bw/2,bh/2+5,-LEAF_T/2],leafMat,1.5);d.hole='door:0';
+  // it opens out, into the corridor: the leaf flush with the wall's corridor face, hinged there (an open leaf then stands in the doorway,
+  // clear of the reveal). The leaf runs from the hinge toward -x; turning it (s = -1) takes its free edge out (-z)
+  const d=door(hx,-A.tD,null,null,leafMat,1.5);d.s=-1;d.h=bh*MM;d.hole='door:0';glazedLeaf(d.g,bw,bh);
   // the handles, square: 1000 up, 60 in from the leaf's free edge, one out of each face
   { const ux=60-bw,hy=1000;
-    [[0,1],[-LEAF_T,-1]].forEach(([fz,s])=>leverHandle(d.g,doorHandleMat,hy,hy+25,(o0,o1,u0,u1)=>[ux+u0,ux+u1,...(s>0?[fz+o0,fz+o1]:[fz-o1,fz-o0])])); }
+    [[LEAF_T,1],[0,-1]].forEach(([fz,s])=>leverHandle(d.g,doorHandleMat,hy,hy+25,(o0,o1,u0,u1)=>[ux+u0,ux+u1,...(s>0?[fz+o0,fz+o1]:[fz-o1,fz-o0])])); }
   const cs=new THREE.Group();doorGroup.add(cs);d.frame=cs;   // the casings and the lining: a click on them works the door, they hide with it
   const yt=A.dH;
   const plank=(x0,x1,za,zb,ya,yb,role)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(yb-ya)*MM,(zb-za)*MM),leafMat);
@@ -479,23 +556,23 @@ function buildDoors(){
     plank(c0-CW,c0,z0,z1,0,ct,'casing');plank(c1,c1+CW,z0,z1,0,ct,'casing');plank(c0-CW,c1+CW,z0,z1,ct,ct+CW,'casing');});
   // the lining: face to face of the wall, its ends under the casings
   plank(dA,dA+LT,-A.tD,0,0,yt-LT,'lining');plank(dB-LT,dB,-A.tD,0,0,yt-LT,'lining');plank(dA,dB,-A.tD,0,yt-LT,yt,'lining');
-  // door swing on the floor, drawn the way plans show it: from the leaf shut (toward -x) to it open (into the room)
+  // door swing on the floor, drawn the way plans show it: from the leaf shut (toward -x) to it open (into the corridor)
   { arcs=new THREE.Group();const am=new THREE.LineDashedMaterial({color:0x6b7069,dashSize:.04,gapSize:.03});
     const arc=(cx,cz,r,a0,a1,leaf,hole)=>{const pts=[];for(let i=0;i<=32;i++){const a=a0+(a1-a0)*i/32;pts.push(new THREE.Vector3((cx+r*Math.cos(a))*MM,.006,(cz+r*Math.sin(a))*MM));}
       const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),am);l.computeLineDistances();l.userData.hole=hole;arcs.add(l);
       const e=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(cx*MM,.006,cz*MM),new THREE.Vector3((cx+r*Math.cos(leaf))*MM,.006,(cz+r*Math.sin(leaf))*MM)]),new THREE.LineBasicMaterial({color:0x6b7069}));e.userData.hole=hole;arcs.add(e);};
-    arc(hx,0,bw,Math.PI,Math.PI/2,Math.PI/2,'door:0');
+    arc(hx,-A.tD,bw,Math.PI,1.5*Math.PI,1.5*Math.PI,'door:0');
     scene.add(arcs); }
   doors.forEach((d,i)=>{if(keep[i])Object.assign(d,keep[i]);});
   doorParts.length=0;
   doors.forEach(d=>{const id=d.hole.split(':')[0];[d.g,d.frame].forEach(g=>{if(g)g.traverse(o=>{o.userData.wall=id;});});});   // a door goes down with its wall
-  doorGroup.traverse(m=>{if(!m.isMesh)return;if(typeof m.userData.whole==="number"){doorParts.push({m,whole:m.userData.whole,wall:m.userData.wall});return;}const h=m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2,wall:m.userData.wall});});
+  doorGroup.traverse(m=>{if(!m.isMesh)return;if(typeof m.userData.whole==="number"){doorParts.push({m,whole:m.userData.whole,wall:m.userData.wall});return;}const h=m.userData.h||m.geometry.parameters.height,y=m.position.y;doorParts.push({m,h,b:y-h/2,t:y+h/2,wall:m.userData.wall});});
 }
 buildDoors();
 
 // the sizes changed: everything of the room is built again for the view on screen
 modelHooks.push(()=>{
-  floor.position.set(CX,-.002,CZ);
+  floor.position.set(CX,FLOOR_Y,CZ);
   buildRooms();buildDoors();buildWalls(VIEWS[view]);applyTheme();
 });
 
@@ -510,8 +587,10 @@ function applyTheme(){
   const e=.002;wallTexU.revMin.value.set((winX-A.winW/2)*MM-e,A.winS*MM-e,A.L*MM-e);wallTexU.revMax.value.set((winX+A.winW/2)*MM+e,A.winT*MM+e,(A.L+A.tW)*MM+e);
   ceilColor.set(wallCol(WALLC.white));
   wallMat.roughness=wc.r;
-  const fl=(vs()||{}).floors!==false;
-  roomMats.forEach((m,i)=>m.color.set(fl?css(ROOMS[i].col):css('--scene-floor')));
+  const fl=S.floor;
+  // a room with a floor of its own (tex: the laminate) shows it; «Покрытие пола» off (shared, views.js): the plain floor colour
+  roomMats.forEach((m,i)=>{const tx=fl&&ROOMS[i].tex?laminateTex:null;if(m.map!==tx){m.map=tx;m.needsUpdate=true;}
+    if(tx)m.color.set(0xffffff);else m.color.set(fl?css(ROOMS[i].col):css('--scene-floor'));});
   paintNames();
 }
 

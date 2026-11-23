@@ -1,5 +1,5 @@
 /* ---------- the wardrobe: 1601 × 2600 × 506, against the photo wallpaper's wall at its left end (as one faces the wall), or against the
-   door wall in its right corner (A.wardWall; WARD_AT); a click on it (not on a door) moves it from one to the other ----------
+   door wall in its right corner (A.wardWall, set in the plan's panel; WARD_AT) ----------
    Taupe outside, cream inside. Below a plinth; the main case on four hinged doors (the left door hinged on the left, the middle pair
    from the middle out, the right door on the right) and three black edge handles where they meet, one at each meeting: the middle one
    on the left door of the pair, the right one of it opens by a push; on top a cupboard on four doors without handles. Inside the main case three sections: shelves on the left and on the right (one door each), in the middle (two
@@ -22,7 +22,6 @@ function buildWardrobe(){
   const w=wardWall();if(!w)return;
   const {T,BACK,FRONT,PLINTH,TOP,GAP}=WD,W=A.wardW,D=A.wardD,Hh=A.wardH,dC=D-FRONT,yM=Hh-TOP;   // the case's front; the main case's top
   const g=new THREE.Group();wardGroup.add(g);g.userData.wardrobe=true;
-  g.userData.click=()=>setModel({...A,wardWall:A.wardWall==='door'?'right':'door'});   // to the other wall (its doors open on their own clicks)
   const box=(par,x0,x1,y0,y1,z0,z1,mat,lines=true)=>{const m=new THREE.Mesh(new THREE.BoxGeometry((x1-x0)*MM,(y1-y0)*MM,(z1-z0)*MM),mat);
     m.position.set((x0+x1)/2*MM,(y0+y1)/2*MM,(z0+z1)/2*MM);m.castShadow=m.receiveShadow=true;
     if(lines)m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),edgeMat));par.add(m);return m;};
@@ -60,23 +59,12 @@ function buildWardrobe(){
   // a handle at each meeting of two doors: the middle one on the pair's left door
   [[0,true,true],[1,true,true],[2,false,false],[3,false,true]].forEach(([i,l,hd])=>{
     door(dx(i),dx(i)+dw,PLINTH+GAP,yM-GAP/2,l,hd);door(dx(i),dx(i)+dw,yM+GAP/2,Hh-GAP,l,false);});
-  // onto the wall: u along the wall from its left end as one faces it, d out into the room
-  const [at,dir]=w.face,sg=dir[0]==='+'?1:-1,back=at+sg*PL_T,[r0,r1]=w.run;
-  const off=WARD_AT[w.id]==='right'?r1-r0-PL_T-W:PL_T;   // its left side from the wall's left end, the skirting board at the corner kept
-  // the wall's left end as one faces it and the way along it: facing -x (the right wall) from the door end up z, facing +x from the window
-  // end down z, facing -z (the door wall) from x 0 up x, facing +z from the far end down x
-  if(dir[1]==='x'){g.rotation.y=sg<0?-Math.PI/2:Math.PI/2;g.position.set(back*MM,0,(sg<0?r0+off:r1-off)*MM);}
-  else{g.rotation.y=sg>0?0:Math.PI;g.position.set((sg>0?r0+off:r1-off)*MM,0,back*MM);}
+  // onto the wall: from its left end as one faces it, or in its right corner (the skirting board at the corner kept)
+  const [r0,r1]=w.run;standAgainst(g,w,WARD_AT[w.id]==='right'?r1-r0-PL_T-W:PL_T);
 }
 buildWardrobe();modelHooks.push(buildWardrobe);
 // where it stands in the room (m): what the walk can't go through, [x0,x1,z0,z1,y0,y1]
-function wardrobeBoxes(){
-  const g=wardGroup.children[0];if(!g)return [];
-  const c=Math.cos(g.rotation.y),s=Math.sin(g.rotation.y),P=g.position,W=A.wardW*MM,D=A.wardD*MM;
-  const pts=[[0,0],[W,0],[0,D],[W,D]].map(([x,z])=>[P.x+x*c+z*s,P.z-x*s+z*c]);
-  const xs=pts.map(p=>p[0]),zs=pts.map(p=>p[1]);
-  return [[Math.min(...xs),Math.max(...xs),Math.min(...zs),Math.max(...zs),0,A.wardH*MM]];
-}
+function wardrobeBoxes(){const g=wardGroup.children[0];return g?[standBox(g,0,A.wardW,0,A.wardD,A.wardH)]:[];}
 // the doors swing toward where they are sent, a held one follows the hold
 frameHooks.push((dt,ease)=>{furnDoors.forEach(d=>{
   if(held&&held.d===d){d.t=Math.min(d.max,Math.max(0,d.t+held.dir*HOLD_RATE*dt));d.a=d.t;}else d.a+=(d.t-d.a)*ease(.07);

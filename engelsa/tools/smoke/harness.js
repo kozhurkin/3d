@@ -32,6 +32,8 @@ function stub(name = 'stub') {
       // objects of the scene have a real place and real children, so checks can see where things stand
       // a geometry keeps its sizes, so a box of a mesh can be found (Box3.setFromObject)
       if (/Geometry$/.test(name)) o.args = args, o.kind = name;
+      // and where it was moved to (translate, as THREE's: returns itself), so a part's place in the scene can be told
+      if (/Geometry$/.test(name)) { o.off = [0, 0, 0]; o.translate = (x, y, z) => { o.off[0] += x; o.off[1] += y; o.off[2] += z; return o; }; }
       // an extruded one has its vertices (none here), so code walking them runs (the wardrobe's faceted panels shade theirs)
       if (name === 'THREE.ExtrudeGeometry') o.attributes = { position: { count: 0, getY: () => 0 } };
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group', 'THREE.Scene'].includes(name)) {

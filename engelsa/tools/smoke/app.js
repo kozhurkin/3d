@@ -25,18 +25,18 @@ check('размеры: 2710 × 4797 (13 м²), потолок 3060', () => {
     sub: '2710 × 4797 мм · 13,00 м² · потолок 3060' });
 });
 
-check('дверь: 800 между наличниками 70, правый наличник в 1570 от правого угла; открывается в комнату', () => {
+check('дверь: 800 между наличниками 70, правый наличник в 1570 от правого угла; открывается наружу, в коридор', () => {
   const p = open();
   const r = p.run(() => {
     const cs = doors[0].frame.children, d = doors[0], x = (m, s) => tt.mm(m.position.x + s * m.geometry.args[0] / 2);
     const room = cs.filter((m) => m.userData.casing && m.position.z > 0 && m.position.y < 1);   // the two jambs' casings on the room face
-    return { hole: tt.wall('door').holes, dL, cas: room.map((m) => [x(m, -1), x(m, 1)]), hinge: tt.mm(d.g.position.x), s: d.s,
-      leaf: tt.mm(d.g.children[0].position.x) };
+    return { hole: tt.wall('door').holes, dL, cas: room.map((m) => [x(m, -1), x(m, 1)]), hinge: tt.mm(d.g.position.x), hz: tt.mm(d.g.position.z), s: d.s,
+      leaf: tt.mm(d.g.children.find((m) => typeof m.userData.whole === 'number').position.x) };   // the handle, at the free edge
   });
   assert.deepStrictEqual(r.hole, [[260, 1080, 2000]], 'the doorway: 820 in the wall (the lining 10 under each casing)');
   assert.deepStrictEqual(r.cas, [[200, 270], [1070, 1140]], 'casings: 200 from the left corner, 2710 − 1140 = 1570 from the right');
   assert.strictEqual(r.dL, 200);
-  assert.deepStrictEqual([r.hinge, r.s, r.leaf < 0], [1067, 1, true], 'hinged at the right jamb, the leaf toward the left; it turns into the room');
+  assert.deepStrictEqual([r.hinge, r.hz, r.s, r.leaf < 0], [1067, -120, -1, true], 'hinged at the right jamb on the corridor face, the leaf toward the left; it turns out');
 });
 
 check('окно: по центру стены напротив двери, ширина 1200, от 900 до 2950', () => {
@@ -97,7 +97,7 @@ check('лепнина 110 под потолком по всем стенам, п
   assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
 });
 
-check('фотообои: слева от входа, от плинтуса, 2700 высотой; 5000 по ширине, на стене 4797 — от угла у двери', () => {
+check('фотообои: слева от входа, от плинтуса, 2700 высотой; 5000 по ширине, на стене 4797 — от угла у двери; или справа, или на обеих', () => {
   const p = open();
   const get = () => p.run(() => wallParts.filter((w) => w.photo).map((w) => ({ id: w.id, b: tt.mm(w.b), t: tt.mm(w.t), box: w.box,
     rot: w.m.rotation.y, rep: [muralTex.repeat.x, muralTex.repeat.y] })));
@@ -112,9 +112,10 @@ check('фотообои: слева от входа, от плинтуса, 2700
   const btn = (v) => p.document.querySelector(`[data-panel="plan"] [data-mural="${v}"]`);
   btn('left').click();
   assert.deepStrictEqual(get().map((w) => [w.id, w.box]), [['left', [0, 1, 0, 4797]]]);
-  btn('').click();
-  assert.strictEqual(get().length, 0);
-  assert.strictEqual(btn('').getAttribute('aria-pressed'), 'true');
+  btn('both').click();
+  assert.deepStrictEqual(get().map((w) => [w.id, w.box]), [['right', [2709, 2710, 0, 4797]], ['left', [0, 1, 0, 4797]]], 'both long walls');
+  assert.strictEqual(btn('both').getAttribute('aria-pressed'), 'true');
+  assert.strictEqual(p.document.querySelector('[data-panel="plan"] [data-mural=""]'), null, 'no «Нет»');
 });
 
 check('лепнина — фриз с листьями: полка сверху, рельеф до 30 мм, низ доски гладкий', () => {
@@ -217,17 +218,65 @@ check('розетка не отбрасывает тень', () => {
   assert.deepStrictEqual(p.run(() => [roseGroup.children[0].castShadow, roseGroup.children[0].receiveShadow]), [false, true]);
 });
 
-check('шкаф: клик по нему (не по двери) — к стене с дверью, в правый угол; ещё клик — обратно; так же кнопками в панели', () => {
+check('шкаф: кнопкой в панели — к стене с дверью, в правый угол, и обратно; клик по нему самому его не двигает', () => {
   const p = open();
   const at = () => p.run(() => [A.wardWall, wardrobeBoxes()[0].map((v) => tt.mm(v)), document.querySelector('[data-ward="door"]').getAttribute('aria-pressed')]);
-  p.run(() => wardGroup.children[0].userData.click());
+  assert.strictEqual(p.run(() => wardGroup.children[0].userData.click), undefined, 'no click of its own');
+  p.document.querySelector('[data-ward="door"]').click();
   assert.deepStrictEqual(at(), ['door', [1093, 2694, 16, 522, 0, 2600], 'true'], 'in the right corner, on the skirting boards; clear of the doorway (1080)');
   assert.deepStrictEqual(p.run(() => aptProblems(A)), []);
-  p.run(() => wardGroup.children[0].userData.click());
+  p.document.querySelector('[data-ward="right"]').click();
   assert.deepStrictEqual(at()[0], 'right');
   p.document.querySelector('[data-ward="door"]').click();
   assert.deepStrictEqual(at()[0], 'door');
   slide(p, 'dR', 1500);   // the door to the right: the doorway's edge (2650 − dR) reaches the wardrobe's side (1093) at dR 1557
   assert.strictEqual(p.run(() => A.dR), 1560);
   assert.match(p.document.getElementById('pSizeMsg').textContent, /Шкаф/);
+});
+
+check('дверь «Классика»: полотно с вырезом под стекло, филёнка, стекло, раскладка на 6 стёкол; всё режется по высоте стен', () => {
+  const p = open();
+  const r = p.run(() => { const g = doors[0].g, leaf = g.children.filter((m) => !(typeof m.userData.whole === 'number'));
+    return { n: leaf.length, glass: leaf.filter((m) => m.material === doorGlassMat).length, kinds: leaf.map((m) => m.geometry.kind),
+      h: leaf.map((m) => tt.mm(m.userData.h)), parts: doorParts.filter((q) => !q.whole).every((q) => q.h > 0) }; });
+  assert.deepStrictEqual(r, { n: 6, glass: 1, kinds: ['THREE.ExtrudeGeometry', 'THREE.ExtrudeGeometry', 'THREE.ShapeGeometry', 'THREE.BoxGeometry', 'THREE.BoxGeometry', 'THREE.BoxGeometry'],
+    h: [1980, 755, 815, 815, 24, 24], parts: true });
+});
+
+check('дверь: раскладка в стекле — стойка и две перекладины между низом стекла (1050) и верхом арки (1865)', () => {
+  const p = open();
+  const r = p.run(() => doors[0].g.children.filter((m) => m.geometry.kind === 'THREE.BoxGeometry' && !(typeof m.userData.whole === 'number'))
+    .map((m) => tt.mm(m.position.y + m.geometry.off[1])));
+  assert.strictEqual(r.length, 3);
+  r.forEach((y) => assert.ok(y > 1050 && y < 1865, 'a bar at ' + y));
+});
+
+check('диван MANSTAD: у стены справа от входа спинкой к плинтусу, кушеткой к окну в 100 от его стены; кнопкой — зеркально у стены слева', () => {
+  const p = open();
+  const r = () => p.run(() => sofaBoxes().map((b) => b.map((v) => tt.mm(v))));
+  assert.deepStrictEqual(r(), [[16, 966, 2297, 4697, 0, 900], [16, 1576, 3797, 4697, 0, 450]],
+    'its back at the skirting board, its end 100 off the window wall; the main part 950 deep; the chaise 900 wide, 1560 out');
+  assert.strictEqual(p.run(() => velour.map === undefined ? 'none' : 'map'), 'map');
+  const btn = (v) => p.document.querySelector(`[data-sofa="${v}"]`);
+  assert.strictEqual(btn('left').getAttribute('aria-pressed'), 'true');
+  btn('right').click();
+  assert.deepStrictEqual(r(), [[1744, 2694, 2297, 4697, 0, 900], [1134, 2694, 3797, 4697, 0, 450]], 'mirrored at the other side wall');
+  assert.deepStrictEqual([p.run(() => A.sofaWall), btn('right').getAttribute('aria-pressed')], ['right', 'true']);
+  assert.deepStrictEqual(p.run(() => aptProblems(A)), [], 'it and the wardrobe fit at one wall');
+  slide(p, 'L', 3500);   // the wardrobe (16…1617) and the sofa (L − 2500…) meet at L 4117
+  assert.strictEqual(p.run(() => A.L), 4117);
+  assert.match(p.document.getElementById('pSizeMsg').textContent, /диван/);
+});
+
+check('пол: ламинат светлого дерева, доски вдоль боковых стен; в обходе тоже; без «Покрытия пола» — простой пол; общий пол на 10 ниже', () => {
+  const p = open();
+  const r = () => p.run(() => [roomMats[0].map === laminateTex, roomGroup.visible, [laminateTex.repeat.x, laminateTex.repeat.y].map((v) => +v.toFixed(4))]);
+  assert.deepStrictEqual(r(), [true, true, [+(1 / 1.544).toFixed(4), +(1 / 2.76).toFixed(4)]]);
+  assert.strictEqual(p.run(() => tt.mm(floor.position.y)), -10, 'not in the room floor\'s depth (it flickered)');
+  assert.strictEqual(p.document.getElementById('pFloors'), null, 'the plan\'s «Цвет пола» gone');
+  p.document.getElementById('wFloor').checked = false; p.document.getElementById('wFloor').dispatch('change');
+  assert.strictEqual(r()[0], false);
+  assert.strictEqual(p.run(() => S.floor), false);
+  const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
+  assert.deepStrictEqual(w.run(() => [roomMats[0].map === laminateTex, roomGroup.visible]), [true, true], 'in the walk');
 });

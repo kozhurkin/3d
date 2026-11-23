@@ -16,8 +16,8 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='eng-shared-v1';
-const S={wc:'mid',wcc:WALLC.custom.c,light:{...LIGHT0},edge:true,fly:true};   // wcc: the wall colour picked; edge: the walls' and doors' outlines; fly: the animated flight between tabs
-{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;if(/^#[0-9a-f]{6}$/i.test(s.wcc||''))S.wcc=s.wcc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;} }
+const S={wc:'mid',wcc:WALLC.custom.c,light:{...LIGHT0},edge:true,fly:true,floor:true};   // wcc: the wall colour picked; floor: the floor covering (the laminate); edge: the walls' and doors' outlines; fly: the animated flight between tabs
+{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;if(/^#[0-9a-f]{6}$/i.test(s.wcc||''))S.wcc=s.wcc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;if(s.floor===false)S.floor=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
 // wall colour swatches
@@ -34,6 +34,9 @@ syncWc();
 // the walls' and doors' outlines (walls.js: edgeOp), the same in every view
 const edgeBox=document.getElementById('wEdge');edgeBox.checked=S.edge;
 edgeBox.addEventListener('change',e=>{S.edge=e.target.checked;saveShared();});
+// the floor covering (the laminate), in every view; off: the plain floor
+const floorBox=document.getElementById('wFloor');floorBox.checked=S.floor;
+floorBox.addEventListener('change',e=>{S.floor=e.target.checked;applyTheme();saveShared();});
 // the animated flight between tabs; without it the new view's walls are there at once and the camera glides to it
 const flyBox=document.getElementById('wFly');flyBox.checked=S.fly;
 flyBox.addEventListener('change',e=>{S.fly=e.target.checked;saveShared();});

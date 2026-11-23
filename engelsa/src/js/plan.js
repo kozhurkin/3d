@@ -82,22 +82,22 @@ function renderFacts(){
       row('Стена с окном',`${winX-A.winW/2} + ${A.winW} + ${A.W-winX-A.winW/2}`)+
       row('Стены',`обои под лён (по образцу), откосы окна окрашены; лепнина ${A.cornH}, плинтус ${A.plH}`)+
       row('Над фотообоями',`плетёнка ${A.ropeH} × 6 по периметру (у окна прервана) на ${A.plH+A.muralH}; обои до её низа, выше до лепнины стена белая`)+
-      row('Шкаф',`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены с фотообоями, от угла у двери'}; клик по нему — к другой стене`)+
+      row('Шкаф',`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены слева от входа, от угла у двери'}`)+
+      row('Диван',`IKEA MANSTAD угловой, зелёный велюр: 2400 × 1560 × 900, у стены ${A.sofaWall==='left'?'справа':'слева'} от входа, спинкой к плинтусу, кушеткой к окну в ${A.sofaGap} от его стены`)+
       row('Потолок',`розетка-овал ${A.rosW} × ${A.rosD} по центру, длинной стороной вдоль боковых стен, листья как у лепнины`)+
-      row('Фотообои',A.muralWall?`${A.muralW} × ${A.muralH} от плинтуса, ${A.muralWall==='right'?'слева':'справа'} от входа; на стене ${Math.min(A.muralW,A.L)}`:'нет')+
+      row('Фотообои',`${A.muralW} × ${A.muralH} от плинтуса, ${({right:'слева от входа',left:'справа от входа',both:'на обеих длинных стенах'})[A.muralWall]}; на стене ${Math.min(A.muralW,A.L)}`)+
       row('Толщина стен',`с дверью ${A.tD}, боковые ${A.tS}, с окном ${A.tW}`,true)}</dl>`;
   pq('#pSub').textContent=`${A.W} × ${A.L} мм · ${area()} м² · потолок ${H}`;
 }
 renderFacts();
 
-/* the plan's own settings: dimensions, the room's name, the floor colour */
+/* the plan's own settings: dimensions, the room's name */
 function syncPlan(){
   const V=VS.plan;
-  pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;pq('#pFloors').checked=V.floors;
+  pq('#pDims').checked=V.dims;pq('#pNames').checked=V.names;
 }
 pq('#pDims').addEventListener('change',e=>{VS.plan.dims=e.target.checked;saveView('plan');});
 pq('#pNames').addEventListener('change',e=>{VS.plan.names=e.target.checked;saveView('plan');});
-pq('#pFloors').addEventListener('change',e=>{VS.plan.floors=e.target.checked;applyTheme();saveView('plan');});
 
 /* ---------- wall sizes: edited only here, the walk takes them as they are ----------
    A slider stops at the last value where everything still fits and says what is in the way */
@@ -131,9 +131,11 @@ pq('#pSizes').innerHTML=SIZES.map(([g,fs])=>`<div><h3>${g}, мм</h3>${fs.map(f=
 const sizeMsg=pq('#pSizeMsg');
 function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});
   planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
-  planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));}
-// the wardrobe's wall (as a click on it does): kept with the sizes (A.wardWall)
-planPanel.querySelectorAll('[data-ward]').forEach(b=>b.addEventListener('click',()=>setModel({...A,wardWall:b.dataset.ward})));
+  planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));
+  planPanel.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));}
+// the wardrobe's and the sofa's walls: kept with the sizes (A.wardWall, A.sofaWall); not where they would not fit
+[['ward','wardWall'],['sofa','sofaWall']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
+  const a={...A,[k]:b.dataset[d]},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}sizeMsg.textContent='';setModel(a);})));
 // the photo wallpaper's wall: kept with the sizes (A.muralWall)
 planPanel.querySelectorAll('[data-mural]').forEach(b=>b.addEventListener('click',()=>{
   const a={...A,muralWall:b.dataset.mural},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}setModel(a);}));
@@ -172,7 +174,7 @@ insetHide.push(dimsGroup,winDims,doorDims);
 frameHooks.push(()=>{
   // dimensions come when the plan is reached; room floors and names change halfway (room views have the plain floor, as before)
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
-  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=half;
+  dimsGroup.visible=on&&VS.plan.dims;namesGroup.visible=half&&VS.plan.names;roomGroup.visible=true;   // the floor (laminate) in every view
   if(dimsGroup.visible&&dimsDirty)buildDims();
   dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
   winDims.visible=dimsGroup.visible&&wallParts.some(w=>w.glass&&w.m.visible);   // the window's glass is on screen
@@ -233,7 +235,7 @@ addView('plan',{
   rooms:'all',
   // the cut mode hides a wall while the camera looks at it from outside the room
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
-  defaults:{Wm:'auto',Wh:100,dm:'closed',dims:true,names:true,floors:true},
+  defaults:{Wm:'auto',Wh:100,dm:'closed',dims:true,names:true},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole room from any direction
   panel:planPanel,
   home:()=>setCam('plan'),

@@ -23,18 +23,22 @@
       <div class="toggles">
         <label><input type="checkbox" id="pDims" checked> Размеры</label>
         <label><input type="checkbox" id="pNames" checked> Название и площадь</label>
-        <label><input type="checkbox" id="pFloors" checked> Цвет пола</label>
       </div>
       <h3>Фотообои</h3>
       <div class="seg" role="group" aria-label="Фотообои">
-        <button data-mural="right" aria-pressed="true" title="Если войти в комнату — стена по левую руку">Слева от входа</button>
+        <button data-mural="right" aria-pressed="true" title="Если войти в комнату — стена по левую руку">Слева</button>
         <button data-mural="left" aria-pressed="false" title="Если войти в комнату — стена по правую руку">Справа</button>
-        <button data-mural="" aria-pressed="false">Нет</button>
+        <button data-mural="both" aria-pressed="false" title="На обеих длинных стенах">Обе</button>
       </div>
       <h3>Шкаф</h3>
-      <div class="seg" role="group" aria-label="Шкаф" title="Или клик по самому шкафу (не по двери)">
-        <button data-ward="right" aria-pressed="true">У фотообоев</button>
-        <button data-ward="door" aria-pressed="false">У двери</button>
+      <div class="seg" role="group" aria-label="Шкаф">
+        <button data-ward="right" aria-pressed="true" title="У стены по левую руку от входа, от угла у двери">Слева</button>
+        <button data-ward="door" aria-pressed="false" title="У стены с дверью, в правом углу">У двери</button>
+      </div>
+      <h3>Диван</h3>
+      <div class="seg" role="group" aria-label="Диван">
+        <button data-sofa="right" aria-pressed="false" title="Спинкой к стене по левую руку от входа, кушеткой к окну">Слева</button>
+        <button data-sofa="left" aria-pressed="true" title="Спинкой к стене по правую руку от входа, кушеткой к окну">Справа</button>
       </div>
       <h3>Камера</h3>
       <div class="views v4" data-cams>

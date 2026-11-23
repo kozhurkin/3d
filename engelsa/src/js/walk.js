@@ -64,7 +64,7 @@ function walkHome(){goal.theta=Math.PI;goal.phi=Math.PI/2;goal.r=LOOK;setEye((dA
 
 /* ---------- what is in the way, m: [x0,x1,z0,z1,y0,y1] ----------
    The walls without their openings (rebuilt with the sizes); a window is not a way through; a door opening is while its door
-   is open; the wardrobe */
+   is open; the wardrobe, the sofa */
 let wallBoxes=[],doorways=[];
 function walkWalls(){
   wallBoxes=[];doorways=[];
@@ -83,7 +83,7 @@ function walkWalls(){
 walkWalls();modelHooks.push(walkWalls);
 function walkObstacles(){
   const shut=new Set(VS.walk.dm==='none'?[]:doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
-  return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),wardrobeBoxes());
+  return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),wardrobeBoxes(),sofaBoxes());
 }
 // how far the circle's centre at u is from the box b along axis i (0: x, 1: z); 0 inside its span
 const gap=(b,i,u)=>Math.max(b[2*i]-u,0,u-b[2*i+1]);

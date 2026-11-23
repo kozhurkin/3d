@@ -14,15 +14,17 @@ const APT_A={
   winW:1200, winS:900, winT:2950,   // the window, centred in the wall opposite the door: width, sill and top from the floor
   tD:120, tS:120, tW:400,           // walls: the door wall, the side walls, the window wall (outer)
   cornH:110, plH:70,                // the cornice under the ceiling: its drop down the wall; the skirting board: its height
-  muralWall:'right', muralW:5000, muralH:2700,  // the photo wallpaper: on which wall ('' none; 'right' is left of the way in), its width and height,
+  muralWall:'right', muralW:5000, muralH:2700,  // the photo wallpaper: on which wall ('right' is left of the way in; 'both': both side walls), its width and height,
                                                 // from the skirting board's top up, glued from the left corner as one faces the wall (the rest cut off)
   wardWall:'right', wardW:1601, wardD:506, wardH:2600,   // the wardrobe: at the photo wallpaper's wall at its left end ('door': the door wall's
                                                           // right corner); its width, depth, height
+  sofaWall:'left', sofaGap:100,     // the sofa (IKEA MANSTAD): its back to this side wall ('left': right of the way in), its chaise toward the window;
+                                    // its back at the skirting board, the chaise's end this far off the window wall
   rosW:550, rosD:450,               // the ceiling rose, an oval in the middle of the ceiling: along the side walls, across them
   ropeH:11                          // the twisted rope trim round the room right over the photo wallpaper's top: its height (6 deep);
                                     // the wallpaper up to its bottom, the wall over it up to the cornice white
 };
-const CW=70,CT=10,LT=10,PL_T_=16;   // … ; PL_T_: the skirting board's thickness (walls.js: PL_T)   // door casings: width, thickness; the lining through the wall between them: thickness
+const CW=70,CT=10,LT=10,PL_T_=16,SOFA_L_=2400;   // … ; PL_T_: the skirting board's thickness (walls.js: PL_T); SOFA_L_: the sofa's length (sofa.js: SF.L)   // door casings: width, thickness; the lining through the wall between them: thickness
 
 /* Builds the whole model from the sizes; a: the sizes to change, the rest come from APT_A.
    Walls: rect r=[x0,x1,z0,z1]; ext: outer side of the wall (each wall of one room is an outer one of the model);
@@ -44,7 +46,7 @@ function apartment(a){
     {id:'window',name:'Стена с окном',r:[-A.tS,A.W+A.tS,A.L,A.L+A.tW],ext:'+z',rooms:['room'],holes:[[winX-A.winW/2,winX+A.winW/2,A.winT,A.winS]],
       face:[A.L,'-z'],run:[0,A.W],plinth:[[0,A.W]],rope:[[0,winX-A.winW/2],[winX+A.winW/2,A.W]]}
   ];
-  const ROOMS=[{id:'room',name:'Комната',r:[0,A.W,0,A.L],origin:[0,0],col:'--fl-kit',at:[A.W/2,A.L/2]}];
+  const ROOMS=[{id:'room',name:'Комната',r:[0,A.W,0,A.L],origin:[0,0],col:'--fl-kit',tex:'laminate',at:[A.W/2,A.L/2]}];   // tex: its floor laminate (walls.js)
   const BOX={x0:-A.tS,x1:A.W+A.tS,z0:-A.tD,z1:A.L+A.tW};
   return {A,H:A.H,dA,dB,dL,winX,WALLS,ROOMS,BOX};
 }
@@ -61,6 +63,8 @@ function aptProblems(a){
   if(A.winT>A.H-A.cornH)out.push('Окно заходит под лепнину');
   if(A.plH>A.winS&&A.winS>0)out.push('Плинтус выше подоконника');
   if(A.wardWall==='door'&&A.W-PL_T_-A.wardW<dB)out.push('Шкаф у стены с дверью заходит на проём');
+  // the wardrobe from the door's end of the left wall, the sofa from its window end
+  if(A.wardWall==='right'&&A.sofaWall==='right'&&PL_T_+A.wardW>A.L-A.sofaGap-SOFA_L_)out.push('Шкаф и диван у одной стены не помещаются');
   if(A.plH+A.muralH+A.ropeH>A.H-A.cornH)out.push('Фотообои с плетёнкой над ними заходят под лепнину');
   return out;
 }

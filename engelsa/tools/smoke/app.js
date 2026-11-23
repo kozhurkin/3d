@@ -479,8 +479,8 @@ check('люстра «Диски» (MyLight, Ozon): по центру потол
       top: Math.min(...DISC_TIERS.map((T) => T.t)), low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), vis: lampGroup.visible,
       on: document.querySelector('[data-lamp="discs"]').getAttribute('aria-pressed') };
   });
-  assert.deepStrictEqual(r, { at: [1355, 3028, 2399], kind: 'discs', n: 56, top: 214, low: 535, out: 300, vis: true, on: 'true' }, 'Ø 600');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 535, низ в 2493 от пола/);
+  assert.deepStrictEqual(r, { at: [1355, 3043, 2399], kind: 'discs', n: 56, top: 214, low: 535, out: 300, vis: true, on: 'true' }, 'Ø 600');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 535, низ в 2508 от пола/);
   p.document.querySelector('[data-lamp="none"]').click();
   assert.deepStrictEqual(p.run(() => [A.lamp, lampGroup.children.length, document.querySelector('[data-lamp="none"]').getAttribute('aria-pressed')]), ['none', 0, 'true']);
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /<dt>Люстра<\/dt><dd>нет<\/dd>/);
@@ -497,7 +497,7 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
     return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, v: c.variant }; });
   assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 4],
     lines: [['Размер', 'Ø 60, высота 53,5 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
-      ['Место', 'по центру потолка, низ в 2493 от пола'], 'Нажатие на люстру — следующий вариант.'] });
+      ['Место', 'по центру потолка, низ в 2508 от пола'], 'Нажатие на люстру — следующий вариант.'] });
   const el = p.document.getElementById('itemCard'), next = () => el.children.find((c) => c.className === 'next');
   p.run(() => openItemCard(infoOf(lampGroup.children[0])));
   next().children[1].click();
@@ -524,9 +524,9 @@ check('люстра «Ветви 50» (Aine Light, Wildberries): как «Вет
   assert.deepStrictEqual(r, { kind: 'branches', ext: [224, 530, 248], discs: [362, 240], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
     'inside 225 × 530 × 250 (half the oval\'s sides), the same every time (seeded)');
   assert.deepStrictEqual(p.run(() => [BR.aine.H - BR.aine.hub, BR.big.H - BR.big.hub]), [250, 250], 'the chandelier itself as high as «Ветви 80»');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 530, низ в 2498 от пола/);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 530, низ в 2513 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.lines.map((l) => l[1])]; });
-  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 53 см', '20 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2498 от пола', 'а']]);   // the last a paragraph: its [1] a letter
+  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 53 см', '20 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2513 от пола', 'а']]);   // the last a paragraph: its [1] a letter
 });
 
 check('люстра: клик по ней — следующий вариант (по кругу, без «Нет»), курсор над ней — рука; тени люстры не отбрасывают', () => {
@@ -553,7 +553,7 @@ check('розетка на «Комнате»: видна, пока камера
   assert.strictEqual(p.run(() => roseGroup.visible), false);
 });
 
-check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на трёх тросах 40 см с проводом посередине тросы от середины чашки врозь к ветвям — 730 от чашки (низ на 2298); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
+check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на трёх тросах 40 см с проводом посередине тросы от середины чашки врозь к ветвям — 730 от чашки (низ на 2313); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches80"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
@@ -563,11 +563,11 @@ check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 
   });
   assert.deepStrictEqual(r, { kind: 'branches80', ext: [396, 730, 391], discs: [489, 282], bulbs: 8, on: 'true', cables: [true, true, true], cord: [455] },
     'inside 400 × 730 × 400; the cord from the cup (25) to the hub (480); the cables wider apart down (their middles off the axis)');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 730, низ в 2298 от пола/);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 730, низ в 2313 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.url, c.lines.slice(0, 3)]; });
   assert.deepStrictEqual(i, [12234, 'Ozon', 'https://ozon.ru/t/Z2pmmdJ',
-    [['Размер', 'Ø 80, высота 73 см'], ['Подвес', '3 троса и провод, 40 см (до 1 м)'], ['Место', 'по центру потолка, низ в 2298 от пола']]]);
-  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2300 (its bottom at 1538)
+    [['Размер', 'Ø 80, высота 73 см'], ['Подвес', '3 троса и провод, 40 см (до 1 м)'], ['Место', 'по центру потолка, низ в 2313 от пола']]]);
+  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2300 (its bottom at 1553)
   // the head (to 1750) stops at its edge, crouched (to 1200) it goes under
   const go = (hi) => p.run((hi) => tt.mm(walkSlide((A.W / 2 - 600) * MM, A.L / 2 * MM, .4, 0, .3, hi)[0]), hi);
   assert.strictEqual(go(1.75), 1155);
@@ -584,17 +584,17 @@ check('люстра «Шары» (ERVILEN, Ozon): 900 × 900, тело 300 на 
       on: document.querySelector('[data-lamp="ervilen"]').getAttribute('aria-pressed') };
   });
   assert.deepStrictEqual(r, { kind: 'ervilen', ext: [407, 472, 425], globes: 12, glass: true, discs: 26, high: 179, on: 'true' }, 'inside 450 × 475 × 450');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра ERVILEN, G9, 84 Вт: 900 × 900, высота 475, низ в 2553 от пола/);
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра ERVILEN, G9, 84 Вт: 900 × 900, высота 475, низ в 2568 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.url, c.lines.slice(0, 4)]; });
   assert.deepStrictEqual(i, [7547, 'Ozon', 'https://ozon.ru/t/1NEcBba',
-    [['Размер', '90 × 90, высота 30 см'], ['Штанга', '30 см'], ['Лампы', 'G9, 84 Вт'], ['Место', 'по центру потолка, низ в 2553 от пола']]]);
+    [['Размер', '90 × 90, высота 30 см'], ['Штанга', '30 см'], ['Лампы', 'G9, 84 Вт'], ['Место', 'по центру потолка, низ в 2568 от пола']]]);
 });
 
-check('люстры висят под розеткой: чашка на 32 ниже потолка (купол розетки в середине), а не в её рельефе', () => {
+check('люстры висят у розетки: чашка на 17 ниже потолка — наполовину в куполе розетки (32), а не утоплена в её рельефе', () => {
   const p = open();
   ['discs', 'branches', 'branches80', 'ervilen'].forEach((k) => {
     p.run((k) => setModel({ ...A, lamp: k }), k);
-    assert.deepStrictEqual(p.run(() => [tt.mm(lampGroup.children[0].position.y), roseDepth(0, 0), LAMP_TOP]), [3028, 32, 32], k);
+    assert.deepStrictEqual(p.run(() => [tt.mm(lampGroup.children[0].position.y), roseDepth(0, 0), LAMP_TOP]), [3043, 32, 17], k);
   });
 });
 

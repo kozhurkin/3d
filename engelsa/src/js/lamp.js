@@ -1,6 +1,6 @@
 /* ---------- the chandelier: in the middle of the ceiling, at the rose (A.lamp: which one, 'none' without; set in the plan's panel) ----------
    Each kind (LAMPS) builds itself in its own frame: y down from its cup's top (mm), x and z round its axis; its group hangs from the
-   ceiling's middle under the rose's boss (LAMP_TOP down), so its cup shows whole, not inside the rose's relief. Seen while the walls
+   ceiling's middle at the rose's boss (LAMP_TOP down): its cup half in the boss, the rest of it out of the rose's relief. Seen while the walls
    stand whole up to the ceiling (as the rose), on the «Комната» tab too: it is chosen there.
    A third of its height and more is its rod or cables (as they are): the glass starts lower. It casts no shadow (a blot on the floor in the
    sun's light that a lamp under the ceiling would not make). A click on it puts the next one.
@@ -20,7 +20,7 @@ function dimpleTexture(){
 const lampGlass=new THREE.MeshStandardMaterial({color:new THREE.Color('#efe9df').convertSRGBToLinear(),roughness:.35,metalness:0,
   emissive:new THREE.Color('#3a3226'),bumpMap:dimpleTexture(),bumpScale:.002});   // the faint emissive: the bulbs inside lighting it up
 const lampGroup=new THREE.Group();scene.add(lampGroup);
-const LAMP_TOP=roseDepth(0,0);   // mm: how far the rose's middle hangs from the ceiling (32)
+const LAMP_TOP=roseDepth(0,0)-15;   // mm: the cup's top under the ceiling: 15 into the rose's boss (it hangs 32)
 const lampLow=L=>H-LAMP_TOP-L.H;   // mm: the chandelier's bottom over the floor
 // a rod of radius r (mm) from a to b ([x, y, z] in its frame), tapering to r1 at b
 function lampRod(par,a,b,r,mat,r1=r){

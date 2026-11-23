@@ -44,6 +44,14 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
 @media (prefers-reduced-motion: reduce){.save[aria-busy="true"] svg{animation:none}}
 .frames{flex:1;min-height:0;position:relative}
 .frames iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
+/* a phone on its side (low and wide): the app the whole height (the frame clear of the notches), the tabs over it at the top right —
+   over the app's panel, as wide as it (app.html: the same media, its panel 260 wide, 8 in from the frame's edges, 42 down) */
+@media (orientation:landscape) and (max-height:540px){
+  .bar{position:absolute;z-index:5;top:8px;right:calc(8px + env(safe-area-inset-right,0px));width:260px;box-sizing:border-box;padding:0;gap:8px}
+  .tabs{flex:1}
+  .tabs a{flex:1;text-align:center;padding:9px 8px}
+  .frames{margin-left:env(safe-area-inset-left,0px);margin-right:env(safe-area-inset-right,0px)}
+}
 </style>
 
 <header class="bar">
@@ -93,6 +101,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);display:flex
   function fitBar(){
     // the row as it would be: measured with the tabs shown, in the same frame, so nothing flickers
     bar.removeAttribute('data-compact');
+    if(matchMedia('(orientation:landscape) and (max-height:540px)').matches){pickClose(false);return;}   // the tabs over the panel: they fit
     const cs=getComputedStyle(bar),have=bar.clientWidth-(parseFloat(cs.paddingLeft)||0)-(parseFloat(cs.paddingRight)||0);
     const need=nav.scrollWidth+(parseFloat(cs.columnGap)||16)+save.offsetWidth;
     if(need>have)bar.setAttribute('data-compact','');else pickClose(false);

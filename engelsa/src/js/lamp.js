@@ -1,9 +1,10 @@
 /* ---------- the chandelier: in the middle of the ceiling, at the rose (A.lamp: which one, 'none' without; set in the plan's panel) ----------
    Each kind (LAMPS) builds itself in its own frame: y down from the ceiling (mm), x and z round its axis; its group hangs from the
    ceiling's middle. Seen while the walls stand whole up to the ceiling (as the rose), on the «Комната» tab too: it is chosen there.
-   Not an obstacle in the walk: it hangs over the head */
+   A third of its height and more is its rod (as they are): the glass starts lower. It casts no shadow (a blot on the floor in the
+   sun's light that a lamp under the ceiling would not make). A click on it puts the next one. Not an obstacle in the walk: it hangs over the head */
 const lampGold=new THREE.MeshStandardMaterial({color:new THREE.Color('#c9a25a').convertSRGBToLinear(),roughness:.3,metalness:.9});
-const lampBlack=new THREE.MeshStandardMaterial({color:0x151515,roughness:.45,metalness:.5});
+const lampBrass=new THREE.MeshStandardMaterial({color:new THREE.Color('#a8834e').convertSRGBToLinear(),roughness:.35,metalness:.85});   // antique brass
 /* the frosted glass of the discs, pressed with a fine pattern of dimples: a tile of 120 mm (a disc's cap UVs are 0…1 across it)
    of small round bumps every way, a little lighter and darker; the same canvas is its bump. Opaque (milky), so it goes into the .glb */
 function dimpleTexture(){
@@ -20,29 +21,33 @@ const lampGroup=new THREE.Group();scene.add(lampGroup);
 // a rod of radius r (mm) from a to b ([x, y, z] in its frame), tapering to r1 at b
 function lampRod(par,a,b,r,mat,r1=r){
   const d=new THREE.Vector3(b[0]-a[0],b[1]-a[1],b[2]-a[2]).multiplyScalar(MM),l=d.length();
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1*MM,r*MM,l,12),mat);m.castShadow=true;
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(r1*MM,r*MM,l,12),mat);
   m.position.set((a[0]+b[0])/2*MM,(a[1]+b[1])/2*MM,(a[2]+b[2])/2*MM);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());
   par.add(m);return m;
 }
 // a round part on the axis: radius r, from y0 to y1 down from the ceiling (mm)
 function lampCyl(g,r,y0,y1,mat){const m=new THREE.Mesh(new THREE.CylinderGeometry(r*MM,r*MM,(y1-y0)*MM,32),mat);
-  m.position.y=-(y0+y1)/2*MM;m.castShadow=true;g.add(m);return m;}
-/* «MyLight», 8 bulbs (Ozon): Ø 600, 530 from the ceiling. A black ceiling cup and rod, a gold hub with 8 gold arms out and a little up;
-   textured glass discs in tiers, each hanging by its top edge, its face out: the top tier's 8 from the arms' ends, under it rings
-   ever smaller and the discs leaning out at the top more and more, so together they make a bowl down to 530. A tier: its ring's
-   radius r, how many n, turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad) */
+  m.position.y=-(y0+y1)/2*MM;g.add(m);return m;}
+/* «MyLight», 8 bulbs (Ozon): Ø 600, 535 from the ceiling, all its metal brass. A cup on the ceiling Ø 100 and a rod down to a hub at 190,
+   its 10 arms out from a collar and a little up, a ring at each end; textured glass discs in tiers from 185 (a third of the height
+   above them), each hanging by its top edge, its face out: the top tier's 10 from the arms' rings, under it rings ever smaller and
+   the discs leaning out at the top more and more, so together they make a bowl down to 535. A tier: its ring's radius r, how many n,
+   turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad) */
 const DISC_TIERS=[
-  {r:285,n:8,ph:0,d:170,t:80,b:0},{r:268,n:8,ph:.5,d:160,t:110,b:-.08},{r:225,n:10,ph:.25,d:150,t:195,b:-.18},
-  {r:175,n:9,ph:0,d:140,t:270,b:-.28},{r:120,n:8,ph:.5,d:130,t:335,b:-.38},{r:65,n:6,ph:0,d:120,t:390,b:-.5},{r:22,n:3,ph:.2,d:110,t:425,b:-.3}
+  {r:285,n:10,ph:0,d:150,t:185,b:0},{r:262,n:10,ph:.5,d:140,t:205,b:-.1},{r:215,n:10,ph:.25,d:135,t:262,b:-.2},
+  {r:165,n:9,ph:0,d:125,t:318,b:-.3},{r:112,n:8,ph:.5,d:115,t:368,b:-.4},{r:62,n:6,ph:0,d:105,t:410,b:-.45},{r:22,n:3,ph:.2,d:100,t:439,b:-.3}
 ];
 const DISC_T=4;   // the glass's thickness
 function lampDiscs(g){
-  // the cup on the ceiling, the rod, the hub
-  const cyl=(r,y0,y1,mat)=>lampCyl(g,r,y0,y1,mat);
-  cyl(55,0,22,lampBlack);cyl(57,18,24,lampGold);cyl(6,24,72,lampBlack);cyl(20,72,102,lampGold);
-  // the arms: from the hub out to the top tier's ring, rising 15 toward their ends; the bulbs on them hid by the glass
+  // the cup on the ceiling, the rod, the hub with its collar under it
+  const cyl=(r,y0,y1)=>lampCyl(g,r,y0,y1,lampBrass);
+  cyl(50,0,26);cyl(7,26,172);cyl(22,168,218);cyl(30,184,198);
+  // the arms: from the collar out to the top tier's ring, rising 20 toward their ends, a cap and a ring there the disc hangs from;
+  // the bulbs on them hid by the glass
   const T0=DISC_TIERS[0];
-  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[18*c,-90,18*s],[T0.r*c,-75,T0.r*s],5,lampGold);}
+  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[26*c,-191,26*s],[(T0.r+8)*c,-171,(T0.r+8)*s],6,lampBrass);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(6*MM,1.5*MM,6,16),lampBrass);ring.position.set(T0.r*c*MM,-(T0.t-5)*MM,T0.r*s*MM);
+    ring.rotation.y=-a;g.add(ring);}
   // the discs: each in a pivot at its hanging point, x out from the axis, turned about its tangent by the lean
   const geo={};
   DISC_TIERS.forEach(({r,n,ph,d,t,b})=>{
@@ -50,15 +55,15 @@ function lampDiscs(g){
     for(let i=0;i<n;i++){const a=2*Math.PI*(i+ph)/n,p=new THREE.Group();
       p.position.set(r*Math.cos(a)*MM,-t*MM,r*Math.sin(a)*MM);p.rotation.y=-a;g.add(p);
       const q=new THREE.Group();q.rotation.z=b;p.add(q);
-      const m=new THREE.Mesh(G,lampGlass);m.position.y=-d/2*MM;m.castShadow=true;m.userData.disc=true;q.add(m);}
+      const m=new THREE.Mesh(G,lampGlass);m.position.y=-d/2*MM;m.userData.disc=true;q.add(m);}
   });
 }
-/* «Aine Light», crystal, 6 bulbs (Wildberries): 500 × 450, 450 from the ceiling. A gold cup on the ceiling (Ø 120 × 25) and a rod,
-   a hub with gold branches out every way, knobbly twigs up off them; from the branches on thin wires strands of small discs —
+/* «Aine Light», crystal, 6 bulbs (Wildberries): 500 × 450, 450 from the ceiling. A gold cup on the ceiling (Ø 120 × 25) and a rod
+   to a hub at 170, gold branches out from it every way, knobbly twigs up off them to about 120 (the rod a quarter and more); from the branches on thin wires strands of small discs —
    white hammered glass and clear faceted crystal at random — down to a rounded bottom, lowest in the middle. Inside, on a stem under
    the hub, 6 candle bulbs in cups. Its oval's long side along the side walls (z), as the rose's. Random but seeded: the same every time.
    The discs (hundreds) are two meshes, one of each glass, the wires one of lines */
-const BR={W:500,D:450,H:450,hub:100,N:12,disc:{white:17,crystal:14},jit:5};   // sizes; the hub's level; branches; the discs' radii; a strand's sway
+const BR={W:500,D:450,H:450,hub:170,N:12,disc:{white:17,crystal:14},jit:5};   // sizes; the hub's level; branches; the discs' radii; a strand's sway
 const lampWhite=new THREE.MeshStandardMaterial({color:new THREE.Color('#f3efe8').convertSRGBToLinear(),roughness:.45,side:THREE.DoubleSide,
   emissive:new THREE.Color('#2a251c'),bumpMap:dimpleTexture(),bumpScale:.0015});
 const lampCrystal=new THREE.MeshStandardMaterial({color:new THREE.Color('#dce5ea').convertSRGBToLinear(),roughness:.08,metalness:.25,
@@ -75,7 +80,7 @@ function lampDiscMesh(g,list,mat,k){
       ext[0]=Math.max(ext[0],Math.abs(px));ext[2]=Math.max(ext[2],Math.abs(pz));}});
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
   geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
-  const m=new THREE.Mesh(geo,mat);m.castShadow=true;m.userData.discs=list.length;g.add(m);return m;
+  const m=new THREE.Mesh(geo,mat);m.userData.discs=list.length;g.add(m);return m;
 }
 function lampBranches(g){
   let seed=5;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
@@ -84,21 +89,21 @@ function lampBranches(g){
   const ax=D/2-disc.white-jit,az=W/2-disc.white-jit,at=(a,r)=>[ax*r*Math.cos(a),az*r*Math.sin(a)];
   lampCyl(g,60,0,22,lampGold);lampCyl(g,61,19,25,lampGold);lampCyl(g,5,25,hub,lampGold);lampCyl(g,18,hub-10,hub+25,lampGold);
   // the stem under the hub with the 6 bulbs round it: arms out to cups, a candle bulb in each; a ball at its end
-  lampCyl(g,4,hub+25,262,lampGold);const ball=new THREE.Mesh(new THREE.SphereGeometry(12*MM,16,12),lampGold);ball.position.y=-270*MM;g.add(ball);
-  for(let i=0;i<6;i++){const a=2*Math.PI*(i+.5)/6,c=Math.cos(a),s=Math.sin(a);lampRod(g,P(0,236,0),P(85*c,236,85*s),3,lampGold);
-    const cup=lampCyl(g,12,212,240,lampGold);cup.position.x=85*c*MM;cup.position.z=85*s*MM;
-    const b=new THREE.Mesh(new THREE.SphereGeometry(15*MM,16,12),lampBulb);b.scale.y=1.6;b.position.set(85*c*MM,-188*MM,85*s*MM);g.add(b);}
+  lampCyl(g,4,hub+25,hub+132,lampGold);const ball=new THREE.Mesh(new THREE.SphereGeometry(12*MM,16,12),lampGold);ball.position.y=-(hub+140)*MM;g.add(ball);
+  for(let i=0;i<6;i++){const a=2*Math.PI*(i+.5)/6,c=Math.cos(a),s=Math.sin(a);lampRod(g,P(0,hub+116,0),P(85*c,hub+116,85*s),3,lampGold);
+    const cup=lampCyl(g,12,hub+92,hub+120,lampGold);cup.position.x=85*c*MM;cup.position.z=85*s*MM;
+    const b=new THREE.Mesh(new THREE.SphereGeometry(15*MM,16,12),lampBulb);b.scale.y=1.6;b.position.set(85*c*MM,-(hub+68)*MM,85*s*MM);g.add(b);}
   // the branches: each from the hub in three pieces to its tip, a twig up off its middle each side; knobs on the tips.
   // Where strands hang from: along the branches and the twigs, and a few round the hub
   const pt=(a,r,y)=>{const [x,z]=at(a,r);return [x,y,z];},anchors=[];   // an anchor: [x, y down, z, how far out 0…1]
   for(let i=0;i<6;i++)anchors.push([...pt(2*Math.PI*i/6,.12,hub+30),.12]);
-  const knob=(p)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(4.5*MM,10,8),lampGold);m.position.set(p[0]*MM,-p[1]*MM,p[2]*MM);m.castShadow=true;g.add(m);};
+  const knob=(p)=>{const m=new THREE.Mesh(new THREE.SphereGeometry(4.5*MM,10,8),lampGold);m.position.set(p[0]*MM,-p[1]*MM,p[2]*MM);g.add(m);};
   const along=(p,q,t)=>p.map((v,j)=>v+(q[j]-v)*t);
   for(let i=0;i<N;i++){const a=2*Math.PI*(i+rnd()*.4)/N;
-    const p0=pt(a,.06,hub),p1=pt(a+(rnd()-.5)*.15,.5,hub-6+rnd()*12),p2=pt(a+(rnd()-.5)*.2,1,hub-30+rnd()*18);
+    const p0=pt(a,.06,hub),p1=pt(a+(rnd()-.5)*.15,.5,hub-6+rnd()*12),p2=pt(a+(rnd()-.5)*.2,1,hub-25+rnd()*15);
     lampRod(g,P(...p0),P(...p1),6,lampGold,4);lampRod(g,P(...p1),P(...p2),4,lampGold,2.2);knob(p2);
     [.3,.45,.62,.8,.92,1].forEach((t)=>anchors.push([...(t<=.5?along(p0,p1,t/.5):along(p1,p2,(t-.5)/.5)),t]));
-    [-1,1].forEach(sd=>{const q=pt(a+sd*(.28+rnd()*.12),.62+rnd()*.2,hub-45-rnd()*25);lampRod(g,P(...p1),P(...q),3,lampGold,1.5);knob(q);
+    [-1,1].forEach(sd=>{const q=pt(a+sd*(.28+rnd()*.12),.62+rnd()*.2,hub-32-rnd()*20);lampRod(g,P(...p1),P(...q),3,lampGold,1.5);knob(q);
       anchors.push([...q,.7]);});
   }
   // the strands: from an anchor a wire down, discs on it every 30–38, swaying a little, to a bottom lower toward the middle
@@ -114,8 +119,8 @@ function lampBranches(g){
   const l=new THREE.LineSegments(lg,lampWire);l.raycast=()=>{};g.add(l);
 }
 const LAMPS={
-  discs:{n:'Диски',build:lampDiscs,H:530,size:'Ø 600',info:{title:'Люстра MyLight, 8 плафонов (Ozon)',price:8232,shop:'Ozon',url:'https://ozon.ru/t/sZSVo8F',
-    lines:[['Размер','Ø 60, высота 53 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
+  discs:{n:'Диски',build:lampDiscs,H:535,size:'Ø 600',info:{title:'Люстра MyLight, 8 плафонов (Ozon)',price:8232,shop:'Ozon',url:'https://ozon.ru/t/sZSVo8F',
+    lines:[['Размер','Ø 60, высота 53,5 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
   branches:{n:'Ветви',build:lampBranches,H:BR.H,size:`${BR.W} × ${BR.D}`,info:{title:'Люстра хрустальная Aine Light, 6 рожков (Wildberries)',
     price:8051,shop:'Wildberries',url:'https://www.wildberries.ru/catalog/1605669544/detail.aspx',
     lines:[['Размер','50 × 45, высота 45 см'],['Материал','алюминий, стекло К9'],['Лампы','6 × E14 до 60 Вт (360 Вт)'],
@@ -127,12 +132,13 @@ function nextLamp(){const i=LAMP_KINDS.indexOf(A.lamp);setModel({...A,lamp:LAMP_
 function lampInfo(){
   const L=LAMPS[A.lamp];if(!L)return null;
   const page=LAMP_KINDS.length>1?{next:nextLamp,variant:[LAMP_KINDS.indexOf(A.lamp)+1,LAMP_KINDS.length]}:{};
-  return {...page,...L.info,lines:[...L.info.lines,['Место',`по центру потолка, низ в ${H-L.H} от пола`]]};
+  return {...page,...L.info,lines:[...L.info.lines,['Место',`по центру потолка, низ в ${H-L.H} от пола`],
+    'Нажатие на люстру — следующий вариант.']};
 }
 function buildLamp(){
   emptyGroup(lampGroup,false);
   const L=LAMPS[A.lamp];if(!L)return;
-  const g=new THREE.Group();g.userData.lamp=A.lamp;g.userData.info=lampInfo;g.position.set(A.W/2*MM,H*MM,A.L/2*MM);lampGroup.add(g);
+  const g=new THREE.Group();g.userData.lamp=A.lamp;g.userData.info=lampInfo;g.userData.click=nextLamp;g.position.set(A.W/2*MM,H*MM,A.L/2*MM);lampGroup.add(g);
   L.build(g);
 }
 buildLamp();modelHooks.push(buildLamp);

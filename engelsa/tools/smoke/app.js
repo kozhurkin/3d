@@ -468,7 +468,7 @@ check('«i» на сенсорном экране — по тапу у пред�
   tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== t0], [true, true]);
 });
 
-check('люстра «Диски» (MyLight, Ozon): по центру потолка, Ø 600, низ в 530 от потолка; видна, пока стены целые; кнопка «Нет» убирает', () => {
+check('люстра «Диски» (MyLight, Ozon): по центру потолка, Ø 600, низ в 535 от потолка, стекло с 185 (треть высоты — штанга); видна, пока стены целые; «Нет» убирает', () => {
   const p = open();
   const r = p.run(() => {
     const g = lampGroup.children[0], discs = [];
@@ -476,11 +476,11 @@ check('люстра «Диски» (MyLight, Ozon): по центру потол
     // each disc's lowest point and how far out it reaches (mm): its hanging point, the lean, its Ø along the tangent
     const ext = DISC_TIERS.map(({ r, d, t, b }) => [Math.round(t + d * Math.cos(b)), Math.round(Math.hypot(r, d / 2))]);
     return { at: [tt.mm(g.position.x), tt.mm(g.position.y), tt.mm(g.position.z)], kind: g.userData.lamp, n: discs.length,
-      low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), vis: lampGroup.visible,
+      top: Math.min(...DISC_TIERS.map((T) => T.t)), low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), vis: lampGroup.visible,
       on: document.querySelector('[data-lamp="discs"]').getAttribute('aria-pressed') };
   });
-  assert.deepStrictEqual(r, { at: [1355, 3060, 2399], kind: 'discs', n: 52, low: 530, out: 297, vis: true, on: 'true' }, 'Ø 594 + glass ≈ 600');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 530, низ в 2530 от пола/);
+  assert.deepStrictEqual(r, { at: [1355, 3060, 2399], kind: 'discs', n: 56, top: 185, low: 535, out: 295, vis: true, on: 'true' }, 'Ø 590 + glass ≈ 600');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 535, низ в 2525 от пола/);
   p.document.querySelector('[data-lamp="none"]').click();
   assert.deepStrictEqual(p.run(() => [A.lamp, lampGroup.children.length, document.querySelector('[data-lamp="none"]').getAttribute('aria-pressed')]), ['none', 0, 'true']);
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /<dt>Люстра<\/dt><dd>нет<\/dd>/);
@@ -496,8 +496,8 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]);
     return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, v: c.variant }; });
   assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 2],
-    lines: [['Размер', 'Ø 60, высота 53 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
-      ['Место', 'по центру потолка, низ в 2530 от пола']] });
+    lines: [['Размер', 'Ø 60, высота 53,5 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
+      ['Место', 'по центру потолка, низ в 2525 от пола'], 'Нажатие на люстру — следующий вариант.'] });
   const el = p.document.getElementById('itemCard'), next = () => el.children.find((c) => c.className === 'next');
   p.run(() => openItemCard(infoOf(lampGroup.children[0])));
   next().children[1].click();
@@ -508,7 +508,7 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
 });
 
-check('люстра «Ветви» (Aine Light, Wildberries): золотые ветви, на нитях белые и хрустальные диски; 500 × 450 (длинной стороной вдоль боковых стен), низ в 450 от потолка', () => {
+check('люстра «Ветви» (Aine Light, Wildberries): втулка на 170, золотые ветви, на нитях белые и хрустальные диски; 500 × 450 (длинной стороной вдоль боковых стен), низ в 450 от потолка', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
@@ -516,9 +516,31 @@ check('люстра «Ветви» (Aine Light, Wildberries): золотые в�
       mats: g.children.filter((m) => m.userData.discs).map((m) => m.material === lampWhite ? 'white' : m.material === lampCrystal ? 'crystal' : '?'),
       bulbs: g.children.filter((m) => m.material === lampBulb).length, wires: g.children.filter((m) => m.material === lampWire).length };
   });
-  assert.deepStrictEqual(r, { kind: 'branches', ext: [220, 445, 249], discs: [537, 352], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
+  assert.deepStrictEqual(r, { kind: 'branches', ext: [222, 447, 246], discs: [411, 270], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
     'inside 225 × 450 × 250 (half the oval\'s sides), the same every time (seeded)');
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 450, низ в 2610 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.lines.map((l) => l[1])]; });
-  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 45 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2610 от пола']]);
+  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 45 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2610 от пола', 'а']]);   // the last a paragraph: its [1] a letter
+});
+
+check('люстра: клик по ней — следующий вариант (по кругу, без «Нет»), курсор над ней — рука; тени люстры не отбрасывают', () => {
+  const p = open();
+  const click = () => p.run(() => clickAt({}, { object: lampGroup.children[0].children[3] }));
+  assert.deepStrictEqual([click(), p.run(() => A.lamp), p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')], [true, 'branches', 'true']);
+  assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'discs']);
+  assert.strictEqual(p.run(() => typeof clickOf({ object: lampGroup.children[0].children[3] })), 'function');
+  ['discs', 'branches'].forEach((k) => {
+    p.run((k) => setModel({ ...A, lamp: k }), k);
+    const sh = p.run(() => { const all = []; const walk = (o) => { if (o.castShadow === true) all.push(o); (o.children || []).forEach(walk); }; walk(lampGroup); return all.length; });
+    assert.strictEqual(sh, 0, k + ': nothing of it casts a shadow');
+  });
+});
+
+check('розетка на «Комнате»: видна, пока камера ниже потолка («За диваном»), скрыта сверху', () => {
+  const p = open();
+  assert.strictEqual(p.run(() => roseGroup.visible), false, 'from above the ceiling');
+  p.document.querySelector('[data-cam="sofa"]').click(); p.fly();
+  assert.deepStrictEqual(p.run(() => [camera.position.y < H * MM, roseGroup.visible]), [true, true], 'at eye level');
+  p.document.querySelector('[data-cam="top"]').click(); p.fly();
+  assert.strictEqual(p.run(() => roseGroup.visible), false);
 });

@@ -119,19 +119,25 @@ function pickDoor(e,hit){
   for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o||d.frame===o);if(d)return d;}
   return null;
 }
-// a click at a point of the canvas (h: what is there, if already found): the door there (or a cabinet door) opens or closes; true if one did
-function clickAt(e,hit){const h=hit===undefined?hitAt(e):hit,d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();return true;}return false;}
+// an item that does something of its own on a click, not a door (userData.click: the chandelier puts the next one), under a hit
+function clickOf(h){for(let o=h&&h.object;o;o=o.parent){const c=o.userData&&o.userData.click;if(typeof c==='function')return c;}return null;}
+// a click at a point of the canvas (h: what is there, if already found): the door there (or a cabinet door) opens or closes, or the item
+// there does what it does; true if something did
+function clickAt(e,hit){
+  const h=hit===undefined?hitAt(e):hit,d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();return true;}
+  const c=clickOf(h);if(c){c();return true;}return false;
+}
 canvas.addEventListener('pointerup',e=>{
   if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
   clearTimeout(holdTimer);
   if(held){held=null;canvas.style.cursor='';doorsChanged();downAt=null;lost(e);return;}
   if(downAt&&ptrs.size===1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){
-    // a finger has no cursor to rest: a tap on a thing that is not a door brings up its «i» there
+    // a finger has no cursor to rest: a tap on a thing that does nothing on a click brings up its «i» there
     const h=hitAt(e);if(!clickAt(e,h)&&e.pointerType&&e.pointerType!=='mouse')tapItem(h,e);
   }
   downAt=null;lost(e);
 });
-canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)||clickOf(h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
 canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')itemHover(null);});   // a finger lifted leaves too: its «i» stays
 canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});

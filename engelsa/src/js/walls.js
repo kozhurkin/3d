@@ -210,8 +210,9 @@ function buildRose(){
   const m=new THREE.Mesh(g,trimMat);m.castShadow=false;m.receiveShadow=true;m.userData.rose=true;roseGroup.add(m);   // it casts no shadow
 }
 buildRose();
-// it hangs under the ceiling: seen while the walls stand whole up to it, not on the «Комната» tab (the plan: it would hang over the room)
-frameHooks.push(()=>{const V=vs();roseGroup.visible=!!V&&view!=='plan'&&!wallFeetMode&&V.Wm!=='edges'&&wallCut>=H*MM-1e-6;});
+// it hangs under the ceiling: seen while the walls stand whole up to it, on every tab, but not from above the ceiling (the plan has
+// none: it would hang over the room seen from above)
+frameHooks.push(()=>{const V=vs();roseGroup.visible=!!V&&!wallFeetMode&&V.Wm!=='edges'&&wallCut>=H*MM-1e-6&&camera.position.y<H*MM;});
 modelHooks.push(buildRose);
 
 // … made a mesh of the room face of wall w (face: [where, the way into the room]) from a to b along it, y0 up from the floor;

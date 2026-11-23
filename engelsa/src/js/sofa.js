@@ -5,18 +5,26 @@
    Built in its own frame (x along the wall from its left end as one faces the wall, y up, z out into the room; mm), stood against the
    wall by standAgainst (walls.js) */
 const SF={L:SOFA_L_,D:950,DC:1560,WC:900,H:900,ARM:200,ARMH:660,SEAT:450,LEG:40,BASE:330,BACK:200};
-/* the velour: sage green, crushed — blotches darker and lighter, the pile's fine streaks along one way; a tile of 600 mm on the parts
-   (their UVs are in metres: ExtrudeGeometry's) */
+/* the velour: sage green, crushed, as chaotic as can be so its repeats don't show: a tile of 1200 mm (the parts' UVs are in metres:
+   ExtrudeGeometry's) with faint wide washes, blotches darker and lighter of every size, stretched and turned every way, and the pile's
+   fine streaks along one way, each a little askew. Every mark drawn again across the tile's edges, so the tile is seamless */
+const VELOUR_TILE=1.2;   // m
 function velourTexture(){
-  const N=512,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
+  const N=1024,c=document.createElement('canvas');c.width=c.height=N;const g=c.getContext('2d');
   let seed=7;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
   g.fillStyle='#7f907c';g.fillRect(0,0,N,N);
-  for(let i=0;i<90;i++){const x=rnd()*N,y=rnd()*N,r=20+rnd()*80,dark=rnd()<.55,a=.12+rnd()*.18;
-    for(const dx of [-N,0,N])for(const dy of [-N,0,N]){const gr=g.createRadialGradient(x+dx,y+dy,0,x+dx,y+dy,r);
-      gr.addColorStop(0,dark?`rgba(70,88,70,${a})`:`rgba(170,184,165,${a})`);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(x+dx-r,y+dy-r,2*r,2*r);}}
-  for(let i=0;i<700;i++){const x=rnd()*N,y=rnd()*N,l=6+rnd()*20;g.fillStyle=rnd()<.5?'rgba(200,212,195,.12)':'rgba(60,75,60,.12)';
-    for(const d of [-N,0])g.fillRect(x+d,y,l,1);}
-  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(1/.6,1/.6);t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
+  // a mark at x, y drawn by f in its own frame (turned by rot), again on the far side of every edge it comes near (within m)
+  const wrap=(x,y,m,rot,f)=>{for(const dx of [-N,0,N])for(const dy of [-N,0,N]){
+    if(x+dx<-m||x+dx>N+m||y+dy<-m||y+dy>N+m)continue;g.save();g.translate(x+dx,y+dy);g.rotate(rot);f();g.restore();}};
+  const blot=(r,asp,col)=>wrap(rnd()*N,rnd()*N,r,rnd()*Math.PI,()=>{g.scale(1,asp);const gr=g.createRadialGradient(0,0,0,0,0,r);
+    gr.addColorStop(0,col);gr.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gr;g.fillRect(-r,-r,2*r,2*r);});
+  for(let i=0;i<14;i++){const a=.05+rnd()*.06;blot(220+rnd()*260,.5+rnd()*.5,rnd()<.5?`rgba(70,88,70,${a})`:`rgba(170,184,165,${a})`);}   // the washes
+  for(let i=0;i<380;i++){const a=.08+rnd()*.2,r=12+Math.pow(rnd(),1.8)*140;
+    blot(r,.3+rnd()*.7,rnd()<.55?`rgba(70,88,70,${a})`:`rgba(170,184,165,${a})`);}
+  for(let i=0;i<2800;i++){const l=4+rnd()*30,a=.06+rnd()*.1;g.fillStyle=rnd()<.5?`rgba(200,212,195,${a})`:`rgba(60,75,60,${a})`;
+    wrap(rnd()*N,rnd()*N,l,(rnd()-.5)*.5,()=>g.fillRect(0,0,l,1));}
+  const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.encoding=THREE.sRGBEncoding;t.anisotropy=8;
+  t.repeat.x=t.repeat.y=1/VELOUR_TILE;
   return t;
 }
 const velour=new THREE.MeshPhysicalMaterial({map:velourTexture(),roughness:.85,sheen:new THREE.Color(0x9fb59a)});   // the sheen: the velour's pile catching the light

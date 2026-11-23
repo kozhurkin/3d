@@ -4,9 +4,13 @@
    p: swatch colour when the scene colour does not show the paint itself (the lit white wall, not its base tone) */
 const WALLC={
   linen:{n:'Обои',c:'#FFFFFF',r:.95,p:'#A59389',tex:true},   // the wallpaper: its colour and its linen weave are the photo's (wallTex); p: its mean colour
-  white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
+  // between Greige and the wallpaper as they show in the room: Greige's c is taken as linear (it shows lighter than its hex), the wallpaper's
+  // as sRGB; their middle in sRGB, made linear (lin); its swatch the middle of the two swatches
+  mid:{n:'Средний беж',c:'#C4B9B0',r:.92,lin:true,p:'#B6A99D'},
   greige:{n:'Greige',c:'#C7BEB1',r:.9},
-  french:{n:'French Grey',c:'#B8B9A6',r:.9}
+  french:{n:'French Grey',c:'#B8B9A6',r:.9},
+  white:{n:'Белый',c:'--scene-wall',r:.95,p:'#F7F6F2'},
+  custom:{n:'Свой',c:'#C9B8A8',r:.92,lin:true,pick:true}   // picked in the panel (views.js: S.wcc), shown as picked: sRGB made linear
 };
 const wallCol=w=>w.c.startsWith('--')?css(w.c):w.c;
 const floorMat=new THREE.MeshStandardMaterial({roughness:.95});
@@ -75,11 +79,9 @@ function trimProfile(h){
    of the run, a whole number of them on a wall.
    friezeDepth(u, v): how far the face stands out of the wall (mm) at u along a leaf's period (0…1) and v down from the top (0…1) */
 const FRIEZE_BASE=8,FRIEZE_BAND=18,FRIEZE_LEAF=20;
-function friezeDepth(u,v){
-  if(v<.13)return FRIEZE_BAND-Math.max(0,(v-.1)/.03)*3;   // the band, its lower edge rounded off
-  if(v<.17)return FRIEZE_BASE+1;                          // the groove under it
-  const t=(v-.17)/.79;if(t>=1)return FRIEZE_BASE;         // down the leaf 0…1; the board's plain bottom under the tips
-  const x=Math.abs(u-.5);   // from the leaf's axis: both halves the same
+/* the acanthus leaf of the cornice and the ceiling rose, 0…about 1 out: x from its axis (0….5 of its period: both halves the same),
+   t from its top (0) to its tip (1) */
+function leafDepth(x,t){
   // the leaf: round at its top, widest a third of the way down, narrowing to a round tip; its edges lobed alike on both sides
   const w=.47*Math.sqrt(Math.max(0,1-((t-.34)/(t<.34?.37:.66))**2))*(1+.1*Math.sin(2*Math.PI*3.5*t+.8));
   let d=0;
@@ -92,7 +94,13 @@ function friezeDepth(u,v){
   // the curls at the top: rolled out to the sides, a knob between them, a smaller pair under them; round knobs, each a dome
   [[.3,.1,.15],[0,.07,.13],[.17,.27,.11],[.36,.3,.09]].forEach(([cx,ct,cr])=>{
     const q=1-((x-cx)**2+((t-ct)*.6)**2)/(cr*cr);if(q>0)d=Math.max(d,.45+.62*Math.sqrt(q));});
-  return FRIEZE_BASE+FRIEZE_LEAF*Math.min(1.1,d);
+  return d;
+}
+function friezeDepth(u,v){
+  if(v<.13)return FRIEZE_BAND-Math.max(0,(v-.1)/.03)*3;   // the band, its lower edge rounded off
+  if(v<.17)return FRIEZE_BASE+1;                          // the groove under it
+  const t=(v-.17)/.79;if(t>=1)return FRIEZE_BASE;         // down the leaf 0…1; the board's plain bottom under the tips
+  return FRIEZE_BASE+FRIEZE_LEAF*Math.min(1.1,leafDepth(Math.abs(u-.5),t));
 }
 /* the rope trim: strands twisted, round across, the grooves between them running up at a slant; a groove to ROPE_P mm of the run.
    ropeDepth(u, v): how far it stands out of the wall (mm) at u along a twist (0…1) and v down from its top (0…1) */
@@ -119,6 +127,38 @@ const TRIM={   // the trims along the walls: how far each stands out at most (mm
   rope:{d:ROPE_D,geo:(l,h)=>reliefGeometry(l,h,{p:ROPE_P,seg:8,ny:6,depth:ropeDepth}),lines:89},
   plinth:{d:PL_T,geo:(l,h)=>new THREE.ExtrudeGeometry(trimProfile(h),{depth:l*MM,bevelEnabled:false,curveSegments:8}),lines:30}
 };
+/* the ceiling rose: an oval of the cornice's style, A.rosW × A.rosD in the middle of the ceiling, its long side along the side walls.
+   From its middle out (ρ 0…1 of the oval): a domed boss with a knob, a bead round it in a groove, a ring of ROSE_N acanthus leaves,
+   the curls at the bead, the round tips out, a plain rim rounded off at the edge. roseDepth(a, ρ): how far it hangs down (mm),
+   a the angle round it in leaves (0…1 a leaf) */
+const ROSE_N=16;
+function roseDepth(a,p){
+  if(p<.16)return 14+12*Math.sqrt(1-(p/.16)**2)+6*Math.max(0,1-(p/.05)**2);   // the boss, the knob on it
+  if(p<.19)return 8;                                                           // the groove
+  if(p<.24)return 8+8*Math.sqrt(Math.max(0,1-((p-.215)/.025)**2));             // the bead
+  if(p>.97)return Math.max(1,6*Math.sqrt(Math.max(0,1-((p-.97)/.03)**2)));     // the rim's rounded edge, 1 mm off the ceiling
+  const t=(p-.24)/.68;if(t>=1)return 6;                                        // the rim under the tips
+  return 6+FRIEZE_LEAF*Math.min(1.1,leafDepth(Math.abs(a-.5),t));
+}
+const roseGroup=new THREE.Group();scene.add(roseGroup);
+function buildRose(){
+  emptyGroup(roseGroup,false);
+  const na=ROSE_N*24,np=44,pos=[],idx=[],at=(i,j)=>i*(np+1)+j,ra=A.rosW/2,rb=A.rosD/2;
+  for(let i=0;i<=na;i++)for(let j=0;j<=np;j++){const th=i/na*2*Math.PI,p=j/np,u=(i%24)/24;
+    pos.push((A.W/2+rb*p*Math.cos(th))*MM,(H-roseDepth(u,p))*MM,(A.L/2+ra*p*Math.sin(th))*MM);}   // the long side along z
+  for(let i=0;i<na;i++)for(let j=0;j<np;j++)idx.push(at(i,j),at(i,j+1),at(i+1,j),at(i,j+1),at(i+1,j+1),at(i+1,j));   // facing down
+  // its back against the ceiling: a smooth oval facing up, what the plan sees from above (no ceiling there)
+  const o=pos.length/3;pos.push(A.W/2*MM,H*MM,A.L/2*MM);
+  for(let i=0;i<=na;i++){const th=i/na*2*Math.PI;pos.push((A.W/2+rb*Math.cos(th))*MM,H*MM,(A.L/2+ra*Math.sin(th))*MM);}
+  for(let i=0;i<na;i++)idx.push(o,o+2+i,o+1+i);
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,trimMat);m.castShadow=m.receiveShadow=true;m.userData.rose=true;roseGroup.add(m);
+}
+buildRose();
+// it hangs under the ceiling: seen while the walls stand whole up to it
+frameHooks.push(()=>{const V=vs();roseGroup.visible=!!V&&!wallFeetMode&&V.Wm!=='edges'&&wallCut>=H*MM-1e-6;});
+modelHooks.push(buildRose);
+
 // … made a mesh of the room face of wall w (face: [where, the way into the room]) from a to b along it, y0 up from the floor;
 // its geometry centred on its box, as the wall pieces are (the wall-height cut and a flight scale it about its middle)
 function trimMesh(kind,w,a,b,y0,h){
@@ -464,7 +504,7 @@ modelHooks.push(()=>{
 function applyTheme(){
   scene.background=new THREE.Color(css('--scene-bg'));
   floorMat.color.set(css('--scene-floor'));
-  const wc=WALLC[S.wc]||WALLC.linen;wallMat.color.set(wallCol(wc));wallTexU.wallTexOn.value=wc.tex?1:0;
+  const wc=WALLC[S.wc]||WALLC.linen;wallMat.color.set(wallCol(wc));if(wc.lin)wallMat.color.convertSRGBToLinear();wallTexU.wallTexOn.value=wc.tex?1:0;
   // the white from the rope's bottom: the wallpaper ends under it, as the photo one does
   wallTexU.wallBandY.value=(A.plH+A.muralH)*MM;wallTexU.wallBandC.value.copy(trimMat.color);
   const e=.002;wallTexU.revMin.value.set((winX-A.winW/2)*MM-e,A.winS*MM-e,A.L*MM-e);wallTexU.revMax.value.set((winX+A.winW/2)*MM+e,A.winT*MM+e,(A.L+A.tW)*MM+e);

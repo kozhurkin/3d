@@ -16,15 +16,20 @@ function saveView(id=view){writeJSON(viewKey(id),VS[id]);}
 
 /* shared settings: light and wall colour */
 const SKEY='eng-shared-v1';
-const S={wc:'linen',light:{...LIGHT0},edge:true,fly:true};   // edge: the walls' and doors' outlines; fly: the animated flight between tabs
-{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;} }
+const S={wc:'mid',wcc:WALLC.custom.c,light:{...LIGHT0},edge:true,fly:true};   // wcc: the wall colour picked; edge: the walls' and doors' outlines; fly: the animated flight between tabs
+{ const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;if(/^#[0-9a-f]{6}$/i.test(s.wcc||''))S.wcc=s.wcc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
 // wall colour swatches
 const wcs=document.getElementById('wcs');
-wcs.innerHTML=Object.entries(WALLC).map(([k,w])=>`<button class="wc" data-wc="${k}" aria-pressed="false"><i style="background:${w.p||w.c}"></i>${w.n}</button>`).join('');
+WALLC.custom.c=S.wcc;
+wcs.innerHTML=Object.entries(WALLC).map(([k,w])=>`<button class="wc" data-wc="${k}" aria-pressed="false"><i style="background:${w.p||w.c}"></i>${w.n}</button>`).join('')
+  +`<input type="color" id="wcPick" value="${S.wcc}" aria-label="Свой цвет стен" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">`;
 const syncWc=()=>wcs.querySelectorAll('[data-wc]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.wc===S.wc));
-wcs.querySelectorAll('[data-wc]').forEach(b=>b.addEventListener('click',()=>{S.wc=b.dataset.wc;syncWc();applyTheme();saveShared();}));
+wcs.querySelectorAll('[data-wc]').forEach(b=>b.addEventListener('click',()=>{S.wc=b.dataset.wc;syncWc();applyTheme();saveShared();if(WALLC[S.wc].pick)wcPick.click();}));
+// «Свой»: the button takes it and opens the browser's colour picker; the colour goes on the walls as it is moved
+const wcPick=document.getElementById('wcPick'),wcSw=wcs.querySelector('[data-wc="custom"] i');
+wcPick.addEventListener('input',e=>{S.wc='custom';S.wcc=WALLC.custom.c=e.target.value;wcSw.style.background=S.wcc;syncWc();applyTheme();saveShared();});
 syncWc();
 // the walls' and doors' outlines (walls.js: edgeOp), the same in every view
 const edgeBox=document.getElementById('wEdge');edgeBox.checked=S.edge;

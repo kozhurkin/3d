@@ -75,12 +75,13 @@ check('ракурсы: «На дверь» — камера за стеной с
   assert.ok(z('window') < -120, 'past the door wall');
 });
 
-check('стены: обои из фото по умолчанию; у другого цвета текстуры нет', () => {
+check('стены: «Средний беж» по умолчанию; обои — из фото, у другого цвета текстуры нет', () => {
   const p = open();
   const r = () => p.run(() => [S.wc, wallTexU.wallTexOn.value, typeof wallMat.onBeforeCompile, document.querySelector('[data-wc="linen"]').getAttribute('aria-pressed')]);
+  assert.deepStrictEqual(r(), ['mid', 0, 'function', 'false']);
+  assert.strictEqual(p.document.querySelector('[data-wc="mid"]').getAttribute('aria-pressed'), 'true');
+  p.document.querySelector('[data-wc="linen"]').click();
   assert.deepStrictEqual(r(), ['linen', 1, 'function', 'true']);
-  p.document.querySelector('[data-wc="greige"]').click();
-  assert.deepStrictEqual(r(), ['greige', 0, 'function', 'false']);
 });
 
 check('лепнина 110 под потолком по всем стенам, плинтус 70 — до наличников двери', () => {
@@ -147,4 +148,38 @@ check('откосы окна не оклеены: проём окна в мир�
   const p = open();
   const r = p.run(() => [wallTexU.revMin.value, wallTexU.revMax.value].map((v) => [v.x, v.y, v.z].map((x) => tt.mm(x))));
   assert.deepStrictEqual(r, [[753, 898, 4795], [1957, 2952, 5199]], 'the opening 755…1955, 900…2950, through the wall 4797…5197, 2 mm over');
+});
+
+check('розетка на потолке: овал 500 × 350 по центру, вдоль боковых стен, листья как у лепнины; видна и сверху — гладкой спинкой, пока стены целые', () => {
+  const p = open();
+  const r = p.run(() => {
+    const m = roseGroup.children[0];
+    const ring = [...Array(64)].map((_, i) => roseDepth((i % 4) / 4, .5));
+    return { n: roseGroup.children.length, rose: m.userData.rose, boss: roseDepth(0, 0), rim: roseDepth(.3, .95), edge: roseDepth(.3, 1),
+      same: leafDepth(.2, .5) === leafDepth(Math.abs(.3 - .5), .5), frieze: friezeDepth(.5, .5) === FRIEZE_BASE + FRIEZE_LEAF * Math.min(1.1, leafDepth(0, (.5 - .17) / .79)),
+      vis: roseGroup.visible, A: [A.rosW, A.rosD] };
+  });
+  assert.deepStrictEqual(r, { n: 1, rose: true, boss: 32, rim: 6, edge: 1, same: true, frieze: true, vis: true, A: [500, 350] }, 'on the plan from above too');
+  assert.deepStrictEqual(p.run(() => [roseGroup.scale.y, roseGroup.position.y]), [1, 0], 'not turned: from above its smooth back shows');
+  const wh = p.document.querySelector('[data-panel="plan"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); p.tick();
+  assert.strictEqual(p.run(() => roseGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
+});
+
+check('цвет стен: «Средний беж» между Greige и обоями; «Свой» — из палитры браузера, запоминается', () => {
+  const storage = new Map();
+  const p = open({ storage });
+  assert.deepStrictEqual(p.document.querySelectorAll('[data-wc]').map((b) => b.dataset.wc), ['linen', 'mid', 'greige', 'french', 'white', 'custom']);
+  p.document.querySelector('[data-wc="mid"]').click();
+  const lin = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);   // the hex's channels 0…1
+  const c = p.run(() => [wallMat.color.r, wallMat.color.g, wallMat.color.b, wallTexU.wallTexOn.value]);
+  // Greige shows as its hex taken linear, the wallpaper as its photo: the middle of the two on screen (sRGB)
+  const enc = (v) => Math.pow(v, 1 / 2.4) * 1.055 - 0.055;
+  [0, 1, 2].forEach((i) => { const mid = (lin('#C7BEB1')[i] ** (1 / 2.2) + lin('#A59389')[i]) / 2; assert.ok(Math.abs(enc(c[i]) - mid) < .02, `channel ${i}: ${enc(c[i])} ≈ ${mid}`); });
+  assert.strictEqual(c[3], 0, 'no wallpaper texture');
+  const pick = p.document.getElementById('wcPick'); pick.value = '#336699'; pick.dispatch('input');
+  assert.deepStrictEqual(p.run(() => [S.wc, S.wcc]), ['custom', '#336699']);
+  assert.strictEqual(p.document.querySelector('[data-wc="custom"]').getAttribute('aria-pressed'), 'true');
+  assert.deepStrictEqual(JSON.parse(storage.get('eng-shared-v1')).wcc, '#336699');
+  const q = open({ storage });
+  assert.deepStrictEqual(q.run(() => [S.wc, WALLC.custom.c]), ['custom', '#336699'], 'remembered');
 });

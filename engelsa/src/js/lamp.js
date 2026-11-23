@@ -125,6 +125,45 @@ function lampBranches(g,c){
   const lg=new THREE.BufferGeometry();lg.setAttribute('position',new THREE.Float32BufferAttribute(wire,3));
   const l=new THREE.LineSegments(lg,lampWire);l.raycast=()=>{};g.add(l);
 }
+/* «ERVILEN», G9, 84 W (Ozon): 900 × 900, 300 high on a rod of 300. A gold cup on the ceiling and the rod to a flat hub at 325;
+   6 gold arms out from it, each forking in two, a milk-glass globe Ø 120 at the end of each (12, glowing); along the arms white
+   enamelled discs Ø 100–120 on short stalks, turned every way. The globes and discs within 150 over and under the hub, so it is
+   300 high (175…475 from the ceiling), the rod above it nearly two fifths of the whole. Seeded: the same every time */
+const ERV={W:900,hub:325,half:150,globe:60,disc:[50,60],arms:6,discs:26,seed:3};
+const lampOpal=new THREE.MeshStandardMaterial({color:new THREE.Color('#f6f1e8').convertSRGBToLinear(),roughness:.5,
+  emissive:new THREE.Color('#d9c6a2'),emissiveIntensity:.55});   // milk glass with the bulb inside
+const lampEnamel=new THREE.MeshStandardMaterial({color:new THREE.Color('#f2f1ec').convertSRGBToLinear(),roughness:.6,side:THREE.DoubleSide});
+function lampGlobes(g){
+  let seed=ERV.seed;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const {hub,half,globe:gr,arms}=ERV,out=ERV.W/2-gr,P=(x,y,z)=>[x,-y,z],ext=g.userData.ext=[0,0,0];
+  // how far it reaches (mm): out along x, down, out along z; a round thing r across those (a disc less across its own normal)
+  const grow=(x,y,z,rx,ry=rx,rz=rx)=>{ext[0]=Math.max(ext[0],Math.abs(x)+rx);ext[1]=Math.max(ext[1],y+ry);ext[2]=Math.max(ext[2],Math.abs(z)+rz);};
+  lampCyl(g,55,0,22,lampGold);lampCyl(g,7,22,hub,lampGold);lampCyl(g,35,hub-14,hub+14,lampGold);
+  const pts=[];   // along the arms, for the discs: [x, y, z]
+  for(let i=0;i<arms;i++){const a=2*Math.PI*(i+rnd()*.3)/arms;
+    // the arm to its fork, then a branch to each globe: one far out, one nearer, over or under the hub's level
+    const fr=110+rnd()*80,fy=hub+(rnd()-.5)*40,f=[fr*Math.cos(a),fy,fr*Math.sin(a)];
+    lampRod(g,P(0,hub,0),P(...f),7,lampGold,6);
+    [[.5,out*(.88+rnd()*.12)],[-.5,out*(.45+rnd()*.25)]].forEach(([da,r])=>{
+      const b=a+da*(.35+rnd()*.3),y=hub+(rnd()-.5)*2*(half-gr),c=[r*Math.cos(b),y,r*Math.sin(b)];
+      const d=Math.hypot(c[0]-f[0],c[2]-f[2]),k=(d-gr-14)/d,s=[f[0]+(c[0]-f[0])*k,y,f[2]+(c[2]-f[2])*k];   // the socket at the globe's side
+      lampRod(g,P(...f),P(...s),5,lampGold,4);
+      const cup=new THREE.Mesh(new THREE.SphereGeometry(16*MM,12,10),lampGold);cup.position.set(s[0]*MM,-y*MM,s[2]*MM);g.add(cup);
+      const m=new THREE.Mesh(new THREE.SphereGeometry(gr*MM,24,18),lampOpal);m.position.set(c[0]*MM,-y*MM,c[2]*MM);m.userData.globe=true;g.add(m);
+      grow(c[0],y,c[2],gr);
+      [.3,.55,.8].forEach(t=>pts.push(f.map((v,j)=>v+(s[j]-v)*t)));});
+    pts.push([f[0]*.6,(hub+f[1])/2,f[2]*.6]);
+  }
+  // the discs: at points along the arms, off them by a short stalk, each turned at random; kept inside its size
+  for(let i=0;i<ERV.discs&&pts.length;i++){const p=pts.splice(Math.floor(rnd()*pts.length),1)[0],R=ERV.disc[0]+rnd()*(ERV.disc[1]-ERV.disc[0]);
+    // its face's normal n (y up), any way round; the stalk along it, 14 out; a disc reaches R·√(1−n²) along each axis
+    const u=rnd()*2-1,ph=rnd()*2*Math.PI,w=Math.sqrt(1-u*u),n=[w*Math.cos(ph),u,w*Math.sin(ph)],e=n.map(v=>R*Math.sqrt(1-v*v));
+    const o=[p[0]+n[0]*14,p[1]-n[1]*14,p[2]+n[2]*14],lim=ERV.W/2-R,rr=Math.hypot(o[0],o[2]);if(rr>lim){o[0]*=lim/rr;o[2]*=lim/rr;}
+    o[1]=Math.min(hub+half-e[1],Math.max(hub-half+e[1],o[1]));
+    lampRod(g,P(...p),P(...o),1.5,lampGold);
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(R*MM,R*MM,2*MM,28),lampEnamel);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(...n));
+    m.position.set(o[0]*MM,-o[1]*MM,o[2]*MM);m.userData.disc=true;g.add(m);grow(o[0],o[1],o[2],e[0],e[1],e[2]);}
+}
 const LAMPS={
   discs:{n:'Диски',build:lampDiscs,H:535,size:'Ø 600',info:{title:'Люстра MyLight, 8 плафонов (Ozon)',price:8232,shop:'Ozon',url:'https://ozon.ru/t/sZSVo8F',
     lines:[['Размер','Ø 60, высота 53,5 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
@@ -134,7 +173,9 @@ const LAMPS={
       ['Площадь','до 35 м²']]}},
   branches80:{n:'Ветви 80',build:g=>lampBranches(g,BR.big),H:BR.big.H,size:`Ø ${BR.big.W}`,
     info:{title:'Люстра хрустальная с висюльками (Ozon)',
-    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 83 см'],['Трос','50 см (регулируется до 1 м)']]}}
+    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 83 см'],['Трос','50 см (регулируется до 1 м)']]}},
+  ervilen:{n:'Шары',build:lampGlobes,H:ERV.hub+ERV.half,size:`${ERV.W} × ${ERV.W}`,info:{title:'Люстра ERVILEN, G9, 84 Вт (Ozon)',price:7547,shop:'Ozon',
+    url:'https://ozon.ru/t/1NEcBba',lines:[['Размер','90 × 90, высота 30 см'],['Штанга','30 см'],['Лампы','G9, 84 Вт']]}}
 };
 const LAMP_KINDS=Object.keys(LAMPS);
 /* its card («i»): the kind's own, the place under it. Several kinds: a link to the next one, as the plan panel's buttons go */

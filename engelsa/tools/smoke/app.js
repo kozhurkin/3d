@@ -495,7 +495,7 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   const p = open();
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]);
     return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, v: c.variant }; });
-  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 3],
+  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 4],
     lines: [['Размер', 'Ø 60, высота 53,5 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
       ['Место', 'по центру потолка, низ в 2525 от пола'], 'Нажатие на люстру — следующий вариант.'] });
   const el = p.document.getElementById('itemCard'), next = () => el.children.find((c) => c.className === 'next');
@@ -503,10 +503,12 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   next().children[1].click();
   assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent,
     p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')],
-  ['branches', 'Люстра хрустальная Aine Light, 6 рожков (Wildberries)', '2/3', 'true']);
+  ['branches', 'Люстра хрустальная Aine Light, 6 рожков (Wildberries)', '2/4', 'true']);
   next().children[1].click();
   assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent],
-    ['branches80', 'Люстра хрустальная с висюльками (Ozon)', '3/3']);
+    ['branches80', 'Люстра хрустальная с висюльками (Ozon)', '3/4']);
+  next().children[1].click();
+  assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent], ['ervilen', 'Люстра ERVILEN, G9, 84 Вт (Ozon)', '4/4']);
   next().children[1].click();
   assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
 });
@@ -531,9 +533,10 @@ check('люстра: клик по ней — следующий вариант 
   const click = () => p.run(() => clickAt({}, { object: lampGroup.children[0].children[3] }));
   assert.deepStrictEqual([click(), p.run(() => A.lamp), p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')], [true, 'branches', 'true']);
   assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'branches80']);
+  assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'ervilen']);
   assert.deepStrictEqual([click(), p.run(() => A.lamp)], [true, 'discs']);
   assert.strictEqual(p.run(() => typeof clickOf({ object: lampGroup.children[0].children[3] })), 'function');
-  ['discs', 'branches', 'branches80'].forEach((k) => {
+  ['discs', 'branches', 'branches80', 'ervilen'].forEach((k) => {
     p.run((k) => setModel({ ...A, lamp: k }), k);
     const sh = p.run(() => { const all = []; const walk = (o) => { if (o.castShadow === true) all.push(o); (o.children || []).forEach(walk); }; walk(lampGroup); return all.length; });
     assert.strictEqual(sh, 0, k + ': nothing of it casts a shadow');
@@ -568,3 +571,19 @@ check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 
   p.run(() => setModel({ ...A, H: 2400 }));
   assert.deepStrictEqual([go(1.75), go(1.2)], [809, 1155], 'its oval 396 out from the axis (1355): 959 less the body 150');
 });
+
+check('люстра «Шары» (ERVILEN, Ozon): 900 × 900, тело 300 на штанге 300 — от 175 до 475 от потолка; 12 шаров на ветвях, 26 белых дисков', () => {
+  const p = open();
+  p.document.querySelector('[data-lamp="ervilen"]').click();
+  const r = p.run(() => { const g = lampGroup.children[0], gl = g.children.filter((m) => m.userData.globe);
+    return { kind: g.userData.lamp, ext: g.userData.ext.map(Math.round), globes: gl.length, glass: gl.every((m) => m.material === lampOpal),
+      discs: g.children.filter((m) => m.userData.disc).length, high: Math.min(...gl.map((m) => tt.mm(-m.position.y) - 60)),
+      on: document.querySelector('[data-lamp="ervilen"]').getAttribute('aria-pressed') };
+  });
+  assert.deepStrictEqual(r, { kind: 'ervilen', ext: [407, 472, 425], globes: 12, glass: true, discs: 26, high: 179, on: 'true' }, 'inside 450 × 475 × 450');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра ERVILEN, G9, 84 Вт: 900 × 900, высота 475, низ в 2585 от пола/);
+  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.url, c.lines.slice(0, 4)]; });
+  assert.deepStrictEqual(i, [7547, 'Ozon', 'https://ozon.ru/t/1NEcBba',
+    [['Размер', '90 × 90, высота 30 см'], ['Штанга', '30 см'], ['Лампы', 'G9, 84 Вт'], ['Место', 'по центру потолка, низ в 2585 от пола']]]);
+});
+

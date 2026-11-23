@@ -552,23 +552,23 @@ check('розетка на «Комнате»: видна, пока камера
   assert.strictEqual(p.run(() => roseGroup.visible), false);
 });
 
-check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на тросе 50 см — 830 от потолка (низ на 2230); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
+check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на тросе 30 см — 630 от потолка (низ на 2430); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches80"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
     return { kind: g.userData.lamp, ext: g.userData.ext.map(Math.round), discs: g.children.filter((m) => m.userData.discs).map((m) => m.userData.discs),
       bulbs: g.children.filter((m) => m.material === lampBulb).length, on: document.querySelector('[data-lamp="branches80"]').getAttribute('aria-pressed') };
   });
-  assert.deepStrictEqual(r, { kind: 'branches80', ext: [396, 830, 391], discs: [489, 282], bulbs: 8, on: 'true' }, 'inside 400 × 830 × 400');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 830, низ в 2230 от пола/);
+  assert.deepStrictEqual(r, { kind: 'branches80', ext: [396, 630, 391], discs: [489, 282], bulbs: 8, on: 'true' }, 'inside 400 × 630 × 400');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 630, низ в 2430 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.url, c.lines.slice(0, 3)]; });
   assert.deepStrictEqual(i, [12234, 'Ozon', 'https://ozon.ru/t/Z2pmmdJ',
-    [['Размер', 'Ø 80, высота 83 см'], ['Трос', '50 см (регулируется до 1 м)'], ['Место', 'по центру потолка, низ в 2230 от пола']]]);
-  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2400 (its bottom at 1570)
+    [['Размер', 'Ø 80, высота 63 см'], ['Трос', '30 см (регулируется до 1 м)'], ['Место', 'по центру потолка, низ в 2430 от пола']]]);
+  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2300 (its bottom at 1670)
   // the head (to 1750) stops at its edge, crouched (to 1200) it goes under
   const go = (hi) => p.run((hi) => tt.mm(walkSlide((A.W / 2 - 600) * MM, A.L / 2 * MM, .4, 0, .3, hi)[0]), hi);
   assert.strictEqual(go(1.75), 1155);
-  p.run(() => setModel({ ...A, H: 2400 }));
+  p.run(() => setModel({ ...A, H: 2300 }));
   assert.deepStrictEqual([go(1.75), go(1.2)], [809, 1155], 'its oval 396 out from the axis (1355): 959 less the body 150');
 });
 

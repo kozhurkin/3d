@@ -513,7 +513,7 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
 });
 
-check('люстра «Ветви» (Aine Light, Wildberries): втулка на 170, золотые ветви, на нитях белые и хрустальные диски; 500 × 450 (длинной стороной вдоль боковых стен), низ в 450 от потолка', () => {
+check('люстра «Ветви 50» (Aine Light, Wildberries): как «Ветви 80», но 500 × 450 (длинной стороной вдоль боковых стен) и на штанге — тоже 300, низ в 630 от потолка; на нитях белые и хрустальные диски', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
@@ -521,11 +521,12 @@ check('люстра «Ветви» (Aine Light, Wildberries): втулка на 
       mats: g.children.filter((m) => m.userData.discs).map((m) => m.material === lampWhite ? 'white' : m.material === lampCrystal ? 'crystal' : '?'),
       bulbs: g.children.filter((m) => m.material === lampBulb).length, wires: g.children.filter((m) => m.material === lampWire).length };
   });
-  assert.deepStrictEqual(r, { kind: 'branches', ext: [222, 447, 246], discs: [411, 270], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
-    'inside 225 × 450 × 250 (half the oval\'s sides), the same every time (seeded)');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 450, низ в 2610 от пола/);
+  assert.deepStrictEqual(r, { kind: 'branches', ext: [224, 630, 248], discs: [362, 240], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
+    'inside 225 × 630 × 250 (half the oval\'s sides), the same every time (seeded)');
+  assert.deepStrictEqual(p.run(() => [BR.aine.hub, BR.aine.H, BR.big.hub, BR.big.H]), [380, 630, 380, 630], 'the same heights as «Ветви 80»');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 630, низ в 2430 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.lines.map((l) => l[1])]; });
-  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 45 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2610 от пола', 'а']]);   // the last a paragraph: its [1] a letter
+  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 63 см', '30 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2430 от пола', 'а']]);   // the last a paragraph: its [1] a letter
 });
 
 check('люстра: клик по ней — следующий вариант (по кругу, без «Нет»), курсор над ней — рука; тени люстры не отбрасывают', () => {

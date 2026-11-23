@@ -59,17 +59,17 @@ function lampDiscs(g){
       const m=new THREE.Mesh(G,lampGlass);m.position.y=-d/2*MM;m.userData.disc=true;q.add(m);}
   });
 }
-/* branches with strands of discs: «Aine Light», crystal, 6 bulbs (Wildberries), 500 × 450, 450 from the ceiling; a bigger one like it
-   (Ozon), Ø 800, on a cable of 300 (it goes to 1 m: 1330 then), 630 from the ceiling. A gold cup on the ceiling (Ø 120 × 25) and a rod
-   (or the cable) to the hub, gold branches out from it every way,
-   knobbly twigs up off them (the rod a quarter of the height and more); from the branches on thin wires strands of small discs —
+/* branches with strands of discs: «Aine Light», crystal, 6 bulbs (Wildberries), 500 × 450 on a rod of 300; a bigger one like it
+   (Ozon), Ø 800, on a cable of 300 (it goes to 1 m: 1330 then). Both 630 from the ceiling: the cup, 300 of the rod or the cable, the
+   rest (about 305) the chandelier itself. A gold cup on the ceiling (Ø 120 × 25) and the rod or the cable to the hub, gold branches
+   out from it every way, knobbly twigs up off them; from the branches on thin wires strands of small discs —
    white hammered glass and clear faceted crystal at random — down to a rounded bottom, lowest in the middle. Inside, on a stem under
    the hub, candle bulbs in cups. An oval's long side along the side walls (z), as the rose's. Random but seeded: the same every time.
    The discs (hundreds) are two meshes, one of each glass, the wires one of lines. A kind: its sizes W (along z) × D, height H; the hub's
    level; how many branches N, bulbs n; the seed; cable: hung on a cable, not a rod. The discs are as big in both, and the heights in it
    (the branches' rise, the bulbs, the bottom's curve); across, the rest grows with it */
 const BR={disc:{white:17,crystal:14},jit:5,   // the discs' radii; a strand's sway
-  aine:{W:500,D:450,H:450,hub:170,N:12,n:6,seed:5},big:{W:800,D:800,H:630,hub:380,N:16,n:8,seed:9,cable:true}};
+  aine:{W:500,D:450,H:630,hub:380,N:12,n:6,seed:5},big:{W:800,D:800,H:630,hub:380,N:16,n:8,seed:9,cable:true}};
 const lampWhite=new THREE.MeshStandardMaterial({color:new THREE.Color('#f3efe8').convertSRGBToLinear(),roughness:.45,side:THREE.DoubleSide,
   emissive:new THREE.Color('#2a251c'),bumpMap:dimpleTexture(),bumpScale:.0015});
 const lampCrystal=new THREE.MeshStandardMaterial({color:new THREE.Color('#dce5ea').convertSRGBToLinear(),roughness:.08,metalness:.25,
@@ -169,7 +169,7 @@ const LAMPS={
     lines:[['Размер','Ø 60, высота 53,5 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
   branches:{n:'Ветви 50',build:g=>lampBranches(g,BR.aine),H:BR.aine.H,size:`${BR.aine.W} × ${BR.aine.D}`,info:{title:'Люстра хрустальная Aine Light, 6 рожков (Wildberries)',
     price:8051,shop:'Wildberries',url:'https://www.wildberries.ru/catalog/1605669544/detail.aspx',
-    lines:[['Размер','50 × 45, высота 45 см'],['Материал','алюминий, стекло К9'],['Лампы','6 × E14 до 60 Вт (360 Вт)'],
+    lines:[['Размер','50 × 45, высота 63 см'],['Штанга','30 см'],['Материал','алюминий, стекло К9'],['Лампы','6 × E14 до 60 Вт (360 Вт)'],
       ['Площадь','до 35 м²']]}},
   branches80:{n:'Ветви 80',build:g=>lampBranches(g,BR.big),H:BR.big.H,size:`Ø ${BR.big.W}`,
     info:{title:'Люстра хрустальная с висюльками (Ozon)',

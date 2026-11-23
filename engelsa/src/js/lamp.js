@@ -37,7 +37,7 @@ function lampCyl(g,r,y0,y1,mat){const m=new THREE.Mesh(new THREE.CylinderGeometr
    the glass 60 %), each hanging by its top edge, its face out: the top tier's 10 from the arms' rings, under it rings ever smaller and
    the discs leaning out at the top more and more, so together they make a bowl down to 535. A tier: its ring's radius r, how many n,
    turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad).
-   A bigger one like it (Ozon, 12 bulbs), Ø 750, as high, in nickel (DISC_TIERS_75): its rings 1.25 times wider, 12 arms, the discs
+   A bigger one like it (Ozon, 12 bulbs), Ø 750, as high, its metal as brass (DISC_TIERS_75): its rings 1.25 times wider, 12 arms, the discs
    1.15 times bigger and more of them round, the tiers' tops a little closer so it still ends at 535 */
 const DISC_TIERS=[
   {r:292,n:10,ph:0,d:138,t:214,b:0},{r:268,n:10,ph:.5,d:128,t:232,b:-.1},{r:215,n:10,ph:.25,d:124,t:285,b:-.2},
@@ -47,7 +47,6 @@ const DISC_TIERS_75=[
   {r:366,n:12,ph:0,d:159,t:214,b:0},{r:336,n:12,ph:.5,d:147,t:231,b:-.1},{r:270,n:12,ph:.25,d:143,t:281,b:-.2},
   {r:207,n:11,ph:0,d:132,t:329,b:-.3},{r:141,n:10,ph:.5,d:121,t:373,b:-.4},{r:78,n:7,ph:0,d:110,t:408,b:-.45},{r:28,n:3,ph:.2,d:106,t:434,b:-.3}
 ];
-const lampNickel=new THREE.MeshStandardMaterial({color:new THREE.Color('#b9bab7').convertSRGBToLinear(),roughness:.3,metalness:.85});   // satin nickel
 const DISC_T=4;   // the glass's thickness
 function lampDiscs(g,tiers=DISC_TIERS,metal=lampBrass){
   // the cup on the ceiling, the rod, the hub with its collar under it
@@ -183,8 +182,8 @@ function lampGlobes(g){
 const LAMPS={
   discs:{n:'Диски',build:lampDiscs,H:535,size:'Ø 600',info:{title:'Люстра MyLight, 8 плафонов (Ozon)',price:8232,shop:'Ozon',url:'https://ozon.ru/t/sZSVo8F',
     lines:[['Размер','Ø 60, высота 53,5 см'],['Материал','стекло, металл'],['Лампы','8 × E14 до 60 Вт (480 Вт)'],['Площадь','25–30 м²']]}},
-  discs75:{n:'Диски 75',build:g=>lampDiscs(g,DISC_TIERS_75,lampNickel),H:535,size:'Ø 750',info:{title:'Люстра стеклянная, 12 плафонов (Ozon)',
-    price:11327,shop:'Ozon',url:'https://ozon.ru/t/7EWNSq6',lines:[['Размер','Ø 75, высота 53,5 см'],['Материал','стекло, металл'],
+  discs75:{n:'Диски 75',build:g=>lampDiscs(g,DISC_TIERS_75),H:535,size:'Ø 750',info:{title:'Люстра стеклянная, 12 плафонов (Ozon)',
+    price:11327,shop:'Ozon',url:'https://ozon.ru/t/ovfA0HP',lines:[['Размер','Ø 75, высота 53,5 см'],['Материал','стекло, металл'],
       ['Лампы','12 × до 60 Вт (720 Вт)']]}},
   branches:{n:'Ветви 50',build:g=>lampBranches(g,BR.aine),H:BR.aine.H,size:`${BR.aine.W} × ${BR.aine.D}`,info:{title:'Люстра хрустальная Aine Light, 6 рожков (Wildberries)',
     price:8051,shop:'Wildberries',url:'https://www.wildberries.ru/catalog/1605669544/detail.aspx',

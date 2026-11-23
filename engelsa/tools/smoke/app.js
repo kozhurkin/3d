@@ -602,7 +602,7 @@ check('люстры висят у розетки: чашка на 17 ниже п
   });
 });
 
-check('люстра «Диски 75» (Ozon, 12 плафонов): увеличенная копия «Дисков 60» — Ø 750, та же высота 535 и стекло с 214 (40 / 60), 12 рожков, никель', () => {
+check('люстра «Диски 75» (Ozon, 12 плафонов): увеличенная копия «Дисков 60» — Ø 750, та же высота 535 и стекло с 214 (40 / 60), 12 рожков, латунь', () => {
   const p = open();
   p.document.querySelector('[data-lamp="discs75"]').click();
   const r = p.run(() => {
@@ -610,13 +610,12 @@ check('люстра «Диски 75» (Ozon, 12 плафонов): увелич�
     g.children.forEach((pv) => pv.children.forEach((q) => q.children.forEach((m) => { if (m.userData.disc) discs.push(m); })));
     const ext = DISC_TIERS_75.map(({ r, d, t, b }) => [Math.round(t + d * Math.cos(b)), Math.round(Math.hypot(r, d / 2))]);
     return { kind: g.userData.lamp, n: discs.length, arms: DISC_TIERS_75[0].n, top: Math.min(...DISC_TIERS_75.map((T) => T.t)),
-      low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), nickel: g.children.filter((m) => m.material === lampNickel).length > 10,
-      brass: g.children.some((m) => m.material === lampBrass), on: document.querySelector('[data-lamp="discs75"]').getAttribute('aria-pressed') };
+      low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), brass: g.children.filter((m) => m.material === lampBrass).length > 10, on: document.querySelector('[data-lamp="discs75"]').getAttribute('aria-pressed') };
   });
-  assert.deepStrictEqual(r, { kind: 'discs75', n: 67, arms: 12, top: 214, low: 535, out: 375, nickel: true, brass: false, on: 'true' }, 'Ø 750');
+  assert.deepStrictEqual(r, { kind: 'discs75', n: 67, arms: 12, top: 214, low: 535, out: 375, brass: true, on: 'true' }, 'Ø 750');
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра стеклянная, 12 плафонов: Ø 750, высота 535, низ в 2508 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]); return [c.price, c.shop, c.url, c.lines.slice(0, 4)]; });
-  assert.deepStrictEqual(i, [11327, 'Ozon', 'https://ozon.ru/t/7EWNSq6', [['Размер', 'Ø 75, высота 53,5 см'], ['Материал', 'стекло, металл'],
+  assert.deepStrictEqual(i, [11327, 'Ozon', 'https://ozon.ru/t/ovfA0HP', [['Размер', 'Ø 75, высота 53,5 см'], ['Материал', 'стекло, металл'],
     ['Лампы', '12 × до 60 Вт (720 Вт)'], ['Место', 'по центру потолка, низ в 2508 от пола']]]);
 });
 

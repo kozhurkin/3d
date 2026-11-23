@@ -83,7 +83,7 @@ function walkWalls(){
 walkWalls();modelHooks.push(walkWalls);
 function walkObstacles(){
   const shut=new Set(VS.walk.dm==='none'?[]:doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
-  return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),wardrobeBoxes());   // the sofa is not one: walked through
+  return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),wardrobeBoxes(),lampBoxes());   // the sofa is not one: walked through
 }
 // how far the circle's centre at u is from the box b along axis i (0: x, 1: z); 0 inside its span
 const gap=(b,i,u)=>Math.max(b[2*i]-u,0,u-b[2*i+1]);

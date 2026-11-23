@@ -468,7 +468,7 @@ check('«i» на сенсорном экране — по тапу у пред�
   tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== t0], [true, true]);
 });
 
-check('люстра «Диски» (MyLight, Ozon): по центру потолка, Ø 600, низ в 535 от потолка, стекло с 185 (треть высоты — штанга); видна, пока стены целые; «Нет» убирает', () => {
+check('люстра «Диски» (MyLight, Ozon): по центру потолка, Ø 600, низ в 535 от потолка, стекло с 214 (штанга 40 % высоты, стекло 60 %); видна, пока стены целые; «Нет» убирает', () => {
   const p = open();
   const r = p.run(() => {
     const g = lampGroup.children[0], discs = [];
@@ -479,7 +479,7 @@ check('люстра «Диски» (MyLight, Ozon): по центру потол
       top: Math.min(...DISC_TIERS.map((T) => T.t)), low: Math.max(...ext.map((e) => e[0])), out: Math.max(...ext.map((e) => e[1])), vis: lampGroup.visible,
       on: document.querySelector('[data-lamp="discs"]').getAttribute('aria-pressed') };
   });
-  assert.deepStrictEqual(r, { at: [1355, 3060, 2399], kind: 'discs', n: 56, top: 185, low: 535, out: 295, vis: true, on: 'true' }, 'Ø 590 + glass ≈ 600');
+  assert.deepStrictEqual(r, { at: [1355, 3060, 2399], kind: 'discs', n: 56, top: 214, low: 535, out: 300, vis: true, on: 'true' }, 'Ø 600');
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра MyLight, 8 плафонов: Ø 600, высота 535, низ в 2525 от пола/);
   p.document.querySelector('[data-lamp="none"]').click();
   assert.deepStrictEqual(p.run(() => [A.lamp, lampGroup.children.length, document.querySelector('[data-lamp="none"]').getAttribute('aria-pressed')]), ['none', 0, 'true']);
@@ -513,7 +513,7 @@ check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; ра
   assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
 });
 
-check('люстра «Ветви 50» (Aine Light, Wildberries): как «Ветви 80», но 500 × 450 (длинной стороной вдоль боковых стен) и на штанге — тоже 300, низ в 630 от потолка; на нитях белые и хрустальные диски', () => {
+check('люстра «Ветви 50» (Aine Light, Wildberries): как «Ветви 80», но 500 × 450 (длинной стороной вдоль боковых стен) и на штанге 300, низ в 630 от потолка; на нитях белые и хрустальные диски', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
@@ -523,7 +523,7 @@ check('люстра «Ветви 50» (Aine Light, Wildberries): как «Вет
   });
   assert.deepStrictEqual(r, { kind: 'branches', ext: [224, 630, 248], discs: [362, 240], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
     'inside 225 × 630 × 250 (half the oval\'s sides), the same every time (seeded)');
-  assert.deepStrictEqual(p.run(() => [BR.aine.hub, BR.aine.H, BR.big.hub, BR.big.H]), [380, 630, 380, 630], 'the same heights as «Ветви 80»');
+  assert.deepStrictEqual(p.run(() => [BR.aine.H - BR.aine.hub, BR.big.H - BR.big.hub]), [250, 250], 'the chandelier itself as high as «Ветви 80»');
   assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 630, низ в 2430 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.lines.map((l) => l[1])]; });
   assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 63 см', '30 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2430 от пола', 'а']]);   // the last a paragraph: its [1] a letter
@@ -553,19 +553,21 @@ check('розетка на «Комнате»: видна, пока камера
   assert.strictEqual(p.run(() => roseGroup.visible), false);
 });
 
-check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на тросе 30 см — 630 от потолка (низ на 2430); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
+check('люстра «Ветви 80» (Ozon): как «Ветви 50», но Ø 800, на трёх тросах 40 см с проводом посередине — 730 от потолка (низ на 2330); в обходе над головой, а при низком потолке голова упирается, нагнувшись — проходишь', () => {
   const p = open();
   p.document.querySelector('[data-lamp="branches80"]').click();
   const r = p.run(() => { const g = lampGroup.children[0];
     return { kind: g.userData.lamp, ext: g.userData.ext.map(Math.round), discs: g.children.filter((m) => m.userData.discs).map((m) => m.userData.discs),
-      bulbs: g.children.filter((m) => m.material === lampBulb).length, on: document.querySelector('[data-lamp="branches80"]').getAttribute('aria-pressed') };
+      bulbs: g.children.filter((m) => m.material === lampBulb).length, on: document.querySelector('[data-lamp="branches80"]').getAttribute('aria-pressed'),
+      cables: g.children.filter((m) => m.material === lampCable).length, cord: g.children.filter((m) => m.material === lampCord).map((m) => tt.mm(m.geometry.args[2])) };
   });
-  assert.deepStrictEqual(r, { kind: 'branches80', ext: [396, 630, 391], discs: [489, 282], bulbs: 8, on: 'true' }, 'inside 400 × 630 × 400');
-  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 630, низ в 2430 от пола/);
+  assert.deepStrictEqual(r, { kind: 'branches80', ext: [396, 730, 391], discs: [489, 282], bulbs: 8, on: 'true', cables: 3, cord: [455] },
+    'inside 400 × 730 × 400; the cord from the cup (25) to the hub (480)');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная с висюльками: Ø 800, высота 730, низ в 2330 от пола/);
   const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.url, c.lines.slice(0, 3)]; });
   assert.deepStrictEqual(i, [12234, 'Ozon', 'https://ozon.ru/t/Z2pmmdJ',
-    [['Размер', 'Ø 80, высота 63 см'], ['Трос', '30 см (регулируется до 1 м)'], ['Место', 'по центру потолка, низ в 2430 от пола']]]);
-  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2300 (its bottom at 1670)
+    [['Размер', 'Ø 80, высота 73 см'], ['Подвес', '3 троса и провод, 40 см (до 1 м)'], ['Место', 'по центру потолка, низ в 2330 от пола']]]);
+  // toward it from 600 off its axis, 400 a step: high over the head it is passed under; with the ceiling at 2300 (its bottom at 1570)
   // the head (to 1750) stops at its edge, crouched (to 1200) it goes under
   const go = (hi) => p.run((hi) => tt.mm(walkSlide((A.W / 2 - 600) * MM, A.L / 2 * MM, .4, 0, .3, hi)[0]), hi);
   assert.strictEqual(go(1.75), 1155);

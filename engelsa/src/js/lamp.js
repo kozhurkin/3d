@@ -29,24 +29,24 @@ function lampRod(par,a,b,r,mat,r1=r){
 // a round part on the axis: radius r, from y0 to y1 down from the ceiling (mm)
 function lampCyl(g,r,y0,y1,mat){const m=new THREE.Mesh(new THREE.CylinderGeometry(r*MM,r*MM,(y1-y0)*MM,32),mat);
   m.position.y=-(y0+y1)/2*MM;g.add(m);return m;}
-/* «MyLight», 8 bulbs (Ozon): Ø 600, 535 from the ceiling, all its metal brass. A cup on the ceiling Ø 100 and a rod down to a hub at 190,
-   its 10 arms out from a collar and a little up, a ring at each end; textured glass discs in tiers from 185 (a third of the height
-   above them), each hanging by its top edge, its face out: the top tier's 10 from the arms' rings, under it rings ever smaller and
+/* «MyLight», 8 bulbs (Ozon): Ø 600, 535 from the ceiling, all its metal brass. A cup on the ceiling Ø 100 and a rod down to a hub at 220,
+   its 10 arms out from a collar and a little up, a ring at each end; textured glass discs in tiers from 214 (the rod 40 % of the height,
+   the glass 60 %), each hanging by its top edge, its face out: the top tier's 10 from the arms' rings, under it rings ever smaller and
    the discs leaning out at the top more and more, so together they make a bowl down to 535. A tier: its ring's radius r, how many n,
    turned by ph (of the step between them), the disc's Ø d, its top t down from the ceiling, its lean b (rad) */
 const DISC_TIERS=[
-  {r:285,n:10,ph:0,d:150,t:185,b:0},{r:262,n:10,ph:.5,d:140,t:205,b:-.1},{r:215,n:10,ph:.25,d:135,t:262,b:-.2},
-  {r:165,n:9,ph:0,d:125,t:318,b:-.3},{r:112,n:8,ph:.5,d:115,t:368,b:-.4},{r:62,n:6,ph:0,d:105,t:410,b:-.45},{r:22,n:3,ph:.2,d:100,t:439,b:-.3}
+  {r:292,n:10,ph:0,d:138,t:214,b:0},{r:268,n:10,ph:.5,d:128,t:232,b:-.1},{r:215,n:10,ph:.25,d:124,t:285,b:-.2},
+  {r:165,n:9,ph:0,d:115,t:336,b:-.3},{r:112,n:8,ph:.5,d:105,t:382,b:-.4},{r:62,n:6,ph:0,d:96,t:420,b:-.45},{r:22,n:3,ph:.2,d:92,t:447,b:-.3}
 ];
 const DISC_T=4;   // the glass's thickness
 function lampDiscs(g){
   // the cup on the ceiling, the rod, the hub with its collar under it
   const cyl=(r,y0,y1)=>lampCyl(g,r,y0,y1,lampBrass);
-  cyl(50,0,26);cyl(7,26,172);cyl(22,168,218);cyl(30,184,198);
+  cyl(50,0,26);cyl(7,26,201);cyl(22,197,247);cyl(30,213,227);
   // the arms: from the collar out to the top tier's ring, rising 20 toward their ends, a cap and a ring there the disc hangs from;
   // the bulbs on them hid by the glass
   const T0=DISC_TIERS[0];
-  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[26*c,-191,26*s],[(T0.r+8)*c,-171,(T0.r+8)*s],6,lampBrass);
+  for(let i=0;i<T0.n;i++){const a=2*Math.PI*i/T0.n,c=Math.cos(a),s=Math.sin(a);lampRod(g,[26*c,-220,26*s],[(T0.r+8)*c,-200,(T0.r+8)*s],6,lampBrass);
     const ring=new THREE.Mesh(new THREE.TorusGeometry(6*MM,1.5*MM,6,16),lampBrass);ring.position.set(T0.r*c*MM,-(T0.t-5)*MM,T0.r*s*MM);
     ring.rotation.y=-a;g.add(ring);}
   // the discs: each in a pivot at its hanging point, x out from the axis, turned about its tangent by the lean
@@ -60,21 +60,23 @@ function lampDiscs(g){
   });
 }
 /* branches with strands of discs: «Aine Light», crystal, 6 bulbs (Wildberries), 500 × 450 on a rod of 300; a bigger one like it
-   (Ozon), Ø 800, on a cable of 300 (it goes to 1 m: 1330 then). Both 630 from the ceiling: the cup, 300 of the rod or the cable, the
-   rest (about 305) the chandelier itself. A gold cup on the ceiling (Ø 120 × 25) and the rod or the cable to the hub, gold branches
-   out from it every way, knobbly twigs up off them; from the branches on thin wires strands of small discs —
+   (Ozon), Ø 800, on three steel cables of 400 (they go to 1 m) and the cord between them, 730 from the ceiling; the small one 630:
+   the cup, 300 of the rod, the rest (about 305) the chandelier itself, as the big one's. A gold cup on the ceiling (Ø 120 × 25), the
+   rod or the cables to the hub, gold branches out from it every way, knobbly twigs up off them; from the branches on thin wires strands of small discs —
    white hammered glass and clear faceted crystal at random — down to a rounded bottom, lowest in the middle. Inside, on a stem under
    the hub, candle bulbs in cups. An oval's long side along the side walls (z), as the rose's. Random but seeded: the same every time.
    The discs (hundreds) are two meshes, one of each glass, the wires one of lines. A kind: its sizes W (along z) × D, height H; the hub's
-   level; how many branches N, bulbs n; the seed; cable: hung on a cable, not a rod. The discs are as big in both, and the heights in it
+   level; how many branches N, bulbs n; the seed; cable: hung on cables, not a rod. The discs are as big in both, and the heights in it
    (the branches' rise, the bulbs, the bottom's curve); across, the rest grows with it */
 const BR={disc:{white:17,crystal:14},jit:5,   // the discs' radii; a strand's sway
-  aine:{W:500,D:450,H:630,hub:380,N:12,n:6,seed:5},big:{W:800,D:800,H:630,hub:380,N:16,n:8,seed:9,cable:true}};
+  aine:{W:500,D:450,H:630,hub:380,N:12,n:6,seed:5},big:{W:800,D:800,H:730,hub:480,N:16,n:8,seed:9,cable:true}};
 const lampWhite=new THREE.MeshStandardMaterial({color:new THREE.Color('#f3efe8').convertSRGBToLinear(),roughness:.45,side:THREE.DoubleSide,
   emissive:new THREE.Color('#2a251c'),bumpMap:dimpleTexture(),bumpScale:.0015});
 const lampCrystal=new THREE.MeshStandardMaterial({color:new THREE.Color('#dce5ea').convertSRGBToLinear(),roughness:.08,metalness:.25,
   side:THREE.DoubleSide,flatShading:true,emissive:new THREE.Color('#1c2226')});
 const lampBulb=new THREE.MeshStandardMaterial({color:0xfff4dc,emissive:new THREE.Color('#ffd28a'),emissiveIntensity:.9});
+const lampCable=new THREE.MeshStandardMaterial({color:0xb4b6b8,roughness:.3,metalness:.9});   // steel
+const lampCord=new THREE.MeshStandardMaterial({color:new THREE.Color('#d9cdb0').convertSRGBToLinear(),roughness:.5});   // the cord, braided, gold-beige
 const lampWire=new THREE.LineBasicMaterial({color:new THREE.Color('#b8975a').convertSRGBToLinear()});
 // discs [x, y down, z, radius, turn] (mm) as one mesh: each a flat k-gon standing upright, facing the way of its turn
 function lampDiscMesh(g,list,mat,k){
@@ -93,7 +95,11 @@ function lampBranches(g,c){
   const {W,D,H:Hh,hub,N,n}=c,{disc,jit}=BR,P=(x,y,z)=>[x,-y,z],k=Math.max(W,D)/500,t=Math.sqrt(k);g.userData.ext=[0,0,0];   // k: its size to the small one's
   // the anchors' oval: the discs' sway and size kept inside W × D
   const ax=D/2-disc.white-jit,az=W/2-disc.white-jit,at=(a,r)=>[ax*r*Math.cos(a),az*r*Math.sin(a)];
-  lampCyl(g,60,0,22,lampGold);lampCyl(g,61,19,25,lampGold);lampCyl(g,c.cable?1.5:5*t,25,hub,lampGold);lampCyl(g,18*t,hub-10*t,hub+25*t,lampGold);
+  lampCyl(g,60,0,22,lampGold);lampCyl(g,61,19,25,lampGold);lampCyl(g,18*t,hub-10*t,hub+25*t,lampGold);
+  // the rod; or three cables from the cup's rim down to the hub's top, 120° apart, and the cord in the middle
+  if(!c.cable)lampCyl(g,5*t,25,hub,lampGold);
+  else{lampCyl(g,2.5,25,hub,lampCord);for(let i=0;i<3;i++){const a=2*Math.PI*i/3+Math.PI/6,co=Math.cos(a),si=Math.sin(a);
+    lampRod(g,P(45*co,25,45*si),P(14*t*co,hub-10*t,14*t*si),.8,lampCable);}}
   // the stem under the hub with the bulbs round it: arms out to cups, a candle bulb in each; a ball at its end
   const y=v=>hub+v,rb=85*k;
   lampCyl(g,4*t,y(25),y(132),lampGold);const ball=new THREE.Mesh(new THREE.SphereGeometry(12*t*MM,16,12),lampGold);ball.position.y=-y(140)*MM;g.add(ball);
@@ -173,7 +179,7 @@ const LAMPS={
       ['Площадь','до 35 м²']]}},
   branches80:{n:'Ветви 80',build:g=>lampBranches(g,BR.big),H:BR.big.H,size:`Ø ${BR.big.W}`,
     info:{title:'Люстра хрустальная с висюльками (Ozon)',
-    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 63 см'],['Трос','30 см (регулируется до 1 м)']]}},
+    price:12234,shop:'Ozon',url:'https://ozon.ru/t/Z2pmmdJ',lines:[['Размер','Ø 80, высота 73 см'],['Подвес','3 троса и провод, 40 см (до 1 м)']]}},
   ervilen:{n:'Шары',build:lampGlobes,H:ERV.hub+ERV.half,size:`${ERV.W} × ${ERV.W}`,info:{title:'Люстра ERVILEN, G9, 84 Вт (Ozon)',price:7547,shop:'Ozon',
     url:'https://ozon.ru/t/1NEcBba',lines:[['Размер','90 × 90, высота 30 см'],['Штанга','30 см'],['Лампы','G9, 84 Вт']]}}
 };

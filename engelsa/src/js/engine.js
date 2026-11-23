@@ -119,19 +119,21 @@ function pickDoor(e,hit){
   for(let o=h.object;o;o=o.parent){const d=doors.find(d=>d.g===o||d.frame===o)||fd.find(d=>d.g===o||d.frame===o);if(d)return d;}
   return null;
 }
-// a click at a point of the canvas: the door there (or a cabinet door) opens or closes
-function clickAt(e){const h=hitAt(e),d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();}}
+// a click at a point of the canvas (h: what is there, if already found): the door there (or a cabinet door) opens or closes; true if one did
+function clickAt(e,hit){const h=hit===undefined?hitAt(e):hit,d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();return true;}return false;}
 canvas.addEventListener('pointerup',e=>{
   if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
   clearTimeout(holdTimer);
   if(held){held=null;canvas.style.cursor='';doorsChanged();downAt=null;lost(e);return;}
   if(downAt&&ptrs.size===1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){
-    clickAt(e);
+    // a finger has no cursor to rest: a tap on a thing that is not a door brings up its «i» there
+    const h=hitAt(e);if(!clickAt(e,h)&&e.pointerType&&e.pointerType!=='mouse')tapItem(h,e);
   }
   downAt=null;lost(e);
 });
 canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
-canvas.addEventListener('pointerleave',()=>itemHover(null));canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')itemHover(null);});   // a finger lifted leaves too: its «i» stays
+canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
 // wheel zooms toward the point under the cursor (surface hit, or the plane through the pivot)
@@ -174,7 +176,8 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')infoBtn.setAttribute
 
 /* ---------- what a thing is: the cursor resting on something that knows it (userData.info on it or up its parents, or on its
    part: {title, lines, and price (₽), url, shop if it is sold (or buy: a row for each product it is made of), next and variant if it has variants} or a function giving them) brings up an «i» by the cursor; a click on it opens a short card.
-   With the mouse in the views that orbit (the walk keeps the mouse to itself); the camera moving takes the «i» away ---------- */
+   With the mouse in the views that orbit (the walk keeps the mouse to itself), on a touch screen a tap brings it; the camera moving
+   takes the «i» away ---------- */
 const ITEM_REST=700,ITEM_GRACE=600;
 const itemDot=document.getElementById('itemDot'),itemCard=document.getElementById('itemCard');
 let itemTimer=null,itemHide=null,itemInfo=null,itemCam=null;
@@ -198,6 +201,11 @@ function itemHover(info,e){
   if(!info||!e)return;
   const rc=viewer.getBoundingClientRect(),x=e.clientX-rc.left,y=e.clientY-rc.top;
   itemTimer=setTimeout(()=>showItemDot(info,x,y),ITEM_REST);   // every move starts the wait again: it comes when the cursor rests
+}
+// a tap (touch or pen) at e on hit h: the «i» of what is there, by the finger
+function tapItem(h,e){
+  clearTimeout(itemTimer);const info=h&&infoOf(h.object);if(!info)return;
+  const rc=viewer.getBoundingClientRect();showItemDot(info,e.clientX-rc.left,e.clientY-rc.top);
 }
 itemDot.addEventListener('pointerenter',()=>{clearTimeout(itemHide);itemHide=null;});
 itemDot.addEventListener('pointerleave',()=>{if(!itemDot.hidden)itemHide=setTimeout(hideItemDot,ITEM_GRACE);});

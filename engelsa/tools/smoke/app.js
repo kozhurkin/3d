@@ -445,3 +445,25 @@ check('пол: ламинат светлого дерева, доски вдол
   const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
   assert.deepStrictEqual(w.run(() => [roomMats[0].map === laminateTex, roomGroup.visible]), [true, true], 'in the walk');
 });
+
+check('«i» на сенсорном экране — по тапу у предмета с карточкой, не у двери; поднятый палец его не убирает, сдвиг пальца — не тап', () => {
+  const p = open();
+  const c = p.document.getElementById('c'), dot = p.document.getElementById('itemDot'), card = p.document.getElementById('itemCard');
+  // what is under the finger: the wardrobe (no raycasts in Node)
+  p.run(() => { hitAt = () => ({ object: wardGroup.children[0].children[0] }); });
+  const title = p.run(() => infoOf(wardGroup.children[0].children[0]).title);
+  const tap = (type, x1 = 120) => {
+    c.dispatch('pointerdown', { pointerId: 1, clientX: 100, clientY: 200, button: 0, pointerType: type });
+    c.dispatch('pointerup', { pointerId: 1, clientX: x1, clientY: 200, button: 0, pointerType: type });
+    c.dispatch('pointerleave', { pointerId: 1, pointerType: type });
+  };
+  tap('mouse', 100); assert.strictEqual(dot.hidden, true, 'the mouse: the «i» comes when the cursor rests, not on a click');
+  tap('touch', 100); assert.deepStrictEqual([dot.hidden, dot.title, dot.style.left, dot.style.top], [false, title, '110px', '170px']);
+  p.tick(60); assert.strictEqual(dot.hidden, false, 'the finger lifted: the «i» stays');
+  dot.click(); assert.deepStrictEqual([dot.hidden, card.hidden], [true, false]);
+  tap('touch'); assert.deepStrictEqual([dot.hidden, card.hidden], [true, true], 'a drag: the card closes, no «i»');
+  // the door under the finger: it opens, no «i»
+  p.run(() => { hitAt = () => ({ object: doors[0].g }); });
+  const t0 = p.run(() => doors[0].t);
+  tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== t0], [true, true]);
+});

@@ -98,7 +98,7 @@ function renderFacts(){
         :`${A.wardW} × ${A.wardH} × ${A.wardD} ${A.wardWall==='door'?'у стены с дверью, в правом углу':'у стены слева от входа, от угла у двери'}`)+
       row('Диван',`IKEA MANSTAD угловой, зелёный велюр: 2400 × 1560 × 900, у стены ${A.sofaWall==='left'?'справа':'слева'} от входа, спинкой к плинтусу, кушеткой к окну в ${A.sofaGap} от его стены`)+
       row('Потолок',`розетка-овал ${A.rosW} × ${A.rosD} по центру, длинной стороной вдоль боковых стен, листья как у лепнины`)+
-      row('Люстра',LAMPS[A.lamp]?`${LAMPS[A.lamp].info.title.replace(/ \(.*\)$/,'')}: Ø ${LAMPS[A.lamp].D}, высота ${LAMPS[A.lamp].H}, низ в ${H-LAMPS[A.lamp].H} от пола`:'нет')+
+      row('Люстра',LAMPS[A.lamp]?`${LAMPS[A.lamp].info.title.replace(/ \(.*\)$/,'')}: ${LAMPS[A.lamp].size}, высота ${LAMPS[A.lamp].H}, низ в ${H-LAMPS[A.lamp].H} от пола`:'нет')+
       row('Фотообои',`${A.muralW} × ${A.muralH} от плинтуса, ${({right:'слева от входа',left:'справа от входа',both:'на обеих длинных стенах'})[A.muralWall]}; на стене ${Math.min(A.muralW,A.L)}`)+
       row('Толщина стен',`с дверью ${A.tD}, боковые ${A.tS}, с окном ${A.tW}`,true)}</dl>`;
   pq('#pSub').textContent=`${A.W} × ${A.L} мм · ${area()} м² · потолок ${H}`;

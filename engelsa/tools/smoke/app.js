@@ -491,10 +491,34 @@ check('люстра «Диски» (MyLight, Ozon): по центру потол
   assert.strictEqual(w.run(() => lampGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
 });
 
-check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; размер, материал, лампы, место', () => {
+check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; размер, материал, лампы, место; ссылка на следующий вариант', () => {
   const p = open();
-  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]); return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, next: !!c.next }; });
-  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', next: false,
+  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[5]);
+    return { t: c.title, price: c.price, shop: c.shop, url: c.url, lines: c.lines, v: c.variant }; });
+  assert.deepStrictEqual(i, { t: 'Люстра MyLight, 8 плафонов (Ozon)', price: 8232, shop: 'Ozon', url: 'https://ozon.ru/t/sZSVo8F', v: [1, 2],
     lines: [['Размер', 'Ø 60, высота 53 см'], ['Материал', 'стекло, металл'], ['Лампы', '8 × E14 до 60 Вт (480 Вт)'], ['Площадь', '25–30 м²'],
       ['Место', 'по центру потолка, низ в 2530 от пола']] });
+  const el = p.document.getElementById('itemCard'), next = () => el.children.find((c) => c.className === 'next');
+  p.run(() => openItemCard(infoOf(lampGroup.children[0])));
+  next().children[1].click();
+  assert.deepStrictEqual([p.run(() => A.lamp), el.children[1].textContent, next().children[0].textContent,
+    p.document.querySelector('[data-lamp="branches"]').getAttribute('aria-pressed')],
+  ['branches', 'Люстра хрустальная Aine Light, 6 рожков (Wildberries)', '2/2', 'true']);
+  next().children[1].click();
+  assert.strictEqual(p.run(() => A.lamp), 'discs', 'round again; «Нет» is not a variant');
+});
+
+check('люстра «Ветви» (Aine Light, Wildberries): золотые ветви, на нитях белые и хрустальные диски; 500 × 450 (длинной стороной вдоль боковых стен), низ в 450 от потолка', () => {
+  const p = open();
+  p.document.querySelector('[data-lamp="branches"]').click();
+  const r = p.run(() => { const g = lampGroup.children[0];
+    return { kind: g.userData.lamp, ext: g.userData.ext.map(Math.round), discs: g.children.filter((m) => m.userData.discs).map((m) => m.userData.discs),
+      mats: g.children.filter((m) => m.userData.discs).map((m) => m.material === lampWhite ? 'white' : m.material === lampCrystal ? 'crystal' : '?'),
+      bulbs: g.children.filter((m) => m.material === lampBulb).length, wires: g.children.filter((m) => m.material === lampWire).length };
+  });
+  assert.deepStrictEqual(r, { kind: 'branches', ext: [220, 445, 249], discs: [537, 352], mats: ['white', 'crystal'], bulbs: 6, wires: 1 },
+    'inside 225 × 450 × 250 (half the oval\'s sides), the same every time (seeded)');
+  assert.match(p.run(() => document.getElementById('pFacts').innerHTML), /Люстра хрустальная Aine Light, 6 рожков: 500 × 450, высота 450, низ в 2610 от пола/);
+  const i = p.run(() => { const c = infoOf(lampGroup.children[0].children[0]); return [c.price, c.shop, c.lines.map((l) => l[1])]; });
+  assert.deepStrictEqual(i, [8051, 'Wildberries', ['50 × 45, высота 45 см', 'алюминий, стекло К9', '6 × E14 до 60 Вт (360 Вт)', 'до 35 м²', 'по центру потолка, низ в 2610 от пола']]);
 });

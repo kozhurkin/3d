@@ -194,6 +194,28 @@ check('камера: щипок приближает к тому, что меж�
   assert.ok(dist(P) <= e0 + 1e-9, 'not pushed back: ' + e0 + ' → ' + dist(P));
 });
 
+check('камера: метка на время жеста пальцами — в центре вращения, при щипке — у того, к чему приближение; мышью её нет', () => {
+  const p = open();
+  const mark = () => { p.tick(1); return p.run(() => ({ v: touchMark.visible, P: touchMark.position.clone() })); };
+  assert.ok(!mark().v, 'none at rest');
+  // one finger: at the target, on what is in the centre
+  const Q = under(p, 0, 0, 3);
+  touch(p, 'pointerdown', 600, 150);
+  let m = mark(); assert.ok(m.v, 'shown on a touch'); xyz(m.P, Q, 'at what is in the centre');
+  touch(p, 'pointermove', 660, 190);
+  m = mark(); assert.ok(m.v, 'shown while turning'); xyz(m.P, p.run(() => goalT), 'at the target');
+  // a second finger: at what is between the fingers
+  const R = p.run(() => { const v = new THREE.Vector3(0.4, 1.1, 0.7); ray.intersectObjects = () => [{ object: { visible: true, material: {} }, point: v }]; return v; });
+  touch(p, 'pointerdown', 700, 300, 2); touch(p, 'pointermove', 750, 350, 2);
+  m = mark(); assert.ok(m.v, 'shown in a pinch'); xyz(m.P, R, 'at what is between the fingers');
+  touch(p, 'pointerup', 750, 350, 2); touch(p, 'pointerup', 660, 190, 1);
+  assert.ok(!mark().v, 'gone when the fingers are up');
+  // the mouse: none, pressed or dragging
+  mouse(p, 'pointerdown', 300, 200); assert.ok(!mark().v, 'none on a mouse press');
+  mouse(p, 'pointermove', 360, 240); assert.ok(!mark().v, 'none on a mouse drag');
+  mouse(p, 'pointerup', 360, 240);
+});
+
 check('камера: нажатие ставит точку камеры на ось взгляда на глубину предмета под курсором; колесо подходит к нему до 0,3 м', () => {
   const p = open();
   const state = () => p.run(() => ({ r: goal.r, cr: cam.r, T: goalT.clone(), cT: cam.target.clone() }));

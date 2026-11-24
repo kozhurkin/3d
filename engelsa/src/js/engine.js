@@ -71,6 +71,7 @@ function shortWay(){
   while(cam.theta-goal.theta>Math.PI)goal.theta+=2*Math.PI;
 }
 const ptrs=new Map();let pinch0=0;
+let touchDown=false;   // the press now down is a finger's (the first one down tells): the touch mark shows
 const _r=new THREE.Vector3(),_u=new THREE.Vector3(),_ad=new THREE.Vector3();
 /* the target onto the view's axis at the depth of P (the camera stays where it is and looks the same way), for the camera and
    for its goal: r is then how far the camera is from P along its view. So the pan carries P with the cursor, the wheel and a pinch
@@ -125,6 +126,7 @@ canvas.addEventListener('pointerdown',e=>{
     holdDoor(d);canvas.style.cursor='grabbing';
   },HOLD_MS);}
   if(e.button===1)e.preventDefault();
+  if(ptrs.size===0)touchDown=e.pointerType==='touch';
   // a second finger grabs nothing: the pinch. A finger would hide what it turns: it turns about what is in the centre of the screen
   // (anchored there, that is the target: the orbit about the target turns about it), touched anywhere
   if(ptrs.size===0&&e.pointerType==='touch'){
@@ -318,6 +320,18 @@ let itemView=null;
 frameHooks.push(()=>{
   if(!itemDot.hidden&&itemCam&&camera.position.distanceTo(itemCam)>1e-4)hideItemDot();
   if(view!==itemView){itemView=view;hideItemDot();closeItemCard();}
+});
+/* a touch's mark: while fingers are down, a dot where the camera turns (one finger: the target) or what a pinch comes nearer to,
+   as the finger covers neither; the same size on screen, over everything, no ray finds it. The mouse has none: it turns about
+   the cursor */
+const MARK_PX=5;   // its radius on screen
+const touchMark=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
+  new THREE.MeshBasicMaterial({color:0xff6a1a,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));
+touchMark.renderOrder=30;touchMark.raycast=()=>{};touchMark.visible=false;scene.add(touchMark);
+frameHooks.push(()=>{
+  touchMark.visible=touchDown&&ptrs.size>0&&!held&&!ownMouse();if(!touchMark.visible)return;
+  touchMark.position.copy(pinchP||goalT);
+  touchMark.scale.setScalar(camera.position.distanceTo(touchMark.position)*2*Math.tan(camera.fov*Math.PI/360)*MARK_PX/viewer.clientHeight);
 });
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 

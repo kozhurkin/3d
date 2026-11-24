@@ -116,7 +116,7 @@ canvas.addEventListener('pointerdown',e=>{
     holdDoor(d);canvas.style.cursor='grabbing';
   },HOLD_MS);}
   if(e.button===1)e.preventDefault();
-  const h=ptrs.size===0?hitAt(e):null;grabP=h&&h.point?h.point.clone():null;if(grabP)anchorAt(grabP);   // a second finger: a pinch
+  const h=ptrs.size===0?hitAt(e):null;grabP=h?h.point.clone():null;if(grabP)anchorAt(grabP);   // a second finger grabs nothing: the pinch
   focusDrag();
   canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1||e.button===2});
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}
@@ -137,13 +137,13 @@ canvas.addEventListener('pointermove',e=>{
     focusDrag();
   }
 });
-const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;if(!ptrs.size)focus.drag=false;};
+const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;if(!ptrs.size){focus.drag=false;grabP=null;}};
 // a click (no drag) on a door leaf opens or closes that door; on an item with a click of its own, it does that
-// what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at)
+// what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at);
+// the ray is aimed through the cursor either way (the wheel's fallback uses it)
 function hitAt(e){
-  if(inTransition())return null;
   aimRay(e);
-  return ray.intersectObjects(scene.children,true).find(hittable)||null;
+  return inTransition()?null:ray.intersectObjects(scene.children,true).find(hittable)||null;
 }
 function pickDoor(e,hit){
   const h=hit===undefined?hitAt(e):hit;
@@ -187,8 +187,7 @@ const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(ownMouse())return;camDrive=null;
-  aimRay(e);
-  const hit=ray.intersectObjects(scene.children,true).find(hittable);
+  const hit=hitAt(e);
   if(hit){_zp.copy(hit.point);anchorAt(_zp);}
   else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}
   const r0=cam.r,r1=clampR(r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012))),r0);
@@ -225,7 +224,7 @@ const ovCam=new THREE.PerspectiveCamera(36,1.4,.05,200);ovCam.layers.enableAll()
 const _oc=new THREE.Vector3(),_od=new THREE.Vector3(.25,1.5,1).normalize(),_ov=new THREE.Vector3(),_oup=new THREE.Vector3(0,1,0),_oq=new THREE.Quaternion();
 const apt=new THREE.Box3(new THREE.Vector3(BOX.x0*MM,0,BOX.z0*MM),new THREE.Vector3(BOX.x1*MM,H*MM,BOX.z1*MM)),_osz=new THREE.Vector3();
 function updateDebug(){
-  const on=focus.drag||performance.now()<focus.until,toFocus=camera.position.distanceTo(focus.p);
+  const on=focus.drag&&!held||performance.now()<focus.until,toFocus=camera.position.distanceTo(focus.p);
   pivot.visible=viewLine.visible=on;pivot.position.copy(focus.p);
   const ps=Math.max(.4,toFocus*.25);pivot.children.forEach(c=>c.scale.setScalar(ps));
   // mini view frames the apartment itself, not the camera

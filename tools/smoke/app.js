@@ -146,6 +146,10 @@ check('камера, отладка: точка, луч в мини-виде и 
     mouse(p, 'pointerup', 360, 240, button);
     assert.ok(shown().off, 'gone with the button ' + button);
   });
+  // a long press holds a door (the camera stays): nothing shown
+  under(p, 0.6, -0.2, 2.5); mouse(p, 'pointerdown', 300, 200);
+  p.run(() => { held = { d: doors[0], dir: 1 }; }); assert.ok(shown().off, 'a door held');
+  mouse(p, 'pointerup', 300, 200);
   const P = under(p, 0.4, 0.2, 4);
   wheel(p);
   const g = shown(); assert.ok(g.on, 'after the wheel'); xyz(g.at, P, 'where it zooms');

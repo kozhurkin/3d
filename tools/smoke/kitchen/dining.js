@@ -89,7 +89,7 @@ check('кухня: на сенсорном экране «i» по тапу — 
   const p = runPage(PAGES.app, { parentWin: { appView: 'kitchen' } }); p.tick();
   const c = p.document.getElementById('c'), dot = p.document.getElementById('itemDot'), card = p.document.getElementById('itemCard');
   // what is under the finger: the dining table's top (no raycasts in Node)
-  p.run(() => { hitAt = () => ({ object: tt.fur().appl.children.find((o) => { const i = infoOf(o); return i && i.title === 'Обеденный стол'; }) }); });
+  p.run(() => { hitAt = () => ({ object: tt.fur().appl.children.find((o) => { const i = infoOf(o); return i && i.title === 'Обеденный стол'; }), point: goalT.clone() }); });
   const tap = (type, x1 = 120) => {
     c.dispatch('pointerdown', { pointerId: 1, clientX: 100, clientY: 200, button: 0, pointerType: type });
     c.dispatch('pointerup', { pointerId: 1, clientX: x1, clientY: 200, button: 0, pointerType: type });
@@ -101,7 +101,7 @@ check('кухня: на сенсорном экране «i» по тапу — 
   dot.click(); assert.deepStrictEqual([dot.hidden, card.hidden], [true, false]);
   tap('touch'); assert.deepStrictEqual([dot.hidden, card.hidden], [true, true], 'a drag: the card closes, no «i»');
   // a door under the finger: it opens, no «i»
-  p.run(() => { hitAt = () => ({ object: doors[0].g }); });
+  p.run(() => { hitAt = () => ({ object: doors[0].g, point: goalT.clone() }); });
   const a0 = p.run(() => doors[0].t);
   tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== a0], [true, true]);
 });

@@ -90,7 +90,7 @@ function pan(dx,dy){
   _r.setFromMatrixColumn(camera.matrixWorld,0);_u.setFromMatrixColumn(camera.matrixWorld,1);
   cam.target.addScaledVector(_r,-dx*k).addScaledVector(_u,dy*k);goalT.copy(cam.target);
 }
-// what the press grabbed: the surface under the first finger or button (the orbit turns about it, the pan carries it), or null
+// what the press grabbed: the surface under the button (the orbit turns about it, the pan carries it), or null; a finger grabs nothing
 let grabP=null;
 /* what a pinch comes nearer to: what was under the middle between the fingers when the second came down (the pan carries it
    with the middle, the zoom keeps it in place: it stays under the middle), found once */
@@ -129,7 +129,7 @@ canvas.addEventListener('pointerdown',e=>{
   if(ptrs.size===0)touchDown=e.pointerType==='touch';
   // a second finger grabs nothing: the pinch. A finger would hide what it turns: it turns about what is in the centre of the screen
   // (anchored there, that is the target: the orbit about the target turns about it), touched anywhere
-  if(ptrs.size===0&&e.pointerType==='touch'){
+  if(ptrs.size===0&&touchDown){
     const rc=canvas.getBoundingClientRect(),h=hitAt({clientX:rc.left+rc.width/2,clientY:rc.top+rc.height/2});grabP=null;if(h)anchorAt(h.point);
   }else{const h=ptrs.size===0?hitAt(e):null;grabP=h?h.point.clone():null;if(grabP)anchorAt(grabP);}
   canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1||e.button===2});

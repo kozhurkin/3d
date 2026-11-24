@@ -25,7 +25,7 @@ check('обход: диван пускает (проходишь сквозь н
   drag(p, Math.PI / 0.0025); p.tick();
   hold(p, 'KeyW', 150);
   near(eye(p)[2], 0.15, 'stopped at the closed door');
-  p.document.querySelector('[data-panel="walk"] [data-dm="open"]').click(); p.tick(60);
+  p.run(() => { doors.forEach((d) => { d.t = d.max; }); }); p.tick(60);   // opened (a click or E in the browser)
   hold(p, 'KeyW', 30);
   assert.ok(eye(p)[2] < -0.2, 'through the open doorway: ' + eye(p)[2]);
 });
@@ -35,4 +35,24 @@ check('обход: шкаф не пускает', () => {
   drag(p, -Math.PI / 2 / 0.0025); p.tick();   // a quarter turn to the left: facing +x, toward the wardrobe
   hold(p, 'KeyW', 120);
   near(eye(p)[0], 2.188 - 0.15, 'stopped at its doors');
+});
+
+check('панель «Обхода»: стены всегда «Разрез», блоков стен и двери нет; фотообои, фальш-декор, шкаф, диван — те же, что на «Комнате»', () => {
+  const storage = new Map([['eng-view-walk-v1', JSON.stringify({ Wm: 'edges', Wh: 40, dm: 'none', eye: 1500 })]]);
+  const p = runPage(PAGES.app, { parentWin: { appView: 'walk' }, storage }); p.tick();
+  const panel = (v) => `[data-panel="${v}"]`;
+  assert.deepStrictEqual(['[data-wm]', '[data-wh]', '[data-dm]'].map((q) => p.document.querySelector(`${panel('walk')} ${q}`)), [null, null, null]);
+  assert.deepStrictEqual(p.run(() => VS.walk), { arcs: false, eye: 1500 }, 'the old walls\' look and doors dropped');
+  const groups = (v) => p.document.querySelectorAll(`${panel(v)} [role="group"]`).map((g) => g.getAttribute('aria-label'));
+  assert.deepStrictEqual(groups('walk'), ['Фотообои', 'Фальш-декор', 'Шкаф', 'Диван', 'Цвет стен']);
+  assert.deepStrictEqual(groups('plan'), ['Цвет плинтуса', 'Люстра'], 'the block is in the panel on screen only');
+  p.document.querySelector(`${panel('walk')} [data-sofa="right"]`).click();
+  assert.deepStrictEqual(p.run(() => [A.sofaWall, JSON.parse(localStorage.getItem('eng-choice-v1')).sofaWall]), ['right', 'right']);
+  // what does not fit is said under the buttons
+  p.run(() => setModel({ ...A, L: 3500, sofaWall: 'left', wardWall: 'door' }));
+  p.document.querySelector(`${panel('walk')} [data-ward="right"]`).click();
+  p.document.querySelector(`${panel('walk')} [data-sofa="right"]`).click();
+  assert.deepStrictEqual([p.run(() => A.sofaWall), p.document.getElementById('fMsg').textContent], ['left', 'Нельзя: Шкаф и диван у одной стены не помещаются']);
+  p.run(() => showView('plan', false));
+  assert.deepStrictEqual(groups('plan').slice(0, 4), ['Фотообои', 'Фальш-декор', 'Шкаф', 'Диван']);
 });

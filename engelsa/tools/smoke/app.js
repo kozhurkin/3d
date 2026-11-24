@@ -77,6 +77,38 @@ check('настройки в браузере — под своими ключа
   assert.deepStrictEqual(keys, ['eng-model-v1', 'eng-shared-v1', 'eng-view-plan-v1']);
 });
 
+check('выбор в панели запоминается сразу: фотообои, фальш-декор, шкаф, диван, плинтус (цвет и высота), люстра; «Вернуть исходные» его не трогает', () => {
+  const storage = new Map([['eng-model-v1', JSON.stringify({ L: 5000, sofaWall: 'right' })]]);
+  const p = open({ storage });
+  const pick = () => p.run(() => [A.L, A.muralWall, A.decor, A.wardWall, A.sofaWall, A.plColor, A.plH, A.lamp]);
+  assert.deepStrictEqual(pick(), [5000, 'right', 'plain', 'right', 'right', 'wood', 70, 'discs'], 'the remembered sizes');
+  [['mural', 'both'], ['decor', 'none'], ['ward', 'door'], ['sofa', 'left'], ['plcol', 'white'], ['lamp', 'none']]
+    .forEach(([d, v]) => p.document.querySelector(`[data-${d}="${v}"]`).click());
+  slide(p, 'plH', 100);
+  const want = [5000, 'both', 'none', 'door', 'left', 'white', 100, 'none'];
+  assert.deepStrictEqual(pick(), want);
+  assert.deepStrictEqual(JSON.parse(storage.get('eng-choice-v1')),
+    { muralWall: 'both', decor: 'none', wardWall: 'door', sofaWall: 'left', plColor: 'white', plH: 100, lamp: 'none' }, 'a default picked again (the sofa) is kept too');
+  const q = open({ storage });
+  assert.deepStrictEqual(q.run(() => [A.L, A.muralWall, A.decor, A.wardWall, A.sofaWall, A.plColor, A.plH, A.lamp]), want, 'over the remembered sizes');
+  assert.strictEqual(q.document.querySelector('[data-sofa="left"]').getAttribute('aria-pressed'), 'true');
+  q.document.getElementById('pResetA').click();
+  assert.deepStrictEqual(q.run(() => [A.L, A.muralWall, A.decor, A.wardWall, A.sofaWall, A.plColor, A.plH, A.lamp]), [4797, ...want.slice(1)]);
+  // a choice that no longer fits the sizes (or is of another kind) is dropped, the sizes stay
+  storage.set('eng-model-v1', JSON.stringify({ L: 3500 })); storage.set('eng-choice-v1', JSON.stringify({ sofaWall: 'right', lamp: 7 }));
+  assert.deepStrictEqual(open({ storage }).run(() => [A.L, A.sofaWall, A.lamp]), [3500, 'left', 'discs']);
+});
+
+check('страница открывается с любым запомненным выбором, на любой вкладке', () => {
+  const q = open(), vals = (d) => q.document.querySelectorAll(`[data-${d}]`).map((b) => b.getAttribute(`data-${d}`));
+  [['mural', 'muralWall'], ['decor', 'decor'], ['ward', 'wardWall'], ['sofa', 'sofaWall'], ['plcol', 'plColor'], ['lamp', 'lamp']].forEach(([d, k]) =>
+    vals(d).forEach((v) => ['plan', 'walk'].forEach((appView) => {
+      const storage = new Map([['eng-choice-v1', JSON.stringify({ [k]: v })]]);
+      const p = runPage(PAGES.app, { parentWin: { appView }, storage }); p.tick();
+      assert.deepStrictEqual(p.run((k) => [view, A[k]], k), [appView, v], `${k}: ${v}`);
+    })));
+});
+
 check('ракурсы: «План» — из угла, пониже, «На дверь» — камера за стеной с окном, «За диваном» — за стеной у его спинки, на уровне глаз (и зеркально)', () => {
   const p = open();
   const at = (cam) => { p.document.querySelector(`[data-cam="${cam}"]`).click(); return p.run(() => [goalPosition().x, goalPosition().z, goalT.z].map((v) => v * 1000)); };
@@ -109,11 +141,11 @@ check('дверь и плинтус — в текстуре дерева из ф
   assert.match(PAGES.app, /const WOOD_JPG='data:image\/jpeg;base64,/);
 });
 
-check('панель «Комнаты»: нет стен и двери — стены всегда «Разрез», дверь закрыта', () => {
-  const storage = new Map([['eng-view-plan-v1', JSON.stringify({ Wm: 'edges', Wh: 40, dm: 'open' })]]);
+check('панель «Комнаты»: нет стен и двери — стены всегда «Разрез», дверь закрыта; старые настройки стен и двери из браузера отброшены', () => {
+  const storage = new Map([['eng-view-plan-v1', JSON.stringify({ Wm: 'edges', Wh: 40, dm: 'open', marks: true })]]);
   const p = open({ storage });
   assert.deepStrictEqual(['[data-wm]', '[data-wh]', '[data-dm]'].map((q) => p.document.querySelector(`[data-panel="plan"] ${q}`)), [null, null, null]);
-  assert.deepStrictEqual(p.run(() => [VS.plan.Wm, VS.plan.Wh, VS.plan.dm, doors.every((d) => d.t === 0)]), ['auto', 100, 'closed', true]);
+  assert.deepStrictEqual(p.run(() => [VS.plan, doors.every((d) => d.t === 0)]), [{ marks: true }, true]);
 });
 
 check('стены: «Средний беж» по умолчанию; обои — из фото, у другого цвета текстуры нет', () => {
@@ -133,9 +165,6 @@ check('лепнина 110 под потолком по всем стенам, п
     ['right', 2950, 3060, [2680, 2710, 0, 4797]], ['right', 0, 70, [2694, 2710, 0, 4797]],
     ['left', 2950, 3060, [0, 30, 0, 4797]], ['left', 0, 70, [0, 16, 0, 4797]],
     ['window', 2950, 3060, [0, 2710, 4767, 4797]], ['window', 0, 70, [0, 2710, 4781, 4797]]]);
-  // «Контуры»: the walls are see-through, the trims go with them
-  p.run(() => { VS.plan.Wm = 'edges'; }); p.tick();
-  assert.deepStrictEqual(p.run(() => wallParts.filter((w) => w.trim && w.m.visible).length), 0);
 });
 
 check('фотообои: слева от входа, от плинтуса, 2700 высотой; 5000 по ширине, на стене 4797 — от угла у двери; или справа, или на обеих', () => {
@@ -147,9 +176,6 @@ check('фотообои: слева от входа, от плинтуса, 2700
   assert.deepStrictEqual([r[0].id, r[0].b, r[0].t, r[0].box], ['right', 70, 2770, [2709, 2710, 0, 4797]]);
   assert.ok(Math.abs(r[0].rot + Math.PI / 2) < 1e-9, 'faces into the room (-x)');
   assert.ok(Math.abs(r[0].rep[0] - 4797 / 5000) < 1e-9 && r[0].rep[1] === 1, 'the picture cut at the window end, not squeezed');
-  // the walls cut to half: the sheet's top goes, the picture is not squashed
-  p.run(() => { VS.plan.Wh = 50; }); p.tick();
-  near(get()[0].rep[1], (1530 - 70) / 2700, 'the share of the picture left');
   const btn = (v) => p.document.querySelector(`[data-panel="plan"] [data-mural="${v}"]`);
   btn('left').click();
   assert.deepStrictEqual(get().map((w) => [w.id, w.box]), [['left', [0, 1, 0, 4797]]]);
@@ -223,8 +249,6 @@ check('розетка на потолке: овал 550 × 450 по центру
   assert.deepStrictEqual(r, { n: 1, rose: true, boss: 32, rim: 6, edge: 1, same: true, frieze: true, vis: false, A: [550, 450] }, 'not on the «Комната» tab');
   const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
   assert.strictEqual(w.run(() => roseGroup.visible), true, 'in the walk');
-  const wh = w.document.querySelector('[data-panel="walk"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); w.tick();
-  assert.strictEqual(w.run(() => roseGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
 });
 
 check('цвет стен: «Средний беж» между Greige и обоями; «Свой» — из палитры браузера, запоминается', () => {
@@ -306,8 +330,8 @@ check('плинтус: ползунок в панели под «Фальш-де
 });
 
 check('плинтус: под «Диваном»; цвет плашками, как у стен — дерево (по умолчанию, как дверь), белый, бежевый, тауп', () => {
-  const p = open(), hs = [...PAGES.app.matchAll(/<h3>([^<$]+)<\/h3>/g)].map((m) => m[1]);
-  assert.strictEqual(hs.indexOf('Плинтус'), hs.indexOf('Диван') + 1, hs.join(', '));
+  const p = open(), hs = p.document.querySelectorAll('[data-panel="plan"] [role="group"]').map((g) => g.getAttribute('aria-label'));
+  assert.strictEqual(hs.indexOf('Цвет плинтуса'), hs.indexOf('Диван') + 1, hs.join(', '));
   const mat = () => p.run(() => { const m = wallParts.filter((w) => w.kind === 'plinth').map((w) => w.m.material);
     return [A.plColor, new Set(m).size, m[0] === woodMat ? 'wood' : Object.keys(plinthPaint).find((k) => plinthPaint[k] === m[0]),
       document.querySelector(`[data-plcol="${A.plColor}"]`).getAttribute('aria-pressed')]; });
@@ -487,8 +511,6 @@ check('люстра «Диски» (MyLight, Ozon): по центру потол
   const w = runPage(PAGES.app, { parentWin: { appView: 'walk' } }); w.tick();
   w.run(() => setModel({ ...A, lamp: 'discs' }));
   assert.strictEqual(w.run(() => lampGroup.visible), true, 'in the walk');
-  const wh = w.document.querySelector('[data-panel="walk"] [data-wh]'); wh.value = '50'; wh.dispatch('input'); w.tick();
-  assert.strictEqual(w.run(() => lampGroup.visible), false, 'the walls cut lower: no ceiling to hang from');
 });
 
 check('люстра: карточка «i» — MyLight с Ozon, 8 232 ₽; размер, материал, лампы, место; ссылка на следующий вариант', () => {

@@ -217,4 +217,3 @@ function lampBoxes(){
   const g=lampGroup.children[0],e=g&&g.userData.ext,hx=e?e[0]:300,hz=e?e[2]:300;
   return [[A.W/2-hx,A.W/2+hx,A.L/2-hz,A.L/2+hz,lampLow(L),H].map(v=>v*MM)];
 }
-frameHooks.push(()=>{const V=vs();lampGroup.visible=!!V&&!wallFeetMode&&V.Wm!=='edges'&&wallCut>=H*MM-1e-6;});

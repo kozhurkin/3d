@@ -5,7 +5,8 @@ const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- the room as built now (js/apartment.js) ----------
    Its sizes are edited on the plan: setModel() swaps the model, then modelHooks rebuild what depends on it
-   (walls, doors, floors, dimensions…). The sizes remembered in this browser (eng-model-v1) are the ones to start with. */
+   (walls, doors, floors, dimensions…). The sizes remembered in this browser (eng-model-v1) are the ones to start with,
+   the panel's choices (eng-choice-v1, remembered as they are made) over them. */
 let A,H,dA,dB,dL,winX,WALLS,ROOMS,BOX,CX,CZ;
 const MKEY='eng-model-v1';
 const modelHooks=[];
@@ -16,7 +17,17 @@ function useModel(a){
 function setModel(a){useModel(a);modelHooks.forEach(f=>f());}
 // only the sizes that differ from the defaults, so a later change of a default still reaches the sizes nobody touched
 const modelDiff=()=>Object.fromEntries(Object.entries(A).filter(([k,v])=>k in APT_A&&APT_A[k]!==v));   // a size the model no longer has (an old save's) is dropped
-useModel((()=>{try{const a=JSON.parse(localStorage.getItem(MKEY)||'null');if(a&&!aptProblems(a).length)return a;}catch(e){}return {};})());
+/* the panel's choices: the photo wallpaper, the false decor, the wardrobe, the sofa, the skirting board (its colour and height), the
+   chandelier — remembered whenever the model changes, all of them (a default picked again must win over the remembered sizes) */
+const CKEY='eng-choice-v1';
+const CHOICE=['muralWall','decor','wardWall','sofaWall','plColor','plH','lamp'];
+const choiceOf=a=>Object.fromEntries(CHOICE.map(k=>[k,a[k]]));
+const readStore=k=>{try{const v=JSON.parse(localStorage.getItem(k)||'null');return v&&typeof v==='object'?v:null;}catch(e){return null;}};
+// the remembered choices of the same kind as the defaults (a choice the model no longer has is dropped)
+const choiceSaved=()=>Object.fromEntries(Object.entries(readStore(CKEY)||{}).filter(([k,v])=>CHOICE.includes(k)&&typeof v===typeof APT_A[k]));
+// the sizes with the choices over them; what does not fit is left out: the choices, then the sizes
+useModel([{...readStore(MKEY),...choiceSaved()},readStore(MKEY)||{},choiceSaved()].find(a=>!aptProblems(a).length)||{});
+modelHooks.push(()=>{try{localStorage.setItem(CKEY,JSON.stringify(choiceOf(A)));}catch(e){}});
 
 /* ---------- three setup ---------- */
 const canvas=document.getElementById('c'), viewer=document.getElementById('viewer');
@@ -124,13 +135,13 @@ function clickOf(h){for(let o=h&&h.object;o;o=o.parent){const c=o.userData&&o.us
 // a click at a point of the canvas (h: what is there, if already found): the door there (or a cabinet door) opens or closes, or the item
 // there does what it does; true if something did
 function clickAt(e,hit){
-  const h=hit===undefined?hitAt(e):hit,d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;doorsChanged();return true;}
+  const h=hit===undefined?hitAt(e):hit,d=pickDoor(e,h);if(d){d.t=d.t!==0?0:d.max;return true;}
   const c=clickOf(h);if(c){c();return true;}return false;
 }
 canvas.addEventListener('pointerup',e=>{
   if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
   clearTimeout(holdTimer);
-  if(held){held=null;canvas.style.cursor='';doorsChanged();downAt=null;lost(e);return;}
+  if(held){held=null;canvas.style.cursor='';downAt=null;lost(e);return;}
   if(downAt&&ptrs.size===1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){
     // a finger has no cursor to rest: a tap on a thing that does nothing on a click brings up its «i» there
     const h=hitAt(e);if(!clickAt(e,h)&&e.pointerType&&e.pointerType!=='mouse')tapItem(h,e);
@@ -147,7 +158,7 @@ const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function aimRay(e){const rc=canvas.getBoundingClientRect();ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);ray.setFromCamera(ndc,camera);}   // the ray through the cursor
 const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
 const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
-// what the cursor can hit: a visible surface (not a line, a label, or a wall turned see-through in «Контуры»)
+// what the cursor can hit: a visible surface (not a line, a label, or a wall faded away in a flight)
 const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{

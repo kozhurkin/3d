@@ -37,8 +37,8 @@ function stub(name = 'stub') {
       // an extruded one has its vertices (none here), so code walking them runs (the wardrobe's faceted panels shade theirs)
       if (name === 'THREE.ExtrudeGeometry') o.attributes = { position: { count: 0, getY: () => 0 } };
       if (['THREE.Mesh', 'THREE.LineSegments', 'THREE.Line', 'THREE.Sprite', 'THREE.Group', 'THREE.Scene'].includes(name)) {
-        // userData plain and no parent till added, as THREE's: what is not put there is not there, and a walk up the parents ends
-        Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [], userData: {}, parent: null });
+        // userData plain, no parent till added and visible, as THREE's: what is not put there is not there, and a walk up the parents ends
+        Object.assign(o, { position: new Vec3(), scale: new Vec3(1, 1, 1), children: [], userData: {}, parent: null, visible: true });
         o.add = (...c) => { c.forEach((x) => { x.parent = o; o.children.push(x); }); return o; };
         o.remove = (...c) => { o.children = o.children.filter((x) => !c.includes(x)); c.forEach((x) => { if (x.parent === o) x.parent = null; }); return o; };
       }

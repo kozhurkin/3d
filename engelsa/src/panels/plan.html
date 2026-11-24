@@ -7,30 +7,7 @@
       <div class="toggles">
         <label><input type="checkbox" id="pMarks"> Размеры и площадь</label>
       </div>
-      <h3>Фотообои</h3>
-      <div class="seg" role="group" aria-label="Фотообои">
-        <button data-mural="right" aria-pressed="true" title="Если войти в комнату — стена по левую руку">Слева</button>
-        <button data-mural="left" aria-pressed="false" title="Если войти в комнату — стена по правую руку">Справа</button>
-        <button data-mural="both" aria-pressed="false" title="На обеих длинных стенах">Обе</button>
-      </div>
-      <h3>Фальш-декор</h3>
-      <div class="seg" role="group" aria-label="Фальш-декор" title="Над фотообоями по периметру; над ним белая стена до лепнины">
-        <button data-decor="thin" aria-pressed="true" title="Плетёнка-косичка">Тонкий<br>11 мм</button>
-        <button data-decor="plain" aria-pressed="false" title="Гладкий молдинг">Обычный<br>35 мм</button>
-        <button data-decor="none" aria-pressed="false" title="Без декора: обои до лепнины, над фотообоями — в цвет их неба">Нет</button>
-      </div>
-      <h3>Шкаф</h3>
-      <div class="seg" role="group" aria-label="Шкаф">
-        <button data-ward="right" aria-pressed="true" title="У стены по левую руку от входа, от угла у двери">Слева</button>
-        <button data-ward="door" aria-pressed="false" title="У стены с дверью, в правом углу">У двери</button>
-        <button data-ward="corner1" aria-pressed="false" title="Угловой 964 × 964 и доп. секция 400 у стены с дверью (у стены с фотообоями без неё), сверху антресоль 400">Угловой 1</button>
-        <button data-ward="corner" aria-pressed="false" title="Угловой 964 × 964 и доп. секции по 400 с обеих сторон, сверху антресоль 400">Угловой 2</button>
-      </div>
-      <h3>Диван</h3>
-      <div class="seg" role="group" aria-label="Диван">
-        <button data-sofa="right" aria-pressed="false" title="Спинкой к стене по левую руку от входа, кушеткой к окну">Слева</button>
-        <button data-sofa="left" aria-pressed="true" title="Спинкой к стене по правую руку от входа, кушеткой к окну">Справа</button>
-      </div>
+      <div data-furn-slot style="display:contents"></div>
       <h3>Плинтус</h3>
       <div class="wcs pl-cols" id="pPlCol" role="group" aria-label="Цвет плинтуса" style="position:relative"></div>
       <div id="pPlinth" class="pl-h" title="Фотообои и декор над ними стоят на плинтусе: выше плинтус — выше и они"></div>

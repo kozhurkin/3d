@@ -2,7 +2,7 @@
    A view names the walls it shows (rooms), which walls hide in the cut mode and from which side (fade),
    its own settings (remembered per view) and its panel. Light and wall colour are shared by all views:
    their block (#shared) moves into the panel of the view on screen. */
-const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), defaults, panel, home(), sync(), onDoors(),
+const VIEWS={};     // id → {rooms, fade, frame(), sun(), anchor(), defaults, panel, home(), sync(),
                    //       mouse: the view takes the mouse itself (no orbit), info: its hint under «i» (data-info)}
 const VS={};        // id → the view's own settings
 let view=null;      // the view on screen
@@ -20,6 +20,7 @@ const S={wc:'mid',wcc:WALLC.custom.c,light:{...LIGHT0},edge:true,fly:true,floor:
 { const s=readJSON(SKEY);if(s){if(WALLC[s.wc])S.wc=s.wc;if(/^#[0-9a-f]{6}$/i.test(s.wcc||''))S.wcc=s.wcc;S.light={...LIGHT0,...(s.light||{})};if(s.edge===false)S.edge=false;if(s.fly===false)S.fly=false;if(s.floor===false)S.floor=false;} }
 const saveShared=()=>writeJSON(SKEY,S);
 const sharedEl=document.getElementById('shared');
+const furnEl=document.getElementById('furn');   // the photo wallpaper, the false decor, the wardrobe, the sofa (plan.js): moved as #shared
 // wall colour swatches
 const wcs=document.getElementById('wcs');
 WALLC.custom.c=S.wcc;
@@ -50,41 +51,12 @@ document.getElementById('lightReset').addEventListener('click',()=>{S.light={...
 syncLight();
 frameHooks.push(dt=>{if(spin){const L=S.light;L.az+=30*dt;if(L.az>180)L.az-=360;syncLight();}});   // one turn in 12 s
 
-/* walls segment and height slider: a view has them in its panel ([data-wm], [data-wh], [data-wh-out]) or keeps its walls as set */
-function syncWallCtl(id){
-  const p=VIEWS[id].panel,V=VS[id],wh=p.querySelector('[data-wh]');
-  if(!wh)return;
-  wh.value=V.Wh;p.querySelector('[data-wh-out]').textContent=(V.Wm==='row'?10:V.Wh)+'%';
-  wh.disabled=V.Wm==='row'||V.Wm==='feet';wh.parentElement.style.opacity=wh.disabled?.45:1;
-  p.querySelectorAll('[data-wm]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.wm===V.Wm));
-}
-/* doors segment ([data-dm]) of a view: the apartment's doors all closed, all open (nothing pressed when they differ),
-   or no doors at all in this view. The doors are one for every view: a view with the segment follows them */
-function syncDoorCtl(id){
-  const bs=VIEWS[id].panel.querySelectorAll('[data-dm]'),V=VS[id];
-  if(!bs.length)return;
-  let st=V.dm;
-  if(st!=='none'){const open=doors.filter(d=>d.t!==0).length;st=open===doors.length?'open':open===0?'closed':'mixed';if(st!=='mixed')V.dm=st;}
-  bs.forEach(x=>x.setAttribute('aria-pressed',x.dataset.dm===st));
-}
-
-/* a view joins the app: its settings come from this browser, its panel gets the common controls */
+/* a view joins the app: its settings come from this browser (only the ones it still has: an old save's walls' look and doors are dropped) */
 function addView(id,def){
   VIEWS[id]=def;
-  VS[id]=Object.assign(JSON.parse(JSON.stringify(def.defaults)),readJSON(viewKey(id))||{});
-  const p=def.panel;
-  if(!p.querySelector(`[data-wm="${VS[id].Wm}"]`))VS[id].Wm=def.defaults.Wm;   // a walls' mode this view has no button for (a saved one renamed since) — its default
-  p.querySelectorAll('[data-wm]').forEach(b=>b.addEventListener('click',()=>{VS[id].Wm=b.dataset.wm;syncWallCtl(id);saveView(id);}));
-  const wh=p.querySelector('[data-wh]');if(wh)wh.addEventListener('input',e=>{VS[id].Wh=+e.target.value;syncWallCtl(id);saveView(id);});
-  p.querySelectorAll('[data-dm]').forEach(b=>b.addEventListener('click',()=>{
-    const dm=VS[id].dm=b.dataset.dm;if(dm!=='none')doors.forEach(d=>d.t=dm==='open'?d.max:0);
-    saveView(id);doorsChanged();}));
+  const saved=Object.entries(readJSON(viewKey(id))||{}).filter(([k])=>k in def.defaults);
+  VS[id]=Object.assign(JSON.parse(JSON.stringify(def.defaults)),Object.fromEntries(saved));
 }
-
-/* a door was clicked or held:
-   every view updates its door controls from the doors as they are and remembers */
-function doorsChanged(){Object.keys(VIEWS).forEach(id=>{const v=VIEWS[id],seg=!!v.panel.querySelector('[data-dm]');
-  if(seg)syncDoorCtl(id);if(v.onDoors)v.onDoors();if(seg||v.onDoors)saveView(id);});}
 
 /* the sun aims at the middle of the view and its shadows cover the view (tighter in a room: sharper shadows) */
 function aimView(){const s=VIEWS[view].sun();aimSun(s.x,s.y,s.z,s.half);}
@@ -133,8 +105,8 @@ function showView(id,animate=true){
   if(view)camMem[view]={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone().sub(anchorOf(view))};
   view=id;const vw=VIEWS[id];
   Object.values(VIEWS).forEach(v=>{v.panel.hidden=v!==vw;});
-  // light and wall colour in its panel, if it has a place for them; the hint under «i» of the view
-  const slot=vw.panel.querySelector('[data-shared-slot]');if(slot)slot.appendChild(sharedEl);sharedEl.hidden=!slot;
+  // light and wall colour, the room's finish and furniture (#furn) in its panel, if it has a place for them; the hint under «i» of the view
+  [['shared',sharedEl],['furn',furnEl]].forEach(([k,el])=>{const slot=vw.panel.querySelector(`[data-${k}-slot]`);if(slot)slot.appendChild(el);el.hidden=!slot;});
   syncInfo();
   const m=camMem[id];
   if(m){goal.theta=m.theta;goal.phi=m.phi;goal.r=m.r;goalT.copy(m.t).add(anchorOf(id));shortWay();}else vw.home();
@@ -145,5 +117,5 @@ function showView(id,animate=true){
     tr=null;if(camDrive===driveCam)camDrive=null;buildWalls(vw);aimView();
     if(!animate||reduce){cam.theta=goal.theta;cam.phi=goal.phi;cam.r=goal.r;cam.target.copy(goalT);}
   }
-  syncWallCtl(id);syncDoorCtl(id);if(vw.sync)vw.sync();applyTheme();
+  if(vw.sync)vw.sync();applyTheme();
 }

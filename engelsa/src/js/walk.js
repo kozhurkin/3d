@@ -5,11 +5,10 @@
    cabinet front in the middle of the screen (under the cursor while dragging); the mouse taken, the button held HOLD_MS moves it
    gradually, as a long press in the other views, a shorter press opens or closes it on release. On a touch screen a finger in the lower left corner of
    the scene (a square of STICK_ZONE of its width) holds a stick (the circle comes under it): the farther from its centre, the
-   faster the walk; elsewhere a finger looks; a tap is the door under the finger. The panel sets the eye height, the walls' look, the doors, and has the common wall colour (with
-   the outlines) and light.
+   faster the walk; elsewhere a finger looks; a tap is the door under the finger. The panel sets the eye height, has the room's finish and
+   furniture (views.js: #furn) and the common wall colour (with the outlines) and light; the walls always cut, as on the plan.
    The camera is the orbit's, its centre a step (LOOK) in front of the eyes: a flight to the walk and from it, and the camera
-   remembered for the view, work as in any view. Walls (however they look) and the closed door stop the walker;
-   with «Без двери» the doorway is free */
+   remembered for the view, work as in any view. Walls and the closed door stop the walker */
 const walkPanel=document.querySelector('[data-panel="walk"]');
 const LOOK=1;                       // m: the orbit's centre in front of the eyes
 const BODY=.15;                     // m: the walker seen from above is a circle of this radius (a person turned sideways)
@@ -82,7 +81,7 @@ function walkWalls(){
 }
 walkWalls();modelHooks.push(walkWalls);
 function walkObstacles(){
-  const shut=new Set(VS.walk.dm==='none'?[]:doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
+  const shut=new Set(doors.filter(d=>d.a<OPEN_A).map(d=>d.hole));
   return wallBoxes.concat(doorways.filter(w=>shut.has(w.hole)).map(w=>w.b),wardrobeBoxes(),lampBoxes());   // the sofa is not one: walked through
 }
 // how far the circle's centre at u is from the box b along axis i (0: x, 1: z); 0 inside its span
@@ -154,7 +153,7 @@ function useDoor(cx,cy){
 }
 let drag=null;
 let press=null;   // the left button down while the mouse is taken: {s: seconds down, long: held HOLD_MS, d: the door in the aim then}
-function letGo(){const p=press;press=null;if(p&&p.d){if(held&&held.d===p.d)held=null;doorsChanged();}}
+function letGo(){const p=press;press=null;if(p&&p.d&&held&&held.d===p.d)held=null;}
 canvas.addEventListener('pointerdown',e=>{
   if(!walking())return;
   // a finger in the lower left corner holds the stick (one at a time); elsewhere it looks, as the mouse drags
@@ -216,10 +215,8 @@ const ceiling=new THREE.Mesh(new THREE.PlaneGeometry(1,1),ceilMat);
 ceiling.rotation.x=Math.PI/2;ceiling.visible=false;scene.add(ceiling);   // faces down: seen from the rooms only, it casts no shadow
 function placeCeiling(){ceiling.scale.set((BOX.x1-BOX.x0)*MM,(BOX.z1-BOX.z0)*MM,1);ceiling.position.set(CX,H*MM,CZ);}
 placeCeiling();modelHooks.push(placeCeiling);
-// the ceiling closes solid walls up to it; in the cut mode, only while the eyes are in the room (outside, its walls open)
+// the ceiling: only while the eyes are in the room (outside, the cut mode opens its walls)
 function ceilingOver(){
-  const V=VS.walk;if(V.Wh<100||(V.Wm!=='show'&&V.Wm!=='auto'))return false;
-  if(V.Wm==='show')return true;
   const [x,,z]=eyeNow();return x>BOX.x0*MM&&x<BOX.x1*MM&&z>BOX.z0*MM&&z<BOX.z1*MM;
 }
 const aimEl=document.getElementById('walkAim'),hintEl=document.getElementById('walkHint');
@@ -249,7 +246,7 @@ frameHooks.push(()=>{
   if(Math.abs(camera.fov-fov)>1e-4){camera.fov=fov;camera.updateProjectionMatrix();}
 });
 
-/* ---------- the panel: the eye height (the walls and the doors are the common controls: views.js) ---------- */
+/* ---------- the panel: the eye height (the room's finish and furniture: views.js, #furn) ---------- */
 const eyeIn=walkPanel.querySelector('#walkEye'),eyeOut=walkPanel.querySelector('#walkEyeOut');
 function syncWalk(){eyeIn.value=VS.walk.eye;eyeOut.textContent=VS.walk.eye+' мм';}
 eyeIn.addEventListener('input',e=>{VS.walk.eye=+e.target.value;syncWalk();saveView('walk');});
@@ -259,7 +256,7 @@ addView('walk',{
   // the cut mode: as on the plan, a wall hides while the eyes are outside it
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
   mouse:true,info:'walk',
-  defaults:{Wm:'auto',Wh:100,dm:'closed',arcs:false,eye:1650},
+  defaults:{arcs:false,eye:1650},
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),
   panel:walkPanel,
   home:walkHome,

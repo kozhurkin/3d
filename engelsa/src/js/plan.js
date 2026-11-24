@@ -103,10 +103,10 @@ function renderFacts(){
       row('Толщина стен',`с дверью ${A.tD}, боковые ${A.tS}, с окном ${A.tW}`,true)}</dl>`;
   pq('#pSub').textContent=`${A.W} × ${A.L} мм · ${area()} м² · потолок ${H}`;
 }
-renderFacts();
+// not at load: it reads what the later modules have (wardrobe.js: WC); drawn when the panel is shown and when the sizes change
 
 /* the plan's own setting: dimensions with the room's name and area, one checkbox */
-function syncPlan(){pq('#pMarks').checked=VS.plan.marks;}
+function syncPlan(){pq('#pMarks').checked=VS.plan.marks;renderFacts();}
 pq('#pMarks').addEventListener('change',e=>{VS.plan.marks=e.target.checked;saveView('plan');});
 
 /* ---------- wall sizes: edited only here, the walk takes them as they are ----------
@@ -146,19 +146,20 @@ const sizeMsg=pq('#pSizeMsg');
 pq('#pPlCol').innerHTML=Object.entries(PLINTH_C).map(([k,c])=>`<button class="wc" data-plcol="${k}" aria-pressed="false">`+
   `<i style="background:${k==='wood'?`url(${WOOD_JPG}) center/cover`:c.p}"></i>${c.n}</button>`).join('');
 function syncSizes(){sizeFields.forEach(f=>{const v=f.get(A);pq(`[data-size="${f.k}"]`).value=v;pq(`[data-size-out="${f.k}"]`).textContent=v;});
-  planPanel.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
-  planPanel.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));
-  planPanel.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));
-  planPanel.querySelectorAll('[data-lamp]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lamp===A.lamp));
-  planPanel.querySelectorAll('[data-decor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.decor===A.decor));
-  planPanel.querySelectorAll('[data-plcol]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.plcol===A.plColor));}
-// the wardrobe's and the sofa's walls, the chandelier, the false decor, the skirting board's colour: kept with the sizes (A.wardWall, A.sofaWall,
-// A.lamp, A.decor, A.plColor); not where they would not fit
-[['ward','wardWall'],['sofa','sofaWall'],['lamp','lamp'],['decor','decor'],['plcol','plColor']].forEach(([d,k])=>planPanel.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
-  const a={...A,[k]:b.dataset[d]},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}sizeMsg.textContent='';setModel(a);})));
-// the photo wallpaper's wall: kept with the sizes (A.muralWall)
-planPanel.querySelectorAll('[data-mural]').forEach(b=>b.addEventListener('click',()=>{
-  const a={...A,muralWall:b.dataset.mural},why=aptProblems(a)[0];if(why){sizeMsg.textContent=`Нельзя: ${why}`;return;}setModel(a);}));
+  document.querySelectorAll('[data-mural]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.mural===A.muralWall));
+  document.querySelectorAll('[data-ward]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ward===A.wardWall));
+  document.querySelectorAll('[data-sofa]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sofa===A.sofaWall));
+  document.querySelectorAll('[data-lamp]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.lamp===A.lamp));
+  document.querySelectorAll('[data-decor]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.decor===A.decor));
+  document.querySelectorAll('[data-plcol]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.plcol===A.plColor));}
+// the photo wallpaper's wall, the false decor, the wardrobe's and the sofa's walls (#furn: in the panel on screen, the walk's too),
+// the chandelier, the skirting board's colour: kept with the sizes (A.muralWall, A.decor, A.wardWall, A.sofaWall, A.lamp, A.plColor)
+// and remembered at once (engine.js: CKEY); not where they would not fit — said under the buttons
+const furnMsg=furnEl.querySelector('#fMsg');
+[['mural','muralWall'],['decor','decor'],['ward','wardWall'],['sofa','sofaWall'],['lamp','lamp'],['plcol','plColor']].forEach(([d,k])=>
+  document.querySelectorAll(`[data-${d}]`).forEach(b=>b.addEventListener('click',()=>{
+    const msg=furnEl.contains(b)?furnMsg:sizeMsg,a={...A,[k]:b.dataset[d]},why=aptProblems(a)[0];
+    msg.textContent=why?`Нельзя: ${why}`:'';if(!why)setModel(a);})));
 // the value v if everything fits with it; otherwise the last one toward v that fits (on the slider's step from the current value)
 function fitSize(f,v){
   const cur=f.get(A),bad=aptProblems(f.set(A,v));
@@ -180,7 +181,10 @@ sizesBox.addEventListener('toggle',()=>writeJSON('eng-plan-sizes',sizesBox.open)
 // sizes as the starting ones: in this browser, or as a code to send to the chat so they become the defaults for everyone
 const aMsg=pq('#pAMsg');
 pq('#pSaveA').addEventListener('click',()=>{try{localStorage.setItem(MKEY,JSON.stringify(modelDiff()));aMsg.textContent='Сохранено в этом браузере';}catch(e){aMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
-pq('#pResetA').addEventListener('click',()=>{try{localStorage.removeItem(MKEY);}catch(e){}setModel({});aMsg.textContent='Исходные размеры возвращены';sizeMsg.textContent='';});
+// back to the starting sizes; the choices (choiceOf) stay as they are
+pq('#pResetA').addEventListener('click',()=>{
+  try{localStorage.removeItem(MKEY);}catch(e){}const c=choiceOf(A);setModel(aptProblems(c).length?{}:c);
+  aMsg.textContent='Исходные размеры возвращены';sizeMsg.textContent='';});
 pq('#pCopyA').addEventListener('click',()=>{
   const ta=pq('#pACode');ta.value=JSON.stringify(modelDiff());
   (navigator.clipboard?navigator.clipboard.writeText(ta.value):Promise.reject()).then(()=>{aMsg.textContent='Код скопирован';}).catch(()=>{ta.hidden=false;ta.focus();ta.select();aMsg.textContent='Выделено — нажмите Ctrl+C';});
@@ -195,7 +199,7 @@ frameHooks.push(()=>{
   const on=view==='plan'&&!inTransition(),half=presence('plan')>=.5;
   dimsGroup.visible=on&&VS.plan.marks;namesGroup.visible=half&&VS.plan.marks;roomGroup.visible=true;   // the floor (laminate) in every view
   if(dimsGroup.visible&&dimsDirty)buildDims();
-  dimsGroup.position.y=(wallFeetMode?0:wallCut)+.02;
+  dimsGroup.position.y=H*MM+.02;
   winDims.visible=dimsGroup.visible&&wallParts.some(w=>w.glass&&w.m.visible);   // the window's glass is on screen
   doorDims.visible=dimsGroup.visible&&camera.position.z>0&&wallParts.some(w=>w.id==='door'&&Math.abs(w.b-A.dH*MM)<1e-6&&w.m.visible);   // the lintel over the doorway is on screen, seen from the room
   // dimension labels: readable near, shrinking with the plan far (engine.js: fitLabels)
@@ -248,18 +252,15 @@ canvas.addEventListener('pointermove',e=>{
 });
 canvas.addEventListener('pointerleave',()=>setHoverRoom(-1));
 modelHooks.push(()=>setHoverRoom(-1));   // the sizes changed: the frame is gone until the cursor moves
-frameHooks.push(()=>{if(hoverRoom>=0){if(!namesGroup.visible)setHoverRoom(-1);else hoverFrame.position.y=(wallFeetMode?0:wallCut)+.02;}});
+frameHooks.push(()=>{if(hoverRoom>=0){if(!namesGroup.visible)setHoverRoom(-1);else hoverFrame.position.y=H*MM+.02;}});
 
 addView('plan',{
   rooms:'all',
   // the cut mode hides a wall while the camera looks at it from outside the room
   fade:Object.fromEntries(WALLS.filter(w=>w.ext).map(w=>[w.id,w.ext])),
-  defaults:{Wm:'auto',Wh:100,dm:'closed',marks:false},   // marks: a new key, so an old saved dims/names doesn't turn them on
+  defaults:{marks:false},   // marks: a new key, so an old saved dims/names doesn't turn them on
   sun:()=>({x:CX,y:0,z:CZ,half:4.6}),   // shadows cover the whole room from any direction
   panel:planPanel,
   home:()=>setCam('plan'),
   sync:syncPlan
 });
-// no walls' or doors' controls in its panel: the walls always cut where the camera is outside, the door closed (a click opens it)
-Object.assign(VS.plan,{Wm:'auto',Wh:100,dm:'closed'});
-doors.forEach(d=>d.t=0);

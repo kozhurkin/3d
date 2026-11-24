@@ -122,7 +122,11 @@ canvas.addEventListener('pointerdown',e=>{
     holdDoor(d);canvas.style.cursor='grabbing';
   },HOLD_MS);}
   if(e.button===1)e.preventDefault();
-  const h=ptrs.size===0?hitAt(e):null;grabP=h?h.point.clone():null;if(grabP)anchorAt(grabP);   // a second finger grabs nothing: the pinch
+  // a second finger grabs nothing: the pinch. A finger would hide what it turns: it turns about what is in the centre of the screen
+  // (anchored there, that is the target: the orbit about the target turns about it), touched anywhere
+  if(ptrs.size===0&&e.pointerType==='touch'){
+    const rc=canvas.getBoundingClientRect(),h=hitAt({clientX:rc.left+rc.width/2,clientY:rc.top+rc.height/2});grabP=null;if(h)anchorAt(h.point);
+  }else{const h=ptrs.size===0?hitAt(e):null;grabP=h?h.point.clone():null;if(grabP)anchorAt(grabP);}
   canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1||e.button===2});
   if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}
 });

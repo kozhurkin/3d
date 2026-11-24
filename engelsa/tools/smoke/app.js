@@ -137,6 +137,7 @@ const under = (p, side, up, depth, r) => {
 };
 const inFrame = (p, P) => { const { C, k, u, b } = frame(p), v = [P.x - C[0], P.y - C[1], P.z - C[2]]; return [k, u, b].map((a) => a[0] * v[0] + a[1] * v[1] + a[2] * v[2]); };
 const mouse = (p, type, x, y, button = 0) => p.document.getElementById('c').dispatch(type, { pointerId: 1, clientX: x, clientY: y, button, pointerType: 'mouse' });
+const touch = (p, type, x, y, id = 1) => p.document.getElementById('c').dispatch(type, { pointerId: id, clientX: x, clientY: y, button: 0, pointerType: 'touch' });
 const wheel = (p) => p.document.getElementById('c').dispatch('wheel', { deltaY: -100, clientX: 300, clientY: 200 });
 const drag = (p, button = 0) => { mouse(p, 'pointerdown', 300, 200, button); mouse(p, 'pointermove', 360, 240); mouse(p, 'pointerup', 360, 240, button); };
 const xyz = (a, b, msg) => ['x', 'y', 'z'].forEach((k, i) => near(Array.isArray(a) ? a[i] : a[k], Array.isArray(b) ? b[i] : b[k], msg + ', ' + k));
@@ -152,6 +153,23 @@ check('камера: вращение, как в SketchUp, — вокруг то
   const t0 = p.run(() => { ray.intersectObjects = () => []; return goalT.clone(); });
   drag(p);
   xyz(p.run(() => goalT), t0, 'the target stays');
+});
+
+check('камера: палец вращает вокруг того, что в центре экрана (оно остаётся в центре), чего бы ни касался', () => {
+  const p = open();
+  // Q — on the view's axis at 3 m (in the centre of the screen), R — under the finger; the ray hits one or the other by where it aims
+  const Q = under(p, 0, 0, 3), R = under(p, 0.8, 0.5, 1.5);
+  p.run((Q, R) => {
+    const a0 = aimRay; let c = false;
+    aimRay = (e) => { const rc = canvas.getBoundingClientRect(); c = e.clientX === rc.left + rc.width / 2 && e.clientY === rc.top + rc.height / 2; a0(e); };
+    ray.intersectObjects = () => [{ object: { visible: true, material: {} }, point: new THREE.Vector3(...(c ? Q : R)) }];
+  }, [Q.x, Q.y, Q.z], [R.x, R.y, R.z]);
+  const g0 = p.run(() => [goal.theta, goal.phi]);
+  touch(p, 'pointerdown', 600, 150); touch(p, 'pointermove', 660, 190); touch(p, 'pointerup', 660, 190);
+  const g1 = p.run(() => [goal.theta, goal.phi]), s = inFrame(p, Q);
+  assert.ok(Math.abs(g1[0] - g0[0]) > 0.3 && Math.abs(g1[1] - g0[1]) > 0.2, 'the view turned');
+  near(s[0], 0, 'Q in the centre, x'); near(s[1], 0, 'Q in the centre, y');
+  xyz(p.run(() => goalT), Q, 'the target at Q');
 });
 
 check('камера: нажатие ставит точку камеры на ось взгляда на глубину предмета под курсором; колесо подходит к нему до 0,3 м', () => {

@@ -122,6 +122,61 @@ check('ракурсы: «План» — из угла, пониже, «На дв
   assert.strictEqual(p.document.querySelector('[data-cam="window"]'), null);
 });
 
+/* the camera's checks below. frame: the camera at its goal — where it stands (C) and its axes: right (k), up (u), back (b).
+   under: the camera put at its goal (r from its target, if given), a surface under the cursor at P — side to the right, up,
+   depth along the view, from the camera. inFrame: P in the frame's axes, from the camera. */
+const frame = (p) => {
+  const g = p.run(() => { const C = goalPosition(); return { t: goal.theta, f: goal.phi, C: [C.x, C.y, C.z] }; }), { t, f } = g;
+  const b = [Math.sin(f) * Math.sin(t), Math.cos(f), Math.sin(f) * Math.cos(t)], k = [Math.cos(t), 0, -Math.sin(t)];
+  return { C: g.C, k, b, u: [b[1] * k[2] - b[2] * k[1], b[2] * k[0] - b[0] * k[2], b[0] * k[1] - b[1] * k[0]] };
+};
+const under = (p, side, up, depth, r) => {
+  p.run((r) => { if (r) goal.r = r; cam.theta = goal.theta; cam.phi = goal.phi; cam.r = goal.r; cam.target.copy(goalT); }, r);
+  const { C, k, u, b } = frame(p), P = [0, 1, 2].map((i) => C[i] - b[i] * depth + k[i] * side + u[i] * up);
+  return p.run((P) => { const v = new THREE.Vector3(...P); ray.intersectObjects = () => [{ object: { visible: true, material: {} }, point: v }]; return v; }, P);
+};
+const inFrame = (p, P) => { const { C, k, u, b } = frame(p), v = [P.x - C[0], P.y - C[1], P.z - C[2]]; return [k, u, b].map((a) => a[0] * v[0] + a[1] * v[1] + a[2] * v[2]); };
+const mouse = (p, type, x, y, button = 0) => p.document.getElementById('c').dispatch(type, { pointerId: 1, clientX: x, clientY: y, button, pointerType: 'mouse' });
+const wheel = (p) => p.document.getElementById('c').dispatch('wheel', { deltaY: -100, clientX: 300, clientY: 200 });
+const drag = (p, button = 0) => { mouse(p, 'pointerdown', 300, 200, button); mouse(p, 'pointermove', 360, 240); mouse(p, 'pointerup', 360, 240, button); };
+const xyz = (a, b, msg) => ['x', 'y', 'z'].forEach((k, i) => near(Array.isArray(a) ? a[i] : a[k], Array.isArray(b) ? b[i] : b[k], msg + ', ' + k));
+
+check('камера: вращение, как в SketchUp, — вокруг точки под курсором (она стоит на месте на экране); мимо всего — вокруг центра экрана', () => {
+  const p = open();
+  const P = under(p, 0.7, -0.4, 3), g0 = p.run(() => [goal.theta, goal.phi]), s0 = inFrame(p, P);
+  drag(p);
+  const g1 = p.run(() => [goal.theta, goal.phi]);
+  assert.ok(Math.abs(g1[0] - g0[0]) > 0.3 && Math.abs(g1[1] - g0[1]) > 0.2, 'the view turned');
+  xyz(inFrame(p, P), s0, 'P in the camera\'s frame');
+  // nothing under the cursor: about the target, as before
+  const t0 = p.run(() => { ray.intersectObjects = () => []; return goalT.clone(); });
+  drag(p);
+  xyz(p.run(() => goalT), t0, 'the target stays');
+});
+
+check('камера: нажатие ставит точку камеры на ось взгляда на глубину предмета под курсором; колесо подходит к нему до 0,3 м', () => {
+  const p = open();
+  const state = () => p.run(() => ({ r: goal.r, cr: cam.r, T: goalT.clone(), cT: cam.target.clone() }));
+  // a press (the right button: the pan): the camera stays, r is P's depth, the camera's target with its goal's
+  under(p, 0.5, -0.3, 2.5, 6);
+  const C0 = frame(p).C;
+  mouse(p, 'pointerdown', 300, 200, 2); mouse(p, 'pointerup', 300, 200, 2);
+  const s = state();
+  xyz(frame(p).C, C0, 'the camera stays');
+  near(s.r, 2.5, 'the goal\'s r: P\'s depth'); near(s.cr, 2.5, 'the camera\'s r'); xyz(s.T, s.cT, 'the target with its goal\'s');
+  // the wheel toward a far thing, r at its limit before: it comes nearer
+  const dist = (P) => { const C = frame(p).C; return Math.hypot(C[0] - P.x, C[1] - P.y, C[2] - P.z); };
+  let P = under(p, 0.4, 0.2, 4, 0.3);
+  const d0 = dist(P);
+  wheel(p);
+  assert.ok(dist(P) < d0 - 0.3, 'nearer to the far thing: ' + d0 + ' → ' + dist(P));
+  // a thing nearer than 0.3 m: the wheel in does not push the camera back
+  P = under(p, 0.02, 0, 0.2, 5);
+  const e0 = dist(P);
+  wheel(p);
+  assert.ok(dist(P) <= e0 + 1e-9, 'not pushed back: ' + e0 + ' → ' + dist(P));
+});
+
 check('сцена: без мини-вида; «i» — подсказка под устройство (мышь или палец) и под вкладку', () => {
   const p = open();
   assert.deepStrictEqual([p.document.getElementById('camBtn'), p.run(() => typeof showDebug)], [null, 'undefined']);
@@ -474,7 +529,7 @@ check('«i» на сенсорном экране — по тапу у пред�
   const p = open();
   const c = p.document.getElementById('c'), dot = p.document.getElementById('itemDot'), card = p.document.getElementById('itemCard');
   // what is under the finger: the wardrobe (no raycasts in Node)
-  p.run(() => { hitAt = () => ({ object: wardGroup.children[0].children[0] }); });
+  p.run(() => { hitAt = () => ({ object: wardGroup.children[0].children[0], point: goalT.clone() }); });
   const title = p.run(() => infoOf(wardGroup.children[0].children[0]).title);
   const tap = (type, x1 = 120) => {
     c.dispatch('pointerdown', { pointerId: 1, clientX: 100, clientY: 200, button: 0, pointerType: type });
@@ -487,7 +542,7 @@ check('«i» на сенсорном экране — по тапу у пред�
   dot.click(); assert.deepStrictEqual([dot.hidden, card.hidden], [true, false]);
   tap('touch'); assert.deepStrictEqual([dot.hidden, card.hidden], [true, true], 'a drag: the card closes, no «i»');
   // the door under the finger: it opens, no «i»
-  p.run(() => { hitAt = () => ({ object: doors[0].g }); });
+  p.run(() => { hitAt = () => ({ object: doors[0].g, point: goalT.clone() }); });
   const t0 = p.run(() => doors[0].t);
   tap('touch', 100); assert.deepStrictEqual([dot.hidden, p.run(() => doors[0].t) !== t0], [true, true]);
 });

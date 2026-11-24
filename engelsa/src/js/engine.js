@@ -91,6 +91,9 @@ function pan(dx,dy){
 }
 // what the press grabbed: the surface under the first finger or button (the orbit turns about it, the pan carries it), or null
 let grabP=null;
+/* what a pinch comes nearer to: what was under the middle between the fingers when the second came down (the pan carries it
+   with the middle, the zoom keeps it in place: it stays under the middle), found once */
+let pinchP=null;
 /* orbit (the left drag): as in SketchUp, about P, the point under the cursor where the drag began (nothing there — about the target,
    the centre of the screen). The target turns about P by the same turn as the view's direction (about the vertical, then about
    the camera's right axis), so P stays where it was on screen. */
@@ -128,7 +131,10 @@ canvas.addEventListener('pointerdown',e=>{
     const rc=canvas.getBoundingClientRect(),h=hitAt({clientX:rc.left+rc.width/2,clientY:rc.top+rc.height/2});grabP=null;if(h)anchorAt(h.point);
   }else{const h=ptrs.size===0?hitAt(e):null;grabP=h?h.point.clone():null;if(grabP)anchorAt(grabP);}
   canvas.setPointerCapture(e.pointerId);ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,pan:e.button===1||e.button===2});
-  if(ptrs.size===2){const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);}
+  if(ptrs.size===2){
+    const [a,b]=[...ptrs.values()];pinch0=Math.hypot(a.x-b.x,a.y-b.y);
+    pinchP=pointAt({clientX:(a.x+b.x)/2,clientY:(a.y+b.y)/2},new THREE.Vector3());
+  }
 });
 canvas.addEventListener('pointermove',e=>{
   if(!ptrs.has(e.pointerId)||ownMouse())return;const pr=ptrs.get(e.pointerId),dx=e.clientX-pr.x,dy=e.clientY-pr.y;
@@ -141,10 +147,10 @@ canvas.addEventListener('pointermove',e=>{
   }else if(ptrs.size===2){
     ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
     pan(dx/2,dy/2);
-    const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0){goal.r=clampR(goal.r*pinch0/d,goal.r);}pinch0=d;
+    const [a,b]=[...ptrs.values()];const d=Math.hypot(a.x-b.x,a.y-b.y);if(pinch0&&pinchP)zoomAt(pinchP,pinch0/d);pinch0=d;
   }
 });
-const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;if(!ptrs.size)grabP=null;};
+const lost=e=>{ptrs.delete(e.pointerId);pinch0=0;pinchP=null;if(!ptrs.size)grabP=null;};
 const furnDoors=[];   // the cabinet doors (js/wardrobe.js): a click or a hold works them as the room's door; they swing by themselves
 // a click (no drag) on a door leaf opens or closes that door; on an item with a click of its own, it does that
 // what is under the cursor: the nearest visible surface, or null (also while flying between views: nothing to point at);
@@ -188,18 +194,24 @@ canvas.addEventListener('contextmenu',e=>e.preventDefault());
 const ray=new THREE.Raycaster(),ndc=new THREE.Vector2();
 function aimRay(e){const rc=canvas.getBoundingClientRect();ndc.set((e.clientX-rc.left)/rc.width*2-1,-(e.clientY-rc.top)/rc.height*2+1);ray.setFromCamera(ndc,camera);}   // the ray through the cursor
 const _zp=new THREE.Vector3(),_pl=new THREE.Plane(),_n=new THREE.Vector3();
+// what is at a point of the screen: the surface there, or where its ray meets the plane across the view through the target
+function pointAt(e,out){
+  const h=hitAt(e);if(h)return out.copy(h.point);
+  camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,out))out.copy(cam.target);return out;
+}
+/* the distance times k toward P (the wheel, a pinch): the camera moves along its ray through P, so P stays where it is on screen;
+   the target anchored at P's depth first, so it stops 0.3 m before P */
+function zoomAt(P,k){
+  anchorAt(P);const r0=cam.r,r1=clampR(r0*k,r0);
+  cam.target.lerp(P,1-r1/r0);goalT.copy(cam.target);cam.r=goal.r=r1;
+}
 const shown=o=>{while(o){if(!o.visible)return false;o=o.parent;}return true;};
 // what the cursor can hit: a visible surface (not a line, a label, or a wall faded away in a flight)
 const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(ownMouse())return;camDrive=null;
-  const hit=hitAt(e);
-  if(hit){_zp.copy(hit.point);anchorAt(_zp);}
-  else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}
-  const r0=cam.r,r1=clampR(r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012))),r0);
-  cam.target.lerp(_zp,1-r1/r0);goalT.copy(cam.target);
-  cam.r=goal.r=r1;
+  zoomAt(pointAt(e,_zp),1+Math.max(-.5,Math.min(.5,e.deltaY*.0012)));
 },{passive:false});
 
 function resize(){const w=viewer.clientWidth,h=viewer.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}

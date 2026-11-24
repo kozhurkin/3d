@@ -172,6 +172,28 @@ check('камера: палец вращает вокруг того, что в 
   xyz(p.run(() => goalT), Q, 'the target at Q');
 });
 
+check('камера: щипок приближает к тому, что между пальцами (оно остаётся на месте на экране), а не к центру; ближе 0,3 м не отталкивает', () => {
+  const p = open();
+  const dist = (P) => { const C = frame(p).C; return Math.hypot(C[0] - P.x, C[1] - P.y, C[2] - P.z); };
+  // two fingers apart about (600, 200), off the centre, moved apart symmetrically: the middle stays
+  const pinch = (k) => {
+    touch(p, 'pointerdown', 600 - 50, 200 - 50, 1); touch(p, 'pointerdown', 600 + 50, 200 + 50, 2);
+    touch(p, 'pointermove', 600 + 50 * k, 200 + 50 * k, 2); touch(p, 'pointermove', 600 - 50 * k, 200 - 50 * k, 1);
+    touch(p, 'pointerup', 600 + 50 * k, 200 + 50 * k, 2); touch(p, 'pointerup', 600 - 50 * k, 200 - 50 * k, 1);
+  };
+  let P = under(p, 0.9, 0.5, 3, 6);
+  const s0 = inFrame(p, P), d0 = dist(P);
+  pinch(2);
+  const s1 = inFrame(p, P);
+  assert.ok(dist(P) < d0 - 0.5, 'nearer to P: ' + d0 + ' → ' + dist(P));
+  near(s1[0] / s1[2], s0[0] / s0[2], 'P where it was on screen, x'); near(s1[1] / s1[2], s0[1] / s0[2], 'P where it was on screen, y');
+  // a thing nearer than 0.3 m: spreading the fingers does not push the camera back
+  P = under(p, 0.02, 0, 0.2, 5);
+  const e0 = dist(P);
+  pinch(2);
+  assert.ok(dist(P) <= e0 + 1e-9, 'not pushed back: ' + e0 + ' → ' + dist(P));
+});
+
 check('камера: нажатие ставит точку камеры на ось взгляда на глубину предмета под курсором; колесо подходит к нему до 0,3 м', () => {
   const p = open();
   const state = () => p.run(() => ({ r: goal.r, cr: cam.r, T: goalT.clone(), cT: cam.target.clone() }));

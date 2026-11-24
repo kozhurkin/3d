@@ -330,10 +330,10 @@ const touchMark=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
   new THREE.MeshBasicMaterial({color:0xff6a1a,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));
 touchMark.renderOrder=30;touchMark.raycast=()=>{};touchMark.visible=false;scene.add(touchMark);
 const pinchMark=(()=>{
-  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');   // a white ring of radius 24, a dark edge
-  g.beginPath();g.arc(32,32,24,0,2*Math.PI);g.lineWidth=10;g.strokeStyle='rgba(0,0,0,.5)';g.stroke();g.lineWidth=5;g.strokeStyle='#fff';g.stroke();
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');   // a blue ring of radius 24, half see-through
+  g.beginPath();g.arc(32,32,24,0,2*Math.PI);g.lineWidth=6;g.strokeStyle='#1e88ff';g.stroke();
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
-  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true}));
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true,opacity:.6}));
   m.renderOrder=31;m.raycast=()=>{};m.visible=false;scene.add(m);return m;
 })();
 frameHooks.push(()=>{

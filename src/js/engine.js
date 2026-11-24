@@ -164,6 +164,7 @@ function clickAt(e,hit){
 }
 canvas.addEventListener('pointerup',e=>{
   if(ownMouse()&&!ptrs.has(e.pointerId))return;   // the walk's own press (a door it holds is its to let go)
+  hoverOver(e);
   clearTimeout(holdTimer);
   if(held){held=null;canvas.style.cursor='';doorsChanged();downAt=null;lost(e);return;}
   if(downAt&&ptrs.size===1&&Math.hypot(e.clientX-downAt.x,e.clientY-downAt.y)<6){
@@ -172,8 +173,18 @@ canvas.addEventListener('pointerup',e=>{
   }
   downAt=null;lost(e);
 });
-canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);canvas.style.cursor=pickDoor(e,h)||clickOf(h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
-canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')itemHover(null);});   // a finger lifted leaves too: its «i» stays
+/* the cursor over the scene (the mouse, not a finger) and the surface under it, for the debug's distance while nothing is pressed;
+   the camera moving under a still cursor (the wheel, a flight, the drag just let go) has it looked for anew (updateDebug) */
+const hover={on:false,x:0,y:0,hit:false,p:new THREE.Vector3(),key:''};
+const camKey=()=>[camera.position.x,camera.position.y,camera.position.z,cam.theta,cam.phi].join();
+// the cursor at e: h — what is under it, found now; not given — to be looked for when the debug next draws
+function hoverOver(e,h){
+  if(e.pointerType==='touch')return;
+  Object.assign(hover,{on:true,x:e.clientX,y:e.clientY,key:''});
+  if(h!==undefined){hover.hit=!!h;if(h)hover.p.copy(h.point);hover.key=camKey();}
+}
+canvas.addEventListener('pointermove',e=>{if(ptrs.size===0&&!ownMouse()){const h=hitAt(e);hoverOver(e,h);canvas.style.cursor=pickDoor(e,h)||clickOf(h)?'pointer':'';itemHover(h&&infoOf(h.object),e);}});
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch'){itemHover(null);hover.on=false;}});   // a finger lifted leaves too: its «i» stays
 canvas.addEventListener('pointercancel',lost);canvas.addEventListener('lostpointercapture',lost);
 canvas.addEventListener('mousedown',e=>{if(e.button===1)e.preventDefault();});
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -187,7 +198,7 @@ const seeThrough=m=>Array.isArray(m)?m.every(seeThrough):!!m&&m.opacity===0;
 const hittable=h=>!(h.object.isLine||h.object.isSprite)&&shown(h.object)&&!seeThrough(h.object.material);
 canvas.addEventListener('wheel',e=>{
   e.preventDefault();if(ownMouse())return;camDrive=null;
-  const hit=hitAt(e);
+  const hit=hitAt(e);hoverOver(e);
   if(hit){_zp.copy(hit.point);anchorAt(_zp);}
   else{camera.getWorldDirection(_n);_pl.setFromNormalAndCoplanarPoint(_n,cam.target);if(!ray.ray.intersectPlane(_pl,_zp))_zp.copy(cam.target);}
   const r0=cam.r,r1=clampR(r0*(1+Math.max(-.5,Math.min(.5,e.deltaY*.0012))),r0);
@@ -199,7 +210,8 @@ canvas.addEventListener('wheel',e=>{
 function resize(){const w=viewer.clientWidth,h=viewer.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
 new ResizeObserver(resize).observe(viewer);
 
-/* ---------- camera debug: while the camera moves, its focus (gizmo, ray, distance); overview inset (as in the room tabs) ---------- */
+/* ---------- camera debug: while the camera moves, its focus (gizmo, ray, distance); at rest, the distance and a faint ray to what is
+   under the cursor; overview inset (as in the room tabs) ---------- */
 let showDebug=false;
 const noRay=o=>{o.traverse(c=>{c.raycast=()=>{};});return o;};
 const dbg=new THREE.Group();dbg.visible=false;scene.add(dbg);
@@ -215,7 +227,7 @@ dbg.add(noRay(pivot));
 const DBG_COL=0xff6a00;
 const camBody=new THREE.Mesh(new THREE.ConeGeometry(.09,.22,4),new THREE.MeshBasicMaterial({color:DBG_COL}));
 camBody.geometry.rotateX(-Math.PI/2);
-const viewLine=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,10),new THREE.MeshBasicMaterial({color:DBG_COL,depthTest:false}));viewLine.renderOrder=40;
+const viewLine=new THREE.Mesh(new THREE.CylinderGeometry(1,1,1,10),new THREE.MeshBasicMaterial({color:DBG_COL,depthTest:false,transparent:true}));viewLine.renderOrder=40;
 const frus=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(16*3).fill(0),3)),new THREE.LineBasicMaterial({color:DBG_COL,depthTest:false}));frus.renderOrder=41;
 const frusFill=new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Array(12*3).fill(0),3)),new THREE.MeshBasicMaterial({color:DBG_COL,transparent:true,opacity:.08,side:THREE.DoubleSide,depthWrite:false,depthTest:false}));frusFill.renderOrder=39;
 [camBody,viewLine,frus,frusFill].forEach(o=>{o.layers.set(1);o.frustumCulled=false;dbg.add(noRay(o));});
@@ -224,8 +236,10 @@ const ovCam=new THREE.PerspectiveCamera(36,1.4,.05,200);ovCam.layers.enableAll()
 const _oc=new THREE.Vector3(),_od=new THREE.Vector3(.25,1.5,1).normalize(),_ov=new THREE.Vector3(),_oup=new THREE.Vector3(0,1,0),_oq=new THREE.Quaternion();
 const apt=new THREE.Box3(new THREE.Vector3(BOX.x0*MM,0,BOX.z0*MM),new THREE.Vector3(BOX.x1*MM,H*MM,BOX.z1*MM)),_osz=new THREE.Vector3();
 function updateDebug(){
-  const on=focus.drag&&!held||performance.now()<focus.until,toFocus=camera.position.distanceTo(focus.p);
-  pivot.visible=viewLine.visible=on;pivot.position.copy(focus.p);
+  const on=focus.drag&&!held||performance.now()<focus.until,rest=!on&&!ptrs.size&&hover.on&&!ownMouse();
+  if(rest&&hover.key!==camKey()){const e={clientX:hover.x,clientY:hover.y};hoverOver(e,hitAt(e));}
+  const near=rest&&hover.hit,at=on?focus.p:hover.p,toFocus=camera.position.distanceTo(at);
+  pivot.visible=on;viewLine.visible=on||near;pivot.position.copy(focus.p);viewLine.material.opacity=on?1:.4;
   const ps=Math.max(.4,toFocus*.25);pivot.children.forEach(c=>c.scale.setScalar(ps));
   // mini view frames the apartment itself, not the camera
   apt.getCenter(_oc);apt.getSize(_osz);
@@ -239,7 +253,7 @@ function updateDebug(){
   const k=rad*.32;
   camBody.position.copy(camera.position);camBody.lookAt(cam.target);camBody.scale.setScalar(k);
   // the ray: a thin cylinder from the camera to the focus
-  _ov.subVectors(focus.p,camera.position);
+  _ov.subVectors(at,camera.position);
   viewLine.position.copy(camera.position).addScaledVector(_ov,.5);
   _oq.setFromUnitVectors(_oup,_ov.clone().normalize());viewLine.quaternion.copy(_oq);
   viewLine.scale.set(rad*.012,toFocus,rad*.012);
@@ -259,7 +273,7 @@ function updateDebug(){
     camArrow.style.left=(50+x*44)+'%';camArrow.style.top=Math.min(74,Math.max(8,50-y*44))+'%';
     camArrow.style.transform=`translate(-50%,-50%) rotate(${Math.atan2(-y,x)}rad)`;}
   const f=v=>v.toFixed(2).replace('.',',')+' м';
-  const t=(on?`<i>До точки</i><em>${f(toFocus)}</em><i>·</i>`:'')+`<i>Высота</i><em>${f(camera.position.y)}</em>`;
+  const t=(on||near?`<i>До точки</i><em>${f(toFocus)}</em><i>·</i>`:'')+`<i>Высота</i><em>${f(camera.position.y)}</em>`;
   if(t!==distTxt){distTxt=t;distEl.innerHTML=t;}
 }
 const inset=document.createElement('div');inset.className='inset';inset.hidden=true;inset.innerHTML='<canvas class="inset-cv"></canvas><b class="dist"></b><i class="cam-arrow" hidden title="Камера за пределами мини-вида"></i>';viewer.appendChild(inset);

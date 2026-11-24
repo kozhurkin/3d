@@ -134,26 +134,52 @@ check('камера: нажатие ставит точку камеры на о
 check('камера, отладка: точка, луч в мини-виде и «До точки» — с нажатия до отпускания (на схваченном предмете) и на миг после колеса', () => {
   const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
   p.document.getElementById('camBtn').click();
-  const shown = () => p.run(() => { updateDebug(); const on = [pivot.visible, viewLine.visible, /До точки/.test(distEl.innerHTML)];
-    return { on: on.every(Boolean), off: !on.some(Boolean), at: pivot.position.clone() }; });
-  assert.ok(shown().off, 'nothing at rest');
+  // drag: the point, the ray and the distance; rest: the distance and a faint ray to what is under the cursor; off: none of them
+  const shown = () => p.run(() => { updateDebug(); const d = /До точки/.test(distEl.innerHTML);
+    const s = pivot.visible && viewLine.visible && d ? 'drag' : !pivot.visible && viewLine.visible && viewLine.material.opacity < 1 && d ? 'rest'
+      : !pivot.visible && !viewLine.visible && !d ? 'off' : '?';
+    return { s, at: pivot.position.clone(), opacity: viewLine.material.opacity }; });
+  assert.strictEqual(shown().s, 'off', 'nothing at rest');
   [0, 2].forEach((button) => {   // the orbit, the pan
     const P = under(p, 0.6, -0.2, 2.5);
     mouse(p, 'pointerdown', 300, 200, button);
-    let g = shown(); assert.ok(g.on, 'from the press, button ' + button); xyz(g.at, P, 'on the grabbed thing');
+    let g = shown(); assert.strictEqual(g.s, 'drag', 'from the press, button ' + button); xyz(g.at, P, 'on the grabbed thing');
+    assert.strictEqual(g.opacity, 1, 'the ray full');
     mouse(p, 'pointermove', 360, 240);
-    g = shown(); assert.ok(g.on, 'while it moves, button ' + button); if (!button) xyz(g.at, P, 'the orbit\'s pivot');
+    g = shown(); assert.strictEqual(g.s, 'drag', 'while it moves, button ' + button); if (!button) xyz(g.at, P, 'the orbit\'s pivot');
     mouse(p, 'pointerup', 360, 240, button);
-    assert.ok(shown().off, 'gone with the button ' + button);
+    assert.strictEqual(shown().s, 'rest', 'the button let go: what is under the cursor, button ' + button);
   });
   // a long press holds a door (the camera stays): nothing shown
   under(p, 0.6, -0.2, 2.5); mouse(p, 'pointerdown', 300, 200);
-  p.run(() => { held = { d: doors[0], dir: 1 }; }); assert.ok(shown().off, 'a door held');
+  p.run(() => { held = { d: doors[0], dir: 1 }; }); assert.strictEqual(shown().s, 'off', 'a door held');
   mouse(p, 'pointerup', 300, 200);
   const P = under(p, 0.4, 0.2, 4);
   wheel(p);
-  const g = shown(); assert.ok(g.on, 'after the wheel'); xyz(g.at, P, 'where it zooms');
-  p.tick(60); assert.ok(shown().off, 'gone a moment later');
+  const g = shown(); assert.strictEqual(g.s, 'drag', 'after the wheel'); xyz(g.at, P, 'where it zooms');
+  p.tick(60); assert.strictEqual(shown().s, 'rest', 'a moment later: back to what is under the cursor');
+});
+
+check('камера, отладка: без нажатия — «До точки» и бледный луч в мини-виде до того, что под курсором мыши; пусто или курсор ушёл — нет', () => {
+  const p = runPage(PAGES.app, { hash: '#plan' }); p.tick();
+  p.document.getElementById('camBtn').click();
+  const state = () => p.run(() => { updateDebug(); const m = /До точки<\/i><em>([\d,]+)/.exec(distEl.innerHTML);
+    return { line: viewLine.visible, pivot: pivot.visible, d: m && +m[1].replace(',', '.'), cam: camera.position.clone() }; });
+  const near = (a, b, what) => assert.ok(Math.abs(a - b) < 0.006, what + ': ' + a + ' ≠ ' + b);
+  let P = under(p, 0.3, -0.1, 2); p.tick();
+  mouse(p, 'pointermove', 300, 200);
+  let s = state(); assert.ok(s.line && !s.pivot, 'the faint ray, no pivot'); near(s.d, Math.hypot(s.cam.x - P.x, s.cam.y - P.y, s.cam.z - P.z), 'the distance to it');
+  // the camera moves under a still cursor: the point is looked for again
+  P = under(p, 0, 0, 3.5, 6); p.tick(30);
+  s = state(); near(s.d, Math.hypot(s.cam.x - P.x, s.cam.y - P.y, s.cam.z - P.z), 'after the camera moved');
+  p.run(() => { ray.intersectObjects = () => []; }); p.run(() => { goal.r += 0.5; }); p.tick(30);
+  s = state(); assert.ok(!s.line && s.d === null, 'nothing under the cursor');
+  under(p, 0.3, -0.1, 2); mouse(p, 'pointermove', 300, 200); assert.ok(state().line, 'back over a thing');
+  p.document.getElementById('c').dispatch('pointerleave', { pointerId: 1, pointerType: 'mouse' });
+  s = state(); assert.ok(!s.line && s.d === null, 'the cursor left the scene');
+  // a finger has no cursor
+  under(p, 0.3, -0.1, 2); p.document.getElementById('c').dispatch('pointermove', { pointerId: 2, clientX: 300, clientY: 200, pointerType: 'touch' });
+  assert.ok(!state().line, 'not for a finger');
 });
 
 check('«Планировка»: камера «План» — под углом со стороны окна и санузла, левая стена и стена с окном убраны разрезом', () => {

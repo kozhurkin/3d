@@ -321,17 +321,26 @@ frameHooks.push(()=>{
   if(!itemDot.hidden&&itemCam&&camera.position.distanceTo(itemCam)>1e-4)hideItemDot();
   if(view!==itemView){itemView=view;hideItemDot();closeItemCard();}
 });
-/* a touch's mark: while fingers are down, a dot where the camera turns (one finger: the target) or what a pinch comes nearer to,
-   as the finger covers neither; the same size on screen, over everything, no ray finds it. The mouse has none: it turns about
-   the cursor */
-const MARK_PX=5;   // its radius on screen
+/* the touch's marks, while fingers are down (the finger covers what they show; the mouse has none: it turns about the cursor).
+   The dot: what one finger turns about, the target, in the centre of the screen — in a pinch too, as a later turn goes about it,
+   not about what was pinched. The ring: what a pinch comes nearer to, between the fingers. The same size on screen, over everything,
+   no ray finds them */
+const MARK_PX=5,PINCH_PX=14;   // their radii on screen
 const touchMark=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
   new THREE.MeshBasicMaterial({color:0xff6a1a,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));
 touchMark.renderOrder=30;touchMark.raycast=()=>{};touchMark.visible=false;scene.add(touchMark);
+const pinchMark=(()=>{
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');   // a white ring of radius 24, a dark edge
+  g.beginPath();g.arc(32,32,24,0,2*Math.PI);g.lineWidth=10;g.strokeStyle='rgba(0,0,0,.5)';g.stroke();g.lineWidth=5;g.strokeStyle='#fff';g.stroke();
+  const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
+  const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true}));
+  m.renderOrder=31;m.raycast=()=>{};m.visible=false;scene.add(m);return m;
+})();
 frameHooks.push(()=>{
-  touchMark.visible=touchDown&&ptrs.size>0&&!held&&!ownMouse();if(!touchMark.visible)return;
-  touchMark.position.copy(pinchP||goalT);
-  touchMark.scale.setScalar(camera.position.distanceTo(touchMark.position)*2*Math.tan(camera.fov*Math.PI/360)*MARK_PX/viewer.clientHeight);
+  const on=touchDown&&ptrs.size>0&&!held&&!ownMouse();touchMark.visible=on;pinchMark.visible=on&&!!pinchP;
+  const px=P=>camera.position.distanceTo(P)*2*Math.tan(camera.fov*Math.PI/360)/viewer.clientHeight;   // m per px at P
+  if(on){touchMark.position.copy(goalT);touchMark.scale.setScalar(px(goalT)*MARK_PX);}
+  if(pinchMark.visible){pinchMark.position.copy(pinchP);pinchMark.scale.setScalar(px(pinchP)*PINCH_PX*64/24);}
 });
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 

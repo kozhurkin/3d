@@ -325,13 +325,14 @@ frameHooks.push(()=>{
    The dot: what one finger turns about, the target, in the centre of the screen — in a pinch too, as a later turn goes about it,
    not about what was pinched. The ring: what a pinch comes nearer to, between the fingers. The same size on screen, over everything,
    no ray finds them */
-const MARK_PX=5,PINCH_PX=14;   // their radii on screen
+const MARK_PX=5,RING_W=3;   // on screen, px: the dot's radius, the ring's width (its hole is the dot's size)
 const touchMark=new THREE.Mesh(new THREE.SphereGeometry(1,16,12),
   new THREE.MeshBasicMaterial({color:0xff6a1a,depthTest:false,depthWrite:false,transparent:true,opacity:.9}));
 touchMark.renderOrder=30;touchMark.raycast=()=>{};touchMark.visible=false;scene.add(touchMark);
 const pinchMark=(()=>{
-  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');   // a blue ring of radius 24, half see-through
-  g.beginPath();g.arc(32,32,24,0,2*Math.PI);g.lineWidth=6;g.strokeStyle='#1e88ff';g.stroke();
+  // a blue ring out to the edge of the canvas (radius 30 of 32), half see-through: the hole MARK_PX, the ring RING_W wide
+  const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),w=30*RING_W/(MARK_PX+RING_W);
+  g.beginPath();g.arc(32,32,30-w/2,0,2*Math.PI);g.lineWidth=w;g.strokeStyle='#1e88ff';g.stroke();
   const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;
   const m=new THREE.Sprite(new THREE.SpriteMaterial({map:t,depthTest:false,depthWrite:false,transparent:true,opacity:.6}));
   m.renderOrder=31;m.raycast=()=>{};m.visible=false;scene.add(m);return m;
@@ -340,7 +341,7 @@ frameHooks.push(()=>{
   const on=touchDown&&ptrs.size>0&&!held&&!ownMouse();touchMark.visible=on;pinchMark.visible=on&&!!pinchP;
   const px=P=>camera.position.distanceTo(P)*2*Math.tan(camera.fov*Math.PI/360)/viewer.clientHeight;   // m per px at P
   if(on){touchMark.position.copy(goalT);touchMark.scale.setScalar(px(goalT)*MARK_PX);}
-  if(pinchMark.visible){pinchMark.position.copy(pinchP);pinchMark.scale.setScalar(px(pinchP)*PINCH_PX*64/24);}
+  if(pinchMark.visible){pinchMark.position.copy(pinchP);pinchMark.scale.setScalar(px(pinchP)*(MARK_PX+RING_W)*64/30);}
 });
 let camDrive=null;     // while set, it places the camera instead of the easing toward the goal
 

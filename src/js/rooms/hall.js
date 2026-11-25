@@ -6,6 +6,9 @@
    Own scope: the room modules share names. */
 (function(){
 let T=16, TF=16; const HDF=4, G=2;
+// the whole cabinet (carcasses and fronts) this far from the side walls and from the ceiling: walls and ceiling aren't true, the
+// mezzanine goes in past the bathroom door's casing and slides over the columns, the doors open clear of the ceiling
+const MG=5;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
@@ -13,25 +16,26 @@ let current=null;
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
   const [parts,add]=partList(), W=p.W, Dc=p.D-TF, Hb=p.H-p.Ht, FL=p.Feet?10:0;   // FL: floor-standing parts sit on 10 mm feet
+  const xa=MG, xb=W-MG;   // the cabinet's outer faces, MG in from the walls (x is from the left wall)
   // left column
   // left column is a false panel: inner side + fixed front, no outer side, no back
   add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,0,Dc);
-  add('Дно / крышка левой фальш-панели','carcass',0,p.Lw-T,FL,FL+T,0,Dc);
-  add('Дно / крышка левой фальш-панели','carcass',0,p.Lw-T,Hb-T,Hb,0,Dc);
-  add('Левая фальш-панель (лицевая, глухая)','front',0,p.Lw-G/2,FL,Hb-G/2,Dc,Dc+TF);
+  add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,FL,FL+T,0,Dc);
+  add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,Hb-T,Hb,0,Dc);
+  add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw-G/2,FL,Hb-G/2,Dc,Dc+TF);
   // right column
   const rx=W-p.Rw;
-  add('Бок правой колонны','carcass',W-T,W,FL,Hb,0,Dc);
-  add('Задняя стенка правой колонны','carcass',rx,W-T,FL,Hb,0,T);
+  add('Бок правой колонны','carcass',xb-T,xb,FL,Hb,0,Dc);
+  add('Задняя стенка правой колонны','carcass',rx,xb-T,FL,Hb,0,T);
   const pl=p.plinth?p.Pl:0;
-  add('Лицевая панель правой колонны','front',rx+G/2,W-G/2,FL,Hb-G/2,Dc,Dc+TF);
+  add('Лицевая панель правой колонны','front',rx+G/2,xb,FL,Hb-G/2,Dc,Dc+TF);
   if(pl){
     add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc);
   }
   const step=(Hb-T-pl-FL)/(p.N+1);
   for(let i=0;i<=p.N+1;i++){
     const y=i===p.N+1?Hb-T:FL+pl+i*step;
-    add(i===0?'Дно правой колонны':i===p.N+1?'Крышка правой колонны':'Полка правой колонны','carcass',rx,W-T,y,y+T,T,Dc);
+    add(i===0?'Дно правой колонны':i===p.N+1?'Крышка правой колонны':'Полка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc);
   }
   /* top: two separate carcasses for easier installation, or one (mezzOne) — its bottom, top and rails across the whole width,
      a partition centred on the joint of the fronts (each section half a board wider than its box was), the fronts the same.
@@ -47,12 +51,14 @@ function computeParts(p){
   };
   const shelf=(nm,x0,x1)=>add('Полка антресоли — '+nm,'carcass',x0,x1,ym,ym+T,0,Dc-20);
   if(p.mezzOne){
-    topBox('единый корпус',0,W);
+    // the one box as wide as the cabinet: W-2*MG goes past the bathroom door's casing (CT over the hall's left wall) with nothing to spare
+    const x0=xa;
+    topBox('единый корпус',x0,xb);
     add('Перегородка антресоли','carcass',rx-T/2,rx+T/2,Hb+T,p.H-T,T,Dc);   // in front of the rails
-    shelf('левая секция',T,rx-T/2);shelf('правая секция',rx+T/2,W-T);
+    shelf('левая секция',x0+T,rx-T/2);shelf('правая секция',rx+T/2,xb-T);
   }else{
-    topBox('центральный корпус',0,rx);shelf('центральный корпус',T,rx-T);
-    topBox('правый корпус',rx,W);shelf('правый корпус',rx+T,W-T);
+    topBox('центральный корпус',xa,rx);shelf('центральный корпус',xa+T,rx-T);
+    topBox('правый корпус',rx,xb);shelf('правый корпус',rx+T,xb-T);
   }
   if(p.reveal){
     const z0=-p.Rv;
@@ -61,25 +67,25 @@ function computeParts(p){
     add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
   }
   const mid=(p.Lw+rx)/2;
-  add('Фальш-панель антресоли (под петли, глухая)','front',0,p.Lw-G/2,Hb+G/2,p.H,Dc,Dc+TF);
+  add('Фальш-панель антресоли (под петли, глухая)','front',xa,p.Lw-G/2,Hb+G/2,p.H,Dc,Dc+TF);
   add('Фасад антресоли','front',p.Lw+G/2,mid-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'L'});
   add('Фасад антресоли','front',mid+G/2,rx-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
-  add('Фасад антресоли правый','front',rx+G/2,W-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
+  add('Фасад антресоли правый','front',rx+G/2,xb,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
   // every board that reaches the floor is lifted onto the feet
   if(FL)parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
   // feet at the corners of each floor-standing unit (8 mm in from the outer faces)
   const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8],[x1-8,z0+8],[x0+8,z1-8],[x1-8,z1-8]];
-  const feet=[...cnr(0,p.Lw,0,Dc+TF),...cnr(rx,W,0,Dc+TF)];
+  const feet=[...cnr(xa,p.Lw,0,Dc+TF),...cnr(rx,xb,0,Dc+TF)];
   return {parts,Dc,Hb,FL,feet};
 }
 
 const O=()=>ROOMS.find(r=>r.id==='hall').origin;   // the hall's (0,0) on the plan, mm
 /* sizes that belong to the walls come from the plan: the false panel and the column reach the opening's sides, the mezzanine
    starts at its top; with the reveal cladding on, each is one board bigger and the board lines the opening. The cabinet is no
-   higher than the ceiling and leaves the mezzanine at least HT_MIN (its two back rails fit) */
+   higher than MG under the ceiling and leaves the mezzanine at least HT_MIN (its two back rails fit) */
 const HT_MIN=300;
 const hBottom=()=>A.eDH-(P.reveal?(P.T||16):0);   // where the mezzanine starts: the top of the opening, or of its cladding
-const hRange=()=>{const hi=A.H;return [Math.min(hBottom()+HT_MIN,hi),hi];};
+const hRange=()=>{const hi=A.H-MG;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(w){
   T=P.T||16;TF=P.TF||16;const rv=P.reveal?T:0,[h0,h1]=hRange();
   P.W=A.hallW;P.L=hLen;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
@@ -130,13 +136,13 @@ function buildCase(g){
 function buildDims(dim,gaps){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Y=new THREE.Vector3(0,1,0),z=P.D+60,Hb=current.Hb;
   const ow=P.W-P.Lw-P.Rw,xr=P.W-60;
-  dim(V(0,P.H+140,z),V(P.W,P.H+140,z),`${P.W}`,Y);
+  dim(V(MG,P.H+140,z),V(P.W-MG,P.H+140,z),`${P.W-2*MG}`,Y);   // the cabinet, MG off each wall
   dim(V(xr,0,z),V(xr,P.H,z),`${P.H}`,X);
   dim(V(60,Hb,z),V(60,P.H,z),`${P.Ht}`,X);
   // across the opening at 260: the left column (the false panel), the opening, the right column
-  dim(V(0,260,z),V(P.Lw,260,z),`${P.Lw}`,Y);
+  dim(V(MG,260,z),V(P.Lw,260,z),`${P.Lw-MG}`,Y);
   dim(V(P.Lw,260,z),V(P.W-P.Rw,260,z),`проём ${ow}`,Y);
-  dim(V(P.W-P.Rw,260,z),V(P.W,260,z),`${P.Rw}`,Y);
+  dim(V(P.W-P.Rw,260,z),V(P.W-MG,260,z),`${P.Rw-MG}`,Y);
   dim(V((P.Lw+P.W-P.Rw)/2,0,z),V((P.Lw+P.W-P.Rw)/2,Hb,z),`${Hb}`,X);
   dim(V(xr,P.H+140,0),V(xr,P.H+140,P.D),`${P.D}`,Y);
   // between the shelves of the right column; in the mezzanine, each shelf with the bottom and the top over it (two boxes,
@@ -172,8 +178,9 @@ hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.bui
 hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
 // what comes from the plan, the space between the shelves, the opening left between the columns
 function panelText(){
-  [['W',P.W],['Hc',A.H],['Rv',P.Rv],['Ht',P.Ht],['Lw',P.Lw],['Rw',P.Rw]].forEach(([n,v])=>{hq('#h-'+n).textContent=v+' мм';});
-  hq('#hSub').textContent=`${P.W} × ${P.H} × ${P.D} мм · `+k.finDesc();
+  // the hall from the plan; the false panel and the column as they are, MG off the walls
+  [['W',P.W],['Hc',A.H],['Rv',P.Rv],['Ht',P.Ht],['Lw',P.Lw-MG],['Rw',P.Rw-MG]].forEach(([n,v])=>{hq('#h-'+n).textContent=v+' мм';});
+  hq('#hSub').textContent=`${P.W-2*MG} × ${P.H} × ${P.D} мм · `+k.finDesc();
   const pl=P.plinth?P.Pl:0,t=P.T||16,step=(P.H-P.Ht-t-pl-(P.Feet?10:0))/(P.N+1),f=v=>v.toFixed(1).replace('.',',').replace(',0','');
   hq('#h-shelfGap').textContent=`Между полками ${f(step-t)} мм · секций ${P.N+1}`;
   // the opening as it is left between the claddings
@@ -186,7 +193,7 @@ const k=roomKit('hall',{
   fromPlan:['W','L','Lw','Rw','Ht','Rv'],
   ids:['H','D','N','Pl'],
   wish:['H'],
-  onSyncIds:()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;},   // the height stays between the mezzanine's least and the ceiling
+  onSyncIds:()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;},   // the height stays between the mezzanine's least and MG under the ceiling
   slider:{sel:'#hFrameSd',key:'Sd',max:()=>hLen},   // how far from the bearing wall the side walls show, up to the kitchen wall
   dims:buildDims,
   // the tool box: in the hall's own view once the frame shows the right wall past it; its footprint on the plan

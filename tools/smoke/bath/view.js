@@ -105,10 +105,10 @@ check('санузел: фасады, размеры, деталировка, н�
   const dims = bq('#b-tDims'); dims.checked = false; dims.dispatch('change');
   assert.deepStrictEqual(p.run('[VS.bath.fronts, VS.bath.dims]'), ['hidden', false]);
   // cut list: every part, grouped by material; the same as CSV
-  assert.match(bq('#b-tot').innerHTML, /^<span>34 детали?<\/span>|^<span>34 деталей<\/span>/);
+  assert.match(bq('#b-tot').innerHTML, /^<span>39 детали?<\/span>|^<span>39 деталей<\/span>/);
   const csv = bq('#b-csv').value.split('\n');
   assert.strictEqual(csv[0], 'Деталь;Материал;Длина;Ширина;Толщина;Кол-во');
-  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 34);
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 39);
   assert.strictEqual(bq('#b-cut').querySelectorAll('th.mh').length, 2, 'carcass and fronts');
   // feet are listed under the parts
   const feet = bq('#b-tFeet'); feet.checked = true; feet.dispatch('change');

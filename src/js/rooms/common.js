@@ -152,7 +152,7 @@ function roomKit(id,cfg){
   // a plain click paints the carcass and the fronts; other groups change only through the menu
   function setFinish(f,where){
     if(where==='both'){FIN.carcass=Object.assign({},f);FIN.front=Object.assign({},f);}else FIN[where]=Object.assign({},f);
-    applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();keepFin();
+    applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();keep();
   }
   const words=groups.map(g=>FIN_WORD[g]);
   const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};
@@ -213,7 +213,7 @@ function roomKit(id,cfg){
   { const s=readJSON(KEY);if(s)applyState(s); }
   const defMsg=pq('defMsg');
   pq('saveDef').addEventListener('click',()=>{try{localStorage.setItem(KEY,JSON.stringify(getState()));defMsg.textContent='Сохранено в этом браузере';}catch(e){defMsg.textContent='Браузер не дал сохранить. Скопируйте код и пришлите в чат';}});
-  pq('resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY));keepFin();sync();defMsg.textContent='Исходные настройки возвращены';});
+  pq('resetDef').addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch(e){}applyState(JSON.parse(FACTORY));keep();sync();defMsg.textContent='Исходные настройки возвращены';});
   pq('copyDef').addEventListener('click',()=>copyText(pq('defCode'),JSON.stringify(getState()),defMsg,'Код скопирован'));
 
   // the sliders' values, the room's own texts, the cut list
@@ -244,13 +244,19 @@ function roomKit(id,cfg){
     sync,
     onDoors:syncDoorMode
   },viewDef));
-  // the finish chosen last stays through a reload (cfg.keepFin): it is kept with the view's settings, over the remembered defaults
-  function keepFin(){if(cfg.keepFin){VS[id].fin=JSON.parse(JSON.stringify(FIN));saveView(id);}}
+  // what was chosen last stays through a reload, kept with the view's settings over the remembered defaults:
+  // the finish (cfg.keepFin), the room's own choices (cfg.keepP: keys of P, as the layout of the bathroom)
+  function keep(){
+    if(cfg.keepFin)VS[id].fin=JSON.parse(JSON.stringify(FIN));
+    if(cfg.keepP)VS[id].p=Object.fromEntries(cfg.keepP.map(j=>[j,P[j]]));
+    if(cfg.keepFin||cfg.keepP)saveView(id);
+  }
   if(cfg.keepFin&&VS[id].fin){takeFinish(VS[id].fin);applyMaterials(mats,FIN,P.Ec);dirty=true;}
+  if(cfg.keepP&&VS[id].p){cfg.keepP.forEach(j=>{if(j in VS[id].p)P[j]=VS[id].p[j];});cur=cfg.fromModel(want);dirty=true;}
   // the plan changed the sizes: they come along. The room is rebuilt (when next in the scene) only if its own sizes changed;
   // otherwise it only moves — on the plan a slider moves every room at once
   modelHooks.push(()=>{const was=JSON.stringify(P);cur=cfg.fromModel(want);if(JSON.stringify(P)!==was)dirty=true;else place();sync();});
 
   const finDesc=()=>{const fc=finName(FIN.carcass),ff=finName(FIN.front);return fc===ff?fc:`корпус — ${fc}; фасады — ${ff}`;};
-  return {build,syncThick,syncIds,syncFinish,updatePanel,finDesc};
+  return {build,syncThick,syncIds,syncFinish,updatePanel,finDesc,keep};
 }

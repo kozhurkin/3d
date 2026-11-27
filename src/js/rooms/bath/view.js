@@ -28,13 +28,14 @@ function buildDims(dim,gaps){
   dim(V(xe,0,z1-60),V(xe,P.Hi,z1-60),`${P.Hi}`,X);
   if(yb>P.Hi)dim(V(xe,P.Hi,z1-60),V(xe,yb,z1-60),`${yb-P.Hi}`,X);
   dim(V(0,yb-80,z1+40),V(P.Du,yb-80,z1+40),`${P.Du}`,Y);
-  // between the shelves: each section of the tall cabinet that has them (the divider closes both), the upper cabinet
+  // between the shelves: each carcass of the tall cabinet that has them, the upper cabinet, the open section (layout 2)
   const by=nms=>current.parts.filter(q=>q.mat==='carcass'&&nms.includes(q.name));
-  const tall=by(['Дно пенала','Полка-разделитель пенала','Полка пенала','Крышка пенала']);
-  if(P.Nb)gaps(tall.filter(q=>q.y0<=P.Hi));
-  if(P.Nh)gaps(tall.filter(q=>q.y1>=P.Hi));
+  const box=nm=>by(['Дно','Полка','Крышка'].map(w=>w+' '+nm));
+  if(P.Nb)gaps(box('нижнего корпуса пенала'));
+  if(P.Nh)gaps(box('верхнего корпуса пенала'));
   if(P.Nu)gaps(by(['Дно верхнего шкафа','Полка верхнего шкафа','Крышка верхнего шкафа']));
-  gaps(by(['Дно открытой секции','Полка открытой секции','Крышка открытой секции']));   // layout 2, when it has one
+  // layout 2, when it has one; its lower carcass has no top: the upper one's bottom closes it
+  gaps([...box('нижнего корпуса открытой секции'),...by(['Дно верхнего корпуса открытой секции'])]);gaps(box('верхнего корпуса открытой секции'));
 }
 
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */
@@ -55,14 +56,14 @@ function setCam(v){
 const panel=document.querySelector('[data-panel="bath"]'),bq=s=>panel.querySelector(s);
 bq('#b-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
 // layout 2: no niche, the upper cabinet on the installation with inset doors, an open section between the riser box and the tall cabinet
-panel.querySelectorAll('[data-lay]').forEach(b=>b.addEventListener('click',()=>{P.Lay=+b.dataset.lay;k.syncThick();k.build();}));
+panel.querySelectorAll('[data-lay]').forEach(b=>b.addEventListener('click',()=>{P.Lay=+b.dataset.lay;k.syncThick();k.build();k.keep();}));
 // the niche, the ceiling and the riser box (from the plan), the space between the shelves
 function panelText(){
   bq('#b-W').textContent=P.W+' мм';bq('#b-L').textContent=P.L+' мм';bq('#b-H').textContent=P.H+' мм';bq('#b-R').textContent=`${P.Rx} × ${P.Rz} мм`;
   bq('#bSub').textContent=`ниша ${P.W} × ${P.L} мм · потолок ${P.H} мм · `+k.finDesc();
   const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),fl=P.Feet?10:0;
   // free height between neighbouring shelves (from the top of one shelf to the underside of the next)
-  const sb=(P.Hi-t/2-P.Pl-fl-t)/(P.Nb+1),sh=(P.H-t-P.Hi-t/2)/(P.Nh+1);
+  const sb=(P.Hi-t-P.Pl-fl-t)/(P.Nb+1),sh=(P.H-t-P.Hi-t)/(P.Nh+1);
   const L2=P.Lay===2,yb=L2?P.Hi:P.Hi+P.Gap,su=(P.H-yb-t)/(P.Nu+1);
   const gap=(n,v)=>(n?`между полками ${f(v-t)} мм`:`без полок: высота отделения ${f(v-t)} мм`);
   bq('#b-gapB').textContent=`Высота дверей ${P.Hi-P.Pl-fl} мм · `+gap(P.Nb,sb);
@@ -76,7 +77,7 @@ function panelText(){
 
 const k=roomKit('bath',{
   P,FIN,mats,px:'b',panel,origin:O,fromModel,setCam,panelText,
-  keepFin:true,   // the finish stays through a reload
+  keepFin:true,keepP:['Lay'],   // the finish and the layout stay through a reload
   fromPlan:['W','L','H','Rx','Rz','Lt'],
   ids:['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'],
   wish:['Wc','Gap'],

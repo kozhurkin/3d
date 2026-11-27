@@ -5,38 +5,40 @@ function computeParts(p){
   const zf=Math.max(p.Dt,p.Rz+TF), zc=zf-TF;   // front plane of the back run (tall cabinet + riser cladding)
   const xb=W, xa=W-Math.min(p.Wc,W-p.Rx);     // carcass at the right; cladding covers riser + filler on the left
   const pl=p.Pl, sp=p.Hi;   // door split follows the installation height
-  // layout 2: an open section between the riser box and the tall cabinet, the cladding only over the box
-  const L2=p.Lay===2, xs=p.Rx, os=L2&&xa-xs>2*T+40, xc=os?xs:xa-G/2;
-  // tall cabinet, floor to ceiling, against the back wall, standing on a plinth
-  add('Бок пенала','carcass',xa,xa+T,FL,H,0,zc);
-  add('Бок пенала','carcass',xb-T,xb,FL,H,0,zc);
-  add('Дно пенала','carcass',xa+T,xb-T,FL+pl,FL+pl+T,0,zc);
-  add('Крышка пенала','carcass',xa+T,xb-T,H-T,H,0,zc);
-  add('Полка-разделитель пенала','carcass',xa+T,xb-T,sp-T/2,sp+T/2,0,zc);
-  add('Ребро жёсткости пенала','carcass',xa+T,xb-T,FL+pl+T,FL+pl+T+RB,0,T);
-  add('Ребро жёсткости пенала','carcass',xa+T,xb-T,H-T-RB,H-T,0,T);
-  const sb=(sp-T/2-FL-pl-T)/(p.Nb+1);
-  for(let i=1;i<=p.Nb;i++){const y=FL+pl+T+i*sb-T/2;add('Полка пенала','carcass',xa+T,xb-T,y,y+T,T,zc-20);}
-  const sh=(H-T-sp-T/2)/(p.Nh+1);
-  for(let i=1;i<=p.Nh;i++){const y=sp+T/2+i*sh-T/2;add('Полка пенала','carcass',xa+T,xb-T,y,y+T,T,zc-20);}
+  // layout 2: an open section between the riser box and the tall cabinet, the cladding only over the box and only Cw wide:
+  // the installation box and the upper cabinet hide the rest of it, so it starts no further out than the shallower of them
+  const L2=p.Lay===2, xs=p.Rx, os=L2&&xa-xs>2*T+40, xc=os?xs:xa-G/2, xc0=os?Math.max(0,Math.min(xs-p.Cw,p.Di,p.Du)):0;
+  /* one carcass (no LDSP sheet is floor to ceiling high, so each run is two, one on the other, split at the installation's top):
+     its sides from y0 to y1, the bottom at yd (over the plinth) and the top between them, n shelves evenly between those;
+     behind — two ribs (the tall cabinet: its shelves 20 mm short of the doors) or an LDSP back (the open section: all flush in front);
+     lid false: no top, the carcass above closes it (no two boards at the joint where it shows) */
+  const body=(nm,x0,x1,y0,yd,y1,zd,n,open,lid=true)=>{
+    const zb=open?T:0,yt=lid?y1-T:y1;   // yt: the underside of what closes it from above
+    add('Бок '+nm,'carcass',x0,x0+T,y0,y1,0,zd);
+    add('Бок '+nm,'carcass',x1-T,x1,y0,y1,0,zd);
+    add('Дно '+nm,'carcass',x0+T,x1-T,yd,yd+T,zb,zd);
+    if(lid)add('Крышка '+nm,'carcass',x0+T,x1-T,y1-T,y1,zb,zd);
+    if(open)add('Задняя стенка '+nm,'carcass',x0+T,x1-T,yd,y1,0,T);
+    else{add('Ребро жёсткости '+nm,'carcass',x0+T,x1-T,yd+T,yd+T+RB,0,T);add('Ребро жёсткости '+nm,'carcass',x0+T,x1-T,y1-T-RB,y1-T,0,T);}
+    const st=(yt-yd-T)/(n+1);
+    for(let i=1;i<=n;i++){const y=yd+T+i*st-T/2;add('Полка '+nm,'carcass',x0+T,x1-T,y,y+T,T,open?zd:zd-20);}
+  };
+  // tall cabinet against the back wall: the lower carcass on the plinth up to the installation's top, the upper one up to the ceiling
+  body('нижнего корпуса пенала',xa,xb,FL,FL+pl,sp,zc,p.Nb);
+  body('верхнего корпуса пенала',xa,xb,sp,sp,H,zc,p.Nh);
   const plinth=(x0,x1)=>add('Цоколь пенала и короба (заподлицо с фасадами)','front',x0,x1,FL,FL+pl-G/2,zc,zf);
-  if(pl>0){if(os){plinth(G/2,xs);plinth(xa,W-G/2);}else plinth(G/2,W-G/2);}
-  // the open section: floor to ceiling, as deep as the run (flush with the cladding and the doors), its own LDSP back, shelves evenly;
+  if(pl>0){if(os)plinth(xa,W-G/2);else plinth(G/2,W-G/2);}   // layout 2: the cladding goes down to the floor, no plinth under it
+  // the open section: as deep as the run (flush with the cladding and the doors), two carcasses as the tall cabinet's;
   // its plinth between its sides, in its colour (it has no fronts)
   if(os){
     if(pl>0)add('Цоколь открытой секции','carcass',xs+T,xa-T,FL,FL+pl-G/2,zc,zf);
-    add('Бок открытой секции','carcass',xs,xs+T,FL,H,0,zf);
-    add('Бок открытой секции','carcass',xa-T,xa,FL,H,0,zf);
-    add('Задняя стенка открытой секции','carcass',xs+T,xa-T,FL+pl,H,0,T);
-    add('Дно открытой секции','carcass',xs+T,xa-T,FL+pl,FL+pl+T,T,zf);
-    add('Крышка открытой секции','carcass',xs+T,xa-T,H-T,H,T,zf);
-    const so=(H-T-FL-pl-T)/(p.Ns+1);
-    for(let i=1;i<=p.Ns;i++){const y=FL+pl+T+i*so-T/2;add('Полка открытой секции','carcass',xs+T,xa-T,y,y+T,T,zf);}
+    body('нижнего корпуса открытой секции',xs,xa,FL,FL+pl,sp,zf,p.Nsb,true,false);   // under the upper one's bottom: no top of its own
+    body('верхнего корпуса открытой секции',xs,xa,sp,sp,H,zf,p.Nsh,true);
   }
-  // fronts: riser cladding (fixed, two panels) + 4 doors, split at the same height
+  // fronts: riser cladding (fixed, two panels; layout 2: the lower one down to the floor) + 4 doors, split at the same height
   const xm=(xa+xb)/2;
   [[FL+pl+G/2,sp-G/2,'нижняя'],[sp+G/2,H-G/2,'верхняя']].forEach(([y0,y1,nm])=>{
-    add('Облицовка короба, '+nm+' (фасад, глухой)','front',0,xc,y0,y1,zc,zf);
+    add('Облицовка короба, '+nm+' (фасад, глухой)','front',xc0,xc,os&&y0<sp?FL:y0,y1,zc,zf);
     add('Фасад пенала','front',xa+G/2,xm-G/2,y0,y1,zc,zf,{hinge:'L'});
     add('Фасад пенала','front',xm+G/2,xb-G/2,y0,y1,zc,zf,{hinge:'R'});
   });
@@ -72,7 +74,7 @@ function computeParts(p){
   if(FL)parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
   // feet at the corners of each floor-standing unit (8 mm in from the outer faces): tall cabinet, the open section, the riser cladding front
   const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8],[x1-8,z0+8],[x0+8,z1-8],[x1-8,z1-8]];
-  const feet=os?[...cnr(xa,xb,0,zf),...cnr(xs,xa,0,zf),[8,zf-8]]:[...cnr(xa,xb,0,zf),[8,zf-8],[xa-8,zf-8]];
+  const feet=os?[...cnr(xa,xb,0,zf),...cnr(xs,xa,0,zf),[xc0+8,zf-8]]:[...cnr(xa,xb,0,zf),[8,zf-8],[xa-8,zf-8]];
   return {parts,zf,yb,Hb:p.Hi,FL,feet};
 }
 

@@ -105,28 +105,29 @@ check('санузел: фасады, размеры, деталировка, н�
   const dims = bq('#b-tDims'); dims.checked = false; dims.dispatch('change');
   assert.deepStrictEqual(p.run('[VS.bath.fronts, VS.bath.dims]'), ['hidden', false]);
   // cut list: every part, grouped by material; the same as CSV
-  assert.match(bq('#b-tot').innerHTML, /^<span>39 детали?<\/span>|^<span>39 деталей<\/span>/);
+  assert.match(bq('#b-tot').innerHTML, /^<span>40 деталей<\/span>/);
   const csv = bq('#b-csv').value.split('\n');
   assert.strictEqual(csv[0], 'Деталь;Материал;Длина;Ширина;Толщина;Кол-во');
-  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 39);
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 40);
   assert.strictEqual(bq('#b-cut').querySelectorAll('th.mh').length, 2, 'carcass and fronts');
-  // feet are listed under the parts
-  const feet = bq('#b-tFeet'); feet.checked = true; feet.dispatch('change');
-  assert.match(bq('#b-tot').innerHTML, /Опоры регулируемые М6, шайба Ø15×5: 6 шт/);
+  // feet are listed under the parts (on from the start, four in the tall cabinet's sides); off — not listed
+  assert.match(bq('#b-tot').innerHTML, /Опоры регулируемые М6, шестигранник 19×5: 4 шт/);
+  const feet = bq('#b-tFeet'); feet.checked = false; feet.dispatch('change');
+  assert.doesNotMatch(bq('#b-tot').innerHTML, /Опоры/);
   // remembered: cabinets and finishes, without the niche, the ceiling and the riser box
   const hi = bq('[data-p="Hi"]'); hi.value = '1300'; hi.dispatch('input');
   bq('[data-decor="H3154"]').click();
   bq('#b-saveDef').click();
   const saved = JSON.parse(storage.get('apt-bath-v2'));
-  assert.deepStrictEqual([saved.P.Hi, saved.P.Feet, ['W', 'L', 'H', 'Rx', 'Rz', 'Lt'].some((k) => k in saved.P), saved.FIN.front.decor], [1300, true, false, 'H3154']);
+  assert.deepStrictEqual([saved.P.Hi, saved.P.Feet, ['W', 'L', 'H', 'Rx', 'Rz', 'Lt'].some((k) => k in saved.P), saved.FIN.front.decor], [1300, false, false, 'H3154']);
   p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick();
   bp = p.document.querySelector('[data-panel="bath"]');
-  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet,f.P.W])(tt.fur("bath"))'), [1300, true, 1250]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet,f.P.W])(tt.fur("bath"))'), [1300, false, 1250]);
   assert.match(bq('#bSub').textContent, /Дуб Чарльстон тёмно-коричневый/);
   assert.deepStrictEqual(pressed(), ['hidden'], 'the view remembers the fronts taken off');
   bq('#b-resetDef').click();
-  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet])(tt.fur("bath"))'), [1200, false]);
-  assert.strictEqual(bq('#b-tFeet').checked, false);
+  assert.deepStrictEqual(p.run('(f=>[f.P.Hi,f.P.Feet])(tt.fur("bath"))'), [1200, true]);
+  assert.strictEqual(bq('#b-tFeet').checked, true);
   assert.ok(!storage.has('apt-bath-v2'));
   assert.match(bq('#bSub').textContent, /корпус — Диамант серый U963 ST9; фасады — Базовый коричневый декор$/);
 });

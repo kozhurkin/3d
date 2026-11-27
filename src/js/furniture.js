@@ -145,7 +145,7 @@ function makeMats(){
   // the room's own steel and plastic too: every material of a room is cut by the room's own planes (furnClip)
   mats.dishDoor=new THREE.MeshStandardMaterial({color:0xb4b7ba,roughness:.35,metalness:.65});
   mats.dishPanel=new THREE.MeshStandardMaterial({color:0x6d7276,roughness:.5,metalness:.5});
-  mats.feet=new THREE.MeshStandardMaterial({color:0x1e1e1e,roughness:.6});
+  mats.feet=new THREE.MeshStandardMaterial({color:0x0c0c0c,roughness:.45});   // black plastic, as a flush button
   mats.pin=new THREE.MeshStandardMaterial({color:0xc8c8c4,metalness:.9,roughness:.3});
   return mats;
 }
@@ -261,10 +261,10 @@ function buildParts(c,mats,{prev=[],open=false}={}){
       holder.add(mesh);holder.userData.front=true;model.add(holder);
     }else{mesh.position.set(cx,cy,cz);(p.inSlide&&slideHolders[p.inSlide]||model).add(mesh);}
   });
-  // adjustable feet (Ø16 mm) under floor-standing cabinets; not part of the panel cut list
+  // adjustable feet (hexagonal, 19 mm) under floor-standing cabinets; not part of the panel cut list
   if(c.FL>0)(c.feet||[]).forEach(([x,z])=>{
-    // black plastic puck Ø15×5 mm on the floor + M6 steel pin screwed into the panel edge
-    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0075,.0075,.005,20),mats.feet);
+    // black plastic hexagonal puck 19 mm across the corners (a round Ø19 cut to six flats), 5 high, on the floor + M6 steel pin screwed into the panel edge
+    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0095,.0095,.005,6),mats.feet);
     puck.position.set(x*MM,.0025,z*MM);puck.castShadow=true;model.add(puck);
     const pin=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,c.FL*MM-.005,12),mats.pin);
     pin.position.set(x*MM,.005+(c.FL*MM-.005)/2,z*MM);model.add(pin);});

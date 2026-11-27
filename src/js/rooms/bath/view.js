@@ -55,7 +55,7 @@ function setCam(v){
 
 /* ---------- panel: what the bathroom has (each cabinet's layout, feet under the tall cabinet) and its texts ---------- */
 const panel=document.querySelector('[data-panel="bath"]'),bq=s=>panel.querySelector(s);
-bq('#b-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
+bq('#b-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();k.keep();});
 // each cabinet's layout (data-for: its key in P): the upper one on the installation with inset doors, no niche (LayU);
 // a section between the riser box and the tall cabinet (LayT): open (2), its upper carcass behind a door (3)
 const lays=[...panel.querySelectorAll('[data-lay]')];
@@ -80,7 +80,7 @@ function panelText(){
 
 const k=roomKit('bath',{
   P,FIN,mats,px:'b',panel,origin:O,fromModel,setCam,panelText,
-  keepFin:true,keepP:['LayU','LayT'],   // the finish and the layouts stay through a reload
+  keepFin:true,keepP:['LayU','LayT','Feet'],   // the finish, the layouts and the feet stay through a reload
   fromPlan:['W','L','H','Rx','Rz','Lt'],
   ids:['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'],
   wish:['Wc','Gap'],

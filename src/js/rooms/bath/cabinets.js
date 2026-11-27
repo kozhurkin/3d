@@ -28,6 +28,8 @@ function computeParts(p){
   body('верхнего корпуса пенала',xa,xb,sp,sp,H,zc,p.Nh);
   const plinth=(x0,x1)=>add('Цоколь пенала и короба (заподлицо с фасадами)','front',x0,x1,FL,FL+pl-G/2,zc,zf);
   if(pl>0){if(os)plinth(xa,W-G/2);else plinth(G/2,W-G/2);}   // with the section: the cladding goes down to the floor, no plinth under it
+  // the tall cabinet's own plinth: across the front between its sides, under its bottom, the fronts' plinth fixed onto it
+  if(pl>0)add('Цоколь пенала','carcass',xa+T,xb-T,FL,FL+pl,zc-T,zc);
   // the section at the riser box: two carcasses as the tall cabinet's, each with its LDSP back; its plinth between its sides, in its colour.
   // Layout 2: both open, as deep as the run (flush with the cladding and the doors); the lower one has no top, the upper one's bottom closes it.
   // Layout 3: the upper one behind a door as the tall cabinet's (hinged at the riser box, opening away from the tall cabinet),
@@ -76,9 +78,10 @@ function computeParts(p){
   }
   // every board that reaches the floor is lifted onto the feet
   if(FL)parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
-  // feet at the corners of each floor-standing unit (8 mm in from the outer faces): tall cabinet, the open section, the riser cladding front
-  const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8],[x1-8,z0+8],[x0+8,z1-8],[x1-8,z1-8]];
-  const feet=os?[...cnr(xa,xb,0,zf),...cnr(xs,xa,0,zf),[xc0+8,zf-8]]:[...cnr(xa,xb,0,zf),[8,zf-8],[xa-8,zf-8]];
+  // feet in the sides of each carcass on the floor (the tall cabinet's, the open section's), 32 in from the carcass's front and back edges;
+  // the fronts' plinth and the riser cladding have none
+  const ft=(x0,x1,zd)=>[x0+T/2,x1-T/2].flatMap(x=>[[x,32],[x,zd-32]]);
+  const feet=[...ft(xa,xb,zc),...(os?ft(xs,xa,zf):[])];
   return {parts,zf,yb,Hb:p.Hi,FL,feet};
 }
 

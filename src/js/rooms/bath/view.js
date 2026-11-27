@@ -28,14 +28,15 @@ function buildDims(dim,gaps){
   dim(V(xe,0,z1-60),V(xe,P.Hi,z1-60),`${P.Hi}`,X);
   if(yb>P.Hi)dim(V(xe,P.Hi,z1-60),V(xe,yb,z1-60),`${yb-P.Hi}`,X);
   dim(V(0,yb-80,z1+40),V(P.Du,yb-80,z1+40),`${P.Du}`,Y);
-  // between the shelves: each carcass of the tall cabinet that has them, the upper cabinet, the open section (layout 2)
+  // between the shelves: each carcass of the tall cabinet that has them, the upper cabinet, the section at the riser box (the tall cabinet's 2 and 3)
   const by=nms=>current.parts.filter(q=>q.mat==='carcass'&&nms.includes(q.name));
   const box=nm=>by(['Дно','Полка','Крышка'].map(w=>w+' '+nm));
   if(P.Nb)gaps(box('нижнего корпуса пенала'));
   if(P.Nh)gaps(box('верхнего корпуса пенала'));
   if(P.Nu)gaps(by(['Дно верхнего шкафа','Полка верхнего шкафа','Крышка верхнего шкафа']));
-  // layout 2, when it has one; its lower carcass has no top: the upper one's bottom closes it
-  gaps([...box('нижнего корпуса открытой секции'),...by(['Дно верхнего корпуса открытой секции'])]);gaps(box('верхнего корпуса открытой секции'));
+  // the section at the riser box, when there is one; its lower carcass without a top (layout 2) is closed by the upper one's bottom
+  const lo=box('нижнего корпуса секции у короба');
+  gaps(lo.some(q=>q.name.startsWith('Крышка'))?lo:[...lo,...by(['Дно верхнего корпуса секции у короба'])]);gaps(box('верхнего корпуса секции у короба'));
 }
 
 /* camera presets of the bath tab, moved to where the bathroom lies on the plan */
@@ -52,11 +53,13 @@ function setCam(v){
   shortWay();
 }
 
-/* ---------- panel: what the bathroom has (the layout, feet under the tall cabinet) and its texts ---------- */
+/* ---------- panel: what the bathroom has (each cabinet's layout, feet under the tall cabinet) and its texts ---------- */
 const panel=document.querySelector('[data-panel="bath"]'),bq=s=>panel.querySelector(s);
 bq('#b-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
-// layout 2: no niche, the upper cabinet on the installation with inset doors, an open section between the riser box and the tall cabinet
-panel.querySelectorAll('[data-lay]').forEach(b=>b.addEventListener('click',()=>{P.Lay=+b.dataset.lay;k.syncThick();k.build();k.keep();}));
+// each cabinet's layout (data-for: its key in P): the upper one on the installation with inset doors, no niche (LayU);
+// a section between the riser box and the tall cabinet (LayT): open (2), its upper carcass behind a door (3)
+const lays=[...panel.querySelectorAll('[data-lay]')];
+lays.forEach(b=>b.addEventListener('click',()=>{P[b.dataset.for]=+b.dataset.lay;k.syncThick();k.build();k.keep();}));
 // the niche, the ceiling and the riser box (from the plan), the space between the shelves
 function panelText(){
   bq('#b-W').textContent=P.W+' мм';bq('#b-L').textContent=P.L+' мм';bq('#b-H').textContent=P.H+' мм';bq('#b-R').textContent=`${P.Rx} × ${P.Rz} мм`;
@@ -64,20 +67,20 @@ function panelText(){
   const t=P.T||16,f=v=>v.toFixed(1).replace('.',',').replace(',0',''),fl=P.Feet?10:0;
   // free height between neighbouring shelves (from the top of one shelf to the underside of the next)
   const sb=(P.Hi-t-P.Pl-fl-t)/(P.Nb+1),sh=(P.H-t-P.Hi-t)/(P.Nh+1);
-  const L2=P.Lay===2,yb=L2?P.Hi:P.Hi+P.Gap,su=(P.H-yb-t)/(P.Nu+1);
+  const L2=P.LayU===2,yb=L2?P.Hi:P.Hi+P.Gap,su=(P.H-yb-t)/(P.Nu+1);
   const gap=(n,v)=>(n?`между полками ${f(v-t)} мм`:`без полок: высота отделения ${f(v-t)} мм`);
   bq('#b-gapB').textContent=`Высота дверей ${P.Hi-P.Pl-fl} мм · `+gap(P.Nb,sb);
   bq('#b-gapH').textContent=`Высота дверей ${P.H-P.Hi} мм · `+gap(P.Nh,sh);
-  // layout 2 has no niche: its depth and the gap over the installation are off
+  // the upper cabinet on the installation: no niche, its depth and the gap over the installation are off
   ['Dm','Gap'].forEach(j=>{bq('#b-'+j).disabled=L2;bq('#b-f'+j).style.opacity=L2?.45:1;});
-  bq('#b-gapM').textContent=L2?'В компоновке 2 ниши нет: шкаф стоит на инсталляции':`Высота ниши ${P.Gap} мм · внутри ${Math.max(0,P.Gap-2*t)} мм`;
+  bq('#b-gapM').textContent=L2?'Ниши нет: шкаф стоит на инсталляции':`Высота ниши ${P.Gap} мм · внутри ${Math.max(0,P.Gap-2*t)} мм`;
   bq('#b-gapM').style.opacity=L2?.45:1;
   bq('#b-gapU').textContent=`Высота шкафа ${P.H-yb} мм · `+gap(P.Nu,su);
 }
 
 const k=roomKit('bath',{
   P,FIN,mats,px:'b',panel,origin:O,fromModel,setCam,panelText,
-  keepFin:true,keepP:['Lay'],   // the finish and the layout stay through a reload
+  keepFin:true,keepP:['LayU','LayT'],   // the finish and the layouts stay through a reload
   fromPlan:['W','L','H','Rx','Rz','Lt'],
   ids:['Hi','Di','Gap','Du','Nu','Dm','Dt','Wc','Pl','Nh','Nb'],
   wish:['Wc','Gap'],
@@ -88,7 +91,7 @@ const k=roomKit('bath',{
   // its footprint: the installation box, the toilet (as buildInstallation has them) and the washing machine besides the tall cabinet
   foot:()=>{const zf=current.zf,cz=zf+P.Lt/2;return [[0,P.Di,zf,zf+P.Lt],[P.Di,P.Di+WC.L,cz-WC.W/2,cz+WC.W/2,true],washRect()];},
   syncFlags:()=>{bq('#b-tFeet').checked=!!P.Feet;
-    panel.querySelectorAll('[data-lay]').forEach(b=>b.setAttribute('aria-pressed',+b.dataset.lay===(P.Lay||1)));},
+    lays.forEach(b=>b.setAttribute('aria-pressed',+b.dataset.lay===(P[b.dataset.for]||1)));},
   view:{
     // the niche: the back wall up to the outer face of the partition next to the tall cabinet, the left wall up to L from the back wall
     frame:L=>{const [ox,oz]=O();return [ox-A.bear,ox+A.bNiche+A.wt,oz-A.bear,oz+L];},

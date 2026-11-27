@@ -5,37 +5,41 @@ function computeParts(p){
   const zf=Math.max(p.Dt,p.Rz+TF), zc=zf-TF;   // front plane of the back run (tall cabinet + riser cladding)
   const xb=W, xa=W-Math.min(p.Wc,W-p.Rx);     // carcass at the right; cladding covers riser + filler on the left
   const pl=p.Pl, sp=p.Hi;   // door split follows the installation height
-  // layout 2: an open section between the riser box and the tall cabinet, the cladding only over the box and only Cw wide:
-  // the installation box and the upper cabinet hide the rest of it, so it starts no further out than the shallower of them
-  const L2=p.Lay===2, xs=p.Rx, os=L2&&xa-xs>2*T+40, xc=os?xs:xa-G/2, xc0=os?Math.max(0,Math.min(xs-p.Cw,p.Di,p.Du)):0;
+  // each cabinet has its own layout. The tall cabinet's (LayT) 2 and 3: a section between the riser box and it, the cladding only over the box and Cw wide:
+  // the installation box, the upper cabinet (and the niche under it) hide the rest of it, so it starts no further out than the shallowest of them
+  const xs=p.Rx, os=p.LayT>=2&&xa-xs>2*T+40, xc=os?xs:xa-G/2, xc0=os?Math.max(0,Math.min(xs-p.Cw,p.Di,p.Du,p.LayU===2?p.Du:p.Dm)):0;
   /* one carcass (no LDSP sheet is floor to ceiling high, so each run is two, one on the other, split at the installation's top):
      its sides from y0 to y1, the bottom at yd (over the plinth) and the top between them, n shelves evenly between those;
-     behind — two ribs (the tall cabinet: its shelves 20 mm short of the doors) or an LDSP back (the open section: all flush in front);
+     behind — two ribs or an LDSP back (back); the shelves 20 mm short of the front edge (behind a door) or flush with it (flush);
      lid false: no top, the carcass above closes it (no two boards at the joint where it shows) */
-  const body=(nm,x0,x1,y0,yd,y1,zd,n,open,lid=true)=>{
-    const zb=open?T:0,yt=lid?y1-T:y1;   // yt: the underside of what closes it from above
+  const body=(nm,x0,x1,y0,yd,y1,zd,n,{back=false,flush=false,lid=true}={})=>{
+    const zb=back?T:0,yt=lid?y1-T:y1;   // yt: the underside of what closes it from above
     add('Бок '+nm,'carcass',x0,x0+T,y0,y1,0,zd);
     add('Бок '+nm,'carcass',x1-T,x1,y0,y1,0,zd);
     add('Дно '+nm,'carcass',x0+T,x1-T,yd,yd+T,zb,zd);
     if(lid)add('Крышка '+nm,'carcass',x0+T,x1-T,y1-T,y1,zb,zd);
-    if(open)add('Задняя стенка '+nm,'carcass',x0+T,x1-T,yd,y1,0,T);
+    if(back)add('Задняя стенка '+nm,'carcass',x0+T,x1-T,yd,y1,0,T);
     else{add('Ребро жёсткости '+nm,'carcass',x0+T,x1-T,yd+T,yd+T+RB,0,T);add('Ребро жёсткости '+nm,'carcass',x0+T,x1-T,y1-T-RB,y1-T,0,T);}
     const st=(yt-yd-T)/(n+1);
-    for(let i=1;i<=n;i++){const y=yd+T+i*st-T/2;add('Полка '+nm,'carcass',x0+T,x1-T,y,y+T,T,open?zd:zd-20);}
+    for(let i=1;i<=n;i++){const y=yd+T+i*st-T/2;add('Полка '+nm,'carcass',x0+T,x1-T,y,y+T,T,flush?zd:zd-20);}
   };
   // tall cabinet against the back wall: the lower carcass on the plinth up to the installation's top, the upper one up to the ceiling
   body('нижнего корпуса пенала',xa,xb,FL,FL+pl,sp,zc,p.Nb);
   body('верхнего корпуса пенала',xa,xb,sp,sp,H,zc,p.Nh);
   const plinth=(x0,x1)=>add('Цоколь пенала и короба (заподлицо с фасадами)','front',x0,x1,FL,FL+pl-G/2,zc,zf);
-  if(pl>0){if(os)plinth(xa,W-G/2);else plinth(G/2,W-G/2);}   // layout 2: the cladding goes down to the floor, no plinth under it
-  // the open section: as deep as the run (flush with the cladding and the doors), two carcasses as the tall cabinet's;
-  // its plinth between its sides, in its colour (it has no fronts)
+  if(pl>0){if(os)plinth(xa,W-G/2);else plinth(G/2,W-G/2);}   // with the section: the cladding goes down to the floor, no plinth under it
+  // the section at the riser box: two carcasses as the tall cabinet's, each with its LDSP back; its plinth between its sides, in its colour.
+  // Layout 2: both open, as deep as the run (flush with the cladding and the doors); the lower one has no top, the upper one's bottom closes it.
+  // Layout 3: the upper one behind a door as the tall cabinet's (hinged at the riser box, opening away from the tall cabinet),
+  // so the lower one has its own top (the upper one's bottom is behind the door)
   if(os){
-    if(pl>0)add('Цоколь открытой секции','carcass',xs+T,xa-T,FL,FL+pl-G/2,zc,zf);
-    body('нижнего корпуса открытой секции',xs,xa,FL,FL+pl,sp,zf,p.Nsb,true,false);   // under the upper one's bottom: no top of its own
-    body('верхнего корпуса открытой секции',xs,xa,sp,sp,H,zf,p.Nsh,true);
+    const shut=p.LayT===3;
+    if(pl>0)add('Цоколь секции у короба','carcass',xs+T,xa-T,FL,FL+pl-G/2,zc,zf);
+    body('нижнего корпуса секции у короба',xs,xa,FL,FL+pl,sp,zf,p.Nsb,{back:true,flush:true,lid:shut});
+    body('верхнего корпуса секции у короба',xs,xa,sp,sp,H,shut?zc:zf,p.Nsh,{back:true,flush:!shut});
+    if(shut)add('Фасад секции у короба','front',xs+G/2,xa-G/2,sp+G/2,H-G/2,zc,zf,{hinge:'L'});
   }
-  // fronts: riser cladding (fixed, two panels; layout 2: the lower one down to the floor) + 4 doors, split at the same height
+  // fronts: riser cladding (fixed, two panels; with the section: the lower one down to the floor) + 4 doors, split at the same height
   const xm=(xa+xb)/2;
   [[FL+pl+G/2,sp-G/2,'нижняя'],[sp+G/2,H-G/2,'верхняя']].forEach(([y0,y1,nm])=>{
     add('Облицовка короба, '+nm+' (фасад, глухой)','front',xc0,xc,os&&y0<sp?FL:y0,y1,zc,zf);
@@ -43,9 +47,9 @@ function computeParts(p){
     add('Фасад пенала','front',xm+G/2,xb-G/2,y0,y1,zc,zf,{hinge:'R'});
   });
   // upper cabinet above the installation, along the left wall
-  // layout 1: over an open niche, its doors overlay; layout 2: no niche, it sits on the installation, its doors inset between its boards
+  // its layout (LayU) 1: over an open niche, its doors overlay; 2: no niche, it sits on the installation, its doors inset between its boards
   p.Lt=Math.max(200,p.L-zf);   // installation run fills the rest of the left wall
-  const yb=L2?p.Hi:p.Hi+p.Gap,dc=p.Du-TF,z0=zf,z1=zf+p.Lt;
+  const L2=p.LayU===2,yb=L2?p.Hi:p.Hi+p.Gap,dc=p.Du-TF,z0=zf,z1=zf+p.Lt;
   // separate product: open niche box in the gap between the installation and the upper cabinet, with its own LDSP back
   if(!L2&&p.Gap>2*T+20){
     const dm=p.Dm||200;

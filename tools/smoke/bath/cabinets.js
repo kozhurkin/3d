@@ -30,7 +30,7 @@ check('санузел: шкафы, инсталляция и унитаз соб
   // the tall cabinet is never wider than the niche past the riser box
   const wc = bq('[data-p="Wc"]'); wc.value = '1400'; wc.dispatch('input');
   assert.strictEqual(b().P.Wc, 1000); assert.strictEqual(wc.value, 1000);
-  // the niche over the installation has no switch of its own: only layout 2 takes it away; feet under the tall cabinet
+  // the niche over the installation has no switch of its own: only the upper cabinet's layout 2 takes it away; feet under the tall cabinet
   assert.ok(r.parts.includes('Бок ниши над инсталляцией')); assert.strictEqual(bq('#b-tMid'), null);
   const feet = bq('#b-tFeet'); feet.checked = true; feet.dispatch('change');
   r = b(); assert.deepStrictEqual([r.P.Feet, r.feet], [true, 6]);
@@ -96,32 +96,32 @@ check('санузел: размер между полками — один на 
 check('санузел: компоновка 2 — ниши нет, верхний шкаф на инсталляции с вкладными фасадами, открытая секция у короба', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
   const bq = (s) => p.document.querySelector('[data-panel="bath"]').querySelector(s);
-  bq('[data-lay="2"]').click();
+  bq('[data-lay="2"][data-for="LayU"]').click(); bq('[data-lay="2"][data-for="LayT"]').click();
   const r = p.run(() => {
     const f = tt.fur('bath'), up = (n) => f.current.parts.filter((q) => q.name === n);
-    return { lay: f.P.Lay, yb: f.current.yb, niche: f.current.parts.some((q) => /ниши/.test(q.name)),
+    return { lay: [f.P.LayU, f.P.LayT], yb: f.current.yb, niche: f.current.parts.some((q) => /ниши/.test(q.name)),
       side: up('Бок верхнего шкафа').map((q) => [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1]), bottom: up('Дно верхнего шкафа').map((q) => [q.x1, q.y0]),
       fronts: up('Фасад верхнего шкафа').map((q) => [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1, q.pivot.z]) };
   });
   // the cabinet from the installation's top to the ceiling, its boards the whole 200 mm; the doors inside them, 2 mm all round
-  assert.deepStrictEqual([r.lay, r.yb, r.niche], [2, 1200, false]);
+  assert.deepStrictEqual([r.lay, r.yb, r.niche], [[2, 2], 1200, false]);
   assert.deepStrictEqual(r.side, [[0, 200, 1200, 2600, 300, 316], [0, 200, 1200, 2600, 1084, 1100]]);
   assert.deepStrictEqual(r.bottom, [[200, 1200]]);
   assert.deepStrictEqual(r.fronts, [[184, 200, 1218, 2582, 318, 699, 318], [184, 200, 1218, 2582, 701, 1082, 1082]]);
   // the panel: the buttons, the niche and the gap over the installation are off
-  assert.deepStrictEqual(['1', '2'].map((v) => bq(`[data-lay="${v}"]`).getAttribute('aria-pressed')), ['false', 'true']);
+  assert.deepStrictEqual([...p.document.querySelectorAll('[data-panel="bath"] [data-lay]')].map((b) => b.getAttribute('aria-pressed')), ['false', 'true', 'false', 'true', 'false']);
   assert.deepStrictEqual([bq('#b-Gap').disabled, bq('#b-Dm').disabled], [true, true]);
   assert.strictEqual(bq('#b-gapU').textContent, 'Высота шкафа 1400 мм · между полками 445,3 мм');
   // the open section between the riser box and the tall cabinet: 200 wide, as deep as the run (300), its own back; the cladding only over the box.
   // Two carcasses as the tall cabinet's: the lower one up to the installation's top with 2 shelves, the upper one to the ceiling with 3
   const s = p.run(() => {
-    const f = tt.fur('bath'), of = (n) => f.current.parts.filter((q) => q.name === n), os = (w, c) => of(`${w} ${c} корпуса открытой секции`);
+    const f = tt.fur('bath'), of = (n) => f.current.parts.filter((q) => q.name === n), os = (w, c) => of(`${w} ${c} корпуса секции у короба`);
     const one = (c) => ({ sides: os('Бок', c).map((q) => [q.x0, q.x1, q.y0, q.y1, q.z1]), shelves: os('Полка', c).map((q) => q.y0), top: os('Крышка', c).length,
       back: os('Задняя стенка', c).map((q) => [q.y0, q.y1, q.z0, q.z1]) });
-    return { box: tt.box(f.current.parts.filter((q) => /открытой секции/.test(q.name)), 'xzy'), lo: one('нижнего'), hi: one('верхнего'),
+    return { box: tt.box(f.current.parts.filter((q) => /секции у короба/.test(q.name)), 'xzy'), lo: one('нижнего'), hi: one('верхнего'),
       clad: of('Облицовка короба, нижняя (фасад, глухой)').map((q) => [q.x0, q.x1, q.y0, q.z1]),
       plinth: of('Цоколь пенала и короба (заподлицо с фасадами)').map((q) => [q.x0, q.x1]),
-      sPlinth: of('Цоколь открытой секции').map((q) => [q.x0, q.x1, q.mat]), gaps: f.dims.userData.gaps };
+      sPlinth: of('Цоколь секции у короба').map((q) => [q.x0, q.x1, q.mat]), gaps: f.dims.userData.gaps };
   });
   assert.deepStrictEqual(s.box, [250, 450, 0, 300, 0, 2600]);
   // the lower one has no top: the upper one's bottom closes it, one board at the joint; its shelves evenly up to that bottom
@@ -132,22 +132,52 @@ check('санузел: компоновка 2 — ниши нет, верхни�
   assert.deepStrictEqual(s.sPlinth, [[266, 434, 'carcass']], 'the section\'s own, between its sides, in its colour');
   assert.deepStrictEqual(s.gaps.slice(-2), ['352', '326'], 'between the section\'s shelves, in each carcass');
   // back to layout 1: the niche and the overlay doors again
-  bq('[data-lay="1"]').click();
+  bq('[data-lay="1"][data-for="LayU"]').click(); bq('[data-lay="1"][data-for="LayT"]').click();
   assert.deepStrictEqual(p.run(() => (f => [f.current.yb, f.current.parts.length])(tt.fur('bath'))), [1500, 39]);
 });
 
-check('санузел: компоновка остаётся после перезагрузки', () => {
+check('санузел: пенал, вариант 3 — верхний корпус секции у короба за дверцей, у нижнего своя крышка', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'bath' } }); p.tick();
+  const n0 = p.run(() => tt.fur('bath').doors.length);
+  p.document.querySelector('[data-panel="bath"] [data-for="LayT"][data-lay="3"]').click();
+  const r = p.run(() => {
+    const f = tt.fur('bath'), of = (n) => f.current.parts.filter((q) => q.name === n), os = (w, c) => of(`${w} ${c} корпуса секции у короба`);
+    return { door: of('Фасад секции у короба').map((q) => [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1, q.hinge]),
+      hiSide: os('Бок', 'верхнего').map((q) => q.z1), hiShelf: os('Полка', 'верхнего').map((q) => q.z1), hiBack: os('Задняя стенка', 'верхнего').length,
+      loTop: os('Крышка', 'нижнего').map((q) => [q.y0, q.y1, q.z1]), loShelf: os('Полка', 'нижнего').map((q) => q.z1),
+      doors: f.doors.length, gaps: f.dims.userData.gaps, clad: of('Облицовка короба, нижняя (фасад, глухой)').map((q) => [q.x0, q.y0]) };
+  });
+  // the door flush with the tall cabinet's, 2 mm off its neighbours, hinged at the riser box; the upper carcass behind it, its shelves 20 short
+  assert.deepStrictEqual(r.door, [[251, 449, 1201, 2599, 284, 300, 'L']]);
+  assert.deepStrictEqual([r.hiSide, r.hiShelf, r.hiBack], [[284, 284], [264, 264, 264], 1]);
+  assert.strictEqual(r.doors, n0 + 1, 'it opens');
+  // the lower carcass open as in layout 2, flush in front, with its own top now
+  assert.deepStrictEqual([r.loTop, r.loShelf], [[[1184, 1200, 300]], [300, 300]]);
+  assert.deepStrictEqual(r.gaps.slice(-2), ['347', '326']);
+  assert.deepStrictEqual(r.clad, [[150, 0]], 'the cladding as in layout 2');
+  assert.deepStrictEqual([...p.document.querySelectorAll('[data-panel="bath"] [data-for="LayT"]')].map((b) => b.getAttribute('aria-pressed')),
+    ['false', 'false', 'true']);
+});
+
+check('санузел: у каждого шкафа своя компоновка, обе остаются после перезагрузки', () => {
   const storage = new Map();
   const open = () => { const p = runPage(PAGES.app, { storage, parentWin: { appView: 'bath' } }); p.tick(); return p; };
-  const lay = (p) => p.run(() => [tt.fur('bath').P.Lay, tt.fur('bath').current.yb]);
+  const lay = (p) => p.run(() => (f => [f.P.LayU, f.P.LayT, f.current.yb, f.current.parts.some((q) => /ниши/.test(q.name)),
+    f.current.parts.some((q) => /секции у короба/.test(q.name))])(tt.fur('bath')));
+  const btn = (p, k, v) => p.document.querySelector(`[data-panel="bath"] [data-for="${k}"][data-lay="${v}"]`);
   let p = open();
-  p.document.querySelector('[data-panel="bath"] [data-lay="2"]').click();
+  // the tall cabinet with the open section, the upper cabinet still over the niche
+  btn(p, 'LayT', 2).click();
+  assert.deepStrictEqual(lay(p), [1, 2, 1500, true, true]);
   p = open();
-  assert.deepStrictEqual(lay(p), [2, 1200], 'layout 2 built at once');
-  assert.strictEqual(p.document.querySelector('[data-panel="bath"] [data-lay="2"]').getAttribute('aria-pressed'), 'true');
-  // back to the defaults: layout 1, and it is the one kept
-  p.document.querySelector('#b-resetDef').click();
-  assert.deepStrictEqual(lay(open()), [1, 1500]);
+  assert.deepStrictEqual(lay(p), [1, 2, 1500, true, true], 'kept, built at once');
+  assert.deepStrictEqual([btn(p, 'LayU', 1), btn(p, 'LayT', 2)].map((b) => b.getAttribute('aria-pressed')), ['true', 'true']);
+  // and the other way round
+  btn(p, 'LayU', 2).click(); btn(p, 'LayT', 1).click();
+  assert.deepStrictEqual(lay(open()), [2, 1, 1200, false, false]);
+  // back to the defaults: both 1, and they are the ones kept
+  p = open(); p.document.querySelector('#b-resetDef').click();
+  assert.deepStrictEqual(lay(open()), [1, 1, 1500, true, false]);
 });
 
 check('санузел: выбранный цвет остаётся после перезагрузки, «Вернуть исходные» возвращает исходный', () => {

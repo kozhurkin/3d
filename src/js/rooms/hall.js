@@ -278,6 +278,7 @@ const k=roomKit('hall',{
   fromPlan:['W','L','Lw','Rw','Ht','Rv'],
   ids:['H','D','N','Pl'],
   wish:['H'],
+  keepFin:true,   // the finish stays through a reload
   onSyncIds:()=>{const [h0,h1]=hRange(),hs=hq('[data-p="H"]');hs.min=h0;hs.max=h1;},   // the height stays between the mezzanine's least and MG under the ceiling
   slider:{sel:'#hFrameSd',key:'Sd',max:()=>hLen},   // how far from the bearing wall the side walls show, up to the kitchen wall
   dims:buildDims,

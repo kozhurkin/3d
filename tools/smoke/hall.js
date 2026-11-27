@@ -377,3 +377,24 @@ check('прихожая: «Раскладка» — детали на полу �
   assert.strictEqual(p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true)), false);
   assert.strictEqual(p.run(() => wallGroup.visible), true);
 });
+
+check('прихожая: выбранный цвет остаётся после перезагрузки, «Вернуть исходные» возвращает исходный', () => {
+  const storage = new Map();
+  const open = () => { const p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick(); return p; };
+  let p = open();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  assert.strictEqual(p.run(() => VS.hall.fin), undefined, 'nothing kept before a choice');
+  const sw = hq('[data-uc]'); sw.click();
+  const chosen = { type: 'uni', color: sw.dataset.uc, name: sw.dataset.un };
+  // a reload: the same browser storage, the carcass and the fronts in the colour chosen, the panel shows it
+  p = open();
+  assert.deepStrictEqual(p.run(() => [VS.hall.fin.carcass, VS.hall.fin.front]), [chosen, chosen]);
+  assert.ok(hq('#hSub').textContent.endsWith(chosen.name), 'the hall\'s line names it');
+  assert.strictEqual(hq(`[data-uc="${chosen.color}"]`).getAttribute('aria-pressed'), 'true');
+  // only the hall's: the bathroom keeps its own
+  assert.strictEqual(p.run(() => VS.bath.fin), undefined);
+  // back to the defaults: the factory finish, and it is the one kept
+  hq('#h-resetDef').click();
+  p = open();
+  assert.deepStrictEqual(p.run(() => VS.hall.fin.front), { type: 'wood', decor: 'H1386' });
+});

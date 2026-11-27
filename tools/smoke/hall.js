@@ -419,7 +419,7 @@ check('прихожая: выбранный цвет остаётся после
   assert.deepStrictEqual(p.run(() => VS.hall.fin.front), { type: 'wood', decor: 'H1386' });
 });
 
-check('прихожая: правая стойка — полки на шкантах Ø8 × 22, дно и крышка на шкантах с эксцентриковыми стяжками, по два крепления в торцах к задней стенке и лицевой панели', () => {
+check('прихожая: правая стойка — полки на шкантах Ø8 × 22, дно и крышка на шкантах с эксцентриковыми стяжками и конфирматах, цоколь на шкантах', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
   const r = p.run(() => {
     const f = tt.fur('hall'), ps = f.current.parts.filter((q) => /правой колонны$/.test(q.name) && /^(Дно|Полка|Крышка)/.test(q.name));
@@ -440,7 +440,14 @@ check('прихожая: правая стойка — полки на шкан�
     { k: 'cam', at: [x, up ? q.y + T : q.y, z + s * 34], ax: 'y', s: up ? -1 : 1, d: 15, depth: 13 },
     { k: 'dowel', at: [x + i * 32, q.y + T / 2, z], ax: 'z', s, d: 8, depth: 22 }]));
   const [bottom, top] = ['Дно правой колонны', 'Крышка правой колонны'].map((n) => r.parts.find((q) => q.name === n));
-  assert.deepStrictEqual(bottom.holes, cam(bottom, false));
-  assert.deepStrictEqual(top.holes, cam(top, true));
-  assert.deepStrictEqual(r.meshes, [12, ...Array(r.N).fill(4), 12]);
+  // and two confirmats (Ø5 × 40) in the end on the side by the wall, 100 from the back and the front end
+  const conf = (q) => [T + 100, Dc - 100].map((z) => ({ k: 'confirmat', at: [xb - T, q.y + T / 2, z], ax: 'x', s: -1, d: 5, depth: 40 }));
+  assert.deepStrictEqual(bottom.holes, [...cam(bottom, false), ...conf(bottom)]);
+  assert.deepStrictEqual(top.holes, [...cam(top, true), ...conf(top)]);
+  assert.deepStrictEqual(r.meshes, [4, 14, ...Array(r.N).fill(4), 14]);
+  // the plinth (80 high): two dowels in each end, 20 from its top and bottom; a low one (40) — a quarter of its height in
+  const plinth = () => p.run(() => tt.fur('hall').current.parts.find((q) => /^Цоколь/.test(q.name)).holes.map((h) => [h.k, h.at[1], h.at[2], h.s, h.depth]));
+  assert.deepStrictEqual(plinth(), [['dowel', 20, T, 1, 22], ['dowel', 60, T, 1, 22], ['dowel', 20, Dc, -1, 22], ['dowel', 60, Dc, -1, 22]]);
+  const pls = p.document.querySelector('[data-panel="hall"]').querySelector('[data-p="Pl"]'); pls.value = '40'; pls.dispatch('input');
+  assert.deepStrictEqual(plinth().map((h) => h[1]), [10, 30, 10, 30]);
 });

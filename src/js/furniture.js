@@ -219,6 +219,7 @@ const FITTINGS={
   dowel:{name:'Шкант',holes:[{k:'dowel',d:8,depth:22}]},
   cam:{name:'Эксцентриковая стяжка',holes:[{k:'screw',d:8,depth:30},{k:'cam',d:15,depth:13,from:34}]},
   dowelCam:{name:'Шкант + эксцентриковая стяжка',of:[['cam',0],['dowel',32]]},
+  confirmat:{name:'Конфирмат',holes:[{k:'confirmat',d:5,depth:40}]},
 };
 /* the holes (partMesh's p.holes) of fitting id at «at» (mm, room axes). Ways as [axis, ±1]: n — into the board, m — along the end
    toward its middle, f — across the board toward the face it is worked from; h — half the board's thickness */

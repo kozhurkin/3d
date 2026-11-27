@@ -11,8 +11,8 @@ let T=16, TF=16; const HDF=4, G=2;
 const MG=5;
 /* the right column's fittings (furniture.js: FITTINGS), mm in from the edges of a board's end: into the back and front panels (FIX_IN),
    the confirmats of the bottom and the top into the side by the wall (CONF_IN), the plinth's dowels from its top and bottom (PLINTH_IN,
-   a quarter of its height at most) */
-const FIX_IN=50,CONF_IN=100,PLINTH_IN=20;
+   a quarter of its height at most), the side's into those panels from its top and bottom (SIDE_IN) */
+const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
@@ -28,18 +28,25 @@ function computeParts(p){
   add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,0,Dc);
   add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,FL,FL+T,0,Dc);
   add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,Hb-T,Hb,0,Dc);
-  add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw-G/2,FL,Hb-G/2,Dc,Dc+TF);
+  // (the columns' fronts reach the opening's edge, flush with their carcasses)
+  add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw,FL,Hb-G/2,Dc,Dc+TF);
   // right column
   // (ends: where the boards between its back and front panels meet them, and the way into the board from there)
   add=unit('right');const rx=W-p.Rw,ends=[[T,1],[Dc,-1]];
-  add('Бок правой колонны','carcass',xb-T,xb,FL,Hb,0,Dc);
-  add('Задняя стенка правой колонны','carcass',rx,xb-T,FL,Hb,0,T);
+  // the back panel and the front one lap over the side by the wall alike, the side stands between them
+  const side=add('Бок правой колонны','carcass',xb-T,xb,FL,Hb,T,Dc,{holes:[]});
+  const back=add('Задняя стенка правой колонны','carcass',rx,xb,FL,Hb,0,T,{holes:[]});
   const pl=p.plinth?p.Pl:0;
-  add('Лицевая панель правой колонны','front',rx+G/2,xb,FL,Hb-G/2,Dc,Dc+TF);
+  const face=add('Лицевая панель правой колонны','front',rx,xb,FL,Hb-G/2,Dc,Dc+TF,{holes:[]});
+  // a fitting of a board's end: its holes in the board (returned), its mates in the board «into» (the back or the front panel, the side)
+  const join=(id,at,o,into=at[2]===T?back:face)=>{into.holes.push(...fittingMates(id,at,{...o,thick:T}));return fittingHoles(id,at,o);};
+  // the side by the wall into them: a dowel and a cam fitting in each end, SIDE_IN from its bottom and top, the cams from the wall's side (unseen)
+  side.holes.push(...ends.flatMap(([z,s])=>[[FL+SIDE_IN,1],[Hb-SIDE_IN,-1]].flatMap(([y,i])=>
+    join('dowelCam',[xb-T/2,y,z],{n:['z',s],m:['y',i],f:['x',1],h:T/2}))));
   if(pl){
     // on dowels into the back and front panels: two in each end, PLINTH_IN from its top and bottom
     const u=Math.min(PLINTH_IN,pl/4),holes=ends.flatMap(([z,s])=>[FL+u,FL+pl-u].flatMap(y=>
-      fittingHoles('dowel',[rx+T/2,y,z],{n:['z',s],m:['y',1],f:['x',1],h:T/2})));
+      join('dowel',[rx+T/2,y,z],{n:['z',s],m:['y',1],f:['x',1],h:T/2})));
     add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,{holes});
   }
   const step=(Hb-T-pl-FL)/(p.N+1);
@@ -48,8 +55,8 @@ function computeParts(p){
      outside the column (the bottom's from below, the top's from above), and with two confirmats into the side by the wall,
      CONF_IN from the ends */
   const fix=(y,id,up)=>ends.flatMap(([z,s])=>[[rx+FIX_IN,1],[xb-T-FIX_IN,-1]].flatMap(([x,i])=>
-    fittingHoles(id,[x,y+T/2,z],{n:['z',s],m:['x',i],f:['y',up],h:T/2})));
-  const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>fittingHoles('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2}));
+    join(id,[x,y+T/2,z],{n:['z',s],m:['x',i],f:['y',up],h:T/2})));
+  const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>join('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2},side));
   for(let i=0;i<=p.N+1;i++){
     const y=i===p.N+1?Hb-T:FL+pl+i*step,shelf=i>0&&i<=p.N;
     add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,
@@ -195,11 +202,13 @@ function setCam(v){
 const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35};
 const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая'],
   ['reveal','Обрамление откосов']];
-/* where each board lies: its biggest face down, its long side away from the viewer; in a heap, columns of boards one behind another,
-   the longest first, none deeper than the longest board of the cabinet. → boards {p, o: its sides longest first, L, B, t, x, z — the
+/* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top
+   away, its face up; a flat one with its long side away. In a heap, columns of boards one behind another, the deepest first, none
+   deeper than the deepest board of the cabinet. → boards {p, o: its sides [away, across, up], L, B, t (their sizes), x, z — the
    middle, mm}, heaps {name, x0, x1, z1}, box [x0, x1, z0, z1] */
 function layoutPlan(parts){
-  const bs=parts.map(p=>{const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0],o=[0,1,2].sort((a,b)=>d[b]-d[a]);return {p,o,L:d[o[0]],B:d[o[1]],t:d[o[2]]};});
+  const bs=parts.map(p=>{const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0],t=d.indexOf(Math.min(...d));
+    const o=t!==1?[1,t===0?2:0,t]:d[0]>=d[2]?[0,2,1]:[2,0,1];return {p,o,L:d[o[0]],B:d[o[1]],t:d[o[2]]};});
   const deep=Math.max(...bs.map(b=>b.L)),boards=[],heaps=[];let x=0;
   lUnits().forEach(([u,name])=>{
     const mine=bs.filter(b=>b.p.u===u).sort((a,b)=>b.L-a.L||b.B-a.B);if(!mine.length)return;
@@ -222,12 +231,12 @@ function buildLayout(model){
   const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),n=boards.length;
   boards.forEach((b,i)=>{
     const p=b.p,m=partMesh(p,mats,seeds.get(p));
-    // its sides turned: the longest away from the viewer (z), the middle across (x), the thinnest up (y); a turn, not a mirror:
-    // with the sides' order odd the middle one goes to −x
-    const o=b.o,ax=[];ax[o[0]]=[0,0,1];ax[o[2]]=[0,1,0];ax[o[1]]=[((o[0]>o[1])+(o[0]>o[2])+(o[1]>o[2]))%2?-1:1,0,0];
+    // its sides turned: o[0] along z (a standing board's up away from the viewer: −z), o[1] across (x), o[2] up (y); a turn, not a mirror:
+    // the way across goes with the sides' order and the way along z
+    const o=b.o,sz=o[0]===1?-1:1,ax=[];ax[o[0]]=[0,0,sz];ax[o[2]]=[0,1,0];ax[o[1]]=[(((o[0]>o[1])+(o[0]>o[2])+(o[1]>o[2]))%2?-1:1)*sz,0,0];
     const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(...ax.map(a=>new THREE.Vector3(...a))));
     m.userData.size={L:b.L,B:b.B,t:b.t};
-    m.userData.lay={from:V((p.x0+p.x1)/2,(p.y0+p.y1)/2,(p.z0+p.z1)/2),to:V(b.x,b.t/2,b.z),q,k:i/n*LAY.late};   // k: when it starts
+    m.userData.lay={from:V((p.x0+p.x1)/2,(p.y0+p.y1)/2,(p.z0+p.z1)/2),to:V(b.x,b.t/2,b.z),q,ax,k:i/n*LAY.late};   // k: when it starts
     g.add(m);
   });
   // the heaps' names on the floor in front of them

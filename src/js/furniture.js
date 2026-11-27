@@ -213,26 +213,33 @@ const DMAX=1.45;
 function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.s*d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else if(d.axis!=='none')d.g.rotation.y=d.s*d.a;if(d.follow)d.follow(d.a);}
 /* ---------- fittings: what joins two boards, and the holes it needs in the board that meets the other by its end ----------
    Each: its name and its holes from the fitting's point (the middle of the board's thickness on its end), d × depth, mm: in the end,
-   along the board; or (from) in its face, «from» in from the end — from the face the fitting is worked from. A set (of): fittings side
-   by side, each its mm along the end toward the middle */
+   along the board; or (from) in its face, «from» in from the end — from the face the fitting is worked from. mate: its holes in the
+   other board, the one the end meets, from the joint into it (through: right through it). A set (of): fittings side by side, each its mm along the end toward the middle */
 const FITTINGS={
-  dowel:{name:'Шкант',holes:[{k:'dowel',d:8,depth:22}]},
-  cam:{name:'Эксцентриковая стяжка',holes:[{k:'screw',d:8,depth:30},{k:'cam',d:15,depth:13,from:34}]},
+  dowel:{name:'Шкант',holes:[{k:'dowel',d:8,depth:22}],mate:[{k:'dowel',d:8,depth:13}]},
+  cam:{name:'Эксцентриковая стяжка',holes:[{k:'screw',d:8,depth:30},{k:'cam',d:15,depth:13,from:34}],mate:[{k:'screw',d:5,depth:13}]},
   dowelCam:{name:'Шкант + эксцентриковая стяжка',of:[['cam',0],['dowel',32]]},
-  confirmat:{name:'Конфирмат',holes:[{k:'confirmat',d:5,depth:40}]},
+  confirmat:{name:'Конфирмат',holes:[{k:'confirmat',d:5,depth:40}],mate:[{k:'confirmat',d:8,through:true}]},
 };
 /* the holes (partMesh's p.holes) of fitting id at «at» (mm, room axes). Ways as [axis, ±1]: n — into the board, m — along the end
    toward its middle, f — across the board toward the face it is worked from; h — half the board's thickness */
+const holeGo=(p,[a,s],d)=>p.map((v,j)=>j==='xyz'.indexOf(a)?v+s*d:v);   // the point p moved d along [axis, ±1]
 function fittingHoles(id,at,{n,m,f,h}){
-  const F=FITTINGS[id],go=(p,[a,s],d)=>p.map((v,j)=>j==='xyz'.indexOf(a)?v+s*d:v);
-  if(F.of)return F.of.flatMap(([q,u])=>fittingHoles(q,go(at,m,u),{n,m,f,h}));
-  return F.holes.map(o=>o.from==null?{k:o.k,at,ax:n[0],s:n[1],d:o.d,depth:o.depth}:{k:o.k,at:go(go(at,n,o.from),f,h),ax:f[0],s:-f[1],d:o.d,depth:o.depth});
+  const F=FITTINGS[id];
+  if(F.of)return F.of.flatMap(([q,u])=>fittingHoles(q,holeGo(at,m,u),{n,m,f,h}));
+  return F.holes.map(o=>o.from==null?{k:o.k,at,ax:n[0],s:n[1],d:o.d,depth:o.depth}:{k:o.k,at:holeGo(holeGo(at,n,o.from),f,h),ax:f[0],s:-f[1],d:o.d,depth:o.depth});
+}
+// its holes in the other board (mate), the same point and ways: from the joint, the other way from n; thick: that board's thickness
+function fittingMates(id,at,{n,m,thick}){
+  const F=FITTINGS[id];
+  if(F.of)return F.of.flatMap(([q,u])=>fittingMates(q,holeGo(at,m,u),{n,m,thick}));
+  return (F.mate||[]).map(o=>Object.assign({k:o.k,at,ax:n[0],s:-n[1],d:o.d,depth:o.through?thick:o.depth},o.through?{through:true}:{}));
 }
 // a hole drilled in a board: black, unlit — no light or reflection greys it
 const holeMat=new THREE.MeshBasicMaterial({color:0x000000});
 /* one board of a cabinet as a mesh, its middle at 0 (m): the finish on its faces, the end faces and their lines. seed: its grain
    (partSeeder). Its holes (p.holes: {at: the mouth's middle on a face, mm, room axes; ax: 'x'/'y'/'z' and s: ±1 — the way into the board;
-   d, depth, mm}) — dark cylinders as deep as they go, a hair out of the face so the mouth shows. buildParts places it; the hall's
+   d, depth, mm; through}) — dark cylinders as deep as they go, a hair out of the face (a through one: of both) so the mouth shows. buildParts places it; the hall's
    «Раскладка» lays it on the floor */
 function partMesh(p,mats,seed){
   const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
@@ -244,8 +251,8 @@ function partMesh(p,mats,seed){
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);
   const c=[cx,(p.y0+p.y1)/2*MM,cz],AX=['x','y','z'];
   (p.holes||[]).forEach(h=>{
-    const k=AX.indexOf(h.ax),o=new THREE.Mesh(new THREE.CylinderGeometry(h.d/2*MM,h.d/2*MM,(h.depth+.5)*MM,16),holeMat);
-    const q=h.at.map((v,j)=>v*MM-c[j]+(j===k?h.s*(h.depth-.5)/2*MM:0));o.position.set(...q);
+    const k=AX.indexOf(h.ax),o=new THREE.Mesh(new THREE.CylinderGeometry(h.d/2*MM,h.d/2*MM,(h.depth+(h.through?1:.5))*MM,16),holeMat);
+    const q=h.at.map((v,j)=>v*MM-c[j]+(j===k?h.s*(h.through?h.depth:h.depth-.5)/2*MM:0));o.position.set(...q);
     if(h.ax==='x')o.rotation.z=Math.PI/2;else if(h.ax==='z')o.rotation.x=Math.PI/2;
     o.userData.hole=h;o.raycast=()=>{};mesh.add(o);
   });

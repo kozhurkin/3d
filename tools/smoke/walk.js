@@ -92,8 +92,8 @@ check('обход: стены и закрытая дверь не пускают
   near(eye(p)[0], 0.070 + 0.15, 'stops at the false panel (70 wide)');
   p.run('setEye(0.6,1.65,0.45)'); p.tick();
   hold(p, 'KeyW', 90);
-  // by the entrance: the hall cabinet's cladding of the reveal ends 50 mm before the eyes (z 0.4, x up to 69 mm): its corner stops the body
-  near(eye(p)[0], 0.069 + Math.sqrt(0.15 ** 2 - 0.05 ** 2), 'stops at the corner of the cladding');
+  // by the entrance: the left false panel's front ends 50 mm before the eyes (z 0.4, x up to 70 mm — the opening's edge): its corner stops the body
+  near(eye(p)[0], 0.070 + Math.sqrt(0.15 ** 2 - 0.05 ** 2), 'stops at the corner of the false panel\'s front');
   // past the bathroom door, nothing along the wall: up to the wall itself
   p.run('setEye(0.6,1.65,1.55)'); p.tick();
   hold(p, 'KeyW', 90);

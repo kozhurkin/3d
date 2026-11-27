@@ -330,3 +330,50 @@ check('входная дверь навешена на правый косяк �
   assert.ok(z < p.run('-A.eRv-ED'), 'the free edge outside');
   assert.ok(x > p.run('(A.eD0+A.eD1)/2'), 'by the right jamb');
 });
+
+check('прихожая: «Раскладка» — детали на полу по изделиям, остальное убрано; повторное нажатие и уход из вкладки собирают шкаф', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const btn = p.document.querySelector('[data-panel="hall"]').querySelector('#h-layout');
+  const cam0 = vec(p, 'goalT');
+  // what is on screen: the cabinet's own boards, the layout, the walls, the doors, the tool box, the dimensions
+  const seen = () => p.run(() => {
+    const f = tt.fur('hall'), m = f.model, g = m.children.find((o) => o.userData.layout === true);
+    return { cab: m.children.filter((o) => o !== f.extra && o !== f.dims && o !== f.foot && o !== g).some((o) => o.visible), lay: !!g,
+      walls: wallGroup.visible, doors: doorGroup.visible, box: f.extra.visible, dims: f.dims.visible };
+  });
+  btn.click(); p.tick(100);
+  assert.strictEqual(btn.getAttribute('aria-pressed'), 'true');
+  assert.deepStrictEqual(seen(), { cab: false, lay: true, walls: false, doors: false, box: false, dims: false });
+  // every board once, lying on the floor (its thinnest side up); the heaps' names; each heap apart from the next, no board over another
+  const r = p.run(() => {
+    const f = tt.fur('hall'), g = f.model.children.find((o) => o.userData.layout === true), ms = g.children.filter((o) => o.userData.lay);
+    const ps = f.current.parts, foot = (o) => { const q = o.userData.part, d = [q.x1 - q.x0, q.y1 - q.y0, q.z1 - q.z0].sort((a, b) => b - a), c = o.position;
+      return { u: q.u, x0: tt.mm(c.x) - d[1] / 2, x1: tt.mm(c.x) + d[1] / 2, z0: tt.mm(c.z) - d[0] / 2, z1: tt.mm(c.z) + d[0] / 2, y: tt.mm(c.y), t: d[2] }; };
+    return { n: ps.length, all: ps.every((q) => ms.some((o) => o.userData.part === q)), boards: ms.map(foot),
+      labels: g.userData.labels.filter((s) => s.visible).length };
+  });
+  assert.strictEqual(r.boards.length, r.n); assert.ok(r.all);
+  assert.ok(r.boards.every((b) => Math.abs(b.y - b.t / 2) <= 1), 'on the floor');
+  assert.deepStrictEqual([...new Set(r.boards.map((b) => b.u))], ['left', 'right', 'mezz', 'mezzR', 'reveal']);
+  assert.strictEqual(r.labels, 5);
+  const over = (a, b) => a.x0 < b.x1 - 1 && b.x0 < a.x1 - 1 && a.z0 < b.z1 - 1 && b.z0 < a.z1 - 1;
+  assert.ok(r.boards.every((a, i) => r.boards.every((b, j) => i === j || !over(a, b))), 'no board over another');
+  const span = (u) => { const bs = r.boards.filter((b) => b.u === u); return [Math.min(...bs.map((b) => b.x0)), Math.max(...bs.map((b) => b.x1))]; };
+  const order = ['left', 'right', 'mezz', 'mezzR', 'reveal'].map(span);
+  order.slice(1).forEach((s, i) => assert.ok(s[0] - order[i][1] >= 299, 'the heaps 300 apart'));
+  assert.notDeepStrictEqual(vec(p, 'goalT'), cam0, 'the camera over the layout');
+  // again: the boards fly back, the cabinet and the rest come back, the camera goes back
+  btn.click(); p.tick(100);
+  assert.deepStrictEqual(seen(), { cab: true, lay: false, walls: true, doors: true, box: true, dims: true });
+  assert.deepStrictEqual(vec(p, 'goalT'), cam0);
+  // the mezzanine in one box: one heap of it
+  const one = p.document.querySelector('[data-panel="hall"]').querySelector('#h-tMezzOne'); one.checked = true; one.dispatch('change');
+  btn.click(); p.tick(100);
+  assert.deepStrictEqual(p.run(() => tt.fur('hall').model.children.find((o) => o.userData.layout === true).userData.labels.map((s) => s.userData.name)),
+    ['Левая стойка', 'Правая стойка', 'Антресоль', 'Обрамление откосов']);
+  // away from the hall: put together at once, the button off
+  p.run(() => showView('plan')); p.tick();
+  assert.strictEqual(btn.getAttribute('aria-pressed'), 'false');
+  assert.strictEqual(p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true)), false);
+  assert.strictEqual(p.run(() => wallGroup.visible), true);
+});

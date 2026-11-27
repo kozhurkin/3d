@@ -211,6 +211,18 @@ function partList(){const parts=[];return [parts,(name,mat,x0,x1,y0,y1,z0,z1,ext
 // follow(a), if it has one, moves what goes with it (axis 'none': only that)
 const DMAX=1.45;
 function turnDoor(d){if(d.axis==='x')d.g.rotation.x=d.s*d.a;else if(d.axis==='z')d.g.position.z=d.a/DMAX*d.travel;else if(d.axis!=='none')d.g.rotation.y=d.s*d.a;if(d.follow)d.follow(d.a);}
+/* one board of a cabinet as a mesh, its middle at 0 (m): the finish on its faces, the end faces and their lines. seed: its grain
+   (partSeeder). buildParts places it; the hall's «Раскладка» lays it on the floor */
+function partMesh(p,mats,seed){
+  const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
+  const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz)),cx=(p.x0+p.x1)/2*MM,cz=(p.z0+p.z1)/2*MM;
+  const hole=p.hole&&[p.hole[0]*MM-cx,p.hole[1]*MM-cx,p.hole[2]*MM-cz,p.hole[3]*MM-cz];   // a cut-out through its top (mm, room axes)
+  const geo=boxGeo(sx,sy,sz,seed,p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole);
+  const mesh=new THREE.Mesh(geo,[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
+  mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
+  const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);
+  return mesh;
+}
 /* c: computeParts() of a room; prev: the doors of the previous build (by key they keep how open they were);
    open: how new doors start. Returns the group (room axes, mm → m) and its doors */
 function buildParts(c,mats,{prev=[],open=false}={}){
@@ -219,12 +231,7 @@ function buildParts(c,mats,{prev=[],open=false}={}){
   const door=(g,extra)=>{const key=extra.key,pd=prevDoors[key];
     const d=Object.assign({g,a:pd?pd.a:0,t:pd?pd.t:(open?DMAX:0),last:pd&&pd.last,max:DMAX},extra);turnDoor(d);doors.push(d);};
   c.parts.forEach(p=>{
-    const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
-    const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz)),cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM;
-    const hole=p.hole&&[p.hole[0]*MM-cx,p.hole[1]*MM-cx,p.hole[2]*MM-cz,p.hole[3]*MM-cz];   // a cut-out through its top (mm, room axes)
-    const mesh=new THREE.Mesh(boxGeo(sx,sy,sz,partSeed(p),p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole),[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
-    mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
-    const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);
+    const cx=(p.x0+p.x1)/2*MM,cy=(p.y0+p.y1)/2*MM,cz=(p.z0+p.z1)/2*MM,mesh=partMesh(p,mats,partSeed(p));
     if(p.mat==='front'){
       const holder=new THREE.Group(),key=p.name+'|'+doors.length;
       if(p.pivot){

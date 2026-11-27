@@ -15,16 +15,18 @@ let current=null;
 
 /* ---------- parts (mm) ---------- */
 function computeParts(p){
-  const [parts,add]=partList(), W=p.W, Dc=p.D-TF, Hb=p.H-p.Ht, FL=p.Feet?10:0;   // FL: floor-standing parts sit on 10 mm feet
+  const [parts,put]=partList(), W=p.W, Dc=p.D-TF, Hb=p.H-p.Ht, FL=p.Feet?10:0;   // FL: floor-standing parts sit on 10 mm feet
   const xa=MG, xb=W-MG;   // the cabinet's outer faces, MG in from the walls (x is from the left wall)
-  // left column
+  // each board belongs to what is made and put up as one piece (u): the columns, the mezzanine boxes, the cladding (the hall's «Раскладка»)
+  const unit=u=>(...a)=>{const o=put(...a);o.u=u;return o;};
+  let add=unit('left');
   // left column is a false panel: inner side + fixed front, no outer side, no back
   add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,0,Dc);
   add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,FL,FL+T,0,Dc);
   add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,Hb-T,Hb,0,Dc);
   add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw-G/2,FL,Hb-G/2,Dc,Dc+TF);
   // right column
-  const rx=W-p.Rw;
+  add=unit('right');const rx=W-p.Rw;
   add('Бок правой колонны','carcass',xb-T,xb,FL,Hb,0,Dc);
   add('Задняя стенка правой колонны','carcass',rx,xb-T,FL,Hb,0,T);
   const pl=p.plinth?p.Pl:0;
@@ -51,25 +53,28 @@ function computeParts(p){
   };
   const shelf=(nm,x0,x1)=>add('Полка антресоли — '+nm,'carcass',x0,x1,ym,ym+T,0,Dc-20);
   if(p.mezzOne){
+    add=unit('mezz');
     // the one box as wide as the cabinet: W-2*MG goes past the bathroom door's casing (CT over the hall's left wall) with nothing to spare
     const x0=xa;
     topBox('единый корпус',x0,xb);
     add('Перегородка антресоли','carcass',rx-T/2,rx+T/2,Hb+T,p.H-T,T,Dc);   // in front of the rails
     shelf('левая секция',x0+T,rx-T/2);shelf('правая секция',rx+T/2,xb-T);
   }else{
-    topBox('центральный корпус',xa,rx);shelf('центральный корпус',xa+T,rx-T);
-    topBox('правый корпус',rx,xb);shelf('правый корпус',rx+T,xb-T);
+    add=unit('mezz');topBox('центральный корпус',xa,rx);shelf('центральный корпус',xa+T,rx-T);
+    add=unit('mezzR');topBox('правый корпус',rx,xb);shelf('правый корпус',rx+T,xb-T);
   }
   if(p.reveal){
-    const z0=-p.Rv;
+    add=unit('reveal');const z0=-p.Rv;
     add('Обрамление откоса левое','carcass',p.Lw-T,p.Lw,0,Hb,z0,0);
     add('Обрамление откоса правое','carcass',rx,rx+T,0,Hb,z0,0);
     add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
   }
   const mid=(p.Lw+rx)/2;
+  add=unit('mezz');
   add('Фальш-панель антресоли (под петли, глухая)','front',xa,p.Lw-G/2,Hb+G/2,p.H,Dc,Dc+TF);
   add('Фасад антресоли','front',p.Lw+G/2,mid-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'L'});
   add('Фасад антресоли','front',mid+G/2,rx-G/2,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
+  if(!p.mezzOne)add=unit('mezzR');
   add('Фасад антресоли правый','front',rx+G/2,xb,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
   // every board that reaches the floor is lifted onto the feet
   if(FL)parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
@@ -167,6 +172,85 @@ function setCam(v){
   shortWay();
 }
 
+/* ---------- «Раскладка»: the cabinet's boards on the floor, as if laid out to be put together — each piece made and put up on
+   its own (the columns, the mezzanine boxes, the cladding) a heap of its own, a little apart. Everything else goes away;
+   the boards fly down from where they stand and back. In hall axes, in front of the bearing wall, the hall's middle between the ends ---------- */
+// mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it
+const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35};
+const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая'],
+  ['reveal','Обрамление откосов']];
+/* where each board lies: its biggest face down, its long side away from the viewer; in a heap, columns of boards one behind another,
+   the longest first, none deeper than the longest board of the cabinet. → boards {p, o: its sides longest first, L, B, t, x, z — the
+   middle, mm}, heaps {name, x0, x1, z1}, box [x0, x1, z0, z1] */
+function layoutPlan(parts){
+  const bs=parts.map(p=>{const d=[p.x1-p.x0,p.y1-p.y0,p.z1-p.z0],o=[0,1,2].sort((a,b)=>d[b]-d[a]);return {p,o,L:d[o[0]],B:d[o[1]],t:d[o[2]]};});
+  const deep=Math.max(...bs.map(b=>b.L)),boards=[],heaps=[];let x=0;
+  lUnits().forEach(([u,name])=>{
+    const mine=bs.filter(b=>b.p.u===u).sort((a,b)=>b.L-a.L||b.B-a.B);if(!mine.length)return;
+    const cols=[];let x1=x,z1=0;
+    mine.forEach(b=>{
+      let c=cols.find(c=>c.w>=b.B&&c.d+LAY.gap+b.L<=deep);
+      if(!c){c={x:cols.length?x1+LAY.gap:x,w:b.B,d:-LAY.gap};cols.push(c);x1=c.x+c.w;}
+      b.x=c.x+b.B/2;b.z=LAY.z0+c.d+LAY.gap+b.L/2;c.d+=LAY.gap+b.L;z1=Math.max(z1,b.z+b.L/2);boards.push(b);
+    });
+    heaps.push({name,x0:x,x1,z1});x=x1+LAY.apart;
+  });
+  // the whole of it in the hall's middle
+  const dx=P.W/2-(x-LAY.apart)/2;boards.forEach(b=>{b.x+=dx;});heaps.forEach(h=>{h.x0+=dx;h.x1+=dx;});
+  return {boards,heaps,box:[dx,x-LAY.apart+dx,LAY.z0,LAY.z0+deep]};
+}
+// the laid-out boards (a group in the cabinet's, made when the layout starts): each knows where it stands and where it lies
+function buildLayout(model){
+  const g=new THREE.Group(),seed=partSeeder(),seeds=new Map(current.parts.map(p=>[p,seed(p)])),{boards,heaps}=layoutPlan(current.parts);
+  g.userData.layout=true;g.userData.labels=[];
+  const V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),n=boards.length;
+  boards.forEach((b,i)=>{
+    const p=b.p,m=partMesh(p,mats,seeds.get(p));
+    // its sides turned: the longest away from the viewer (z), the middle across (x), the thinnest up (y); a turn, not a mirror:
+    // with the sides' order odd the middle one goes to −x
+    const o=b.o,ax=[];ax[o[0]]=[0,0,1];ax[o[2]]=[0,1,0];ax[o[1]]=[((o[0]>o[1])+(o[0]>o[2])+(o[1]>o[2]))%2?-1:1,0,0];
+    const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(...ax.map(a=>new THREE.Vector3(...a))));
+    m.userData.lay={from:V((p.x0+p.x1)/2,(p.y0+p.y1)/2,(p.z0+p.z1)/2),to:V(b.x,b.t/2,b.z),q,k:i/n*LAY.late};   // k: when it starts
+    g.add(m);
+  });
+  // the heaps' names on the floor in front of them
+  heaps.forEach(h=>{const s=dimLabel(h.name,.12);s.userData.name=h.name;s.position.copy(V((h.x0+h.x1)/2,20,h.z1+170));s.visible=false;g.add(s);g.userData.labels.push(s);});
+  model.add(g);return g;
+}
+let layOn=false,lay=0,layCam0=null;   // asked for, how far laid out (0…1), the camera before it
+const smooth=e=>e*e*(3-2*e);
+// the camera over the whole layout, a little from the front
+function layCam(){
+  const {box:[x0,x1,z0,z1]}=layoutPlan(current.parts),[ox,oz]=O().map(u=>u*MM),tv=Math.tan(camera.fov*Math.PI/360),a=camera.aspect||1;
+  goal.theta=0;goal.phi=.62;goal.r=Math.max((x1-x0)*MM/2/(tv*a),(z1-z0)*MM*.7/tv)*1.2;
+  goalT.set(ox+(x0+x1)/2*MM,0,oz+(z0+z1)/2*MM);shortWay();
+}
+function setLayout(on){
+  if(on===layOn)return;layOn=on;hq('#h-layout').setAttribute('aria-pressed',on);
+  if(on){layCam0={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone()};layCam();}
+  else if(layCam0){goal.theta=layCam0.theta;goal.phi=layCam0.phi;goal.r=layCam0.r;goalT.copy(layCam0.t);shortWay();layCam0=null;}
+}
+// the cabinet itself in its group (not the tool box, the dimensions, the footprint, the layout); back as «Фасады» has it
+const ownParts=(m,f)=>m.children.filter(o=>o!==f.extra&&o!==f.dims&&o!==f.foot&&!o.userData.layout);
+const putBack=(m,f)=>ownParts(m,f).forEach(o=>{o.visible=!o.userData.front||VS.hall.fronts!=='hidden';});
+// every frame, after the kit's: the boards on their way; while any is off its place, the cabinet, the walls and the rest are away
+function layFrame(dt){
+  const f=VIEWS.hall.furniture(),m=f.model;if(!m)return;
+  let g=m.children.find(o=>o.userData.layout===true);
+  if(view!=='hall'){   // away from the hall: put together at once
+    if(layOn){layOn=false;layCam0=null;hq('#h-layout').setAttribute('aria-pressed',false);}
+    lay=0;if(g){disposeGroup(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
+    return;
+  }
+  lay=reduce?(layOn?1:0):Math.max(0,Math.min(1,lay+(layOn?1:-1)*dt/LAY.s));
+  if(!lay){if(g){disposeGroup(g);putBack(m,f);}return;}
+  if(!g){g=buildLayout(m);ownParts(m,f).forEach(o=>{o.visible=false;});}   // (a rebuilt cabinet: its new group)
+  g.children.forEach(o=>{const L=o.userData.lay;if(!L)return;const e=smooth(Math.max(0,Math.min(1,(lay-L.k)/(1-LAY.late))));
+    o.position.copy(L.from).lerp(L.to,e);o.position.y+=Math.sin(Math.PI*e)*.3;o.quaternion.identity().slerp(L.q,e);});
+  const ls=g.userData.labels;ls.forEach(s=>{s.visible=lay>.95;});fitLabels(ls);
+  [f.extra,f.dims,f.foot,wallGroup,doorGroup,arcs].forEach(o=>{if(o)o.visible=false;});
+}
+
 /* ---------- panel: what the cabinet has and its texts ---------- */
 const panel=document.querySelector('[data-panel="hall"]'),hq=s=>panel.querySelector(s);
 // the reveal cladding (the false panel and the column grow by a board), the plinth, feet, the mezzanine in one box
@@ -174,6 +258,7 @@ hq('#h-tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;k.build
 hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;k.syncThick();k.build();});
 hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
 hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.build();});
+hq('#h-layout').addEventListener('click',()=>setLayout(!layOn));
 // the entrance door of the model, opened or closed from here as by a click on it
 hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
 // what comes from the plan, the space between the shelves, the opening left between the columns
@@ -216,4 +301,5 @@ const k=roomKit('hall',{
     defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true}
   }
 });
+frameHooks.push(layFrame);   // after the kit's: it hides what the kit shows
 })();

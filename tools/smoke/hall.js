@@ -371,6 +371,26 @@ check('прихожая: «Раскладка» — детали на полу �
   btn.click(); p.tick(100);
   assert.deepStrictEqual(p.run(() => tt.fur('hall').model.children.find((o) => o.userData.layout === true).userData.labels.map((s) => s.userData.name)),
     ['Левая стойка', 'Правая стойка', 'Антресоль', 'Обрамление откосов']);
+  // the cursor over a board, once all of them lie: its name and sizes over it, as in the cut list; off it — gone
+  const c = p.document.getElementById('c'), move = (type = 'pointermove', pointerType = 'mouse') => c.dispatch(type, { pointerId: 1, clientX: 300, clientY: 200, pointerType });
+  // the board's name, the texts of its dimension lines and where they are: their labels, mm from the board's middle on the floor
+  const dims = () => p.run(() => { const d = tt.fur('hall').model.children.find((o) => o.userData.layout === true).userData.hover;
+    if (!d) return null; const m = d.userData.of, c = m.userData.lay.to;
+    return [m.userData.part.name, d.userData.texts, d.children.filter((o) => o.userData.ar).map((s) => [s.position.x - c.x, s.position.y, s.position.z - c.z].map(tt.mm))]; });
+  const point = (name) => p.run((name) => { const g = tt.fur('hall').model.children.find((o) => o.userData.layout === true);
+    const m = g.children.find((o) => o.userData.lay && o.userData.part.name === name); m.isLine = m.isSprite = false;   // (the stub's mesh is anything)
+    ray.intersectObjects = () => [{ object: m, point: m.position }]; }, name);
+  point('Бок правой колонны'); move();
+  const H = p.run(() => tt.fur('hall').current.Hb), D = p.run(() => tt.fur('hall').current.Dc), T = p.run(() => tt.fur('hall').P.T);
+  // the length along its left edge, the width along its near one (50 in, on its top); no thickness
+  assert.deepStrictEqual(dims(), ['Бок правой колонны', [H, D].map(String), [[50 - D / 2, T + 2, 0], [0, T + 2, H / 2 - 50]]]);
+  p.run(() => { ray.intersectObjects = () => []; }); move(); assert.strictEqual(dims(), null, 'off the boards');
+  point('Полка правой колонны'); move('pointerup', 'touch'); assert.deepStrictEqual(dims()[0], 'Полка правой колонны', 'a finger: the board tapped');
+  move('pointerleave', 'touch'); assert.ok(dims(), 'a finger lifted keeps it');
+  move('pointerleave'); assert.strictEqual(dims(), null, 'the cursor left the scene');
+  // putting it together takes it away
+  point('Бок правой колонны'); move(); btn.click(); p.tick(); assert.strictEqual(dims(), null);
+  btn.click(); p.tick(100);
   // away from the hall: put together at once, the button off
   p.run(() => showView('plan')); p.tick();
   assert.strictEqual(btn.getAttribute('aria-pressed'), 'false');
@@ -397,4 +417,30 @@ check('прихожая: выбранный цвет остаётся после
   hq('#h-resetDef').click();
   p = open();
   assert.deepStrictEqual(p.run(() => VS.hall.fin.front), { type: 'wood', decor: 'H1386' });
+});
+
+check('прихожая: правая стойка — полки на шкантах Ø8 × 22, дно и крышка на шкантах с эксцентриковыми стяжками, по два крепления в торцах к задней стенке и лицевой панели', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const r = p.run(() => {
+    const f = tt.fur('hall'), ps = f.current.parts.filter((q) => /правой колонны$/.test(q.name) && /^(Дно|Полка|Крышка)/.test(q.name));
+    return { T: f.P.T, rx: f.P.W - f.P.Rw, xb: f.P.W - 5, Dc: f.current.Dc, N: f.P.N,
+      parts: ps.map((q) => ({ name: q.name, y: q.y0, holes: q.holes || [] })),
+      // in the scene: a dark cylinder for each hole of the board
+      meshes: tt.meshes(f.model, (q) => q.holes).map((m) => m.children.filter((o) => o.userData.hole).length) };
+  });
+  const { T, rx, xb, Dc } = r, x0 = rx + 50, x1 = xb - T - 50, ends = [[T, 1], [Dc, -1]];
+  const shelves = r.parts.filter((q) => q.name === 'Полка правой колонны');
+  assert.strictEqual(shelves.length, r.N);
+  // a shelf: a dowel 50 in from the left and the right edge of its back end (on the back panel) and of its front one (on the front panel)
+  shelves.forEach((q) => assert.deepStrictEqual(q.holes, ends.flatMap(([z, s]) => [x0, x1].map((x) => ({ k: 'dowel', at: [x, q.y + T / 2, z], ax: 'z', s, d: 8, depth: 22 })))));
+  // the bottom and the top: at 50 the screw (Ø8 × 30), 34 from the end over it the cam (Ø15 × 13) from outside the column — the bottom's
+  // from below, the top's from above; 32 toward the middle the dowel
+  const cam = (q, up) => ends.flatMap(([z, s]) => [[x0, 1], [x1, -1]].flatMap(([x, i]) => [
+    { k: 'screw', at: [x, q.y + T / 2, z], ax: 'z', s, d: 8, depth: 30 },
+    { k: 'cam', at: [x, up ? q.y + T : q.y, z + s * 34], ax: 'y', s: up ? -1 : 1, d: 15, depth: 13 },
+    { k: 'dowel', at: [x + i * 32, q.y + T / 2, z], ax: 'z', s, d: 8, depth: 22 }]));
+  const [bottom, top] = ['Дно правой колонны', 'Крышка правой колонны'].map((n) => r.parts.find((q) => q.name === n));
+  assert.deepStrictEqual(bottom.holes, cam(bottom, false));
+  assert.deepStrictEqual(top.holes, cam(top, true));
+  assert.deepStrictEqual(r.meshes, [12, ...Array(r.N).fill(4), 12]);
 });

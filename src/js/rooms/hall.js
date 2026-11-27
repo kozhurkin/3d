@@ -9,6 +9,8 @@ let T=16, TF=16; const HDF=4, G=2;
 // the whole cabinet (carcasses and fronts) this far from the side walls and from the ceiling: walls and ceiling aren't true, the
 // mezzanine goes in past the bathroom door's casing and slides over the columns, the doors open clear of the ceiling
 const MG=5;
+// the right column's fittings (furniture.js: FITTINGS) this far in from the edges of a board's end
+const FIX_IN=50;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
 let current=null;
@@ -35,9 +37,15 @@ function computeParts(p){
     add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc);
   }
   const step=(Hb-T-pl-FL)/(p.N+1);
+  /* the boards between the column's sides — the back panel and the front one — hold to them by their ends, two fittings an end,
+     FIX_IN from its left and right edges: a shelf on dowels; the bottom and the top on a dowel and a cam fitting, the cams from
+     outside the column (the bottom's from below, the top's from above) */
+  const fix=(y,id,up)=>[[T,1],[Dc,-1]].flatMap(([z,s])=>[[rx+FIX_IN,1],[xb-T-FIX_IN,-1]].flatMap(([x,i])=>
+    fittingHoles(id,[x,y+T/2,z],{n:['z',s],m:['x',i],f:['y',up],h:T/2})));
   for(let i=0;i<=p.N+1;i++){
-    const y=i===p.N+1?Hb-T:FL+pl+i*step;
-    add(i===0?'Дно правой колонны':i===p.N+1?'Крышка правой колонны':'Полка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc);
+    const y=i===p.N+1?Hb-T:FL+pl+i*step,shelf=i>0&&i<=p.N;
+    add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,
+      {holes:fix(y,shelf?'dowel':'dowelCam',i===0?-1:1)});
   }
   /* top: two separate carcasses for easier installation, or one (mezzOne) — its bottom, top and rails across the whole width,
      a partition centred on the joint of the fronts (each section half a board wider than its box was), the fronts the same.
@@ -210,6 +218,7 @@ function buildLayout(model){
     // with the sides' order odd the middle one goes to −x
     const o=b.o,ax=[];ax[o[0]]=[0,0,1];ax[o[2]]=[0,1,0];ax[o[1]]=[((o[0]>o[1])+(o[0]>o[2])+(o[1]>o[2]))%2?-1:1,0,0];
     const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(...ax.map(a=>new THREE.Vector3(...a))));
+    m.userData.size={L:b.L,B:b.B,t:b.t};
     m.userData.lay={from:V((p.x0+p.x1)/2,(p.y0+p.y1)/2,(p.z0+p.z1)/2),to:V(b.x,b.t/2,b.z),q,k:i/n*LAY.late};   // k: when it starts
     g.add(m);
   });
@@ -247,7 +256,9 @@ function layFrame(dt){
   if(!g){g=buildLayout(m);ownParts(m,f).forEach(o=>{o.visible=false;});}   // (a rebuilt cabinet: its new group)
   g.children.forEach(o=>{const L=o.userData.lay;if(!L)return;const e=smooth(Math.max(0,Math.min(1,(lay-L.k)/(1-LAY.late))));
     o.position.copy(L.from).lerp(L.to,e);o.position.y+=Math.sin(Math.PI*e)*.3;o.quaternion.identity().slerp(L.q,e);});
-  const ls=g.userData.labels;ls.forEach(s=>{s.visible=lay>.95;});fitLabels(ls);
+  const ls=g.userData.labels;ls.forEach(s=>{s.visible=lay>.95;});
+  if(g.userData.hover&&lay<1)layHover(null);
+  fitLabels(g.userData.hover?ls.concat(g.userData.hover.children):ls);
   [f.extra,f.dims,f.foot,wallGroup,doorGroup,arcs].forEach(o=>{if(o)o.visible=false;});
 }
 
@@ -258,6 +269,27 @@ hq('#h-tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;k.build
 hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;k.syncThick();k.build();});
 hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
 hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.build();});
+/* the board under the cursor in the layout (once every board lies): its dimension lines on it — the length along its left edge,
+   the width along its near one (each in from the edge, a quarter of the width at most); whole mm. A finger: the board tapped. Off it, or the layout going, they go */
+const layGroup=()=>{const m=VIEWS.hall.furniture().model;return m&&m.children.find(o=>o.userData.layout===true);};
+function boardDims(m){
+  const L=m.userData.lay,b=m.userData.size,d=new THREE.Group(),V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Z=new THREE.Vector3(0,0,1);
+  const x=L.to.x/MM,z=L.to.z/MM,x0=x-b.B/2,x1=x+b.B/2,z0=z-b.L/2,z1=z+b.L/2,y=b.t+2,i=Math.min(50,b.B/4);
+  const t=[b.L,b.B].map(v=>String(Math.round(v)));
+  roomDim(d,V(x0+i,y,z0),V(x0+i,y,z1),t[0],X);
+  roomDim(d,V(x0,y,z1-i),V(x1,y,z1-i),t[1],Z);
+  d.userData.of=m;d.userData.texts=t;return d;
+}
+function layHover(e){
+  const g=layGroup();if(!g)return;
+  const h=e&&lay>=1&&!ownMouse()?hitAt(e):null,m=h&&h.object.userData.lay?h.object:null,was=g.userData.hover;
+  if(was&&was.userData.of===m)return;
+  if(was){disposeGroup(was);g.userData.hover=null;}
+  if(m)g.add(g.userData.hover=boardDims(m));
+}
+canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'&&!ptrs.size)layHover(e);});
+canvas.addEventListener('pointerup',e=>{if(e.pointerType==='touch')layHover(e);});
+canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')layHover(null);});
 hq('#h-layout').addEventListener('click',()=>setLayout(!layOn));
 // the entrance door of the model, opened or closed from here as by a click on it
 hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});

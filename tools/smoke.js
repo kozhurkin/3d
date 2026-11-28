@@ -6,7 +6,7 @@
 // Часть-папка (tools/smoke/living/: index.js и файл на предмет) — целиком (living) или один предмет (living/sofa).
 // Обвязка (заглушки, runPage, помощники) — tools/smoke/harness.js, проверки — tools/smoke/<часть>.js или tools/smoke/<часть>/.
 const fs = require('fs'), path = require('path');
-// сборка (0,1 с) — до обвязки: она читает index.html
+// сборка — до обвязки: она читает index.html (исходники не менялись — сборка ничего не читает, build.js)
 const build = require('child_process').spawnSync(process.execPath, [path.join(__dirname, '..', 'build.js')], { encoding: 'utf8' });
 if (build.status !== 0) { console.error('сборка не прошла:\n' + build.stderr); process.exit(1); }
 const { checks, run, times } = require('./smoke/harness');

@@ -203,7 +203,7 @@ function setCam(v){
    the boards fly down from where they stand and back. In hall axes, in front of the bearing wall, the hall's middle between the ends ---------- */
 /* mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it;
    see: how opaque the board under the cursor is */
-const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35};
+const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35,dim:60};   // (dim: the hovered board's dimension lines off its edges, mm)
 const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая'],
   ['reveal','Обрамление откосов']];
 /* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top
@@ -292,15 +292,18 @@ hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;k.syncT
 hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
 hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.build();});
 /* the board under the cursor in the layout (once every board lies): it shows through — its holes, whichever face they are in — and
-   its dimension lines are on it: the length along its left edge, the width along its near one (each in from the edge, a quarter of
-   the width at most); whole mm. A finger: the board tapped. Off it, or the layout going, it is as it was */
+   its dimension lines are outside it, LAY.dim off its edges, at its top's height: the length by its left edge, the width in front of
+   it, each with extension lines from its corners (a little past the line); whole mm. A finger: the board tapped. Off it, or the layout
+   going, it is as it was */
 const layGroup=()=>{const m=VIEWS.hall.furniture().model;return m&&m.children.find(o=>o.userData.layout===true);};
 function boardDims(m){
   const L=m.userData.lay,b=m.userData.size,d=new THREE.Group(),V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Z=new THREE.Vector3(0,0,1);
-  const x=L.to.x/MM,z=L.to.z/MM,x0=x-b.B/2,x1=x+b.B/2,z0=z-b.L/2,z1=z+b.L/2,y=b.t+2,i=Math.min(50,b.B/4);
+  const x=L.to.x/MM,z=L.to.z/MM,x0=x-b.B/2,x1=x+b.B/2,z0=z-b.L/2,z1=z+b.L/2,y=b.t+2,o=LAY.dim,e=o+20;
   const t=[b.L,b.B].map(v=>String(Math.round(v)));
-  roomDim(d,V(x0+i,y,z0),V(x0+i,y,z1),t[0],X);
-  roomDim(d,V(x0,y,z1-i),V(x1,y,z1-i),t[1],Z);
+  roomDim(d,V(x0-o,y,z0),V(x0-o,y,z1),t[0],X);
+  roomDim(d,V(x0,y,z1+o),V(x1,y,z1+o),t[1],Z);
+  const ext=[[x0,z0,x0-e,z0],[x0,z1,x0-e,z1],[x0,z1,x0,z1+e],[x1,z1,x1,z1+e]].flatMap(([a,b,c,f])=>[V(a,y,b),V(c,y,f)]);
+  const l=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(ext),roomDimMat);l.renderOrder=19;d.add(l);
   d.userData.of=m;d.userData.texts=t;return d;
 }
 // a board see-through or back: its own copies of its finish (the boards of one finish share it), as clipped as they are

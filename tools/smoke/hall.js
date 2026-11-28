@@ -393,9 +393,9 @@ check('прихожая: «Раскладка» — детали на полу �
     ray.intersectObjects = () => [{ object: m, point: m.position }]; }, name);
   point('Задняя стенка правой колонны'); move();
   const H = p.run(() => tt.fur('hall').current.Hb), D = p.run(() => tt.fur('hall').current.Dc), T = p.run(() => tt.fur('hall').P.T);
-  // the length along its left edge, the width along its near one (50 in, on its top); no thickness
+  // outside it, 60 off its edges at its top's height: the length by its left edge, the width in front of it; no thickness
   // (the back panel stands between the column's sides: Dc − T wide)
-  assert.deepStrictEqual(dims(), ['Задняя стенка правой колонны', [H, D - T].map(String), [[50 - (D - T) / 2, T + 2, 0], [0, T + 2, H / 2 - 50]]]);
+  assert.deepStrictEqual(dims(), ['Задняя стенка правой колонны', [H, D - T].map(String), [[-(D - T) / 2 - 60, T + 2, 0], [0, T + 2, H / 2 + 60]]]);
   // the board itself shows through (its own copies of the finish, the others' stay); off it — solid again, the same finish as before
   const look = () => p.run(() => { const g = tt.fur('hall').model.children.find((o) => o.userData.layout === true), ms = g.children.filter((o) => o.userData.lay);
     const m = ms.find((o) => o.userData.part.name === 'Задняя стенка правой колонны'), other = ms.find((o) => o !== m && o.userData.part.mat === 'carcass');

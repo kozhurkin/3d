@@ -198,10 +198,10 @@ check('санузел: ножки под пеналом — включены с 
   const got = (p) => [feet(p).checked, ...p.run(() => (f => [f.P.Feet, f.current.FL, f.current.feet.length])(tt.fur('bath')))];
   let p = open();
   assert.deepStrictEqual(got(p), [true, true, 10, 4]);
-  // each one a black hexagonal puck 19 across the corners, 5 high, on the floor, and its pin up to the side
+  // each one a black hexagonal puck 16 across the flats, 5 high, on the floor, and its pin up to the side
   assert.deepStrictEqual(p.run(() => tt.fur('bath').model.children.filter((o) => o.geometry && o.geometry.kind === 'THREE.CylinderGeometry')
-    .map((o) => (([r, , h, n]) => [tt.mm(2 * r), tt.mm(h), n])(o.geometry.args))), Array(4).fill([[19, 5, 6], [6, 5, 12]]).flat(),
-    'the puck: 19 across, 5 high, six sides; the pin: Ø6, round');
+    .map((o) => (([r, , h, n]) => [tt.mm(2 * r * (n === 6 ? Math.cos(Math.PI / 6) : 1)), tt.mm(h), n])(o.geometry.args))), Array(4).fill([[16, 5, 6], [6, 5, 12]]).flat(),
+    'the puck: 16 across the flats, 5 high, six sides; the pin: Ø6, round');
   feet(p).checked = false; feet(p).dispatch('change');
   assert.deepStrictEqual(got(open()), [false, false, 0, 4], 'kept off, without «Сохранить»');
   p = open(); feet(p).checked = true; feet(p).dispatch('change');

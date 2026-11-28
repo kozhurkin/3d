@@ -111,7 +111,7 @@ check('санузел: фасады, размеры, деталировка, н�
   assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 40);
   assert.strictEqual(bq('#b-cut').querySelectorAll('th.mh').length, 2, 'carcass and fronts');
   // feet are listed under the parts (on from the start, four in the tall cabinet's sides); off — not listed
-  assert.match(bq('#b-tot').innerHTML, /Опоры регулируемые М6, шестигранник 19×5: 4 шт/);
+  assert.match(bq('#b-tot').innerHTML, /Опоры регулируемые М6, шестигранник 16×5: 4 шт/);
   const feet = bq('#b-tFeet'); feet.checked = false; feet.dispatch('change');
   assert.doesNotMatch(bq('#b-tot').innerHTML, /Опоры/);
   // remembered: cabinets and finishes, without the niche, the ceiling and the riser box

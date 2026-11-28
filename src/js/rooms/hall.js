@@ -19,8 +19,11 @@ const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500,REV_IN=150,LEFT_IN=100;
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,Rv:100,mezzOne:false,Ec:30,T:16,TF:16,L:1900};
 // the columns stand on feet this high (adjustable), the plinth under the right one, the opening's reveals clad: always
 const FEET=10;
-// the plinth: no higher than this (a cabinet's plinth isn't); its slider stops there, a value kept from before comes down to it
-const PL_MAX=120;
+/* the plinth: no higher than PL_MAX (a cabinet's plinth isn't), no lower than PL_MIN (the cam fixing it to the bottom, 34 from its top,
+   Ø15, keeps 8.5 mm off its lower edge); its slider stops there, a value kept from before comes within */
+const PL_MIN=50,PL_MAX=120;
+// the least wall left between two holes of a board; the step a foot goes in by off a hole
+const WALL=3,FOOT_STEP=8;
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -127,9 +130,19 @@ function computeParts(p){
   add('Фасад антресоли правый','front',rx+G/2,xb,Hb+G/2,p.H,Dc,Dc+TF,{hinge:'R'});
   // every board that reaches the floor is lifted onto the feet
   parts.forEach(q=>{if(q.y0<FL)q.y0=FL;});
-  // feet at the corners of each floor-standing unit (8 mm in from the outer faces)
-  const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8],[x1-8,z0+8],[x0+8,z1-8],[x1-8,z1-8]];
-  const feet=[...cnr(xa,p.Lw,0,Dc+TF),...cnr(rx,xb,0,Dc+TF)];
+  /* feet 8 mm in from the outer faces: at the corners of the right column; under the left one's side by the opening, at its back (by
+     the bearing wall) and 32 in from the front. Each in the end of the board standing on it; where its insert would come nearer than
+     WALL to a hole there (the plinth's dowels), it goes in along the board FOOT_STEP at a time ([x, z, the way in, the puck's turn]).
+     The right column's pucks are turned a quarter: a flat, not a corner, toward the wall and toward the front */
+  const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8,1,0],[x1-8,z0+8,-1,0],[x0+8,z1-8,1,0],[x1-8,z1-8,-1,0]].map(f=>[...f,Math.PI/2]);
+  const feet=[[p.Lw-8,8,0,1,0],[p.Lw-8,Dc+TF-32,0,-1,0],...cnr(rx,xb,0,Dc+TF)].map(([x0,z0,dx,dz,turn])=>{
+    for(let k=0;k<20;k++){
+      const x=x0+dx*k*FOOT_STEP,z=z0+dz*k*FOOT_STEP,q=parts.find(q=>q.y0===FL&&q.x0<x&&x<q.x1&&q.z0<z&&z<q.z1);
+      const h=fittingHoles('foot',[x,FL,z],{n:['y',1]});
+      if(q&&!(q.holes||[]).some(o=>h.some(f=>holesMeet(o,f,WALL)))){(q.holes=q.holes||[]).push(...h);return [x,z,turn];}
+    }
+    return [x0,z0,turn];   // (nowhere: the joints' check finds it bare)
+  });
   return {parts,Dc,Hb,FL,feet};
 }
 
@@ -141,7 +154,7 @@ const HT_MIN=300;
 const hBottom=()=>A.eDH-(P.T||16);   // where the mezzanine starts: the top of the opening's cladding
 const hRange=()=>{const hi=A.H-MG;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(w){
-  T=P.T||16;TF=P.TF||16;P.Pl=Math.min(P.Pl,PL_MAX);const [h0,h1]=hRange();
+  T=P.T||16;TF=P.TF||16;P.Pl=Math.max(PL_MIN,Math.min(P.Pl,PL_MAX));const [h0,h1]=hRange();
   P.W=A.hallW;P.L=hLen;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
   P.Lw=A.eD0+T;P.Rw=A.hallW-A.eD1+T;P.Ht=P.H-hBottom();
   return current=computeParts(P);

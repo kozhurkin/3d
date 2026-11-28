@@ -229,6 +229,7 @@ const FITTINGS={
   cam:{name:'Эксцентриковая стяжка',holes:[{k:'screw',d:8,depth:30},{k:'cam',d:15,depth:13,from:34}],mate:[{k:'screw',d:5,depth:13}]},
   dowelCam:{name:'Шкант + эксцентриковая стяжка',of:[['cam',0],['dowel',32]]},
   confirmat:{name:'Конфирмат',holes:[{k:'confirmat',d:5,depth:40}],mate:[{k:'confirmat',d:8,through:true}]},
+  foot:{name:'Опора регулируемая',holes:[{k:'foot',d:10,depth:16}]},   // its insert, in the board's end over it (no mate)
 };
 /* the holes (partMesh's p.holes) of fitting id at «at» (mm, room axes). Ways as [axis, ±1]: n — into the board, m — along the end
    toward its middle, f — across the board toward the face it is worked from; h — half the board's thickness */
@@ -238,6 +239,9 @@ function fittingHoles(id,at,{n,m,f,h}){
   if(F.of)return F.of.flatMap(([q,u])=>fittingHoles(q,holeGo(at,m,u),{n,m,f,h}));
   return F.holes.map(o=>o.from==null?{k:o.k,at,ax:n[0],s:n[1],d:o.d,depth:o.depth}:{k:o.k,at:holeGo(holeGo(at,n,o.from),f,h),ax:f[0],s:-f[1],d:o.d,depth:o.depth});
 }
+// the space a hole takes, as a box [[x0,x1],[y0,y1],[z0,z1]] (mm, d × d across); two holes meet when less than «wall» mm is left between them
+const holeBox=h=>{const i='xyz'.indexOf(h.ax);return [0,1,2].map(j=>j===i?[h.at[j],h.at[j]+h.s*h.depth].sort((a,b)=>a-b):[h.at[j]-h.d/2,h.at[j]+h.d/2]);};
+const holesMeet=(a,b,wall)=>{const A=holeBox(a),B=holeBox(b);return A.every(([a0,a1],j)=>a0<B[j][1]+wall&&B[j][0]<a1+wall);};
 // its holes in the other board (mate), the same point and ways: from the joint, the other way from n; thick: that board's thickness
 function fittingMates(id,at,{n,m,thick}){
   const F=FITTINGS[id];
@@ -312,11 +316,13 @@ function buildParts(c,mats,{prev=[],open=false}={}){
       holder.add(mesh);holder.userData.front=true;model.add(holder);
     }else{mesh.position.set(cx,cy,cz);(p.inSlide&&slideHolders[p.inSlide]||model).add(mesh);}
   });
-  // adjustable feet (hexagonal, 19 mm) under floor-standing cabinets; not part of the panel cut list
-  if(c.FL>0)(c.feet||[]).forEach(([x,z])=>{
-    // black plastic hexagonal puck 19 mm across the corners (a round Ø19 cut to six flats), 5 high, on the floor + M6 steel pin screwed into the panel edge
-    const puck=new THREE.Mesh(new THREE.CylinderGeometry(.0095,.0095,.005,6),mats.feet);
-    puck.position.set(x*MM,.0025,z*MM);puck.castShadow=true;model.add(puck);
+  // adjustable feet (hexagonal, 16 mm across the flats) under floor-standing cabinets; not part of the panel cut list. A foot [x, z, turn]: its puck
+  // turned that much about the vertical (radians; none — a corner toward the back and the front)
+  if(c.FL>0)(c.feet||[]).forEach(([x,z,turn])=>{
+    /* black plastic hexagonal puck 16 mm across the flats (8 from its middle: a foot 8 in from a face, turned a flat to it, stays within;
+       ≈18.5 across the corners), 5 high, on the floor + M6 steel pin screwed into the panel edge */
+    const r=8/Math.cos(Math.PI/6)*MM,puck=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.005,6),mats.feet);
+    puck.position.set(x*MM,.0025,z*MM);puck.rotation.y=turn||0;puck.castShadow=true;model.add(puck);
     const pin=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,c.FL*MM-.005,12),mats.pin);
     pin.position.set(x*MM,.005+(c.FL*MM-.005)/2,z*MM);model.add(pin);});
   return {model,doors};

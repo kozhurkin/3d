@@ -192,7 +192,8 @@ function roomKit(id,cfg){
       const head=mn!==last?`<tr><th colspan="3" class="mh">${mn}</th></tr>`:'';last=mn;
       return head+`<tr><td>${r.name}</td><td class="n">${r.L} × ${r.B}</td><td class="n">${r.n}</td></tr>`;}).join('');
     const total=rows.reduce((s,r)=>s+r.n,0);
-    pq('tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')+(cur.FL>0?`<span>Опоры регулируемые М6, шестигранник 19×5: ${cur.feet.length} шт</span>`:'');
+    pq('tot').innerHTML=`<span>${total} деталей</span>`+Object.entries(area).map(([k,v])=>`<span>${k}: ${v.toFixed(2)} м²</span>`).join('')
+      +(cur.FL>0?`<span>Опоры регулируемые М6, шестигранник 16×5: ${cur.feet.length} шт</span>`:'');
     pq('csv').value='Деталь;Материал;Длина;Ширина;Толщина;Кол-во\n'+rows.map(r=>[r.name,matName(r.mat),r.L,r.B,r.t,r.n].join(';')).join('\n');
   }
   pq('copy').addEventListener('click',()=>{const ta=pq('csv');copyText(ta,ta.value,pq('copied'),'Скопировано');});

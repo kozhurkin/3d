@@ -239,7 +239,7 @@ function setCam(v){
    the boards fly down from where they stand and back. In hall axes, in front of the bearing wall, the hall's middle between the ends ---------- */
 /* mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it;
    see: how opaque the board under the cursor is */
-const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35,dim:60};   // (dim: the hovered board's dimension lines off its edges, mm)
+const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.5,dim:60};   // (dim: the hovered board's dimension lines off its edges, mm)
 const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],
   ['mezzR','Антресоль малая']];
 /* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top

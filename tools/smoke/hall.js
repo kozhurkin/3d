@@ -30,7 +30,7 @@ check('прихожая: шкаф по стенам и проёму с «Пла�
   // its width is the hall's, the false panel and the column reach the opening's sides (54…946, the cladding 16 into it), the mezzanine
   // sits on the opening's top (2016 less the cladding: 2595 − 2000, the cabinet 5 under the ceiling)
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
-  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 70, 270, 595, 100, 36]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 70, 270, 595, 100, 37]);
   // the module's own starting sizes are these too
   assert.match(PAGES.app.slice(PAGES.app.indexOf('«Прихожая» view')), /^const P=\{W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,/m);
 });
@@ -41,7 +41,7 @@ check('прихожая: шкаф-портал собирается, «Сост�
   const nDoors = p.run('VIEWS.hall.furniture().current.parts.filter(x=>x.mat==="front"&&(x.hinge||x.pivot)).length');
   const h = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.hall.furniture())');
   let r = h();
-  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 36, true], 'built on screen, every door on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 37, true], 'built on screen, every door on a hinge');
   assert.strictEqual(nDoors, 3, 'three mezzanine doors');
   // the panel: what comes from the plan, the cabinet sizes, the space between the shelves
   assert.deepStrictEqual(['W', 'Hc', 'Rv', 'Ht', 'Lw', 'Rw'].map((k) => hq('#h-' + k).textContent), ['1200 мм', '2600 мм', '100 мм', '595 мм', '65 мм', '265 мм']);
@@ -162,9 +162,9 @@ check('прихожая: отделка, фасады, входная дверь
   walls.checked = true; walls.dispatch('change'); p.tick();
   assert.deepStrictEqual(p.run('[wallGroup.visible, doorGroup.visible]'), [true, true]);
   // cut list: every part; the same as CSV
-  assert.match(hq('#h-tot').innerHTML, /^<span>36 деталей<\/span>/);
+  assert.match(hq('#h-tot').innerHTML, /^<span>37 деталей<\/span>/);
   const csv = hq('#h-csv').value.split('\n');
-  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 36);
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 37);
   // a narrow opening on the plan: the chip warns
   p.run('setModel({eD0:150, eD1:900})'); p.tick();
   assert.match(hq('#h-chips').innerHTML, /<span class="chip warn">ширина 718 мм · мало для двери 800×2000<\/span>/);
@@ -462,13 +462,14 @@ check('прихожая: отверстия крепежа — в целых м�
   hq('[data-thick="18"][data-for="T"]').click(); assert.deepStrictEqual(odd(), [], 'boards 18');
 });
 
-check('прихожая: левая стойка — три ребра на шкантах, бок к лицевой панели на четырёх шкантах со стяжками', () => {
+check('прихожая: левая стойка — три ребра на шкантах, задняя стойка на конфирматах и шкантах, бок к лицевой панели на шкантах со стяжками', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
   const r = p.run(() => {
     const f = tt.fur('hall'), ps = f.current.parts, one = (n) => ps.find((q) => q.name === n);
     return { T: f.P.T, Lw: f.P.Lw, Dc: f.current.Dc, Hb: f.current.Hb, FL: f.current.FL,
       ribs: ps.filter((q) => /^Ребро левой/.test(q.name)).map((q) => ({ name: q.name, box: [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1], holes: q.holes })),
       side: one('Бок левой фальш-панели (со стороны проёма)').holes, front: one('Левая фальш-панель (лицевая, глухая)').holes,
+      post: (q => ({ box: [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1], holes: q.holes }))(one('Задняя стойка левой фальш-панели')),
       // in the scene: a dark cylinder for each hole of the column's board
       meshes: tt.meshes(f.model, (q) => q.holes && /левой фальш-панели|Левая фальш-панель/.test(q.name)).map((m) => m.children.filter((o) => o.userData.hole).length) };
   });
@@ -476,13 +477,24 @@ check('прихожая: левая стойка — три ребра на шк
   // the side lines the opening's reveal too: from the door frame (Rv into the opening) to the front, on the feet; no board of its own
   assert.deepStrictEqual(p.run(() => tt.box(tt.fur('hall').current.parts.filter((q) => /^Бок левой/.test(q.name)), 'xzy')), [xs, Lw, -100, Dc, FL, Hb]);
   assert.ok(!p.run(() => tt.fur('hall').current.parts.some((q) => q.name === 'Обрамление откоса левое')));
-  // between the wall (5 mm off it) and the side, the whole depth: at the bottom (on the feet), in the middle, at the top
+  /* between the wall (5 mm off it) and the side, the whole depth: at the bottom (on the feet), in the middle, at the top; the middle one
+     in front of the back post (by the bearing wall, from the bottom rib to the top one, as wide as they are) */
+  const z0 = [0, T, 0];
   assert.deepStrictEqual(r.ribs.map((q) => [q.name, q.box]),
-    ['нижнее', 'среднее', 'верхнее'].map((n, i) => ['Ребро левой фальш-панели — ' + n, [5, xs, ys[i], ys[i] + T, 0, Dc]]));
-  // Ø8 × 22 in the rib, Ø8 × 13 in the side (from its inner face) and in the front (from its back)
+    ['нижнее', 'среднее', 'верхнее'].map((n, i) => ['Ребро левой фальш-панели — ' + n, [5, xs, ys[i], ys[i] + T, z0[i], Dc]]));
+  assert.deepStrictEqual(r.post.box, [5, xs, FL + T, Hb - T, 0, T]);
+  // Ø8 × 22 in the rib, 100 from its ends; Ø8 × 13 in the side (from its inner face) and in the front (from its back)
   const d = (at, ax, s, depth) => ({ k: 'dowel', at, ax, s, d: 8, depth });
-  r.ribs.forEach((q, i) => assert.deepStrictEqual(q.holes,
-    [d([xs, ys[i] + T / 2, 100], 'x', -1, 22), d([xs, ys[i] + T / 2, Dc - 100], 'x', -1, 22), d([xm, ys[i] + T / 2, Dc], 'z', -1, 22)], q.name));
+  const cf = (at, ax, s) => ({ k: 'confirmat', at, ax, s, d: 5, depth: 40 }), thru = (at, ax, s) => ({ k: 'confirmat', at, ax, s, d: 8, depth: T, through: true });
+  const y0 = FL + T, y1 = Hb - T, ym = ys[1] + T / 2;
+  r.ribs.forEach((q, i) => assert.deepStrictEqual(q.holes, [d([xs, ys[i] + T / 2, z0[i] + 100], 'x', -1, 22), d([xs, ys[i] + T / 2, Dc - 100], 'x', -1, 22),
+    d([xm, ys[i] + T / 2, Dc], 'z', -1, 22),
+    // the confirmats: through the bottom rib from below and the top one from above into the post's ends; through the post into the middle one's end
+    ...[[thru([xm, y0, T / 2], 'y', -1)], [cf([xm, ym, T], 'z', 1)], [thru([xm, y1, T / 2], 'y', 1)]][i]], q.name));
+  // the post: four dowels into the side, 100 from its ends and two evenly between; the confirmats (Ø5 × 40) in its ends, through it (Ø8) the middle rib's
+  const py = [0, 1, 2, 3].map((i) => y0 + 100 + Math.round(i * (y1 - y0 - 200) / 3));
+  assert.deepStrictEqual(r.post.holes, [...py.map((y, i) => d([xs, y, T / 2], 'x', -1, 22)), cf([xm, y0, T / 2], 'y', 1), cf([xm, y1, T / 2], 'y', -1),
+    thru([xm, ym, T], 'z', -1)]);
   /* the side into the front by its front end: four dowels with cam fittings, 100 from its bottom and top and two evenly between —
      the screw (Ø8 × 30) in the end, 34 from it the cam (Ø15 × 13) from inside the panel, 32 toward the side's middle the dowel;
      their mates in the front: Ø5 × 13 and Ø8 × 13 */
@@ -491,10 +503,11 @@ check('прихожая: левая стойка — три ребра на шк
     { k: 'cam', at: [xs, y, Dc - 34], ax: 'x', s: 1, d: 15, depth: 13 }, d([xc, y + mi(i), Dc], 'z', -1, 22)]));
   assert.deepStrictEqual(r.front.slice(0, 8), cy.flatMap((y, i) => [{ k: 'screw', at: [xc, y, Dc], ax: 'z', s: 1, d: 5, depth: 13 },
     d([xc, y + mi(i), Dc], 'z', 1, 13)]));
-  // the ribs' mates
-  assert.deepStrictEqual(r.side.slice(12), ys.flatMap((y) => [100, Dc - 100].map((z) => d([xs, y + T / 2, z], 'x', 1, 13))));
+  // the ribs' mates, the post's
+  assert.deepStrictEqual(r.side.slice(12), [...ys.flatMap((y, i) => [z0[i] + 100, Dc - 100].map((z) => d([xs, y + T / 2, z], 'x', 1, 13))),
+    ...py.map((y) => d([xs, y, T / 2], 'x', 1, 13))]);
   assert.deepStrictEqual(r.front.slice(8), ys.map((y) => d([xm, y + T / 2, Dc], 'z', 1, 13)));
-  assert.deepStrictEqual(r.meshes, [18, 11, 3, 3, 3]);
+  assert.deepStrictEqual(r.meshes, [22, 11, 4, 4, 4, 7]);
 });
 
 check('прихожая: крепёж правой стойки — шканты, шканты со стяжками, конфирматы и ответные отверстия', () => {

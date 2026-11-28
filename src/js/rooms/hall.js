@@ -28,7 +28,8 @@ function computeParts(p){
   // each board belongs to what is made and put up as one piece (u): the columns, the mezzanine boxes (the hall's «Раскладка»)
   const unit=u=>(...a)=>{const o=put(...a);o.u=u;return o;};
   // a fitting of a board's end: its holes in the board (returned), its mates in the board «into» (FITTINGS)
-  // (fittings stand at whole mm: what is spread evenly is rounded)
+  // (fittings stand at whole mm: n of them spread evenly from a to b, rounded)
+  const spread=(a,b,n)=>[...Array(n)].map((_,i)=>a+Math.round(i*(b-a)/(n-1)));
   const fit=(id,at,o,into)=>{into.holes.push(...fittingMates(id,at,{...o,thick:into.mat==='front'?TF:T}));return fittingHoles(id,at,{h:T/2,...o});};
   let add=unit('left');
   // left column is a false panel: inner side + fixed front, no outer side, no back. Its side lines the opening's left reveal too:
@@ -38,13 +39,20 @@ function computeParts(p){
   const frontL=add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw,FL,Hb-G/2,Dc,Dc+TF,{holes:[]});
   /* the side into the front by its front end: four dowels with cam fittings, LEFT_IN from its bottom and top and two evenly between,
      the cams from inside the panel (unseen), the dowels 32 toward the middle of the side */
-  sideL.holes.push(...[0,1,2,3].flatMap(i=>fit('dowelCam',[p.Lw-T/2,FL+LEFT_IN+Math.round(i*(Hb-FL-2*LEFT_IN)/3),Dc],
-    {n:['z',-1],m:['y',i<2?1:-1],f:['x',-1]},frontL)));
-  /* three ribs between the wall and the side: at the bottom, in the middle and at the top, on dowels — two in the long edge into the side,
-     LEFT_IN from its ends, one in the middle of the short one into the front */
-  [['нижнее',FL],['среднее',Math.round((FL+Hb-T)/2)],['верхнее',Hb-T]].forEach(([nm,y])=>add('Ребро левой фальш-панели — '+nm,'carcass',xa,p.Lw-T,y,y+T,0,Dc,
-    {holes:[...[[LEFT_IN,1],[Dc-LEFT_IN,-1]].flatMap(([z,i])=>fit('dowel',[p.Lw-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1]},sideL)),
-      ...fit('dowel',[Math.round((xa+p.Lw-T)/2),y+T/2,Dc],{n:['z',-1],m:['x',1],f:['y',1]},frontL)]}));
+  sideL.holes.push(...spread(FL+LEFT_IN,Hb-LEFT_IN,4).flatMap((y,i)=>fit('dowelCam',[p.Lw-T/2,y,Dc],{n:['z',-1],m:['y',i<2?1:-1],f:['x',-1]},frontL)));
+  /* three ribs between the wall and the side: at the bottom, in the middle (in front of the back post: shorter by it) and at the top, on
+     dowels — two in the long edge into the side, LEFT_IN from its ends, one in the middle of the short one into the front */
+  const xm=Math.round((xa+p.Lw-T)/2),yr=Math.round((FL+Hb-T)/2);
+  const ribs=[['нижнее',FL,0],['среднее',yr,T],['верхнее',Hb-T,0]].map(([nm,y,z0])=>add('Ребро левой фальш-панели — '+nm,'carcass',
+    xa,p.Lw-T,y,y+T,z0,Dc,{holes:[...[[z0+LEFT_IN,1],[Dc-LEFT_IN,-1]].flatMap(([z,i])=>fit('dowel',[p.Lw-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1]},sideL)),
+      ...fit('dowel',[xm,y+T/2,Dc],{n:['z',-1],m:['x',1],f:['y',1]},frontL)]}));
+  /* the back post by the bearing wall, between the bottom and the top rib, as wide as they are: into the side on four dowels, LEFT_IN
+     from its ends and two evenly between; a confirmat in the middle of each joint with the ribs — through the bottom and the top one
+     into its ends, through it into the middle one's end */
+  const y0=FL+T,y1=Hb-T,post=add('Задняя стойка левой фальш-панели','carcass',xa,p.Lw-T,y0,y1,0,T,{holes:[]});
+  post.holes.push(...spread(y0+LEFT_IN,y1-LEFT_IN,4).flatMap((y,i)=>fit('dowel',[p.Lw-T,y,T/2],{n:['x',-1],m:['y',i<2?1:-1],f:['z',1]},sideL)),
+    ...[[y0,1,ribs[0]],[y1,-1,ribs[2]]].flatMap(([y,s,r])=>fit('confirmat',[xm,y,T/2],{n:['y',s],m:['x',1],f:['z',1]},r)));
+  ribs[1].holes.push(...fit('confirmat',[xm,yr+T/2,T],{n:['z',1],m:['x',1],f:['y',1]},post));
   /* right column: open toward the opening, its back to the right wall. Its two sides — by the bearing wall and the front one (in
      the fronts' finish, blind) — lap over the ends of the back panel alike, the back panel stands between them; so do the bottom,
      the shelves, the top and the plinth (ends: where those boards meet the sides, and the way into the board from there) */
@@ -104,9 +112,9 @@ function computeParts(p){
   /* the reveals' cladding (the left one is the left column's side) goes up with what it lines: the right board with the right column — into
      its side by the bearing wall by its end: a dowel and a cam fitting REV_IN from its bottom and top (the cams from the opening's wall,
      the dowels 32 toward the middle), three dowels evenly between — the top one with the mezzanine (its bigger box, or the one) */
-  const z0=-p.Rv,ry=i=>FL+REV_IN+Math.round(i*(Hb-FL-2*REV_IN)/4);
+  const z0=-p.Rv;
   add=unit('right');add('Обрамление откоса правое','carcass',rx,rx+T,0,Hb,z0,0,
-    {holes:[0,1,2,3,4].flatMap(i=>fit(i%4?'dowel':'dowelCam',[rx+T/2,ry(i),0],{n:['z',-1],m:['y',i?-1:1],f:['x',1]},sideB))});
+    {holes:spread(FL+REV_IN,Hb-REV_IN,5).flatMap((y,i)=>fit(i%4?'dowel':'dowelCam',[rx+T/2,y,0],{n:['z',-1],m:['y',i?-1:1],f:['x',1]},sideB))});
   add=unit('mezz');add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
   const mid=(p.Lw+rx)/2;
   add=unit('mezz');
@@ -217,7 +225,8 @@ function setCam(v){
 /* mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it;
    see: how opaque the board under the cursor is */
 const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35,dim:60};   // (dim: the hovered board's dimension lines off its edges, mm)
-const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая']];
+const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],
+  ['mezzR','Антресоль малая']];
 /* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top
    away, its face up; a flat one with its long side away. In a heap, columns of boards one behind another, the deepest first, none
    deeper than the deepest board of the cabinet. → boards {p, o: its sides [away, across, up], L, B, t (their sizes), x, z — the

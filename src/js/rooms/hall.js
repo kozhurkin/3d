@@ -303,13 +303,14 @@ const putBack=(m,f)=>ownParts(m,f).forEach(o=>{o.visible=!o.userData.front||VS.h
 function layFrame(dt){
   const f=VIEWS.hall.furniture(),m=f.model;if(!m)return;
   let g=m.children.find(o=>o.userData.layout===true);
+  syncSee();   // see-through as «Рентген» has it (a rebuilt cabinet, the boards just laid out too; nothing away from the hall)
   if(view!=='hall'){   // away from the hall: put together at once
     if(layOn){layOn=false;layCam0=null;hq('#h-layout').setAttribute('aria-pressed',false);}
-    lay=0;if(g){layHover(null);disposeGroup(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
+    lay=0;if(g){layHover(null);unlay(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
     return;
   }
   lay=reduce?(layOn?1:0):Math.max(0,Math.min(1,lay+(layOn?1:-1)*dt/LAY.s));
-  if(!lay){if(g){disposeGroup(g);putBack(m,f);}return;}
+  if(!lay){if(g){unlay(g);putBack(m,f);}return;}
   if(!g)g=buildLayout(m);   // (a rebuilt cabinet: its new group)
   ownParts(m,f).forEach(o=>{o.visible=false;});   // every frame: «Фасады» shows the fronts again
   g.children.forEach(o=>{const L=o.userData.lay;if(!L)return;const e=smooth(Math.max(0,Math.min(1,(lay-L.k)/(1-LAY.late))));
@@ -327,7 +328,7 @@ hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.bui
 /* the board under the cursor in the layout (once every board lies): it shows through — its holes, whichever face they are in — and
    its dimension lines are outside it, LAY.dim off its edges, at its top's height: the length by its left edge, the width in front of
    it, each with extension lines from its corners (a little past the line); whole mm. A finger: the board tapped. Off it, or the layout
-   going, it is as it was */
+   going, it is as it was (see-through still under «Рентген») */
 const layGroup=()=>{const m=VIEWS.hall.furniture().model;return m&&m.children.find(o=>o.userData.layout===true);};
 function boardDims(m){
   const L=m.userData.lay,b=m.userData.size,d=new THREE.Group(),V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Z=new THREE.Vector3(0,0,1);
@@ -345,17 +346,29 @@ function showThrough(m,on){
     Object.assign(c,{clippingPlanes:x.clippingPlanes,transparent:true,opacity:LAY.see,depthWrite:false});cs.set(x,c);}return cs.get(x);});}
   else if(m.userData.solid){new Set(m.material).forEach(c=>c.dispose());m.material=m.userData.solid;delete m.userData.solid;}
 }
+/* «Рентген» (VS.hall.xray, kept with the view): every board of the cabinet see-through, standing or laid out, in the hall's own view;
+   and in the layout the board under the cursor. The feet's pucks and pins stay as they are */
+const boardsIn=(o,f)=>{if(o.userData.part&&o.material)f(o);o.children.forEach(c=>boardsIn(c,f));};   // (its boards, however deep)
+function syncSee(){
+  const m=VIEWS.hall.furniture().model;if(!m)return;
+  const g=layGroup(),hv=g&&g.userData.hover&&g.userData.hover.userData.of,xr=view==='hall'&&!!VS.hall.xray;
+  boardsIn(m,o=>{const on=xr||o===hv;if(on!==!!o.userData.solid)showThrough(o,on);});
+}
+// the layout put away: its boards' own see-through copies of the finish first
+const unlay=g=>{boardsIn(g,o=>{if(o.userData.solid)showThrough(o,false);});disposeGroup(g);};
 function layHover(e){
   const g=layGroup();if(!g)return;
   const h=e&&lay>=1&&!ownMouse()?hitAt(e):null,m=h&&h.object.userData.lay?h.object:null,was=g.userData.hover;
   if(was&&was.userData.of===m)return;
-  if(was){showThrough(was.userData.of,false);disposeGroup(was);g.userData.hover=null;}
-  if(m){showThrough(m,true);g.add(g.userData.hover=boardDims(m));}
+  if(was){disposeGroup(was);g.userData.hover=null;}
+  if(m)g.add(g.userData.hover=boardDims(m));
+  syncSee();
 }
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'&&!ptrs.size)layHover(e);});
 canvas.addEventListener('pointerup',e=>{if(e.pointerType==='touch')layHover(e);});
 canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')layHover(null);});
 hq('#h-layout').addEventListener('click',()=>setLayout(!layOn));
+hq('#h-xray').addEventListener('click',()=>{VS.hall.xray=!VS.hall.xray;saveView('hall');hq('#h-xray').setAttribute('aria-pressed',VS.hall.xray);syncSee();});
 // the entrance door of the model, opened or closed from here as by a click on it
 hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
 // what comes from the plan, the space between the shelves, the opening left between the columns
@@ -395,8 +408,9 @@ const k=roomKit('hall',{
     frame:Sd=>{const [ox,oz]=O();return [ox-A.wt,ox+A.hallW+A.bear,oz-A.bear,oz+Sd];},
     // the sun aims at the middle of the cabinet, shadows cover 6 × 6 m
     sun:()=>{const [ox,oz]=O();return {x:(ox+A.hallW/2)*MM,y:P.H/2*MM,z:oz*MM,half:3};},
-    defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true}
+    defaults:{Wm:'auto',Wh:100,Sd:650,sizes:true,fronts:'closed',dims:true,walls:true,xray:false}
   }
 });
 frameHooks.push(layFrame);   // after the kit's: it hides what the kit shows
+hq('#h-xray').setAttribute('aria-pressed',!!VS.hall.xray);
 })();

@@ -208,7 +208,7 @@ check('прихожая: шкаф следует проёму с «Планир�
   const sd = p.document.getElementById('hFrameSd'); sd.value = '1900'; sd.dispatch('input');
   assert.deepStrictEqual(p.run(hallWalls).find((x) => x.id === 'hallBath').r, [-100, 0, 0, 1900]);
   assert.deepStrictEqual(p.run('doors.map(d=>d.g.visible)'), [true, true]);
-  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900, sizes: true, fronts: 'closed', dims: true, walls: true });
+  assert.deepStrictEqual(JSON.parse(storage.get('apt-view-hall-v1')), { Wm: 'auto', Wh: 100, Sd: 1900, sizes: true, fronts: 'closed', dims: true, walls: true, xray: false });
   // a flight to the bathroom and back
   p.run('showView("bath")'); p.fly();
   assert.strictEqual(p.run('view'), 'bath');
@@ -418,6 +418,44 @@ check('прихожая: «Раскладка» — детали на полу �
   assert.strictEqual(btn.getAttribute('aria-pressed'), 'false');
   assert.strictEqual(p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true)), false);
   assert.strictEqual(p.run(() => wallGroup.visible), true);
+});
+
+check('прихожая: «Рентген» — все детали полупрозрачные на месте и в раскладке, опоры нет; запоминается, вне прихожей выключен', () => {
+  const storage = new Map();
+  const open = () => { const p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick(); return p; };
+  let p = open();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  /* the cabinet's boards, however deep (on the spot and laid out): how many, how many see-through — their own copies of the finish,
+     0.35, no depth write; the feet's pucks solid */
+  const see = () => p.run(() => {
+    const m = tt.fur('hall').model, bs = [], walk = (o) => { if (o.userData.part && o.material) bs.push(o); o.children.forEach(walk); }; walk(m);
+    const thru = (o) => !!o.userData.solid && o.material.every((x) => x.transparent === true && x.opacity === 0.35 && x.depthWrite === false);
+    return { n: bs.length, thru: bs.filter(thru).length,
+      pucks: m.children.filter((o) => o.geometry && o.geometry.args && o.geometry.args[3] === 6).every((o) => o.material.transparent !== true) };
+  });
+  assert.strictEqual(hq('#h-xray').getAttribute('aria-pressed'), 'false');
+  let r = see(); assert.deepStrictEqual([r.thru, r.pucks], [0, true], 'off at first');
+  hq('#h-xray').click();
+  r = see(); assert.ok(r.n > 30); assert.deepStrictEqual([r.thru, r.pucks], [r.n, true], 'every board on the spot');
+  assert.deepStrictEqual([hq('#h-xray').getAttribute('aria-pressed'), JSON.parse(storage.get('apt-view-hall-v1')).xray], ['true', true]);
+  // laid out: the boards on the floor too; the one under the cursor shows its sizes and stays see-through off it
+  hq('#h-layout').click(); p.tick(100);
+  r = see(); assert.strictEqual(r.thru, r.n, 'laid out');
+  const c = p.document.getElementById('c'), move = () => c.dispatch('pointermove', { pointerId: 1, clientX: 300, clientY: 200, pointerType: 'mouse' });
+  p.run(() => { const m = tt.fur('hall').model.children.find((o) => o.userData.layout === true).children.find((o) => o.userData.lay); m.isLine = m.isSprite = false;
+    ray.intersectObjects = () => [{ object: m, point: m.position }]; });
+  move(); assert.ok(p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true).userData.hover), 'its sizes');
+  p.run(() => { ray.intersectObjects = () => []; }); move();
+  r = see(); assert.strictEqual(r.thru, r.n, 'off it: still see-through');
+  // put together: the same; away from the hall all solid, back in it see-through again
+  hq('#h-layout').click(); p.tick(100);
+  r = see(); assert.deepStrictEqual([r.thru === r.n, p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true))], [true, false]);
+  p.run(() => showView('plan')); p.tick(); assert.strictEqual(see().thru, 0, 'away from the hall');
+  p.run(() => showView('hall')); p.tick(); r = see(); assert.strictEqual(r.thru, r.n, 'back in the hall');
+  // a reload: still on; off — every board solid with its own finish back
+  p = open(); r = see();
+  assert.deepStrictEqual([hq('#h-xray').getAttribute('aria-pressed'), r.thru === r.n], ['true', true], 'kept');
+  hq('#h-xray').click(); assert.strictEqual(see().thru, 0, 'off');
 });
 
 check('прихожая: выбранный цвет остаётся после перезагрузки, «Вернуть исходные» возвращает исходный', () => {

@@ -11,6 +11,7 @@
     <div>
       <h2>Вид</h2>
       <div class="row" style="margin-top:0;grid-template-columns:1fr 1fr"><button class="btn" id="h-layout" aria-pressed="false" title="Детали шкафа разложены на полу по изделиям: стойки и антресоли, каждая с обшивкой своего откоса">Раскладка</button><button class="btn" id="h-xray" aria-pressed="false" title="Все детали шкафа полупрозрачные — и на месте, и в раскладке: видно отверстия крепежа и как они сходятся">Рентген</button></div>
+      <div class="lay-off">   <!-- not in «Раскладка»: the boards lie without the walls, the fronts are among them -->
       <h3>Фасады</h3>
       <div class="seg" role="group" aria-label="Фасады">
         <button data-door="closed" aria-pressed="true">Закрыты</button>
@@ -19,7 +20,7 @@
       </div>
       <div class="toggles">
         <label><input type="checkbox" id="h-tDims" checked> Размеры</label>
-        <label><input type="checkbox" id="h-tWall" checked> Стены и дверь</label>
+        <label><input type="checkbox" id="h-tWall" checked> Стены и двери</label>
       </div>
       <h3>Стены</h3>
       <div class="seg" role="group" aria-label="Стены">
@@ -41,6 +42,7 @@
         <button class="btn" data-cam="back" title="Со стороны лестничной площадки">Сзади</button>
         <button class="btn" data-cam="fake" title="Вид на левую фальш-панель">Фальш</button>
         <button class="btn" data-cam="mezz">Антресоль</button>
+      </div>
       </div>
     </div>
 
@@ -77,7 +79,7 @@
       <div class="field"><label>Левая фальш-панель</label><output id="h-Lw"></output></div>
       <div class="field"><label>Правая колонна с полками</label><output id="h-Rw"></output></div>
       <p class="note" style="margin:0 0 10px">Фальш-панель и колонна доходят до краёв входного проёма, антресоль начинается над ним — их задаёт проём на «Планировке».</p>
-      <div class="field"><label for="h-N">Полок в правой колонне</label><output data-p-out="N"></output><input type="range" id="h-N" data-p="N" min="2" max="12" step="1"></div>
+      <div class="field"><label for="h-N">Полок в правой колонне</label><output data-p-out="N"></output><input type="range" id="h-N" data-p="N" min="2" max="8" step="1"></div>
       <div class="note" id="h-shelfGap" style="margin:-4px 0 10px"></div>
       <div class="field"><label for="h-Pl">Высота цоколя</label><output data-p-out="Pl"></output><input type="range" id="h-Pl" data-p="Pl" min="50" max="120" step="5"></div>
     </div>

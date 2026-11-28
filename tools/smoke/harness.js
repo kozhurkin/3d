@@ -135,6 +135,7 @@ function el(tag, attrs = {}) {
     setAttribute(k, v) { this.attrs[k] = String(v); },
     removeAttribute(k) { delete this.attrs[k]; },
     hasAttribute(k) { return k in this.attrs; },
+    toggleAttribute(k, on = !(k in this.attrs)) { if (on) this.attrs[k] = ''; else delete this.attrs[k]; return on; },
     set innerHTML(h) { this.children.forEach((c) => (c.parentElement = null)); this.children = []; this._html = String(h); parseHTML(this._html, this); },
     get innerHTML() { return this._html; },   // what was last written (enough for the checks)
     appendChild(c) {

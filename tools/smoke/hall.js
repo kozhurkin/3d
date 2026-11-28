@@ -104,16 +104,20 @@ check('прихожая: шкаф целиком — корпуса и фаса�
   const up = p.run(() => { const q = tt.fur('hall').current.parts.filter((x) => x.mat === 'carcass' && x.y0 >= 2000);
     return [Math.min(...q.map((x) => x.x0)), Math.max(...q.map((x) => x.x1)), Math.max(...q.map((x) => x.y1))]; });
   assert.deepStrictEqual(up, [5, 1195, 2595]);
-  // the feet too, 8 in from the outer faces (the left column's under its side by the opening only)
+  // the feet too, 8 in from the outer faces (the left column's under its side by the opening only), the right column's by the right wall 24
   const fx = p.run(() => tt.fur('hall').current.feet.map((f) => f[0]));
-  assert.deepStrictEqual([Math.min(...fx), Math.max(...fx)], [62, 1187]);
-  /* their pucks (hexagons 16 across the flats): the right column's turned a flat to the wall and to the front, so they stay within
-     both — from the bearing wall's face to the front's (mm, its six corners) */
-  const pk = p.run(() => { const f = tt.fur('hall'), rx = f.P.W - f.P.Rw;
-    return { front: f.current.Dc + f.P.TF, z: f.model.children.filter((o) => o.geometry && o.geometry.args && o.geometry.args[3] === 6 && tt.mm(o.position.x) > rx)
-      .map((o) => [0, 1, 2, 3, 4, 5].map((k) => (o.position.z + o.geometry.args[0] * Math.cos(Math.PI / 3 * k + o.rotation.y)) / MM)) }; });
-  assert.strictEqual(pk.z.length, 4);
+  assert.deepStrictEqual([Math.min(...fx), Math.max(...fx)], [62, 1171]);
+  /* their pucks (hexagons 16 across the flats, mm, the six corners): the right column's by the opening turned a flat to the wall and to
+     the front, so they stay within both — from the bearing wall's face to the front's; those by the right wall not turned, a flat to it */
+  const pk = p.run(() => { const f = tt.fur('hall'), rx = f.P.W - f.P.Rw, xb = Math.max(...f.current.parts.map((q) => q.x1));
+    const ps = f.model.children.filter((o) => o.geometry && o.geometry.args && o.geometry.args[3] === 6 && tt.mm(o.position.x) > rx);
+    const c = (o, k) => [0, 1, 2, 3, 4, 5].map((i) => (o.position[k] + o.geometry.args[0] * Math.cos(Math.PI / 3 * i + o.rotation.y
+      - (k === 'x' ? Math.PI / 2 : 0))) / MM);
+    const near = ps.filter((o) => tt.mm(o.position.x) < (rx + xb) / 2), far = ps.filter((o) => tt.mm(o.position.x) > (rx + xb) / 2);
+    return { front: f.current.Dc + f.P.TF, xb, z: near.map((o) => c(o, 'z')), turn: far.map((o) => o.rotation.y), x: far.map((o) => c(o, 'x')) }; });
+  assert.deepStrictEqual([pk.z.length, pk.turn], [2, [0, 0]]);
   assert.ok(pk.z.every((z) => Math.min(...z) > -1e-6 && Math.max(...z) < pk.front + 1e-6), JSON.stringify(pk.z.map((z) => [Math.min(...z), Math.max(...z)])));
+  assert.ok(pk.x.every((x) => Math.abs(Math.max(...x) - (pk.xb - 16)) < 1e-6), JSON.stringify(pk.x.map((x) => Math.max(...x))));
 });
 
 check('прихожая: без «Шкафов» на плане — только в своей вкладке, поднимается из пола, не выше потолка', () => {
@@ -134,7 +138,7 @@ check('прихожая: без «Шкафов» на плане — тольк�
   assert.strictEqual(p.document.getElementById('h-Hc').textContent, '2500 мм');
 });
 
-check('прихожая: отделка, фасады, «Стены и дверь», размеры, деталировка, настройки по умолчанию', () => {
+check('прихожая: отделка, фасады, «Стены и двери», размеры, деталировка, настройки по умолчанию', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick();
   let hp = p.document.querySelector('[data-panel="hall"]');
@@ -158,7 +162,7 @@ check('прихожая: отделка, фасады, «Стены и двер�
   hq('[data-door="hidden"]').click(); assert.deepStrictEqual(pressed(), ['hidden']);
   // no box for the entrance door (it opens by a click on it)
   assert.strictEqual(hq('#h-tEntry'), null);
-  // «Стены и дверь» off: the walls, the entrance door and its swing go
+  // «Стены и двери» off: the walls, the entrance door and its swing go
   const walls = hq('#h-tWall'); walls.checked = false; walls.dispatch('change'); p.tick();
   assert.deepStrictEqual(p.run('[wallGroup.visible, doorGroup.visible, arcs.visible]'), [false, false, false]);
   walls.checked = true; walls.dispatch('change'); p.tick();
@@ -337,6 +341,11 @@ check('прихожая: «Раскладка» — детали на полу �
   btn.click(); p.tick(100);
   assert.strictEqual(btn.getAttribute('aria-pressed'), 'true');
   assert.deepStrictEqual(seen(), { cab: false, lay: true, walls: false, doors: false, box: false, dims: false });
+  // the panel without what the layout has no use for: the fronts, the walls, the cameras, the walls' colour; the rest stays
+  const hp = p.document.querySelector('[data-panel="hall"]'), off = (s) => matches(hp.querySelector(s), '[data-lay] .lay-off ' + s);
+  const gone = ['[data-door]', '#h-tDims', '#h-tWall', '[data-wm]', '#hWh', '#hFrameSd', '[data-cams]', '#wcs', '#wEdge'];
+  const kept = ['#h-layout', '#h-xray', '#h-chips', '#h-tMezzOne', '#h-sizesBox', '#h-cut', '#Laz', '#wFly'];
+  assert.deepStrictEqual([gone.filter((s) => !off(s)), kept.filter(off)], [[], []]);
   // every board once, lying on the floor (its thinnest side up); the heaps' names; each heap apart from the next, no board over another
   const r = p.run(() => {
     const f = tt.fur('hall'), g = f.model.children.find((o) => o.userData.layout === true), ms = g.children.filter((o) => o.userData.lay);
@@ -373,6 +382,7 @@ check('прихожая: «Раскладка» — детали на полу �
   // again: the boards fly back, the cabinet and the rest come back, the camera goes back
   btn.click(); p.tick(100);
   assert.deepStrictEqual(seen(), { cab: true, lay: false, walls: true, doors: true, box: true, dims: true });
+  assert.deepStrictEqual(gone.filter(off), [], 'the panel whole again');
   assert.deepStrictEqual(vec(p, 'goalT'), cam0);
   // the mezzanine in one box: one heap of it
   const one = p.document.querySelector('[data-panel="hall"]').querySelector('#h-tMezzOne'); one.checked = true; one.dispatch('change');
@@ -411,6 +421,7 @@ check('прихожая: «Раскладка» — детали на полу �
   // away from the hall: put together at once, the button off
   p.run(() => showView('plan')); p.tick();
   assert.strictEqual(btn.getAttribute('aria-pressed'), 'false');
+  assert.strictEqual(hp.hasAttribute('data-lay'), false);
   assert.strictEqual(p.run(() => !!tt.fur('hall').model.children.find((o) => o.userData.layout === true)), false);
   assert.strictEqual(p.run(() => wallGroup.visible), true);
 });
@@ -563,11 +574,14 @@ check('прихожая: соединения сходятся — у каждо
   const one = hq('#h-tMezzOne'); one.checked = true; one.dispatch('change'); assert.deepStrictEqual(faults(), [], 'the mezzanine in one box');
   hq('[data-thick="18"][data-for="T"]').click(); assert.deepStrictEqual(faults(), [], 'carcass 18');
   hq('[data-thick="18"][data-for="TF"]').click(); assert.deepStrictEqual(faults(), [], 'fronts 18');
-  [['Pl', 50], ['Pl', 55], ['Pl', 120], ['H', 2510], ['D', 300], ['N', 2], ['N', 12]].forEach(([k, v]) => { set(k, v); assert.deepStrictEqual(faults(), [], `${k} ${v}`); });
+  [['Pl', 50], ['Pl', 55], ['Pl', 120], ['H', 2510], ['D', 300], ['N', 2], ['N', 8]].forEach(([k, v]) => { set(k, v); assert.deepStrictEqual(faults(), [], `${k} ${v}`); });
   // the plinth from 50 to 120: its slider stops there, a value past them comes within
   assert.deepStrictEqual(['min', 'max'].map((a) => hq('[data-p="Pl"]').getAttribute(a)), ['50', '120']);
   set('Pl', 200); assert.strictEqual(p.run(() => tt.fur('hall').P.Pl), 120);
   set('Pl', 40); assert.strictEqual(p.run(() => tt.fur('hall').P.Pl), 50);
+  // the column's shelves up to 8: its slider stops there, a value past it comes within
+  assert.strictEqual(hq('[data-p="N"]').getAttribute('max'), '8');
+  set('N', 12); assert.strictEqual(p.run(() => tt.fur('hall').P.N), 8);
 });
 
 check('прихожая: рёбра жёсткости антресоли — 60 мм, к бокам на шкантах, по два в торце в 10 мм от верха и низа', () => {
@@ -688,8 +702,8 @@ check('прихожая: крепёж правой стойки — шканты
   assert.deepStrictEqual(panels.map((q) => q.slice(0, -2)), [[...mates(T, -1), ...rv.flatMap((y, i) => (i % 4 ? [h('dowel', 8, at0(y), 1)]
     : [h('screw', 5, at0(y), 1), h('dowel', 8, at0(y + mi(i)), 1)]))], mates(Dc, 1)]);
   /* and last the feet's inserts (Ø10 × 16 from below), 8 in from the outer faces: by the opening they would come within 3 mm of the
-     plinth's dowels, so they go in two 8 mm steps — 24 in */
-  assert.deepStrictEqual(panels.map((q) => q.slice(-2)), [8, Dc + 16 - 8].map((z) => [rx + 24, xb - 8].map((x) =>
+     plinth's dowels, so they go in two 8 mm steps — 24 in; by the right wall they stand 24 in too */
+  assert.deepStrictEqual(panels.map((q) => q.slice(-2)), [8, Dc + 16 - 8].map((z) => [rx + 24, xb - 24].map((x) =>
     ({ k: 'foot', at: [x, FL, z], ax: 'y', s: 1, d: 10, depth: 16 }))));
   assert.deepStrictEqual(p.run(() => tt.fur('hall').current.parts.find((q) => q.name === 'Обрамление откоса правое').holes),
     rv.flatMap((y, i) => (i % 4 ? [{ k: 'dowel', at: at0(y), ax: 'z', s: -1, d: 8, depth: 22 }] : [

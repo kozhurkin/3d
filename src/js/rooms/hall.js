@@ -24,6 +24,8 @@ const FEET=10;
 /* the plinth: no higher than PL_MAX (a cabinet's plinth isn't), no lower than PL_MIN (the cam fixing it to the bottom, 34 from its top,
    Ø15, keeps 8.5 mm off its lower edge); its slider stops there, a value kept from before comes within */
 const PL_MIN=50,PL_MAX=120;
+// the right column's shelves: no more than N_MAX; its slider stops there, a value kept from before comes within
+const N_MAX=8;
 // the least wall left between two holes of a board; the step a foot goes in by off a hole
 const WALL=3,FOOT_STEP=8;
 let current=null;
@@ -136,8 +138,9 @@ function computeParts(p){
   /* feet 8 mm in from the outer faces: at the corners of the right column; under the left one's side by the opening, at its back (by
      the bearing wall) and 32 in from the front. Each in the end of the board standing on it; where its insert would come nearer than
      WALL to a hole there (the plinth's dowels), it goes in along the board FOOT_STEP at a time ([x, z, the way in, the puck's turn]).
-     The right column's pucks are turned a quarter: a flat, not a corner, toward the wall and toward the front */
-  const cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8,1,0],[x1-8,z0+8,-1,0],[x0+8,z1-8,1,0],[x1-8,z1-8,-1,0]].map(f=>[...f,Math.PI/2]);
+     The right column's pucks by the opening are turned a quarter: a flat, not a corner, toward the wall and toward the front;
+     those by the right wall are not turned and stand 16 further in from it (24) */
+  const Q=Math.PI/2,cnr=(x0,x1,z0,z1)=>[[x0+8,z0+8,1,0,Q],[x1-24,z0+8,-1,0,0],[x0+8,z1-8,1,0,Q],[x1-24,z1-8,-1,0,0]];
   const feet=[[p.Lw-8,8,0,1,0],[p.Lw-8,Dc+TF-32,0,-1,0],...cnr(rx,xb,0,Dc+TF)].map(([x0,z0,dx,dz,turn])=>{
     for(let k=0;k<20;k++){
       const x=x0+dx*k*FOOT_STEP,z=z0+dz*k*FOOT_STEP,q=parts.find(q=>q.y0===FL&&q.x0<x&&x<q.x1&&q.z0<z&&z<q.z1);
@@ -157,7 +160,7 @@ const HT_MIN=300;
 const hBottom=()=>A.eDH-(P.T||16);   // where the mezzanine starts: the top of the opening's cladding
 const hRange=()=>{const hi=A.H-MG;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(w){
-  T=P.T||16;TF=P.TF||16;P.Pl=Math.max(PL_MIN,Math.min(P.Pl,PL_MAX));const [h0,h1]=hRange();
+  T=P.T||16;TF=P.TF||16;P.Pl=Math.max(PL_MIN,Math.min(P.Pl,PL_MAX));P.N=Math.min(P.N,N_MAX);const [h0,h1]=hRange();
   P.W=A.hallW;P.L=hLen;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
   P.Lw=A.eD0+T;P.Rw=A.hallW-A.eD1+T;P.Ht=P.H-hBottom();
   return current=computeParts(P);
@@ -294,8 +297,10 @@ function layCam(){
   goal.theta=0;goal.phi=.62;goal.r=Math.max((x1-x0)*MM/2/(tv*a),(z1-z0)*MM*.7/tv)*1.2;
   goalT.set(ox+(x0+x1)/2*MM,0,oz+(z0+z1)/2*MM);shortWay();
 }
+// the button, and the panel without what the layout has no use for (the fronts, the walls, the cameras; the walls' colour)
+const layPressed=on=>{hq('#h-layout').setAttribute('aria-pressed',on);panel.toggleAttribute('data-lay',on);};
 function setLayout(on){
-  if(on===layOn)return;layOn=on;hq('#h-layout').setAttribute('aria-pressed',on);
+  if(on===layOn)return;layOn=on;layPressed(on);
   if(on){layCam0={theta:goal.theta,phi:goal.phi,r:goal.r,t:goalT.clone()};layCam();}
   else if(layCam0){goal.theta=layCam0.theta;goal.phi=layCam0.phi;goal.r=layCam0.r;goalT.copy(layCam0.t);shortWay();layCam0=null;}
 }
@@ -308,7 +313,7 @@ function layFrame(dt){
   let g=m.children.find(o=>o.userData.layout===true);
   syncSee();   // see-through as «Рентген» has it (a rebuilt cabinet, the boards just laid out too; nothing away from the hall)
   if(view!=='hall'){   // away from the hall: put together at once
-    if(layOn){layOn=false;layCam0=null;hq('#h-layout').setAttribute('aria-pressed',false);}
+    if(layOn){layOn=false;layCam0=null;layPressed(false);}
     lay=0;if(g){layHover(null);unlay(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
     return;
   }
@@ -399,7 +404,7 @@ const k=roomKit('hall',{
   extra:{name:'things',items:[buildCase]},
   frame:(on,{extra,show})=>{if(extra)extra.children.forEach(o=>{if(o.userData.toolCase===true)o.visible=!on||show>=caseAt()[3];});},
   foot:()=>[caseAt()],
-  // in the hall's own view «Стены и дверь» off takes away the walls, the entrance door and its swing
+  // in the hall's own view «Стены и двери» off takes away the walls, the entrance door and its swing
   walls:on=>{if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
     else if(on&&wallGroup)wallGroup.visible=true;},
   syncFlags:()=>{hq('#h-tMezzOne').checked=!!P.mezzOne;},

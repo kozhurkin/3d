@@ -197,8 +197,9 @@ function setCam(v){
 /* ---------- «Раскладка»: the cabinet's boards on the floor, as if laid out to be put together — each piece made and put up on
    its own (the columns, the mezzanine boxes, the cladding) a heap of its own, a little apart. Everything else goes away;
    the boards fly down from where they stand and back. In hall axes, in front of the bearing wall, the hall's middle between the ends ---------- */
-// mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it
-const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35};
+/* mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it;
+   see: how opaque the board under the cursor is */
+const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35};
 const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая'],
   ['reveal','Обрамление откосов']];
 /* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top
@@ -264,7 +265,7 @@ function layFrame(dt){
   let g=m.children.find(o=>o.userData.layout===true);
   if(view!=='hall'){   // away from the hall: put together at once
     if(layOn){layOn=false;layCam0=null;hq('#h-layout').setAttribute('aria-pressed',false);}
-    lay=0;if(g){disposeGroup(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
+    lay=0;if(g){layHover(null);disposeGroup(g);putBack(m,f);if(wallGroup)wallGroup.visible=true;}
     return;
   }
   lay=reduce?(layOn?1:0):Math.max(0,Math.min(1,lay+(layOn?1:-1)*dt/LAY.s));
@@ -285,8 +286,9 @@ hq('#h-tReveal').addEventListener('change',e=>{P.reveal=e.target.checked;k.build
 hq('#h-tPlinth').addEventListener('change',e=>{P.plinth=e.target.checked;k.syncThick();k.build();});
 hq('#h-tFeet').addEventListener('change',e=>{P.Feet=e.target.checked;k.build();});
 hq('#h-tMezzOne').addEventListener('change',e=>{P.mezzOne=e.target.checked;k.build();});
-/* the board under the cursor in the layout (once every board lies): its dimension lines on it — the length along its left edge,
-   the width along its near one (each in from the edge, a quarter of the width at most); whole mm. A finger: the board tapped. Off it, or the layout going, they go */
+/* the board under the cursor in the layout (once every board lies): it shows through — its holes, whichever face they are in — and
+   its dimension lines are on it: the length along its left edge, the width along its near one (each in from the edge, a quarter of
+   the width at most); whole mm. A finger: the board tapped. Off it, or the layout going, it is as it was */
 const layGroup=()=>{const m=VIEWS.hall.furniture().model;return m&&m.children.find(o=>o.userData.layout===true);};
 function boardDims(m){
   const L=m.userData.lay,b=m.userData.size,d=new THREE.Group(),V=(x,y,z)=>new THREE.Vector3(x*MM,y*MM,z*MM),X=new THREE.Vector3(1,0,0),Z=new THREE.Vector3(0,0,1);
@@ -296,12 +298,18 @@ function boardDims(m){
   roomDim(d,V(x0,y,z1-i),V(x1,y,z1-i),t[1],Z);
   d.userData.of=m;d.userData.texts=t;return d;
 }
+// a board see-through or back: its own copies of its finish (the boards of one finish share it), as clipped as they are
+function showThrough(m,on){
+  if(on){const cs=new Map();m.userData.solid=m.material;m.material=m.material.map(x=>{if(!cs.has(x)){const c=x.clone();
+    Object.assign(c,{clippingPlanes:x.clippingPlanes,transparent:true,opacity:LAY.see,depthWrite:false});cs.set(x,c);}return cs.get(x);});}
+  else if(m.userData.solid){new Set(m.material).forEach(c=>c.dispose());m.material=m.userData.solid;delete m.userData.solid;}
+}
 function layHover(e){
   const g=layGroup();if(!g)return;
   const h=e&&lay>=1&&!ownMouse()?hitAt(e):null,m=h&&h.object.userData.lay?h.object:null,was=g.userData.hover;
   if(was&&was.userData.of===m)return;
-  if(was){disposeGroup(was);g.userData.hover=null;}
-  if(m)g.add(g.userData.hover=boardDims(m));
+  if(was){showThrough(was.userData.of,false);disposeGroup(was);g.userData.hover=null;}
+  if(m){showThrough(m,true);g.add(g.userData.hover=boardDims(m));}
 }
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch'&&!ptrs.size)layHover(e);});
 canvas.addEventListener('pointerup',e=>{if(e.pointerType==='touch')layHover(e);});

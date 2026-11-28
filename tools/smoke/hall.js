@@ -393,7 +393,14 @@ check('прихожая: «Раскладка» — детали на полу �
   // the length along its left edge, the width along its near one (50 in, on its top); no thickness
   // (the back panel stands between the column's sides: Dc − T wide)
   assert.deepStrictEqual(dims(), ['Задняя стенка правой колонны', [H, D - T].map(String), [[50 - (D - T) / 2, T + 2, 0], [0, T + 2, H / 2 - 50]]]);
+  // the board itself shows through (its own copies of the finish, the others' stay); off it — solid again, the same finish as before
+  const look = () => p.run(() => { const g = tt.fur('hall').model.children.find((o) => o.userData.layout === true), ms = g.children.filter((o) => o.userData.lay);
+    const m = ms.find((o) => o.userData.part.name === 'Задняя стенка правой колонны'), other = ms.find((o) => o !== m && o.userData.part.mat === 'carcass');
+    return { see: m.material.every((x) => x.transparent === true && x.opacity === 0.35 && x.depthWrite === false), own: m.material.every((x) => !other.material.includes(x)),
+      solid: !m.userData.solid }; });
+  assert.deepStrictEqual(look(), { see: true, own: true, solid: false });
   p.run(() => { ray.intersectObjects = () => []; }); move(); assert.strictEqual(dims(), null, 'off the boards');
+  assert.deepStrictEqual(look(), { see: false, own: false, solid: true });
   point('Полка правой колонны'); move('pointerup', 'touch'); assert.deepStrictEqual(dims()[0], 'Полка правой колонны', 'a finger: the board tapped');
   move('pointerleave', 'touch'); assert.ok(dims(), 'a finger lifted keeps it');
   move('pointerleave'); assert.strictEqual(dims(), null, 'the cursor left the scene');

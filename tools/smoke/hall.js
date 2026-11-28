@@ -30,7 +30,7 @@ check('прихожая: шкаф по стенам и проёму с «Пла�
   // its width is the hall's, the false panel and the column reach the opening's sides (54…946, the cladding 16 into it), the mezzanine
   // sits on the opening's top (2016 less the cladding: 2595 − 2000, the cabinet 5 under the ceiling)
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
-  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 70, 270, 595, 100, 37]);
+  assert.deepStrictEqual(p.run('(f=>[f.P.W,f.P.Lw,f.P.Rw,f.P.Ht,f.P.Rv,f.current.parts.length])(VIEWS.hall.furniture())'), [1200, 70, 270, 595, 100, 36]);
   // the module's own starting sizes are these too
   assert.match(PAGES.app.slice(PAGES.app.indexOf('«Прихожая» view')), /^const P=\{W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,/m);
 });
@@ -41,11 +41,11 @@ check('прихожая: шкаф-портал собирается, «Сост�
   const nDoors = p.run('VIEWS.hall.furniture().current.parts.filter(x=>x.mat==="front"&&(x.hinge||x.pivot)).length');
   const h = () => p.run('(f=>({doors:f.doors.length, parts:f.current.parts.map(x=>x.name), feet:f.current.FL?f.current.feet.length:0, visible:f.model&&f.model.visible, P:f.P}))(VIEWS.hall.furniture())');
   let r = h();
-  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 37, true], 'built on screen, every door on a hinge');
+  assert.deepStrictEqual([r.doors, r.parts.length, r.visible], [nDoors, 36, true], 'built on screen, every door on a hinge');
   assert.strictEqual(nDoors, 3, 'three mezzanine doors');
   // the panel: what comes from the plan, the cabinet sizes, the space between the shelves
   assert.deepStrictEqual(['W', 'Hc', 'Rv', 'Ht', 'Lw', 'Rw'].map((k) => hq('#h-' + k).textContent), ['1200 мм', '2600 мм', '100 мм', '595 мм', '65 мм', '265 мм']);
-  assert.strictEqual(hq('#h-shelfGap').textContent, 'Между полками 299,7 мм · секций 6');
+  assert.strictEqual(hq('#h-shelfGap').textContent, 'Между полками 299–300 мм · секций 6');
   assert.strictEqual(hq('#h-sizesBox').open, true, 'the sizes are open');
   // the height: from the mezzanine's least (the opening's top + 300) to 5 under the ceiling
   const hs = hq('[data-p="H"]');
@@ -59,7 +59,7 @@ check('прихожая: шкаф-портал собирается, «Сост�
   r = h(); assert.deepStrictEqual([r.P.T, r.P.Lw, r.P.Rw], [18, 72, 272]);
   // the reveal cladding, the plinth and the feet under both columns are always there: no switches for them
   assert.deepStrictEqual(['#h-tReveal', '#h-tPlinth', '#h-tFeet'].map((s) => hq(s)), [null, null, null]);
-  assert.ok(['Обрамление откоса левое', 'Цоколь правой колонны (со стороны проёма)'].every((n) => r.parts.includes(n)));
+  assert.ok(['Обрамление откоса правое', 'Цоколь правой колонны (со стороны проёма)'].every((n) => r.parts.includes(n)));
   assert.deepStrictEqual([h().feet, hq('#h-Pl').disabled], [8, false]);
   // the mezzanine in one box: one pair of sides, the bottom, the top and the rails across, a partition between the sections;
   // the fronts and the two shelves stay
@@ -162,9 +162,9 @@ check('прихожая: отделка, фасады, входная дверь
   walls.checked = true; walls.dispatch('change'); p.tick();
   assert.deepStrictEqual(p.run('[wallGroup.visible, doorGroup.visible]'), [true, true]);
   // cut list: every part; the same as CSV
-  assert.match(hq('#h-tot').innerHTML, /^<span>37 деталей<\/span>/);
+  assert.match(hq('#h-tot').innerHTML, /^<span>36 деталей<\/span>/);
   const csv = hq('#h-csv').value.split('\n');
-  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 37);
+  assert.strictEqual(csv.slice(1).reduce((s, l) => s + +l.split(';')[5], 0), 36);
   // a narrow opening on the plan: the chip warns
   p.run('setModel({eD0:150, eD1:900})'); p.tick();
   assert.match(hq('#h-chips').innerHTML, /<span class="chip warn">ширина 718 мм · мало для двери 800×2000<\/span>/);
@@ -258,7 +258,7 @@ check('прихожая: размер между полками — в прав�
   assert.deepStrictEqual(gaps(), ['300', '274', '274']);
   assert.deepStrictEqual(at().slice(1), [[472, 2153, 182], [1059, 2153, 182]]);
   const n = hq('[data-p="N"]'); n.value = '2'; n.dispatch('input');
-  assert.deepStrictEqual(gaps(), ['615', '274', '274']);
+  assert.deepStrictEqual(gaps(), ['616', '274', '274']);
 });
 
 check('прихожая: ящик для инструмента STANLEY FatMax на полу в углу у прохода на кухню — 662 × 293 × 295, в своей вкладке, когда рамка дошла до него, едет за стеной', () => {
@@ -353,12 +353,16 @@ check('прихожая: «Раскладка» — детали на полу �
   // a standing board as if the cabinet were tipped back: its up away from the viewer (−z), its bottom toward them
   assert.ok(r.boards.filter((b) => b.stands).every((b) => b.up.join() === '0,0,-1'));
   assert.ok(r.boards.filter((b) => !b.stands).every((b) => b.up.join() === '0,1,0'), 'a flat one stays face up');
-  assert.deepStrictEqual([...new Set(r.boards.map((b) => b.u))], ['left', 'right', 'mezz', 'mezzR', 'reveal']);
-  assert.strictEqual(r.labels, 5);
+  assert.deepStrictEqual([...new Set(r.boards.map((b) => b.u))], ['left', 'right', 'mezz', 'mezzR']);
+  assert.strictEqual(r.labels, 4);
+  // the reveals' cladding with what it lines: the right board with its column, the top one with the bigger mezzanine box (the left
+  // reveal is the left column's side)
+  assert.deepStrictEqual(p.run(() => tt.fur('hall').current.parts.filter((q) => /^Обрамление/.test(q.name)).map((q) => [q.name, q.u])),
+    [['Обрамление откоса правое', 'right'], ['Обрамление откоса верхнее', 'mezz']]);
   const over = (a, b) => a.x0 < b.x1 - 1 && b.x0 < a.x1 - 1 && a.z0 < b.z1 - 1 && b.z0 < a.z1 - 1;
   assert.ok(r.boards.every((a, i) => r.boards.every((b, j) => i === j || !over(a, b))), 'no board over another');
   const span = (u) => { const bs = r.boards.filter((b) => b.u === u); return [Math.min(...bs.map((b) => b.x0)), Math.max(...bs.map((b) => b.x1))]; };
-  const order = ['left', 'right', 'mezz', 'mezzR', 'reveal'].map(span);
+  const order = ['left', 'right', 'mezz', 'mezzR'].map(span);
   order.slice(1).forEach((s, i) => assert.ok(s[0] - order[i][1] >= 299, 'the heaps 300 apart'));
   assert.notDeepStrictEqual(vec(p, 'goalT'), cam0, 'the camera over the layout');
   // «Фасады» while laid out: the cabinet's fronts stay away (they are on the floor)
@@ -372,7 +376,7 @@ check('прихожая: «Раскладка» — детали на полу �
   const one = p.document.querySelector('[data-panel="hall"]').querySelector('#h-tMezzOne'); one.checked = true; one.dispatch('change');
   btn.click(); p.tick(100);
   assert.deepStrictEqual(p.run(() => tt.fur('hall').model.children.find((o) => o.userData.layout === true).userData.labels.map((s) => s.userData.name)),
-    ['Левая стойка', 'Правая стойка', 'Антресоль', 'Обрамление откосов']);
+    ['Левая стойка', 'Правая стойка', 'Антресоль']);
   // the cursor over a board, once all of them lie: its name and sizes over it, as in the cut list; off it — gone
   const c = p.document.getElementById('c'), move = (type = 'pointermove', pointerType = 'mouse') => c.dispatch(type, { pointerId: 1, clientX: 300, clientY: 200, pointerType });
   // the board's name, the texts of its dimension lines and where they are: their labels, mm from the board's middle on the floor
@@ -446,6 +450,18 @@ check('прихожая: «Антресоль одним корпусом» ос
   assert.deepStrictEqual([one().checked, p.run(() => tt.fur('hall').P.mezzOne)], [false, false]);
 });
 
+check('прихожая: отверстия крепежа — в целых мм при любых размерах', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  const odd = () => p.run(() => tt.fur('hall').current.parts.flatMap((q) => (q.holes || []).filter((h) => !h.at.every(Number.isInteger)).map((h) => q.name)));
+  assert.deepStrictEqual(odd(), []);
+  // a plinth not a multiple of 4, another height, thicker boards
+  const set = (k, v) => { const e = hq(`[data-p="${k}"]`); e.value = String(v); e.dispatch('input'); };
+  set('Pl', 45); assert.deepStrictEqual(odd(), [], 'plinth 45');
+  set('H', 2510); assert.deepStrictEqual(odd(), [], 'height 2510');
+  hq('[data-thick="18"][data-for="T"]').click(); assert.deepStrictEqual(odd(), [], 'boards 18');
+});
+
 check('прихожая: левая стойка — три ребра на шкантах, бок к лицевой панели на четырёх шкантах со стяжками', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
   const r = p.run(() => {
@@ -456,7 +472,10 @@ check('прихожая: левая стойка — три ребра на шк
       // in the scene: a dark cylinder for each hole of the column's board
       meshes: tt.meshes(f.model, (q) => q.holes && /левой фальш-панели|Левая фальш-панель/.test(q.name)).map((m) => m.children.filter((o) => o.userData.hole).length) };
   });
-  const { T, Lw, Dc, Hb, FL } = r, xs = Lw - T, xm = (5 + xs) / 2, ys = [FL, (FL + Hb - T) / 2, Hb - T];
+  const { T, Lw, Dc, Hb, FL } = r, xs = Lw - T, xm = Math.round((5 + xs) / 2), ys = [FL, Math.round((FL + Hb - T) / 2), Hb - T];
+  // the side lines the opening's reveal too: from the door frame (Rv into the opening) to the front, on the feet; no board of its own
+  assert.deepStrictEqual(p.run(() => tt.box(tt.fur('hall').current.parts.filter((q) => /^Бок левой/.test(q.name)), 'xzy')), [xs, Lw, -100, Dc, FL, Hb]);
+  assert.ok(!p.run(() => tt.fur('hall').current.parts.some((q) => q.name === 'Обрамление откоса левое')));
   // between the wall (5 mm off it) and the side, the whole depth: at the bottom (on the feet), in the middle, at the top
   assert.deepStrictEqual(r.ribs.map((q) => [q.name, q.box]),
     ['нижнее', 'среднее', 'верхнее'].map((n, i) => ['Ребро левой фальш-панели — ' + n, [5, xs, ys[i], ys[i] + T, 0, Dc]]));
@@ -467,7 +486,7 @@ check('прихожая: левая стойка — три ребра на шк
   /* the side into the front by its front end: four dowels with cam fittings, 100 from its bottom and top and two evenly between —
      the screw (Ø8 × 30) in the end, 34 from it the cam (Ø15 × 13) from inside the panel, 32 toward the side's middle the dowel;
      their mates in the front: Ø5 × 13 and Ø8 × 13 */
-  const xc = Lw - T / 2, cy = [0, 1, 2, 3].map((i) => FL + 100 + i * (Hb - FL - 200) / 3), mi = (i) => (i < 2 ? 32 : -32);
+  const xc = Lw - T / 2, cy = [0, 1, 2, 3].map((i) => FL + 100 + Math.round(i * (Hb - FL - 200) / 3)), mi = (i) => (i < 2 ? 32 : -32);
   assert.deepStrictEqual(r.side.slice(0, 12), cy.flatMap((y, i) => [{ k: 'screw', at: [xc, y, Dc], ax: 'z', s: -1, d: 8, depth: 30 },
     { k: 'cam', at: [xs, y, Dc - 34], ax: 'x', s: 1, d: 15, depth: 13 }, d([xc, y + mi(i), Dc], 'z', -1, 22)]));
   assert.deepStrictEqual(r.front.slice(0, 8), cy.flatMap((y, i) => [{ k: 'screw', at: [xc, y, Dc], ax: 'z', s: 1, d: 5, depth: 13 },
@@ -517,7 +536,16 @@ check('прихожая: крепёж правой стойки — шканты
     ...[20, 60].map((y) => h('dowel', 8, [rx + T / 2, pq.y + y, z], s)),
     ...[bottom, ...shelves, top].flatMap((q) => [[x0, 1], [x1, -1]].flatMap(([x, i]) => q === bottom || q === top
       ? [h('screw', 5, [x, q.y + T / 2, z], s), h('dowel', 8, [x + i * 32, q.y + T / 2, z], s)] : [h('dowel', 8, [x, q.y + T / 2, z], s)]))];
-  assert.deepStrictEqual(panels, [mates(T, -1), mates(Dc, 1)]);
+  /* and in the side by the bearing wall, from its outer face, the right reveal's cladding's: it meets the side by its end — 150 from its
+     bottom (on the feet) and top a dowel and a cam fitting, the cam (Ø15 × 13) from the opening's wall, 34 from the end, the dowel 32 toward
+     the middle; three dowels (Ø8 × 22) evenly between */
+  const rv = [0, 1, 2, 3, 4].map((i) => FL + 150 + Math.round(i * (Hb - FL - 300) / 4)), at0 = (y) => [rx + T / 2, y, 0], mi = (i) => (i ? -32 : 32);
+  assert.deepStrictEqual(panels, [[...mates(T, -1), ...rv.flatMap((y, i) => (i % 4 ? [h('dowel', 8, at0(y), 1)]
+    : [h('screw', 5, at0(y), 1), h('dowel', 8, at0(y + mi(i)), 1)]))], mates(Dc, 1)]);
+  assert.deepStrictEqual(p.run(() => tt.fur('hall').current.parts.find((q) => q.name === 'Обрамление откоса правое').holes),
+    rv.flatMap((y, i) => (i % 4 ? [{ k: 'dowel', at: at0(y), ax: 'z', s: -1, d: 8, depth: 22 }] : [
+      { k: 'screw', at: at0(y), ax: 'z', s: -1, d: 8, depth: 30 }, { k: 'cam', at: [rx + T, y, -34], ax: 'x', s: -1, d: 15, depth: 13 },
+      { k: 'dowel', at: at0(y + mi(i)), ax: 'z', s: -1, d: 8, depth: 22 }])));
   /* the back panel: into the sides a dowel and a cam fitting in each end, 500 from its bottom and top (the dowel
      32 toward the middle), the cams from the wall's side; the confirmats go through it: Ø8, its whole thickness */
   const side = p.run(() => tt.fur('hall').current.parts.find((q) => q.name === 'Задняя стенка правой колонны').holes);
@@ -528,7 +556,7 @@ check('прихожая: крепёж правой стойки — шканты
       { k: 'dowel', at: [xb - T / 2, y + i * 32, z], ax: 'z', s, d: 8, depth: 22 }])),
     ...[bottom, top].flatMap((q) => [T + 100, Dc - 100].map((z) =>
       ({ k: 'confirmat', at: [xb - T, q.y + T / 2, z], ax: 'x', s: 1, d: 8, depth: T, through: true })))]);
-  assert.deepStrictEqual(r.meshes, [16, 2 * r.N + 14, 2 * r.N + 14, 7, 16, ...Array(r.N).fill(4), 14]);
+  assert.deepStrictEqual(r.meshes, [16, 2 * r.N + 21, 2 * r.N + 14, 7, 16, ...Array(r.N).fill(4), 14]);
   // the plinth (80 high, on the feet): two dowels in each end, 20 from its top and bottom; a low one (40) — a quarter of its height in
   const plinth = () => p.run(() => tt.fur('hall').current.parts.find((q) => /^Цоколь/.test(q.name)).holes.map((h) => [h.k, h.at[1], h.at[2], h.s, h.depth]));
   assert.deepStrictEqual(plinth().slice(0, 4), [['dowel', FL + 20, T, 1, 22], ['dowel', FL + 60, T, 1, 22], ['dowel', FL + 20, Dc, -1, 22], ['dowel', FL + 60, Dc, -1, 22]]);

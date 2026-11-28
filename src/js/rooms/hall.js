@@ -11,9 +11,10 @@ let T=16, TF=16; const HDF=4, G=2;
 const MG=5;
 /* the right column's fittings (furniture.js: FITTINGS), mm in from the edges of a board's end: into its two sides (FIX_IN), the
    confirmats of the bottom and the top into its back panel (CONF_IN), the plinth's dowels from its top and bottom (PLINTH_IN, a quarter
-   of its height at most), the back panel's into the sides from its top and bottom (SIDE_IN); the left column's: the ribs' dowels into its side, the side's
-   fittings into its front (LEFT_IN) */
-const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500,LEFT_IN=100;
+   of its height at most), the back panel's into the sides from its top and bottom (SIDE_IN), the right reveal's cladding's cam fittings into the
+   side by the bearing wall from its bottom and top (REV_IN); the left column's: the ribs' dowels into its side, the side's fittings
+   into its front (LEFT_IN) */
+const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500,REV_IN=150,LEFT_IN=100;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,Rv:100,mezzOne:false,Ec:30,T:16,TF:16,L:1900};
 // the columns stand on feet this high (adjustable), the plinth under the right one, the opening's reveals clad: always
@@ -24,24 +25,26 @@ let current=null;
 function computeParts(p){
   const [parts,put]=partList(), W=p.W, Dc=p.D-TF, Hb=p.H-p.Ht, FL=FEET;   // FL: floor-standing parts sit on the feet
   const xa=MG, xb=W-MG;   // the cabinet's outer faces, MG in from the walls (x is from the left wall)
-  // each board belongs to what is made and put up as one piece (u): the columns, the mezzanine boxes, the cladding (the hall's «Раскладка»)
+  // each board belongs to what is made and put up as one piece (u): the columns, the mezzanine boxes (the hall's «Раскладка»)
   const unit=u=>(...a)=>{const o=put(...a);o.u=u;return o;};
   // a fitting of a board's end: its holes in the board (returned), its mates in the board «into» (FITTINGS)
+  // (fittings stand at whole mm: what is spread evenly is rounded)
   const fit=(id,at,o,into)=>{into.holes.push(...fittingMates(id,at,{...o,thick:into.mat==='front'?TF:T}));return fittingHoles(id,at,{h:T/2,...o});};
   let add=unit('left');
-  // left column is a false panel: inner side + fixed front, no outer side, no back
-  const sideL=add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,0,Dc,{holes:[]});
+  // left column is a false panel: inner side + fixed front, no outer side, no back. Its side lines the opening's left reveal too:
+  // it goes on past the bearing wall's face, Rv into the opening, up to the door frame
+  const sideL=add('Бок левой фальш-панели (со стороны проёма)','carcass',p.Lw-T,p.Lw,FL,Hb,-p.Rv,Dc,{holes:[]});
   // (the columns' fronts reach the opening's edge, flush with their carcasses)
   const frontL=add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw,FL,Hb-G/2,Dc,Dc+TF,{holes:[]});
   /* the side into the front by its front end: four dowels with cam fittings, LEFT_IN from its bottom and top and two evenly between,
      the cams from inside the panel (unseen), the dowels 32 toward the middle of the side */
-  sideL.holes.push(...[0,1,2,3].flatMap(i=>fit('dowelCam',[p.Lw-T/2,FL+LEFT_IN+i*(Hb-FL-2*LEFT_IN)/3,Dc],
+  sideL.holes.push(...[0,1,2,3].flatMap(i=>fit('dowelCam',[p.Lw-T/2,FL+LEFT_IN+Math.round(i*(Hb-FL-2*LEFT_IN)/3),Dc],
     {n:['z',-1],m:['y',i<2?1:-1],f:['x',-1]},frontL)));
   /* three ribs between the wall and the side: at the bottom, in the middle and at the top, on dowels — two in the long edge into the side,
      LEFT_IN from its ends, one in the middle of the short one into the front */
-  [['нижнее',FL],['среднее',(FL+Hb-T)/2],['верхнее',Hb-T]].forEach(([nm,y])=>add('Ребро левой фальш-панели — '+nm,'carcass',xa,p.Lw-T,y,y+T,0,Dc,
+  [['нижнее',FL],['среднее',Math.round((FL+Hb-T)/2)],['верхнее',Hb-T]].forEach(([nm,y])=>add('Ребро левой фальш-панели — '+nm,'carcass',xa,p.Lw-T,y,y+T,0,Dc,
     {holes:[...[[LEFT_IN,1],[Dc-LEFT_IN,-1]].flatMap(([z,i])=>fit('dowel',[p.Lw-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1]},sideL)),
-      ...fit('dowel',[(xa+p.Lw-T)/2,y+T/2,Dc],{n:['z',-1],m:['x',1],f:['y',1]},frontL)]}));
+      ...fit('dowel',[Math.round((xa+p.Lw-T)/2),y+T/2,Dc],{n:['z',-1],m:['x',1],f:['y',1]},frontL)]}));
   /* right column: open toward the opening, its back to the right wall. Its two sides — by the bearing wall and the front one (in
      the fronts' finish, blind) — lap over the ends of the back panel alike, the back panel stands between them; so do the bottom,
      the shelves, the top and the plinth (ends: where those boards meet the sides, and the way into the board from there) */
@@ -56,7 +59,7 @@ function computeParts(p){
   backP.holes.push(...ends.flatMap(([z,s])=>[[FL+SIDE_IN,1],[Hb-SIDE_IN,-1]].flatMap(([y,i])=>
     join('dowelCam',[xb-T/2,y,z],{n:['z',s],m:['y',i],f:['x',1],h:T/2}))));
   // the plinth, on dowels into the sides: two in each end, PLINTH_IN from its top and bottom
-  const u=Math.min(PLINTH_IN,pl/4),plinth=add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,
+  const u=Math.min(PLINTH_IN,Math.round(pl/4)),plinth=add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,
     {holes:ends.flatMap(([z,s])=>[FL+u,FL+pl-u].flatMap(y=>join('dowel',[rx+T/2,y,z],{n:['z',s],m:['y',1],f:['x',1],h:T/2})))});
   let bottom=null;
   const step=(Hb-T-pl-FL)/(p.N+1);
@@ -67,7 +70,7 @@ function computeParts(p){
     join(id,[x,y+T/2,z],{n:['z',s],m:['x',i],f:['y',up],h:T/2})));
   const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>join('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2},backP));
   for(let i=0;i<=p.N+1;i++){
-    const y=i===p.N+1?Hb-T:FL+pl+i*step,shelf=i>0&&i<=p.N;
+    const y=i===p.N+1?Hb-T:FL+pl+Math.round(i*step),shelf=i>0&&i<=p.N;   // (at whole mm: the gaps differ by 1 mm at most)
     const q=add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,
       {holes:shelf?fix(y,'dowel'):[...fix(y,'dowelCam',i===0?-1:1),...conf(y)]});
     if(!i)bottom=q;
@@ -98,10 +101,13 @@ function computeParts(p){
     add=unit('mezz');topBox('центральный корпус',xa,rx);shelf('центральный корпус',xa+T,rx-T);
     add=unit('mezzR');topBox('правый корпус',rx,xb);shelf('правый корпус',rx+T,xb-T);
   }
-  add=unit('reveal');const z0=-p.Rv;
-  add('Обрамление откоса левое','carcass',p.Lw-T,p.Lw,0,Hb,z0,0);
-  add('Обрамление откоса правое','carcass',rx,rx+T,0,Hb,z0,0);
-  add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
+  /* the reveals' cladding (the left one is the left column's side) goes up with what it lines: the right board with the right column — into
+     its side by the bearing wall by its end: a dowel and a cam fitting REV_IN from its bottom and top (the cams from the opening's wall,
+     the dowels 32 toward the middle), three dowels evenly between — the top one with the mezzanine (its bigger box, or the one) */
+  const z0=-p.Rv,ry=i=>FL+REV_IN+Math.round(i*(Hb-FL-2*REV_IN)/4);
+  add=unit('right');add('Обрамление откоса правое','carcass',rx,rx+T,0,Hb,z0,0,
+    {holes:[0,1,2,3,4].flatMap(i=>fit(i%4?'dowel':'dowelCam',[rx+T/2,ry(i),0],{n:['z',-1],m:['y',i?-1:1],f:['x',1]},sideB))});
+  add=unit('mezz');add('Обрамление откоса верхнее','carcass',p.Lw-T,rx+T,Hb,Hb+T,z0,0);
   const mid=(p.Lw+rx)/2;
   add=unit('mezz');
   add('Фальш-панель антресоли (под петли, глухая)','front',xa,p.Lw-G/2,Hb+G/2,p.H,Dc,Dc+TF);
@@ -206,13 +212,12 @@ function setCam(v){
 }
 
 /* ---------- «Раскладка»: the cabinet's boards on the floor, as if laid out to be put together — each piece made and put up on
-   its own (the columns, the mezzanine boxes, the cladding) a heap of its own, a little apart. Everything else goes away;
+   its own (the columns, the mezzanine boxes, each with the reveal's cladding it carries) a heap of its own, a little apart. Everything else goes away;
    the boards fly down from where they stand and back. In hall axes, in front of the bearing wall, the hall's middle between the ends ---------- */
 /* mm: between the boards, between the heaps, from the bearing wall; s: the flight, seconds; late: the last board starts this far into it;
    see: how opaque the board under the cursor is */
 const LAY={gap:40,apart:300,z0:100,s:1.4,late:.35,see:.35,dim:60};   // (dim: the hovered board's dimension lines off its edges, mm)
-const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая'],
-  ['reveal','Обрамление откосов']];
+const lUnits=()=>[['left','Левая стойка'],['right','Правая стойка'],['mezz',P.mezzOne?'Антресоль':'Антресоль большая'],['mezzR','Антресоль малая']];
 /* where each board lies: its biggest face down; a standing one as if the cabinet were tipped back — its bottom toward the viewer, its top
    away, its face up; a flat one with its long side away. In a heap, columns of boards one behind another, the deepest first, none
    deeper than the deepest board of the cabinet. → boards {p, o: its sides [away, across, up], L, B, t (their sizes), x, z — the
@@ -334,8 +339,10 @@ function panelText(){
   // the hall from the plan; the false panel and the column as they are, MG off the walls
   [['W',P.W],['Hc',A.H],['Rv',P.Rv],['Ht',P.Ht],['Lw',P.Lw-MG],['Rw',P.Rw-MG]].forEach(([n,v])=>{hq('#h-'+n).textContent=v+' мм';});
   hq('#hSub').textContent=`${P.W-2*MG} × ${P.H} × ${P.D} мм · `+k.finDesc();
-  const t=P.T||16,step=(P.H-P.Ht-t-P.Pl-FEET)/(P.N+1),f=v=>v.toFixed(1).replace('.',',').replace(',0','');
-  hq('#h-shelfGap').textContent=`Между полками ${f(step-t)} мм · секций ${P.N+1}`;
+  // between the column's shelves as they stand (whole mm: one apart at most)
+  const ys=current.parts.filter(q=>/^(Дно|Полка|Крышка) правой колонны$/.test(q.name)).map(q=>q.y0).sort((a,b)=>a-b);
+  const gs=ys.slice(1).map((y,i)=>y-ys[i]-T),lo=Math.min(...gs),hi=Math.max(...gs);
+  hq('#h-shelfGap').textContent=`Между полками ${lo===hi?lo:lo+'–'+hi} мм · секций ${P.N+1}`;
   // the opening as it is left between the claddings
   const ow=P.W-P.Lw-P.Rw,oh=P.H-P.Ht;
   hq('#h-chips').innerHTML=[[`ширина ${ow} мм`,ow<800],[`высота ${oh} мм`,oh<2000]].map(([t,w])=>`<span class="chip${w?' warn':''}">${t}${w?' · мало для двери 800×2000':''}</span>`).join('');

@@ -134,7 +134,7 @@ check('прихожая: без «Шкафов» на плане — тольк�
   assert.strictEqual(p.document.getElementById('h-Hc').textContent, '2500 мм');
 });
 
-check('прихожая: отделка, фасады, входная дверь, «Стена и дверь», размеры, деталировка, настройки по умолчанию', () => {
+check('прихожая: отделка, фасады, «Стены и дверь», размеры, деталировка, настройки по умолчанию', () => {
   const storage = new Map();
   let p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick();
   let hp = p.document.querySelector('[data-panel="hall"]');
@@ -156,14 +156,9 @@ check('прихожая: отделка, фасады, входная дверь
   hq('[data-door="open"]').click();
   assert.strictEqual(p.run('VIEWS.hall.furniture().doors.every(d=>d.t===d.max)'), true);
   hq('[data-door="hidden"]').click(); assert.deepStrictEqual(pressed(), ['hidden']);
-  // the entrance door of the model: the box opens it, a click on the door ticks the box
-  const entry = hq('#h-tEntry');
-  assert.strictEqual(entry.checked, false);
-  entry.checked = true; entry.dispatch('change');
-  assert.strictEqual(p.run('entranceDoor().t===entranceDoor().max'), true);
-  p.run('(entranceDoor().t=0, doorsChanged())');
-  assert.strictEqual(entry.checked, false);
-  // «Стена и дверь» off: the walls, the entrance door and its swing go
+  // no box for the entrance door (it opens by a click on it)
+  assert.strictEqual(hq('#h-tEntry'), null);
+  // «Стены и дверь» off: the walls, the entrance door and its swing go
   const walls = hq('#h-tWall'); walls.checked = false; walls.dispatch('change'); p.tick();
   assert.deepStrictEqual(p.run('[wallGroup.visible, doorGroup.visible, arcs.visible]'), [false, false, false]);
   walls.checked = true; walls.dispatch('change'); p.tick();
@@ -573,6 +568,29 @@ check('прихожая: соединения сходятся — у каждо
   assert.deepStrictEqual(['min', 'max'].map((a) => hq('[data-p="Pl"]').getAttribute(a)), ['50', '120']);
   set('Pl', 200); assert.strictEqual(p.run(() => tt.fur('hall').P.Pl), 120);
   set('Pl', 40); assert.strictEqual(p.run(() => tt.fur('hall').P.Pl), 50);
+});
+
+check('прихожая: рёбра жёсткости антресоли — 60 мм, к бокам на шкантах, по два в торце в 10 мм от верха и низа', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const rails = () => p.run(() => { const f = tt.fur('hall'), ps = f.current.parts, T = f.P.T;
+    return ps.filter((q) => /^Ребро жёсткости антресоли/.test(q.name)).map((q) => {
+      // its box's sides: the ones its ends meet
+      const sd = ps.filter((s) => /^Бок антресоли/.test(s.name) && s.name.split(' — ')[1] === q.name.split(' — ')[1] && (s.x1 === q.x0 || s.x0 === q.x1));
+      return { q: [q.x0, q.x1, q.y0, q.y1, q.z0, q.z1], h: q.holes, sides: sd.map((s) => s.holes), T, H: f.P.H, Hb: f.current.Hb };
+    }); });
+  const d = (at, s, depth) => ({ k: 'dowel', at, ax: 'x', s, d: 8, depth });
+  const look = (rs) => rs.forEach(({ q: [x0, x1, y0, y1, z0, z1], h, sides, T, H, Hb }, i) => {
+    // on the bottom and under the top, at the back, 60 high
+    assert.deepStrictEqual([y1 - y0, z0, z1, y0 === Hb + T || y1 === H - T], [60, 0, T, true]);
+    const ys = [y0 + 10, y1 - 10], at = (x) => ys.map((y) => [x, y, T / 2]);
+    assert.deepStrictEqual(h, [...at(x0).map((a) => d(a, 1, 22)), ...at(x1).map((a) => d(a, -1, 22))]);
+    // their mates in the two sides, from the inside
+    assert.strictEqual(sides.length, 2);
+    sides.forEach((sh, j) => { const x = j ? x1 : x0; at(x).forEach((a) => assert.ok(sh.some((m) => JSON.stringify(m) === JSON.stringify(d(a, j ? 1 : -1, 13))), `${i}: [${a}]`)); });
+  });
+  let r = rails(); assert.strictEqual(r.length, 4); look(r);
+  const one = p.document.querySelector('[data-panel="hall"]').querySelector('#h-tMezzOne'); one.checked = true; one.dispatch('change');
+  r = rails(); assert.strictEqual(r.length, 2, 'one box'); look(r);
 });
 
 check('прихожая: левая стойка — три ребра на шкантах, задняя стойка на конфирматах и шкантах, бок к лицевой панели на шкантах со стяжками', () => {

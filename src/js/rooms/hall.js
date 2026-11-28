@@ -15,6 +15,8 @@ const MG=5;
    side by the bearing wall from its bottom and top (REV_IN); the left column's: the ribs' dowels into its side, the side's fittings
    into its front (LEFT_IN) */
 const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500,REV_IN=150,LEFT_IN=100;
+// the mezzanine's back rails: how high (RB), their dowels into its sides from their top and bottom (RAIL_IN)
+const RB=60,RAIL_IN=10;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,Rv:100,mezzOne:false,Ec:30,T:16,TF:16,L:1900};
 // the columns stand on feet this high (adjustable), the plinth under the right one, the opening's reveals clad: always
@@ -92,15 +94,16 @@ function computeParts(p){
   plinth.holes.push(...join('dowelCam',[rx+T/2,FL+pl,(T+Dc)/2-FITTINGS.dowelCam.of[1][1]/2],{n:['y',-1],m:['z',1],f:['x',1],h:T/2},bottom));
   /* top: two separate carcasses for easier installation, or one (mezzOne) — its bottom, top and rails across the whole width,
      a partition centred on the joint of the fronts (each section half a board wider than its box was), the fronts the same.
-     No back panel: two 100 mm rails at the back (top and bottom) keep the box square and take the wall fixings */
-  const ym=Hb+p.Ht/2-T/2,RB=100;
+     No back panel: two RB rails at the back (on the bottom and under the top) keep the box square and take the wall fixings; each
+     holds to the sides on dowels, two in each end, RAIL_IN from its top and bottom */
+  const ym=Hb+p.Ht/2-T/2;
   const topBox=(nm,x0,x1)=>{
-    add('Бок антресоли — '+nm,'carcass',x0,x0+T,Hb,p.H,0,Dc);
-    add('Бок антресоли — '+nm,'carcass',x1-T,x1,Hb,p.H,0,Dc);
+    const sides=[x0,x1-T].map(x=>add('Бок антресоли — '+nm,'carcass',x,x+T,Hb,p.H,0,Dc,{holes:[]}));
     add('Дно антресоли — '+nm,'carcass',x0+T,x1-T,Hb,Hb+T,0,Dc);
     add('Крышка антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T,p.H,0,Dc);
-    add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,Hb+T,Hb+T+RB,0,T);
-    add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,p.H-T-RB,p.H-T,0,T);
+    [Hb+T,p.H-T-RB].forEach(y=>add('Ребро жёсткости антресоли — '+nm,'carcass',x0+T,x1-T,y,y+RB,0,T,
+      {holes:[[x0+T,1,sides[0]],[x1-T,-1,sides[1]]].flatMap(([x,s,sd])=>[y+RAIL_IN,y+RB-RAIL_IN].flatMap(v=>
+        fit('dowel',[x,v,T/2],{n:['x',s],m:['y',1],f:['z',1]},sd)))}));
   };
   const shelf=(nm,x0,x1)=>add('Полка антресоли — '+nm,'carcass',x0,x1,ym,ym+T,0,Dc-20);
   if(p.mezzOne){
@@ -369,8 +372,6 @@ canvas.addEventListener('pointerup',e=>{if(e.pointerType==='touch')layHover(e);}
 canvas.addEventListener('pointerleave',e=>{if(e.pointerType!=='touch')layHover(null);});
 hq('#h-layout').addEventListener('click',()=>setLayout(!layOn));
 hq('#h-xray').addEventListener('click',()=>{VS.hall.xray=!VS.hall.xray;saveView('hall');hq('#h-xray').setAttribute('aria-pressed',VS.hall.xray);syncSee();});
-// the entrance door of the model, opened or closed from here as by a click on it
-hq('#h-tEntry').addEventListener('change',e=>{const d=entranceDoor();if(d)d.t=e.target.checked?d.max:0;});
 // what comes from the plan, the space between the shelves, the opening left between the columns
 function panelText(){
   // the hall from the plan; the false panel and the column as they are, MG off the walls
@@ -398,11 +399,10 @@ const k=roomKit('hall',{
   extra:{name:'things',items:[buildCase]},
   frame:(on,{extra,show})=>{if(extra)extra.children.forEach(o=>{if(o.userData.toolCase===true)o.visible=!on||show>=caseAt()[3];});},
   foot:()=>[caseAt()],
-  // in the hall's own view «Стена и дверь» off takes away the walls, the entrance door and its swing
+  // in the hall's own view «Стены и дверь» off takes away the walls, the entrance door and its swing
   walls:on=>{if(on&&VS.hall.walls===false){if(wallGroup)wallGroup.visible=false;doorGroup.visible=false;if(arcs)arcs.visible=false;}
     else if(on&&wallGroup)wallGroup.visible=true;},
   syncFlags:()=>{hq('#h-tMezzOne').checked=!!P.mezzOne;},
-  onDoorMode:()=>{const e=entranceDoor();hq('#h-tEntry').checked=!!e&&e.t>0;},   // a cabinet door or the entrance door was clicked
   view:{
     // the bearing wall from the outer face of the left wall to the outer face of the right one, the side walls up to Sd from it
     frame:Sd=>{const [ox,oz]=O();return [ox-A.wt,ox+A.hallW+A.bear,oz-A.bear,oz+Sd];},

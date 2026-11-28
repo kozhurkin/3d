@@ -19,6 +19,8 @@ const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500,REV_IN=150,LEFT_IN=100;
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,Rv:100,mezzOne:false,Ec:30,T:16,TF:16,L:1900};
 // the columns stand on feet this high (adjustable), the plinth under the right one, the opening's reveals clad: always
 const FEET=10;
+// the plinth: no higher than this (a cabinet's plinth isn't); its slider stops there, a value kept from before comes down to it
+const PL_MAX=120;
 let current=null;
 
 /* ---------- parts (mm) ---------- */
@@ -139,7 +141,7 @@ const HT_MIN=300;
 const hBottom=()=>A.eDH-(P.T||16);   // where the mezzanine starts: the top of the opening's cladding
 const hRange=()=>{const hi=A.H-MG;return [Math.min(hBottom()+HT_MIN,hi),hi];};
 function fromModel(w){
-  T=P.T||16;TF=P.TF||16;const [h0,h1]=hRange();
+  T=P.T||16;TF=P.TF||16;P.Pl=Math.min(P.Pl,PL_MAX);const [h0,h1]=hRange();
   P.W=A.hallW;P.L=hLen;P.Rv=A.eRv;P.H=Math.max(h0,Math.min(w.H,h1));
   P.Lw=A.eD0+T;P.Rw=A.hallW-A.eD1+T;P.Ht=P.H-hBottom();
   return current=computeParts(P);

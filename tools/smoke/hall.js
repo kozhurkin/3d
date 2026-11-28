@@ -462,6 +462,66 @@ check('прихожая: отверстия крепежа — в целых м�
   hq('[data-thick="18"][data-for="T"]').click(); assert.deepStrictEqual(odd(), [], 'boards 18');
 });
 
+check('прихожая: соединения сходятся — у каждого отверстия в торце ответное в прилегающей доске, всё внутри своих досок', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  const hq = (s) => p.document.querySelector('[data-panel="hall"]').querySelector(s);
+  /* the faults of the cabinet's joints as they are now, independent of how they are made: what each hole is comes from FITTINGS —
+     a hole in a board's end (and its mate, by kind), or one from a face (the cam) */
+  const faults = () => p.run(() => {
+    const AX = 'xyz', ends = [], faces = [], bad = [], eq = (a, b) => Math.abs(a - b) < 1e-6;
+    Object.values(FITTINGS).filter((f) => f.holes).forEach((f) => f.holes.forEach((h) => (h.from == null
+      ? ends.push({ h, m: f.mate.find((m) => m.k === h.k) }) : faces.push(h))));
+    const isEnd = (o) => ends.find((e) => e.h.k === o.k && e.h.d === o.d && e.h.depth === o.depth && !o.through);
+    const isMate = (o) => ends.find((e) => e.m.k === o.k && e.m.d === o.d && (e.m.through ? o.through : !o.through && e.m.depth === o.depth));
+    const isFace = (o) => faces.find((h) => h.k === o.k && h.d === o.d && h.depth === o.depth);
+    const hs = tt.fur('hall').current.parts.flatMap((q) => (q.holes || []).map((o) => ({ q, o, i: AX.indexOf(o.ax) })));
+    const lo = (q, i) => q[AX[i] + '0'], hi = (q, i) => q[AX[i] + '1'], name = ({ q, o }) => `${q.name}: ${o.k} Ø${o.d} в [${o.at}]`;
+    hs.forEach((x) => {
+      const { q, o, i } = x;
+      if (!isEnd(o) && !isMate(o) && !isFace(o)) bad.push('не из FITTINGS — ' + name(x));
+      // its mouth on the face it goes in from, the drill into the board, its whole width within it, no deeper than the board
+      if (!eq(o.at[i], o.s > 0 ? lo(q, i) : hi(q, i))) bad.push('устье не на грани доски — ' + name(x));
+      [0, 1, 2].filter((j) => j !== i).forEach((j) => { if (o.at[j] - o.d / 2 < lo(q, j) - 1e-6 || o.at[j] + o.d / 2 > hi(q, j) + 1e-6) bad.push('выходит за доску — ' + name(x)); });
+      const size = hi(q, i) - lo(q, i);
+      if (o.through ? !eq(o.depth, size) : o.depth >= size) bad.push(`глубина ${o.depth} при доске ${size} — ` + name(x));
+    });
+    // a hole in an end and its mate: one each, the same point, toward each other, in another board (touching it there: both mouths on faces)
+    const pairs = new Set();
+    hs.filter((x) => isEnd(x.o)).forEach((x) => {
+      const e = isEnd(x.o), m = hs.filter((y) => y.q !== x.q && y.o.ax === x.o.ax && y.o.s === -x.o.s && y.o.at.every((v, j) => eq(v, x.o.at[j]))
+        && y.o.k === e.m.k && y.o.d === e.m.d && (e.m.through ? y.o.through : y.o.depth === e.m.depth));
+      if (m.length !== 1) bad.push(`ответных ${m.length} — ` + name(x)); else pairs.add(m[0]);
+    });
+    hs.filter((x) => isMate(x.o) && !pairs.has(x)).forEach((x) => bad.push('ответное без отверстия в торце — ' + name(x)));
+    // a cam reaches its screw: across the board to the screw's axis, along it over the screw's end; one screw for each cam
+    hs.filter((x) => isFace(x.o)).forEach((c) => {
+      const sc = hs.filter((x) => x.q === c.q && x.o.k === 'screw' && isEnd(x.o) && x.i !== c.i).filter((x) => {
+        const k = 3 - x.i - c.i, t = (c.o.at[x.i] - x.o.at[x.i]) * x.o.s, dd = (x.o.at[c.i] - c.o.at[c.i]) * c.o.s;
+        return t - c.o.d / 2 < x.o.depth && t + c.o.d / 2 > 0 && dd >= 0 && dd <= c.o.depth && Math.abs(c.o.at[k] - x.o.at[k]) <= (c.o.d - x.o.d) / 2;
+      });
+      if (sc.length !== 1) bad.push(`эксцентрик достаёт стяжек: ${sc.length} — ` + name(c));
+    });
+    /* no two holes of a board run into each other (as boxes d × d × depth), but a cam and its screw. A cam's box goes past its round
+       side, so it is left out against the others */
+    const box = ({ o, i }) => [0, 1, 2].map((j) => (j === i ? [o.at[j], o.at[j] + o.s * o.depth].sort((a, b) => a - b) : [o.at[j] - o.d / 2, o.at[j] + o.d / 2]));
+    hs.forEach((a, ia) => hs.forEach((b, ib) => {
+      if (ib <= ia || a.q !== b.q || isFace(a.o) || isFace(b.o)) return;
+      const A = box(a), B = box(b);
+      if (A.every(([a0, a1], j) => a0 < B[j][1] - 1e-6 && B[j][0] < a1 - 1e-6)) bad.push(`пересекаются — ${name(a)} и ${b.o.k} Ø${b.o.d} в [${b.o.at}]`);
+    }));
+    return bad;
+  });
+  assert.deepStrictEqual(faults(), [], 'as it starts');
+  const set = (k, v) => { const e = hq(`[data-p="${k}"]`); e.value = String(v); e.dispatch('input'); };
+  const one = hq('#h-tMezzOne'); one.checked = true; one.dispatch('change'); assert.deepStrictEqual(faults(), [], 'the mezzanine in one box');
+  hq('[data-thick="18"][data-for="T"]').click(); assert.deepStrictEqual(faults(), [], 'carcass 18');
+  hq('[data-thick="18"][data-for="TF"]').click(); assert.deepStrictEqual(faults(), [], 'fronts 18');
+  [['Pl', 45], ['Pl', 120], ['H', 2510], ['D', 300], ['N', 2], ['N', 12]].forEach(([k, v]) => { set(k, v); assert.deepStrictEqual(faults(), [], `${k} ${v}`); });
+  // the plinth no higher than 120: its slider stops there, a higher value comes down to it
+  assert.strictEqual(hq('[data-p="Pl"]').getAttribute('max'), '120');
+  set('Pl', 200); assert.strictEqual(p.run(() => tt.fur('hall').P.Pl), 120);
+});
+
 check('прихожая: левая стойка — три ребра на шкантах, задняя стойка на конфирматах и шкантах, бок к лицевой панели на шкантах со стяжками', () => {
   const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
   const r = p.run(() => {

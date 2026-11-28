@@ -153,6 +153,7 @@ function roomKit(id,cfg){
   function setFinish(f,where){
     if(where==='both'){FIN.carcass=Object.assign({},f);FIN.front=Object.assign({},f);}else FIN[where]=Object.assign({},f);
     applyMaterials(mats,FIN,P.Ec);syncFinish();updatePanel();keep();
+    dirty=true;   // the panels are cut anew from the new decor's picture (its size: boxGeo)
   }
   const words=groups.map(g=>FIN_WORD[g]);
   const pickFor=b=>b.dataset.decor?{type:'wood',decor:b.dataset.decor}:{type:'uni',color:b.dataset.uc,name:b.dataset.un};

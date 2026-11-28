@@ -102,9 +102,15 @@ function roundBoxGeo(sx,sy,sz,r,k=4){
    on a plain box; and the axes u and v run along */
 const BOX_UV=[[2,-1,1,-1],[2,1,1,-1],[0,1,2,1],[0,1,2,-1],[0,1,1,-1],[0,-1,1,-1]];   // per face: u's axis and way, v's axis and way
 function boxUV(f,c,s){const [au,us,av,vs]=BOX_UV[f];return [.5+us*c[au]/s[au],.5-vs*c[av]/s[av],au,av];}
-function boxGeo(sx,sy,sz,seed,axis,hole){
+/* how much of u and v (the geometry's: RU × RV mm a unit) one picture of material m's decor covers — the board the decor is cut
+   from; null: no picture (a plain colour) */
+const decorTile=m=>{const r=m&&m.map&&m.map.repeat;return r&&r.x>0&&r.y>0?[1/r.x,1/r.y]:null;};
+/* tile: decorTile of its finish — the panel is cut from inside one picture (its pattern never runs into the next one's edge on it):
+   its place on the picture at random within what is left over; a panel bigger than the picture starts at its edge */
+function boxGeo(sx,sy,sz,seed,axis,hole,tile){
   // grain follows the longest side of each panel, like a real cut from a board
-  const g=hole?new THREE.BoxGeometry(sx,sy,sz,3,1,3):new THREE.BoxGeometry(sx,sy,sz),pos=g.attributes.position,uv=g.attributes.uv,r=rng(seed),ox=r(),oy=r();
+  const g=hole?new THREE.BoxGeometry(sx,sy,sz,3,1,3):new THREE.BoxGeometry(sx,sy,sz),pos=g.attributes.position,uv=g.attributes.uv,r=rng(seed);
+  let ox=r(),oy=r();
   const dims=[sx,sy,sz],ax=axis??dims.indexOf(Math.max(sx,sy,sz));   // axis forces the grain direction
   const idx=g.index,face=[];g.groups.forEach(q=>{for(let k=q.start;k<q.start+q.count;k++)face[idx.getX(k)]=q.materialIndex;});
   if(hole){
@@ -118,12 +124,15 @@ function boxGeo(sx,sy,sz,seed,axis,hole){
       g.addGroup(s,keep.length-s,q.materialIndex);});
     g.setIndex(keep);
   }
-  // u, v by where the vertex is on its face (boxUV), in decor repeats
+  // u, v by where the vertex is on its face (boxUV), in decor repeats; then the panel's place on the picture
+  const uvs=[];let mu=0,mv=0;
   for(let j=0;j<pos.count;j++){
     const [u,v,au,av]=boxUV(face[j],[pos.getX(j),pos.getY(j),pos.getZ(j)],dims),du=dims[au],dv=dims[av];
-    const swap=(au===ax)||(av!==ax&&du>dv);
-    if(swap)uv.setXY(j,v*dv/RU+ox,u*du/RV+oy);else uv.setXY(j,u*du/RU+ox,v*dv/RV+oy);
+    const swap=(au===ax)||(av!==ax&&du>dv),q=swap?[v*dv/RU,u*du/RV]:[u*du/RU,v*dv/RV];
+    uvs.push(q);mu=Math.max(mu,q[0]);mv=Math.max(mv,q[1]);
   }
+  if(tile){ox*=Math.max(0,tile[0]-mu);oy*=Math.max(0,tile[1]-mv);}
+  uvs.forEach((q,j)=>uv.setXY(j,q[0]+ox,q[1]+oy));
   return g;
 }
 
@@ -245,7 +254,7 @@ function partMesh(p,mats,seed){
   const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
   const thin=[sx,sy,sz].indexOf(Math.min(sx,sy,sz)),cx=(p.x0+p.x1)/2*MM,cz=(p.z0+p.z1)/2*MM;
   const hole=p.hole&&[p.hole[0]*MM-cx,p.hole[1]*MM-cx,p.hole[2]*MM-cz,p.hole[3]*MM-cz];   // a cut-out through its top (mm, room axes)
-  const geo=boxGeo(sx,sy,sz,seed,p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole);
+  const geo=boxGeo(sx,sy,sz,seed,p.mat==='front'&&!/Цоколь/.test(p.name)?1:undefined,hole,decorTile(mats[p.mat]));
   const mesh=new THREE.Mesh(geo,[0,0,1,1,2,2].map(a=>a===thin?mats[p.mat]:mats[p.mat+'End']));
   mesh.castShadow=mesh.receiveShadow=true;mesh.userData.part=p;
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);

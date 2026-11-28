@@ -632,3 +632,41 @@ check('shell: вкладки и кнопка в одну строку; не вл
   bar.clientWidth = 600; p.ctx.dispatch('resize');
   assert.ok(!bar.hasAttribute('data-compact'));
 });
+
+check('декор: деталь вырезается из одной плиты декора — рисунок на ней не доходит до края картинки; больше плиты — от её края; смена декора перестраивает шкаф', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  /* the stub's geometry has no vertices: a box of its own, its faces as THREE's (px, nx, py, ny, pz, nz, four corners each), for
+     the u, v of every vertex of a panel boxGeo cuts. → the least and the most u and v over seeds spread as partSeeder's (up to 100 000) */
+  const cut = (dims, tile) => p.run((dims, tile) => {
+    class Box {
+      constructor(...s) {
+        const P = [], I = [], G = [], h = s.map((v) => v / 2);
+        [[0, 1], [0, -1], [1, 1], [1, -1], [2, 1], [2, -1]].forEach(([a, sg], f) => {
+          const o = [0, 1, 2].filter((k) => k !== a);
+          [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(([u, v]) => { const c = [0, 0, 0]; c[a] = sg * h[a]; c[o[0]] = u * h[o[0]]; c[o[1]] = v * h[o[1]]; P.push(c); });
+          I.push(f * 4, f * 4 + 1, f * 4 + 2, f * 4 + 2, f * 4 + 1, f * 4 + 3); G.push({ start: f * 6, count: 6, materialIndex: f >> 1 });
+        });
+        this.attributes = { position: { count: P.length, getX: (i) => P[i][0], getY: (i) => P[i][1], getZ: (i) => P[i][2] }, uv: { xy: [], setXY(i, x, y) { this.xy[i] = [x, y]; } } };
+        this.index = { getX: (k) => I[k] }; this.groups = G;
+      }
+    }
+    const was = THREE.BoxGeometry; THREE.BoxGeometry = Box;
+    const all = []; for (let k = 1; k < 60; k++) all.push(...boxGeo(...dims.map((v) => v * MM), 13 + k * 1693, undefined, undefined, tile).attributes.uv.xy);
+    THREE.BoxGeometry = was;
+    const r = (v) => Math.round(v * 1000) / 1000;
+    return [r(Math.min(...all.map((q) => q[0]))), r(Math.max(...all.map((q) => q[0]))), r(Math.min(...all.map((q) => q[1]))), r(Math.max(...all.map((q) => q[1])))];
+  }, dims, tile);
+  // the main decors' picture: 1575 × 2800 mm (u: 600 mm a unit, v: 1200); a side 2000 × 368 × 16, its grain along its length
+  const tile = [1575 / 600, 2800 / 1200], [u0, u1, v0, v1] = cut([16, 2000, 368], tile);
+  assert.ok(u0 >= 0 && u1 <= tile[0] + 1e-3 && v0 >= 0 && v1 <= tile[1] + 1e-3, 'inside one picture: ' + [u0, u1, v0, v1]);
+  assert.ok(u1 - 368 / 600 > 1 && v1 - 2000 / 1200 > 0.5, 'placed at random within it, not always at its corner');
+  // a panel longer than the picture along the grain: from its edge (one joint, where it has to be)
+  const [, , w0, w1] = cut([16, 3000, 368], tile);
+  assert.deepStrictEqual([w0, w1], [0, 2.5]);
+  // a plain colour (no picture): as before — anywhere within one unit
+  const n1 = cut([16, 2000, 368], null)[1] - 368 / 600; assert.ok(n1 > 0.5 && n1 <= 1, 'no picture: ' + n1);
+  // a new decor: the cabinet is cut anew from its picture
+  const m0 = p.run(() => { window._m0 = VIEWS.hall.furniture().model; return true; });
+  p.document.querySelector('[data-panel="hall"]').querySelector('[data-decor]').click(); p.tick();
+  assert.ok(m0 && p.run(() => VIEWS.hall.furniture().model !== window._m0), 'rebuilt');
+});

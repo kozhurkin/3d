@@ -20,11 +20,10 @@ function placeDining(){
 
 /* the dining table: a worktop-decor top on four steel legs, its end against the left wall (kitchen axes, m) */
 function buildTable(g){
-  const box=boxIn(g),x1=TB.l*MM,z0=TB.z*MM,z1=(TB.z+TB.w)*MM,y1=TB.h*MM,y0=(TB.h-TB.t)*MM;
-  const sx=x1,sy=y1-y0,sz=z1-z0,thin=1;
-  const top=new THREE.Mesh(boxGeo(sx,sy,sz,77),[0,0,1,1,2,2].map(a=>a===thin?mats.top:mats.topEnd));
-  top.position.set(x1/2,(y0+y1)/2,(z0+z1)/2);top.castShadow=top.receiveShadow=true;
-  const e=new THREE.LineSegments(new THREE.EdgesGeometry(top.geometry),mats.topLine);e.raycast=()=>{};top.add(e);g.add(top);
+  const box=boxIn(g),x1=TB.l*MM,z0=TB.z*MM,z1=(TB.z+TB.w)*MM,y0=(TB.h-TB.t)*MM;
+  // the top: a board of the worktop's decor, as the cabinets' (cut from inside one picture of it)
+  const top=partMesh({name:'Столешница обеденного стола',mat:'top',x0:0,x1:TB.l,y0:TB.h-TB.t,y1:TB.h,z0:TB.z,z1:TB.z+TB.w},mats,77);
+  top.position.set(x1/2,(TB.h-TB.t/2)*MM,(z0+z1)/2);delete top.userData.part;g.add(top);   // (not a cabinet's part: a piece of the table)
   const l=TB.leg*MM,i=TB.in*MM,legs=[[i,z0+i],[x1-i-l,z0+i],[i,z1-i-l],[x1-i-l,z1-i-l]].map(([x,z])=>box(x,x+l,0,y0,z,z+l,blackMat));
   [top,...legs].forEach(m=>{m.userData.info=INFO.table;m.userData.table=true;});
   return [];

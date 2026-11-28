@@ -9,9 +9,9 @@ let T=16, TF=16; const HDF=4, G=2;
 // the whole cabinet (carcasses and fronts) this far from the side walls and from the ceiling: walls and ceiling aren't true, the
 // mezzanine goes in past the bathroom door's casing and slides over the columns, the doors open clear of the ceiling
 const MG=5;
-/* the right column's fittings (furniture.js: FITTINGS), mm in from the edges of a board's end: into the back and front panels (FIX_IN),
-   the confirmats of the bottom and the top into the side by the wall (CONF_IN), the plinth's dowels from its top and bottom (PLINTH_IN,
-   a quarter of its height at most), the side's into those panels from its top and bottom (SIDE_IN) */
+/* the right column's fittings (furniture.js: FITTINGS), mm in from the edges of a board's end: into its two sides (FIX_IN), the
+   confirmats of the bottom and the top into its back panel (CONF_IN), the plinth's dowels from its top and bottom (PLINTH_IN, a quarter
+   of its height at most), the back panel's into the sides from its top and bottom (SIDE_IN) */
 const FIX_IN=50,CONF_IN=100,PLINTH_IN=20,SIDE_IN=500;
 // cabinet sizes; W, Lw, Rw, Ht, Rv come from the plan's hall and entrance opening, L (the hall's length: where the tool box stands) too
 const P={W:1200,H:2600,D:400,Ht:600,Lw:70,Rw:270,N:5,Pl:80,plinth:true,Rv:100,reveal:true,mezzOne:false,Ec:30,T:16,TF:16,Feet:false,L:1900};
@@ -30,33 +30,32 @@ function computeParts(p){
   add('Дно / крышка левой фальш-панели','carcass',xa,p.Lw-T,Hb-T,Hb,0,Dc);
   // (the columns' fronts reach the opening's edge, flush with their carcasses)
   add('Левая фальш-панель (лицевая, глухая)','front',xa,p.Lw,FL,Hb-G/2,Dc,Dc+TF);
-  // right column
-  // (ends: where the boards between its back and front panels meet them, and the way into the board from there)
+  /* right column: open toward the opening, its back to the right wall. Its two sides — by the bearing wall and the front one (in
+     the fronts' finish, blind) — lap over the ends of the back panel alike, the back panel stands between them; so do the bottom,
+     the shelves, the top and the plinth (ends: where those boards meet the sides, and the way into the board from there) */
   add=unit('right');const rx=W-p.Rw,ends=[[T,1],[Dc,-1]];
-  // the back panel and the front one lap over the side by the wall alike, the side stands between them
-  const side=add('Бок правой колонны','carcass',xb-T,xb,FL,Hb,T,Dc,{holes:[]});
-  const back=add('Задняя стенка правой колонны','carcass',rx,xb,FL,Hb,0,T,{holes:[]});
+  const backP=add('Задняя стенка правой колонны','carcass',xb-T,xb,FL,Hb,T,Dc,{holes:[]});
+  const sideB=add('Боковина правой колонны у несущей стены','carcass',rx,xb,FL,Hb,0,T,{holes:[]});
   const pl=p.plinth?p.Pl:0;
-  const face=add('Лицевая панель правой колонны','front',rx,xb,FL,Hb-G/2,Dc,Dc+TF,{holes:[]});
-  // a fitting of a board's end: its holes in the board (returned), its mates in the board «into» (the back or the front panel, the side)
-  const join=(id,at,o,into=at[2]===T?back:face)=>{into.holes.push(...fittingMates(id,at,{...o,thick:T}));return fittingHoles(id,at,o);};
-  // the side by the wall into them: a dowel and a cam fitting in each end, SIDE_IN from its bottom and top, the cams from the wall's side (unseen)
-  side.holes.push(...ends.flatMap(([z,s])=>[[FL+SIDE_IN,1],[Hb-SIDE_IN,-1]].flatMap(([y,i])=>
+  const sideF=add('Фасадная боковина правой колонны','front',rx,xb,FL,Hb-G/2,Dc,Dc+TF,{holes:[]});
+  // a fitting of a board's end: its holes in the board (returned), its mates in the board «into» (a side, or the back panel)
+  const join=(id,at,o,into=at[2]===T?sideB:sideF)=>{into.holes.push(...fittingMates(id,at,{...o,thick:T}));return fittingHoles(id,at,o);};
+  // the back panel into them: a dowel and a cam fitting in each end, SIDE_IN from its bottom and top, the cams from the wall's side (unseen)
+  backP.holes.push(...ends.flatMap(([z,s])=>[[FL+SIDE_IN,1],[Hb-SIDE_IN,-1]].flatMap(([y,i])=>
     join('dowelCam',[xb-T/2,y,z],{n:['z',s],m:['y',i],f:['x',1],h:T/2}))));
   if(pl){
-    // on dowels into the back and front panels: two in each end, PLINTH_IN from its top and bottom
+    // on dowels into the sides: two in each end, PLINTH_IN from its top and bottom
     const u=Math.min(PLINTH_IN,pl/4),holes=ends.flatMap(([z,s])=>[FL+u,FL+pl-u].flatMap(y=>
       join('dowel',[rx+T/2,y,z],{n:['z',s],m:['y',1],f:['x',1],h:T/2})));
     add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,{holes});
   }
   const step=(Hb-T-pl-FL)/(p.N+1);
-  /* the boards between the column's sides — the back panel and the front one — hold to them by their ends, two fittings an end,
-     FIX_IN from its left and right edges: a shelf on dowels; the bottom and the top on a dowel and a cam fitting, the cams from
-     outside the column (the bottom's from below, the top's from above), and with two confirmats into the side by the wall,
-     CONF_IN from the ends */
+  /* the boards between the column's sides hold to them by their ends, two fittings an end, FIX_IN from its left and right edges:
+     a shelf on dowels; the bottom and the top on a dowel and a cam fitting, the cams from outside the column (the bottom's from
+     below, the top's from above), and with two confirmats into the back panel, CONF_IN from the ends */
   const fix=(y,id,up)=>ends.flatMap(([z,s])=>[[rx+FIX_IN,1],[xb-T-FIX_IN,-1]].flatMap(([x,i])=>
     join(id,[x,y+T/2,z],{n:['z',s],m:['x',i],f:['y',up],h:T/2})));
-  const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>join('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2},side));
+  const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>join('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2},backP));
   for(let i=0;i<=p.N+1;i++){
     const y=i===p.N+1?Hb-T:FL+pl+i*step,shelf=i>0&&i<=p.N;
     add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,

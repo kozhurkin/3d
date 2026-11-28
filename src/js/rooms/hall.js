@@ -270,7 +270,8 @@ function layFrame(dt){
   }
   lay=reduce?(layOn?1:0):Math.max(0,Math.min(1,lay+(layOn?1:-1)*dt/LAY.s));
   if(!lay){if(g){disposeGroup(g);putBack(m,f);}return;}
-  if(!g){g=buildLayout(m);ownParts(m,f).forEach(o=>{o.visible=false;});}   // (a rebuilt cabinet: its new group)
+  if(!g)g=buildLayout(m);   // (a rebuilt cabinet: its new group)
+  ownParts(m,f).forEach(o=>{o.visible=false;});   // every frame: «Фасады» shows the fronts again
   g.children.forEach(o=>{const L=o.userData.lay;if(!L)return;const e=smooth(Math.max(0,Math.min(1,(lay-L.k)/(1-LAY.late))));
     o.position.copy(L.from).lerp(L.to,e);o.position.y+=Math.sin(Math.PI*e)*.3;o.quaternion.identity().slerp(L.q,e);});
   const ls=g.userData.labels;ls.forEach(s=>{s.visible=lay>.95;});

@@ -370,6 +370,9 @@ check('прихожая: «Раскладка» — детали на полу �
   const order = ['left', 'right', 'mezz', 'mezzR', 'reveal'].map(span);
   order.slice(1).forEach((s, i) => assert.ok(s[0] - order[i][1] >= 299, 'the heaps 300 apart'));
   assert.notDeepStrictEqual(vec(p, 'goalT'), cam0, 'the camera over the layout');
+  // «Фасады» while laid out: the cabinet's fronts stay away (they are on the floor)
+  ['open', 'hidden', 'closed'].forEach((k) => { p.document.querySelector('[data-panel="hall"]').querySelector(`[data-door="${k}"]`).click(); p.tick();
+    assert.strictEqual(seen().cab, false, '«Фасады» ' + k); });
   // again: the boards fly back, the cabinet and the rest come back, the camera goes back
   btn.click(); p.tick(100);
   assert.deepStrictEqual(seen(), { cab: true, lay: false, walls: true, doors: true, box: true, dims: true });

@@ -461,7 +461,7 @@ check('прихожая: крепёж правой стойки — шканты
   const [bottom, top] = ['Дно правой колонны', 'Крышка правой колонны'].map((n) => r.parts.find((q) => q.name === n));
   // and two confirmats (Ø5 × 40) in the end on the back panel, 100 from its ends
   const conf = (q) => [T + 100, Dc - 100].map((z) => ({ k: 'confirmat', at: [xb - T, q.y + T / 2, z], ax: 'x', s: -1, d: 5, depth: 40 }));
-  assert.deepStrictEqual(bottom.holes, [...cam(bottom, false), ...conf(bottom)]);
+  assert.deepStrictEqual(bottom.holes.slice(0, -2), [...cam(bottom, false), ...conf(bottom)]);   // (and the plinth's mates: below)
   assert.deepStrictEqual(top.holes, [...cam(top, true), ...conf(top)]);
   // the side by the bearing wall and the front side lap over the back panel's ends alike (to the cabinet's edge), the back panel stands between them
   assert.deepStrictEqual(p.run(() => ['Задняя стенка правой колонны', 'Боковина правой колонны у несущей стены', 'Фасадная боковина правой колонны']
@@ -487,10 +487,19 @@ check('прихожая: крепёж правой стойки — шканты
       { k: 'dowel', at: [xb - T / 2, y + i * 32, z], ax: 'z', s, d: 8, depth: 22 }])),
     ...[bottom, top].flatMap((q) => [T + 100, Dc - 100].map((z) =>
       ({ k: 'confirmat', at: [xb - T, q.y + T / 2, z], ax: 'x', s: 1, d: 8, depth: T, through: true })))]);
-  assert.deepStrictEqual(r.meshes, [16, 2 * r.N + 14, 2 * r.N + 14, 4, 14, ...Array(r.N).fill(4), 14]);
+  assert.deepStrictEqual(r.meshes, [16, 2 * r.N + 14, 2 * r.N + 14, 7, 16, ...Array(r.N).fill(4), 14]);
   // the plinth (80 high): two dowels in each end, 20 from its top and bottom; a low one (40) — a quarter of its height in
   const plinth = () => p.run(() => tt.fur('hall').current.parts.find((q) => /^Цоколь/.test(q.name)).holes.map((h) => [h.k, h.at[1], h.at[2], h.s, h.depth]));
-  assert.deepStrictEqual(plinth(), [['dowel', 20, T, 1, 22], ['dowel', 60, T, 1, 22], ['dowel', 20, Dc, -1, 22], ['dowel', 60, Dc, -1, 22]]);
+  assert.deepStrictEqual(plinth().slice(0, 4), [['dowel', 20, T, 1, 22], ['dowel', 60, T, 1, 22], ['dowel', 20, Dc, -1, 22], ['dowel', 60, Dc, -1, 22]]);
+  // its top into the bottom: a dowel and a cam fitting, the pair in the middle of its length, the cam behind it (from inside the column)
+  const zc = (T + Dc) / 2, pTop = p.run(() => tt.fur('hall').current.parts.find((q) => /^Цоколь/.test(q.name)).holes.slice(4));
+  assert.deepStrictEqual(pTop, [
+    { k: 'screw', at: [rx + T / 2, 80, zc - 16], ax: 'y', s: -1, d: 8, depth: 30 },
+    { k: 'cam', at: [rx + T, 46, zc - 16], ax: 'x', s: -1, d: 15, depth: 13 },
+    { k: 'dowel', at: [rx + T / 2, 80, zc + 16], ax: 'y', s: -1, d: 8, depth: 22 }]);
+  const under = p.run(() => tt.fur('hall').current.parts.find((q) => q.name === 'Дно правой колонны').holes.slice(-2));
+  assert.deepStrictEqual(under.map((h) => [h.k, h.d, h.depth, h.at, h.ax, h.s]),
+    [['screw', 5, 13, [rx + T / 2, 80, zc - 16], 'y', 1], ['dowel', 8, 13, [rx + T / 2, 80, zc + 16], 'y', 1]], 'its mates in the bottom, from below');
   const pls = p.document.querySelector('[data-panel="hall"]').querySelector('[data-p="Pl"]'); pls.value = '40'; pls.dispatch('input');
-  assert.deepStrictEqual(plinth().map((h) => h[1]), [10, 30, 10, 30]);
+  assert.deepStrictEqual(plinth().slice(0, 4).map((h) => h[1]), [10, 30, 10, 30]);
 });

@@ -43,11 +43,12 @@ function computeParts(p){
   // the back panel into them: a dowel and a cam fitting in each end, SIDE_IN from its bottom and top, the cams from the wall's side (unseen)
   backP.holes.push(...ends.flatMap(([z,s])=>[[FL+SIDE_IN,1],[Hb-SIDE_IN,-1]].flatMap(([y,i])=>
     join('dowelCam',[xb-T/2,y,z],{n:['z',s],m:['y',i],f:['x',1],h:T/2}))));
+  let plinth=null,bottom=null;
   if(pl){
     // on dowels into the sides: two in each end, PLINTH_IN from its top and bottom
     const u=Math.min(PLINTH_IN,pl/4),holes=ends.flatMap(([z,s])=>[FL+u,FL+pl-u].flatMap(y=>
       join('dowel',[rx+T/2,y,z],{n:['z',s],m:['y',1],f:['x',1],h:T/2})));
-    add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,{holes});
+    plinth=add('Цоколь правой колонны (со стороны проёма)','carcass',rx,rx+T,FL,FL+pl,T,Dc,{holes});
   }
   const step=(Hb-T-pl-FL)/(p.N+1);
   /* the boards between the column's sides hold to them by their ends, two fittings an end, FIX_IN from its left and right edges:
@@ -58,9 +59,12 @@ function computeParts(p){
   const conf=y=>[[T+CONF_IN,1],[Dc-CONF_IN,-1]].flatMap(([z,i])=>join('confirmat',[xb-T,y+T/2,z],{n:['x',-1],m:['z',i],f:['y',1],h:T/2},backP));
   for(let i=0;i<=p.N+1;i++){
     const y=i===p.N+1?Hb-T:FL+pl+i*step,shelf=i>0&&i<=p.N;
-    add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,
+    const q=add(i===0?'Дно правой колонны':shelf?'Полка правой колонны':'Крышка правой колонны','carcass',rx,xb-T,y,y+T,T,Dc,
       {holes:shelf?fix(y,'dowel'):[...fix(y,'dowelCam',i===0?-1:1),...conf(y)]});
+    if(!i)bottom=q;
   }
+  // the plinth's top into the bottom: a dowel and a cam fitting in the middle of its length (the pair centred), the cam behind it (unseen)
+  if(plinth)plinth.holes.push(...join('dowelCam',[rx+T/2,FL+pl,(T+Dc)/2-FITTINGS.dowelCam.of[1][1]/2],{n:['y',-1],m:['z',1],f:['x',1],h:T/2},bottom));
   /* top: two separate carcasses for easier installation, or one (mezzOne) — its bottom, top and rails across the whole width,
      a partition centred on the joint of the fronts (each section half a board wider than its box was), the fronts the same.
      No back panel: two 100 mm rails at the back (top and bottom) keep the box square and take the wall fixings */

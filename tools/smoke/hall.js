@@ -420,6 +420,27 @@ check('прихожая: «Раскладка» — детали на полу �
   assert.strictEqual(p.run(() => wallGroup.visible), true);
 });
 
+check('прихожая: у глухого отверстия дно серое, устье чёрное; сквозное чёрное с обеих сторон', () => {
+  const p = runPage(PAGES.app, { parentWin: { appView: 'hall' } }); p.tick();
+  /* every hole's cylinder: where its top cap (+y) looks, from how it is turned (Euler XYZ: only one of x, z turns), and the colours of its
+     wall, top cap and bottom cap */
+  const r = p.run(() => tt.meshes(tt.fur('hall').model, (q) => q.holes).flatMap((m) => m.children.filter((o) => o.userData.hole)).map((o) => {
+    const { x: rx, z: rz } = o.rotation, top = [-Math.sin(rz), Math.cos(rz) * Math.cos(rx), Math.cos(rz) * Math.sin(rx)].map((v) => Math.round(v) + 0);
+    return { h: o.userData.hole, top, c: o.material.map(({ color: k }) => (Math.round(k.r * 255) << 16) | (Math.round(k.g * 255) << 8) | Math.round(k.b * 255)) };
+  }));
+  assert.ok(r.length > 150, String(r.length));
+  const K = 0x000000, G = 0x444444;
+  r.forEach(({ h, top, c }) => {
+    // the way into the board, as a vector: the bottom lies that way from the mouth
+    const into = [0, 1, 2].map((j) => ('xyz'[j] === h.ax ? h.s : 0));
+    const want = h.through ? [K, K, K] : top.every((v, j) => v === into[j]) ? [K, G, K] : [K, K, G];
+    assert.deepStrictEqual(c, want, `${h.k} Ø${h.d} в [${h.at}] ${h.ax}${h.s > 0 ? '+' : '−'}`);
+  });
+  // all three kinds of ways in there, and through ones
+  assert.deepStrictEqual(['x', 'y', 'z'].map((a) => [1, -1].map((s) => r.some(({ h }) => h.ax === a && h.s === s && !h.through))), [[true, true], [true, true], [true, true]]);
+  assert.ok(r.some(({ h }) => h.through));
+});
+
 check('прихожая: «Рентген» — все детали полупрозрачные на месте и в раскладке, опоры нет; запоминается, вне прихожей выключен', () => {
   const storage = new Map();
   const open = () => { const p = runPage(PAGES.app, { storage, parentWin: { appView: 'hall' } }); p.tick(); return p; };

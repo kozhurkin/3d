@@ -248,11 +248,12 @@ function fittingMates(id,at,{n,m,thick}){
   if(F.of)return F.of.flatMap(([q,u])=>fittingMates(q,holeGo(at,m,u),{n,m,thick}));
   return (F.mate||[]).map(o=>Object.assign({k:o.k,at,ax:n[0],s:-n[1],d:o.d,depth:o.through?thick:o.depth},o.through?{through:true}:{}));
 }
-// a hole drilled in a board: black, unlit — no light or reflection greys it
-const holeMat=new THREE.MeshBasicMaterial({color:0x000000});
+/* a hole drilled in a board: black, unlit — no light or reflection greys it; a blind one's bottom grey: seen through the board
+   («Рентген», the board under the cursor in the layout) a hole open toward the viewer shows black, one open away from them grey */
+const holeMat=new THREE.MeshBasicMaterial({color:0x000000}),holeEndMat=new THREE.MeshBasicMaterial({color:0x444444});
 /* one board of a cabinet as a mesh, its middle at 0 (m): the finish on its faces, the end faces and their lines. seed: its grain
    (partSeeder). Its holes (p.holes: {at: the mouth's middle on a face, mm, room axes; ax: 'x'/'y'/'z' and s: ±1 — the way into the board;
-   d, depth, mm; through}) — dark cylinders as deep as they go, a hair out of the face (a through one: of both) so the mouth shows. buildParts places it; the hall's
+   d, depth, mm; through}) — dark cylinders as deep as they go, a hair out of the face (a through one: of both) so the mouth shows, a blind one's bottom grey. buildParts places it; the hall's
    «Раскладка» lays it on the floor */
 function partMesh(p,mats,seed){
   const sx=(p.x1-p.x0)*MM,sy=(p.y1-p.y0)*MM,sz=(p.z1-p.z0)*MM;
@@ -264,7 +265,10 @@ function partMesh(p,mats,seed){
   const e=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),mats[p.mat+'Line']);e.raycast=()=>{};mesh.add(e);
   const c=[cx,(p.y0+p.y1)/2*MM,cz],AX=['x','y','z'];
   (p.holes||[]).forEach(h=>{
-    const k=AX.indexOf(h.ax),o=new THREE.Mesh(new THREE.CylinderGeometry(h.d/2*MM,h.d/2*MM,(h.depth+(h.through?1:.5))*MM,16),holeMat);
+    /* the cylinder's own sides: its wall, its top (+y) and bottom caps; turned onto the hole's axis its +y goes −x, +y or +z, and the cap
+       that way is the hole's bottom when the hole goes that way in */
+    const k=AX.indexOf(h.ax),up=h.ax==='x'?-1:1,end=h.through?-1:h.s===up?1:2;
+    const o=new THREE.Mesh(new THREE.CylinderGeometry(h.d/2*MM,h.d/2*MM,(h.depth+(h.through?1:.5))*MM,16),[0,1,2].map(i=>i===end?holeEndMat:holeMat));
     const q=h.at.map((v,j)=>v*MM-c[j]+(j===k?h.s*(h.through?h.depth:h.depth-.5)/2*MM:0));o.position.set(...q);
     if(h.ax==='x')o.rotation.z=Math.PI/2;else if(h.ax==='z')o.rotation.x=Math.PI/2;
     o.userData.hole=h;o.raycast=()=>{};mesh.add(o);
